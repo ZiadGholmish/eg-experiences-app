@@ -1,0 +1,7 @@
+# Copy to `local.properties` (gitignored) and adjust. The SDK path is written by
+# Android Studio on first open; the rest are per-developer overrides.
+sdk.dir=/Users/<you>/Library/Android/sdk
+
+# Base URL for the `local` product flavor. 10.0.2.2 is the host machine as seen
+# from the Android emulator; the api deployable listens on 8084.
+LOCAL_BASE_URL=http://10.0.2.2:8084/api/v1/

@@ -1,0 +1,32 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Per-developer, and carries the SDK path and API hosts
+local.properties
+
+# IDE
+.idea/
+*.iml
+.kotlin/
+
+# Kotlin/Native
+.konan/
+
+# macOS
+.DS_Store
+
+# Xcode
+xcuserdata/
+*.xcuserstate
+iosApp/Pods/
+iosApp/*.xcworkspace/xcuserdata/
+
+# Secrets — never commit any of these
+google-services.json
+GoogleService-Info.plist
+service-accounts/
+*.keystore
+*.jks
+.env

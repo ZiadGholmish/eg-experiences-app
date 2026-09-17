@@ -1,0 +1,42 @@
+<resources>
+    <!-- Arabic — the default locale. Reviewed by a native speaker before
+         release; these are first-pass translations. -->
+    <string name="app_name">تجارب مصر</string>
+
+    <string name="trips_title">الرحلات</string>
+    <string name="trips_empty">لا توجد رحلات بعد. تابعنا قريبًا.</string>
+    <string name="trip_per_person">للفرد</string>
+    <string name="trip_duration_hours">%1$s ساعات</string>
+    <string name="trip_whats_included">ما يشمله السعر</string>
+    <string name="trip_itinerary">برنامج اليوم</string>
+    <string name="trip_host_knowledge">معلومات مفيدة</string>
+    <string name="trip_what_to_bring">ماذا تحضر معك</string>
+    <string name="trip_best_time">أفضل وقت في السنة</string>
+    <string name="trip_look_out_for">ما ينبغي الانتباه له</string>
+    <string name="trip_meeting_point">نقطة اللقاء</string>
+    <string name="trip_departure_point">نقطة الانطلاق</string>
+    <string name="trip_hosted_by">يستضيفها %1$s</string>
+    <string name="trip_host_verified">مضيف موثّق</string>
+
+    <string name="departures_pick_a_date">اختر التاريخ</string>
+    <string name="departure_seats_left">متبقي %1$d مقاعد</string>
+    <string name="departure_sold_out">اكتمل العدد</string>
+
+    <string name="booking_party_size">كم عدد الأشخاص؟</string>
+    <string name="booking_guest_name">الاسم</string>
+    <string name="booking_guest_phone">رقم الهاتف</string>
+    <string name="booking_continue">متابعة</string>
+    <string name="booking_hold_expires_in">نحتفظ بمقاعدك — متبقي %1$s</string>
+    <string name="booking_confirm">تأكيد الحجز</string>
+    <string name="booking_total">الإجمالي</string>
+    <string name="booking_your_ref">رقم الحجز</string>
+    <string name="booking_confirmed">تم الحجز</string>
+    <string name="booking_cancel">إلغاء الحجز</string>
+
+    <string name="error_network">لا يوجد اتصال. تحقق من الإنترنت وحاول مرة أخرى.</string>
+    <string name="error_timeout">استغرق الأمر وقتًا طويلًا. حاول مرة أخرى.</string>
+    <string name="error_generic">حدث خطأ ما. حاول مرة أخرى.</string>
+    <string name="error_hold_expired">انتهى حجز مقاعدك المؤقت. اختر التاريخ من جديد.</string>
+    <string name="error_seats_unavailable">نفدت هذه المقاعد للتو. جرّب تاريخًا آخر.</string>
+    <string name="action_retry">حاول مرة أخرى</string>
+</resources>

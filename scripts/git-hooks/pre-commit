@@ -1,0 +1,10 @@
+#!/bin/sh
+# Installed by `./gradlew installGitHooks`. Blocks a commit that would fail the
+# CI style gate, and tells you the one command that fixes it.
+set -e
+if ! ./gradlew --quiet spotlessCheck; then
+    echo
+    echo "Spotless found formatting violations. Fix them with:"
+    echo "    ./gradlew spotlessApply"
+    exit 1
+fi

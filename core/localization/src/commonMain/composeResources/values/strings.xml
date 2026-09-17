@@ -1,0 +1,46 @@
+<resources>
+    <!-- English. `values/` is the fallback bundle; `values-ar/` is what most
+         users actually see, since Arabic is the default locale. -->
+    <string name="app_name">Egypt Experiences</string>
+
+    <!-- Trips -->
+    <string name="trips_title">Trips</string>
+    <string name="trips_empty">No trips yet. Check back soon.</string>
+    <string name="trip_per_person">per person</string>
+    <string name="trip_duration_hours">%1$s hrs</string>
+    <string name="trip_whats_included">What\'s included</string>
+    <string name="trip_itinerary">The day</string>
+    <string name="trip_host_knowledge">Good to know</string>
+    <string name="trip_what_to_bring">What to bring</string>
+    <string name="trip_best_time">Best time of year</string>
+    <string name="trip_look_out_for">What to look out for</string>
+    <string name="trip_meeting_point">Meeting point</string>
+    <string name="trip_departure_point">Departure point</string>
+    <string name="trip_hosted_by">Hosted by %1$s</string>
+    <string name="trip_host_verified">Verified host</string>
+
+    <!-- Departures -->
+    <string name="departures_pick_a_date">Pick a date</string>
+    <string name="departure_seats_left">%1$d seats left</string>
+    <string name="departure_sold_out">Sold out</string>
+
+    <!-- Booking -->
+    <string name="booking_party_size">How many people?</string>
+    <string name="booking_guest_name">Name</string>
+    <string name="booking_guest_phone">Phone</string>
+    <string name="booking_continue">Continue</string>
+    <string name="booking_hold_expires_in">Holding your seats — %1$s left</string>
+    <string name="booking_confirm">Confirm booking</string>
+    <string name="booking_total">Total</string>
+    <string name="booking_your_ref">Your reference</string>
+    <string name="booking_confirmed">You\'re booked</string>
+    <string name="booking_cancel">Cancel booking</string>
+
+    <!-- Errors -->
+    <string name="error_network">No connection. Check your internet and try again.</string>
+    <string name="error_timeout">That took too long. Try again.</string>
+    <string name="error_generic">Something went wrong. Try again.</string>
+    <string name="error_hold_expired">Your seats were released. Pick a date again.</string>
+    <string name="error_seats_unavailable">Those seats just went. Try a different date.</string>
+    <string name="action_retry">Try again</string>
+</resources>
