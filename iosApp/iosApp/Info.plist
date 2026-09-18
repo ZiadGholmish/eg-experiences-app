@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Filled from the active xcconfig; ContentView reads it back with
+	     forInfoDictionaryKey. The iOS counterpart of BuildConfig.BASE_URL. -->
+	<key>BASE_URL</key>
+	<string>$(BASE_URL)</string>
+
+	<!-- Arabic is the default locale, and RTL the default layout direction.
+	     LocalAppLocale.ios.kt overrides AppleLanguages to switch language;
+	     NSBundle only resolves a language that is listed here. -->
+	<key>CFBundleDevelopmentRegion</key>
+	<string>ar</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>ar</string>
+		<string>en</string>
+	</array>
+
+	<!-- The local flavor talks to the api deployable over plain HTTP on
+	     localhost. Scoped to localhost rather than NSAllowsArbitraryLoads, so
+	     this does not have to be unpicked before a store submission. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<!-- A physical iPhone reaches the backend at the Mac's LAN address, an
+		     IP literal. ATS exception domains match hostnames, not IP literals,
+		     so the localhost entry below does not cover it — this does. -->
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>localhost</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+			</dict>
+		</dict>
+	</dict>
+
+	<key>CFBundleDisplayName</key>
+	<string>$(DISPLAY_NAME)</string>
+
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
+</dict>
+</plist>

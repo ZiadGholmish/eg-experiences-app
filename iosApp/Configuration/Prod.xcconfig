@@ -1,0 +1,4 @@
+#include "Config.xcconfig"
+
+// Placeholder until a prod host is deployed — matches composeApp's `prod` flavor.
+BASE_URL = https:/$()/api.example.invalid/api/v1/

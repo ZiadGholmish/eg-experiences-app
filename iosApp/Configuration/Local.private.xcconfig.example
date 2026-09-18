@@ -1,0 +1,11 @@
+// Copy to `Local.private.xcconfig` (gitignored) to run the local flavor on a
+// physical iPhone, which cannot reach the Mac's localhost.
+//
+// Use the Mac's LAN address — `ipconfig getifaddr en0`. It is handed out by
+// DHCP, so it changes when the router reassigns it; re-run that command and
+// update this file if the app suddenly cannot reach the backend.
+//
+// The phone and the Mac must be on the same network, and the api deployable
+// must be running.
+
+BASE_URL = http:/$()/192.168.1.71:8084/api/v1/
