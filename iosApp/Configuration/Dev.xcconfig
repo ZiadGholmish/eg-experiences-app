@@ -1,0 +1,9 @@
+#include "Config.xcconfig"
+
+// Placeholder until a dev host is deployed — matches composeApp's `dev` flavor.
+// NOT yet wired to a build configuration: the project has only Debug (Local)
+// and Release (Prod). Add a `Dev` configuration pointing here when one exists.
+BASE_URL = https:/$()/api-dev.example.invalid/api/v1/
+
+PRODUCT_BUNDLE_IDENTIFIER = com.egyptexperiences.dev
+DISPLAY_NAME = Egypt Exp Dev

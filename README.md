@@ -70,21 +70,53 @@ device, set `LOCAL_BASE_URL` in `local.properties` to your machine's LAN address
 
 ### iOS
 
-The shared framework builds today (`./gradlew :composeApp:linkDebugFrameworkIosSimulatorArm64`).
-The Xcode app shell is not checked in yet — add it with Android Studio's KMP
-plugin, then call:
+Open `iosApp/iosApp.xcodeproj` in Xcode, pick a simulator and run. The `Compile
+Kotlin Framework` build phase calls
+`./gradlew :composeApp:embedAndSignAppleFrameworkForXcode` before Swift
+compiles, so there is no separate Gradle step. From the command line:
+
+```bash
+xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp \
+  -configuration Debug -sdk iphonesimulator \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build
+```
+
+`Configuration/*.xcconfig` are the iOS counterpart of the Android product
+flavors: `Debug` builds against `Local.xcconfig`, `Release` against
+`Prod.xcconfig`. `BASE_URL` reaches Swift through `Info.plist`, and
+`ContentView` hands it to the shared entry point:
 
 ```swift
 MainViewControllerKt.MainViewController(baseUrl: "…", isDebug: true)
 ```
+
+> The simulator reaches a local backend at **`localhost:8084`**, not
+> `10.0.2.2` — that alias only means anything to the Android emulator.
+
+### Running on a physical iPhone
+
+A phone cannot reach the Mac's `localhost`, so point it at the Mac's LAN
+address — the same problem `LOCAL_BASE_URL` solves for Android:
+
+```bash
+cp iosApp/Configuration/Local.private.xcconfig.example \
+   iosApp/Configuration/Local.private.xcconfig
+ipconfig getifaddr en0     # put this address in the file you just copied
+```
+
+`Local.xcconfig` pulls it in with an optional `#include?`, so the simulator
+still builds when the file is absent. It is gitignored, and the address is
+DHCP — it changes when the router reassigns it.
+
+Signing is automatic against `DEVELOPMENT_TEAM = 474WXSCVBC`. Simulator builds
+are ad-hoc signed (`CODE_SIGNING_ALLOWED[sdk=iphonesimulator*] = NO`), so
+anyone can run one without that team; a device build needs their own.
 
 ## Known gaps
 
 - **No payment step.** `BookingScreen` goes from a seat *hold* straight to the
   confirmation screen, because the backend has no payment endpoint yet. Until
   Paymob lands, a "confirmed" booking is an unpaid hold.
-- **No `iosApp/` Xcode shell.** The shared framework builds and the Swift entry
-  point exists; the app target is not checked in (see iOS above).
 - **Launch is unverified.** `./gradlew build` compiles both platforms and runs
   the tests; nothing has yet resolved the Koin graph or opened the DataStore on
   a device. First run is `:composeApp:installLocalDebug` against a live backend.

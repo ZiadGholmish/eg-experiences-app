@@ -1,0 +1,11 @@
+// Shared by every build configuration. The per-environment files include this
+// one and add BASE_URL, mirroring composeApp's local/dev/prod product flavors.
+
+// Keep PRODUCT_NAME free of spaces — it names the executable and the .app.
+// The launcher label is DISPLAY_NAME, via CFBundleDisplayName in Info.plist.
+PRODUCT_NAME = EgyptExperiences
+DISPLAY_NAME = Egypt Experiences
+PRODUCT_BUNDLE_IDENTIFIER = com.egyptexperiences
+
+CURRENT_PROJECT_VERSION = 1
+MARKETING_VERSION = 1.0

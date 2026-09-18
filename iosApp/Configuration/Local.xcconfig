@@ -1,0 +1,17 @@
+#include "Config.xcconfig"
+
+// `$()` breaks up the `//`, which xcconfig would otherwise read as a comment.
+// The simulator shares the host's network stack, so localhost reaches the api
+// deployable directly. NOT 10.0.2.2 — that alias only means something to the
+// Android emulator.
+BASE_URL = http:/$()/localhost:8084/api/v1/
+
+// A physical iPhone cannot reach the Mac's localhost. Override BASE_URL with
+// the Mac's LAN address in `Local.private.xcconfig`, which is gitignored — the
+// iOS counterpart of LOCAL_BASE_URL in local.properties. See
+// Local.private.xcconfig.example. The `?` makes the include optional, so the
+// simulator still builds without one.
+#include? "Local.private.xcconfig"
+
+PRODUCT_BUNDLE_IDENTIFIER = com.egyptexperiences.local
+DISPLAY_NAME = Egypt Exp Local
