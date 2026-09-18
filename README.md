@@ -117,9 +117,13 @@ anyone can run one without that team; a device build needs their own.
 - **No payment step.** `BookingScreen` goes from a seat *hold* straight to the
   confirmation screen, because the backend has no payment endpoint yet. Until
   Paymob lands, a "confirmed" booking is an unpaid hold.
-- **Launch is unverified.** `./gradlew build` compiles both platforms and runs
-  the tests; nothing has yet resolved the Koin graph or opened the DataStore on
-  a device. First run is `:composeApp:installLocalDebug` against a live backend.
+- **No deployed hosts.** The `dev` and `prod` base URLs are `example.invalid`
+  placeholders on both platforms, so only the `local` flavor talks to anything.
+- **Trip photos 404.** `AssetUrlResolver` builds `/assets/<key>` URLs, but the
+  api deployable serves no such route and answers 401, so every card renders an
+  empty image box.
+- **Neither app is signable for a store.** The Android release build uses the
+  debug keystore, and the iOS target has an empty `AppIcon` asset.
 - **Design tokens are provisional** until the claude.ai/design system is synced
   — see `docs/design-language.md`.
 
