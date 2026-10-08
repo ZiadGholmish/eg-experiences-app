@@ -3,9 +3,9 @@
 
 // Keep PRODUCT_NAME free of spaces — it names the executable and the .app.
 // The launcher label is DISPLAY_NAME, via CFBundleDisplayName in Info.plist.
-PRODUCT_NAME = EgyptExperiences
-DISPLAY_NAME = Egypt Experiences
-PRODUCT_BUNDLE_IDENTIFIER = com.egyptexperiences
+PRODUCT_NAME = Bahr
+DISPLAY_NAME = Bahr
+PRODUCT_BUNDLE_IDENTIFIER = eg.bahr.app
 
 CURRENT_PROJECT_VERSION = 1
 MARKETING_VERSION = 1.0

@@ -55,7 +55,7 @@ kotlin {
 }
 
 android {
-    namespace = "com.egyptexperiences.feature.booking"
+    namespace = "eg.bahr.feature.booking"
     compileSdk =
         libs.versions.android.compileSdk
             .get()

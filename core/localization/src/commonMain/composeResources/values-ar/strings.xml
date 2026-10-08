@@ -1,7 +1,7 @@
 <resources>
     <!-- Arabic — the default locale. Reviewed by a native speaker before
          release; these are first-pass translations. -->
-    <string name="app_name">تجارب مصر</string>
+    <string name="app_name">بحر</string>
 
     <string name="trips_title">الرحلات</string>
     <string name="trips_empty">لا توجد رحلات بعد. تابعنا قريبًا.</string>
@@ -37,6 +37,6 @@
     <string name="error_timeout">استغرق الأمر وقتًا طويلًا. حاول مرة أخرى.</string>
     <string name="error_generic">حدث خطأ ما. حاول مرة أخرى.</string>
     <string name="error_hold_expired">انتهى حجز مقاعدك المؤقت. اختر التاريخ من جديد.</string>
-    <string name="error_seats_unavailable">نفدت هذه المقاعد للتو. جرّب تاريخًا آخر.</string>
+    <string name="error_no_seats_available">نفدت هذه المقاعد للتو. جرّب تاريخًا آخر.</string>
     <string name="action_retry">حاول مرة أخرى</string>
 </resources>

@@ -42,7 +42,7 @@ kotlin {
 }
 
 android {
-    namespace = "com.egyptexperiences.core.network"
+    namespace = "eg.bahr.core.network"
     compileSdk =
         libs.versions.android.compileSdk
             .get()

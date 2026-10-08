@@ -1,5 +1,5 @@
 <resources>
     <!-- Launcher label only. Everything inside the app comes from
          core:localization's compose resources. -->
-    <string name="app_name">Egypt Experiences</string>
+    <string name="app_name">Bahr</string>
 </resources>

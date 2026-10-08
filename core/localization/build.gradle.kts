@@ -9,7 +9,7 @@ plugins {
 
 compose.resources {
     publicResClass = true
-    packageOfResClass = "com.egyptexperiences.core.localization.generated.resources"
+    packageOfResClass = "eg.bahr.core.localization.generated.resources"
 }
 
 kotlin {
@@ -37,7 +37,7 @@ kotlin {
 }
 
 android {
-    namespace = "com.egyptexperiences.core.localization"
+    namespace = "eg.bahr.core.localization"
     compileSdk =
         libs.versions.android.compileSdk
             .get()

@@ -53,7 +53,7 @@ kotlin {
 }
 
 android {
-    namespace = "com.egyptexperiences.feature.trips"
+    namespace = "eg.bahr.feature.trips"
     compileSdk =
         libs.versions.android.compileSdk
             .get()

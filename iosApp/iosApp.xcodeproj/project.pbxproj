@@ -13,7 +13,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		1A0000000000000000000007 /* EgyptExperiences.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EgyptExperiences.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		1A0000000000000000000007 /* Bahr.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Bahr.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1A0000000000000000000012 /* iOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iOSApp.swift; sourceTree = "<group>"; };
 		1A0000000000000000000013 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		1A0000000000000000000014 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -48,7 +48,7 @@
 		1A0000000000000000000003 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				1A0000000000000000000007 /* EgyptExperiences.app */,
+				1A0000000000000000000007 /* Bahr.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -94,7 +94,7 @@
 			);
 			name = iosApp;
 			productName = iosApp;
-			productReference = 1A0000000000000000000007 /* EgyptExperiences.app */;
+			productReference = 1A0000000000000000000007 /* Bahr.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */

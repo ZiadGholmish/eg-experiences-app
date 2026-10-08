@@ -31,7 +31,7 @@ kotlin {
 }
 
 android {
-    namespace = "com.egyptexperiences.core.common"
+    namespace = "eg.bahr.core.common"
     compileSdk =
         libs.versions.android.compileSdk
             .get()

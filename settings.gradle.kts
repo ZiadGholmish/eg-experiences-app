@@ -1,4 +1,4 @@
-rootProject.name = "EgExperiences"
+rootProject.name = "Bahr"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {

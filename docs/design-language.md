@@ -9,8 +9,8 @@ They are **provisional**: where the synced design system disagrees, it wins.
 
 ## Where the tokens came from
 
-`../be/docs/plan/implementation-plan.md` cites a design canvas — the link is in
-that plan, in the private `eg-experiences-be` repo — with 8 mobile artboards at 390px:
+The old Java backend's plan (in the private Java backend repo, now superseded by
+`../docs/PLAN.md`) cites a design canvas with 8 mobile artboards at 390px:
 home with category filters, map view, trip detail, date + party, checkout with a
 hold timer, confirmation, and a host dashboard. The values in
 `core/designsystem/src/commonMain/kotlin/.../theme/` were read out of that
@@ -24,7 +24,7 @@ template, not the nested map page.
 ## Syncing from claude.ai/design
 
 1. Run `/design-login` in Claude Code once, to grant design-system access.
-2. Run `/design-sync` and pick the Burlus / Egypt Experiences design system.
+2. Run `/design-sync` and pick this app's design system.
 3. The sync writes per-component specs; reconcile them against
    `core/designsystem` one component at a time, and update this file's tables.
 

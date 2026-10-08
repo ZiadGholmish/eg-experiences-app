@@ -1,10 +1,12 @@
-# Egypt Experiences — mobile app
+# Bahr — mobile app
 
-Kotlin Multiplatform app for booking attractions and day trips in Egypt.
+Kotlin Multiplatform app for booking day trips in Egypt (package root `eg.bahr`).
 Android and iOS share one Compose Multiplatform UI.
 
-Client of the Burlus backend (`../be`). One `/api/v1/**` contract serves this app
-and the web client — no route exists for one client only.
+Client of the Bahr backend (`../bahr-be`). One `/api/v1/**` contract serves this app
+and the web client — no route exists for one client only. The contract is
+`../bahr-be/docs/api/openapi.yaml` (`../docs/api/openapi.yaml` is a symlink to it);
+the plan is `../docs/PLAN.md`.
 
 ## Tech stack
 
@@ -50,8 +52,15 @@ cp local.properties.example local.properties   # then set sdk.dir
 ./gradlew build
 ```
 
-Run Android against a local backend — start the api deployable first
-(`cd ../be && make infra-up` then run `api`, which listens on **8084**):
+Run Android against a local backend — start the api deployable first, which
+listens on **8084** (see `../bahr-be/AGENTS.md`):
+
+```bash
+cd ../bahr-be && make infra-up
+SECURITY_JWT_SECRET='local-dev-signing-key-at-least-32-bytes!!' ./gradlew :api:bootRun
+```
+
+Then:
 
 ```bash
 ./gradlew :composeApp:installLocalDebug
@@ -114,6 +123,10 @@ anyone can run one without that team; a device build needs their own.
 
 ## Known gaps
 
+- **Module-graph deviations (fixed in M0-M5).** `feature:booking` depends on
+  `feature:trips` (`feature/booking/build.gradle.kts:48`, unused in source), and
+  `ApiErrorCodes` sits in `core:common` instead of `core:network`. See
+  `AGENTS.md` → Conventions.
 - **No payment step.** `BookingScreen` goes from a seat *hold* straight to the
   confirmation screen, because the backend has no payment endpoint yet. Until
   Paymob lands, a "confirmed" booking is an unpaid hold.

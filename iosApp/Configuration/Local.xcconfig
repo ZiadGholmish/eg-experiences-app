@@ -13,5 +13,5 @@ BASE_URL = http:/$()/localhost:8084/api/v1/
 // simulator still builds without one.
 #include? "Local.private.xcconfig"
 
-PRODUCT_BUNDLE_IDENTIFIER = com.egyptexperiences.local
-DISPLAY_NAME = Egypt Exp Local
+PRODUCT_BUNDLE_IDENTIFIER = eg.bahr.app.local
+DISPLAY_NAME = Bahr Local

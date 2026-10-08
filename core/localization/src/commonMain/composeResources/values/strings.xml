@@ -1,7 +1,7 @@
 <resources>
     <!-- English. `values/` is the fallback bundle; `values-ar/` is what most
          users actually see, since Arabic is the default locale. -->
-    <string name="app_name">Egypt Experiences</string>
+    <string name="app_name">Bahr</string>
 
     <!-- Trips -->
     <string name="trips_title">Trips</string>
@@ -41,6 +41,6 @@
     <string name="error_timeout">That took too long. Try again.</string>
     <string name="error_generic">Something went wrong. Try again.</string>
     <string name="error_hold_expired">Your seats were released. Pick a date again.</string>
-    <string name="error_seats_unavailable">Those seats just went. Try a different date.</string>
+    <string name="error_no_seats_available">Those seats just went. Try a different date.</string>
     <string name="action_retry">Try again</string>
 </resources>

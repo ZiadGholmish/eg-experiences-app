@@ -34,7 +34,7 @@ kotlin {
 }
 
 android {
-    namespace = "com.egyptexperiences.core.datastore"
+    namespace = "eg.bahr.core.datastore"
     compileSdk =
         libs.versions.android.compileSdk
             .get()

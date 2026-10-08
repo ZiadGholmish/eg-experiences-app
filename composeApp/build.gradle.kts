@@ -41,7 +41,7 @@ kotlin {
             isStatic = true
             // Without this the linker cannot infer a bundle ID and falls back
             // to the bundle name, which breaks crash symbolication later.
-            binaryOption("bundleId", "com.egyptexperiences.shared")
+            binaryOption("bundleId", "eg.bahr.shared")
         }
     }
 
@@ -99,7 +99,7 @@ kotlin {
 }
 
 android {
-    namespace = "com.egyptexperiences"
+    namespace = "eg.bahr"
     compileSdk =
         libs.versions.android.compileSdk
             .get()
@@ -110,7 +110,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.egyptexperiences"
+        applicationId = "eg.bahr.app"
         minSdk =
             libs.versions.android.minSdk
                 .get()
@@ -127,7 +127,7 @@ android {
 
     // BASE_URL is the only per-environment value so far. Both dev and prod hosts
     // are placeholders until the api deployable is actually deployed — see
-    // ../be/docs/plan/implementation-plan.md.
+    // ../docs/PLAN.md (M7).
     productFlavors {
         create("local") {
             dimension = "environment"

@@ -53,7 +53,7 @@ kotlin {
 }
 
 android {
-    namespace = "com.egyptexperiences.feature.splash"
+    namespace = "eg.bahr.feature.splash"
     compileSdk =
         libs.versions.android.compileSdk
             .get()

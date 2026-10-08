@@ -9,7 +9,7 @@ plugins {
 
 compose.resources {
     publicResClass = true
-    packageOfResClass = "com.egyptexperiences.core.designsystem.generated.resources"
+    packageOfResClass = "eg.bahr.core.designsystem.generated.resources"
 }
 
 kotlin {
@@ -39,7 +39,7 @@ kotlin {
 }
 
 android {
-    namespace = "com.egyptexperiences.core.designsystem"
+    namespace = "eg.bahr.core.designsystem"
     compileSdk =
         libs.versions.android.compileSdk
             .get()
