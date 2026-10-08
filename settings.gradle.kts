@@ -37,6 +37,9 @@ include(":core:designsystem")
 include(":core:localization")
 include(":core:datastore")
 
+// Test-only: helpers for other modules' test source sets (bahr-modularization: core:testing → core:common).
+include(":core:testing")
+
 // Feature modules — one per area of the `/api/v1/**` contract.
 include(":feature:splash")
 include(":feature:trips")

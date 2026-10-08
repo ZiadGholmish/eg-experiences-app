@@ -9,6 +9,7 @@ import eg.bahr.core.localization.generated.resources.error_hold_expired
 import eg.bahr.core.localization.generated.resources.error_network
 import eg.bahr.core.localization.generated.resources.error_no_seats_available
 import eg.bahr.core.localization.generated.resources.error_timeout
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -17,21 +18,27 @@ import org.jetbrains.compose.resources.stringResource
  * Branches on the backend's error *code*, never its message — the contract says
  * the code is the stable part. An unmapped code falls back to the generic
  * string rather than showing the user a raw server message.
+ *
+ * Returns the resource rather than the text so non-composable callers (the
+ * app-wide error host) can carry it and resolve it in the current locale.
  */
-@Composable
-fun AppError.localizedMessage(): String =
+fun AppError.messageRes(): StringResource =
     when (this) {
-        AppError.Network -> stringResource(Res.string.error_network)
-        AppError.Timeout -> stringResource(Res.string.error_timeout)
+        AppError.Network -> Res.string.error_network
+        AppError.Timeout -> Res.string.error_timeout
         is AppError.Api ->
             when (code) {
-                ApiErrorCodes.HOLD_EXPIRED -> stringResource(Res.string.error_hold_expired)
-                ApiErrorCodes.NO_SEATS_AVAILABLE -> stringResource(Res.string.error_no_seats_available)
-                else -> stringResource(Res.string.error_generic)
+                ApiErrorCodes.HOLD_EXPIRED -> Res.string.error_hold_expired
+                ApiErrorCodes.NO_SEATS_AVAILABLE -> Res.string.error_no_seats_available
+                else -> Res.string.error_generic
             }
-        is AppError.Serialization -> stringResource(Res.string.error_generic)
-        is AppError.Unknown -> stringResource(Res.string.error_generic)
+        is AppError.Serialization -> Res.string.error_generic
+        is AppError.Unknown -> Res.string.error_generic
     }
+
+/** [messageRes], resolved in the composition's language. */
+@Composable
+fun AppError.localizedMessage(): String = stringResource(messageRes())
 
 /** 5xx is the server's problem and may pass; 4xx is this request's and will not. */
 private const val SERVER_ERROR_FLOOR = 500

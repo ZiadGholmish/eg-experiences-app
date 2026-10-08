@@ -1,5 +1,6 @@
 package eg.bahr.feature.trips.di
 
+import eg.bahr.feature.trips.data.DefaultTripRepository
 import eg.bahr.feature.trips.data.TripApiService
 import eg.bahr.feature.trips.data.TripRepository
 import eg.bahr.feature.trips.presentation.TripDetailViewModel
@@ -10,7 +11,7 @@ import org.koin.dsl.module
 val tripsModule =
     module {
         single { TripApiService(get()) }
-        single { TripRepository(get()) }
-        viewModel { TripListViewModel(get()) }
+        single<TripRepository> { DefaultTripRepository(get()) }
+        viewModel { TripListViewModel(get(), get()) }
         viewModel { (slug: String) -> TripDetailViewModel(slug, get()) }
     }

@@ -2,6 +2,7 @@ package eg.bahr.feature.trips.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import eg.bahr.core.common.error.AppErrorController
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.feature.trips.data.TripRepository
@@ -29,6 +30,7 @@ data class TripListUiState(
 
 class TripListViewModel(
     private val repository: TripRepository,
+    private val errors: AppErrorController,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(TripListUiState())
     val uiState: StateFlow<TripListUiState> = _uiState.asStateFlow()
@@ -76,10 +78,14 @@ class TripListViewModel(
                 }
 
                 is AppResult.Failure ->
-                    _uiState.update {
-                        // A failed "load more" keeps the pages already shown;
-                        // only a failed first page empties the screen.
-                        it.copy(isLoading = false, isLoadingMore = false, error = result.error)
+                    if (append) {
+                        // A failed "load more" keeps the pages already shown and stays
+                        // usable, so it is a transient message, not screen state.
+                        _uiState.update { it.copy(isLoadingMore = false) }
+                        errors.show(result.error)
+                    } else {
+                        // Only a failed first page empties the screen.
+                        _uiState.update { it.copy(isLoading = false, error = result.error) }
                     }
             }
         }

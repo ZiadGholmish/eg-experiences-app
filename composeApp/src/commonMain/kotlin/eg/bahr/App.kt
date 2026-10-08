@@ -2,13 +2,18 @@ package eg.bahr
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import eg.bahr.core.common.error.AppErrorController
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.datastore.AppSettingsStore
+import eg.bahr.core.designsystem.error.BahrErrorHost
 import eg.bahr.core.designsystem.theme.BahrLocale
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.localization.ProvideAppLanguage
+import eg.bahr.core.localization.messageRes
 import eg.bahr.navigation.AppNavHost
+import kotlinx.coroutines.flow.map
 import org.koin.compose.koinInject
 
 /**
@@ -23,9 +28,15 @@ fun App() {
     val settings: AppSettingsStore = koinInject()
     val language by settings.language.collectAsStateWithLifecycle(initialValue = AppLanguage.default)
 
+    val errors: AppErrorController = koinInject()
+    val errorMessages = remember(errors) { errors.errors.map { it.messageRes() } }
+
     ProvideAppLanguage(language) {
         BahrTheme(locale = language.toBahrLocale()) {
-            AppNavHost()
+            // Inside the theme and the language: the snackbar is themed, mirrored and localized.
+            BahrErrorHost(messages = errorMessages) {
+                AppNavHost()
+            }
         }
     }
 }

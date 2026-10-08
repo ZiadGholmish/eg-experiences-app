@@ -2,6 +2,7 @@ package eg.bahr.di
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import eg.bahr.core.common.error.AppErrorController
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.datastore.AppSettingsStore
 import eg.bahr.core.datastore.createPreferencesDataStore
@@ -29,6 +30,9 @@ fun appModule(
 ) = module {
     single { ApiConfig(baseUrl = baseUrl, isDebug = isDebug) }
     single<DataStore<Preferences>> { createPreferencesDataStore(preferencesPath) }
+
+    // One per app: view models report transient errors here, App's BahrErrorHost shows them.
+    single { AppErrorController() }
 
     /**
      * Reads the stored language on each request rather than caching it, so a

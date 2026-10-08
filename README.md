@@ -32,7 +32,8 @@ mobile-app/
 │   ├── network/           # ApiEnvelope, MoneyDto, callApi, HttpClient factory
 │   ├── designsystem/      # BahrTheme, tokens, BahrFormat, shared components
 │   ├── localization/      # ar/en strings, RTL provider, error messages
-│   └── datastore/         # Persisted settings
+│   ├── datastore/         # Persisted settings
+│   └── testing/           # Test-only: runViewModelTest, screenshot helper
 ├── feature/
 │   ├── splash/
 │   ├── trips/             # GET /trips, /trips/{slug}, /trips/{slug}/departures
@@ -120,6 +121,34 @@ DHCP — it changes when the router reassigns it.
 Signing is automatic against `DEVELOPMENT_TEAM = 474WXSCVBC`. Simulator builds
 are ad-hoc signed (`CODE_SIGNING_ALLOWED[sdk=iphonesimulator*] = NO`), so
 anyone can run one without that team; a device build needs their own.
+
+## Testing
+
+| What | Command |
+|---|---|
+| All unit tests, Android JVM + iOS simulator | `./gradlew allTests` |
+| Screenshot check against the committed goldens | `./gradlew verifyRoborazziDebug` |
+| Re-record goldens after an intended UI change | `./gradlew recordRoborazziDebug` (then review the PNG diff before staging) |
+| Coverage, `core:*` + view models | `./gradlew koverHtmlReportMobile` → `build/reports/kover/htmlMobile/index.html` |
+| Coverage gate | `./gradlew koverVerifyMobile` (also part of `check`) |
+| String-resource lint (`\'`, bare `%s`/`%d`) | `./gradlew checkStringResources` (also part of `check`) |
+
+- **View models:** `commonTest`, hand-written fake repositories, and
+  `runViewModelTest { … }` from `core:testing`, which points `Dispatchers.Main`
+  at the test scheduler. Template: `feature/trips/.../TripListViewModelTest.kt`
+  with `FakeTripRepository`.
+- **Screenshots:** Roborazzi on Robolectric (Android JVM, native graphics), in
+  each module's `src/androidUnitTest/`; goldens are committed in
+  `src/androidUnitTest/screenshots/`. The shots render through
+  `ProvideAppLanguage` + `BahrTheme` like the app, on an English "device", so the
+  Arabic goldens also prove the app language beats the device language and that
+  the real Manrope / IBM Plex Sans Arabic faces load. Plain `testDebugUnitTest`
+  (part of `build`) renders them without comparing; only `verify…` fails on a
+  pixel difference.
+- **Transient errors** (the screen stays usable): inject `AppErrorController`
+  into the view model and call `show(error)`; the app root's `BahrErrorHost`
+  shows it as a localized snackbar. Errors that *are* the screen's state stay in
+  the `UiState`.
 
 ## Known gaps
 

@@ -8,7 +8,7 @@
     <string name="trips_empty">No trips yet. Check back soon.</string>
     <string name="trip_per_person">per person</string>
     <string name="trip_duration_hours">%1$s hrs</string>
-    <string name="trip_whats_included">What\'s included</string>
+    <string name="trip_whats_included">What’s included</string>
     <string name="trip_itinerary">The day</string>
     <string name="trip_host_knowledge">Good to know</string>
     <string name="trip_what_to_bring">What to bring</string>
@@ -33,7 +33,7 @@
     <string name="booking_confirm">Confirm booking</string>
     <string name="booking_total">Total</string>
     <string name="booking_your_ref">Your reference</string>
-    <string name="booking_confirmed">You\'re booked</string>
+    <string name="booking_confirmed">You’re booked</string>
     <string name="booking_cancel">Cancel booking</string>
 
     <!-- Errors -->

@@ -25,6 +25,9 @@ The Java backend in `../be/` is a superseded, read-only reference.
 - `./gradlew spotlessApply` before every commit. `./gradlew installGitHooks`
   once after cloning installs a pre-commit hook that enforces it.
 - `./gradlew allTests` — common tests on both targets.
+- `./gradlew verifyRoborazziDebug` — screenshot diffs against the committed
+  goldens; `./gradlew recordRoborazziDebug` re-records them after an intended UI
+  change. `./gradlew koverHtmlReportMobile` — coverage. See README → Testing.
 
 Running the backend locally (in `../bahr-be`, see its `AGENTS.md`):
 
