@@ -1,5 +1,6 @@
 package eg.bahr.feature.booking.presentation
 
+import eg.bahr.core.designsystem.format.BahrFormat
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -40,9 +41,12 @@ class HoldCountdownTest {
     }
 
     @Test
-    fun `formats as minutes and zero-padded seconds`() {
-        assertEquals("9:30", HoldCountdown.format(9.minutes + 30.seconds))
-        assertEquals("0:05", HoldCountdown.format(5.seconds))
-        assertEquals("0:00", HoldCountdown.format(Duration.ZERO))
+    fun `the time left formats as the design's mm-ss countdown`() {
+        // Formatting moved to BahrFormat (its own cases are in BahrFormatTest); this pins the
+        // hand-off between the two: whole seconds of the remaining duration.
+        val remaining = HoldCountdown.remaining("2026-05-01T10:09:30Z", now)!!
+        assertEquals("09:30", BahrFormat.countdown(remaining.inWholeSeconds.toInt()))
+        assertEquals("00:05", BahrFormat.countdown(5.seconds.inWholeSeconds.toInt()))
+        assertEquals("00:00", BahrFormat.countdown(Duration.ZERO.inWholeSeconds.toInt()))
     }
 }

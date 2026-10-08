@@ -4,14 +4,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import eg.bahr.core.designsystem.theme.EgOnBrand
-import eg.bahr.core.designsystem.theme.EgTeal
-import eg.bahr.core.designsystem.theme.EgTheme
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.app_name
 import kotlinx.coroutines.delay
@@ -33,14 +31,14 @@ fun SplashScreen(
     }
 
     Column(
-        modifier = modifier.fillMaxSize().background(EgTeal),
+        modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.primary),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
             text = stringResource(Res.string.app_name),
-            style = EgTheme.typography.screenTitle,
-            color = EgOnBrand,
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.onPrimary,
         )
     }
 }

@@ -26,11 +26,5 @@ object HoldCountdown {
         return if (left.isNegative()) Duration.ZERO else left
     }
 
-    /** `m:ss`, the form the canvas's checkout timer uses. */
-    fun format(remaining: Duration): String {
-        val totalSeconds = remaining.inWholeSeconds
-        val minutes = totalSeconds / 60
-        val seconds = totalSeconds % 60
-        return "$minutes:${seconds.toString().padStart(2, '0')}"
-    }
+    // Display formatting is `BahrFormat.countdown` (core:designsystem), the app's one formatter.
 }

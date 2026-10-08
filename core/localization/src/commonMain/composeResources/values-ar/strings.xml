@@ -26,7 +26,7 @@
     <string name="booking_guest_name">الاسم</string>
     <string name="booking_guest_phone">رقم الهاتف</string>
     <string name="booking_continue">متابعة</string>
-    <string name="booking_hold_expires_in">نحتفظ بمقاعدك — متبقي %1$s</string>
+    <string name="booking_hold_label">المقاعد محجوزة لمدة</string>
     <string name="booking_confirm">تأكيد الحجز</string>
     <string name="booking_total">الإجمالي</string>
     <string name="booking_your_ref">رقم الحجز</string>

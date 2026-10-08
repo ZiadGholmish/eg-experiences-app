@@ -1,8 +1,6 @@
 package eg.bahr.feature.trips.presentation
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -11,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -19,18 +18,14 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
-import eg.bahr.core.common.money.MoneyFormatter
-import eg.bahr.core.designsystem.component.EgBadge
-import eg.bahr.core.designsystem.component.EgErrorView
-import eg.bahr.core.designsystem.component.EgLoadingView
-import eg.bahr.core.designsystem.component.EgPrimaryButton
-import eg.bahr.core.designsystem.theme.EgInkFaint
-import eg.bahr.core.designsystem.theme.EgInkSubtle
-import eg.bahr.core.designsystem.theme.EgSuccess
-import eg.bahr.core.designsystem.theme.EgSuccessTint
-import eg.bahr.core.designsystem.theme.EgSurfaceSunken
-import eg.bahr.core.designsystem.theme.EgTeal
-import eg.bahr.core.designsystem.theme.EgTheme
+import eg.bahr.core.designsystem.components.BahrBadge
+import eg.bahr.core.designsystem.components.BahrErrorView
+import eg.bahr.core.designsystem.components.BahrLoadingView
+import eg.bahr.core.designsystem.components.BahrPrimaryButton
+import eg.bahr.core.designsystem.components.ImageGround
+import eg.bahr.core.designsystem.format.BahrFormat
+import eg.bahr.core.designsystem.theme.BahrSpacing
+import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.action_retry
 import eg.bahr.core.localization.generated.resources.booking_continue
@@ -64,11 +59,11 @@ fun TripDetailScreen(
     val trip = state.trip
 
     when {
-        state.isLoading -> EgLoadingView(modifier)
+        state.isLoading -> BahrLoadingView(modifier)
 
         trip == null -> {
             val error = state.error
-            EgErrorView(
+            BahrErrorView(
                 message = error?.localizedMessage().orEmpty(),
                 retryLabel = stringResource(Res.string.action_retry),
                 onRetry = if (error?.isRetryable == true) viewModel::load else null,
@@ -96,21 +91,21 @@ private fun TripDetailContent(
     modifier: Modifier = Modifier,
 ) {
     val soldOutLabel = stringResource(Res.string.departure_sold_out)
-    val gutter = EgTheme.spacings.screenGutter
+    val gutter = BahrSpacing.gutter
 
     Column(modifier = modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(bottom = EgTheme.spacings.x5l),
-            verticalArrangement = Arrangement.spacedBy(EgTheme.spacings.x5l),
+            contentPadding = PaddingValues(bottom = BahrSpacing.xl),
+            verticalArrangement = Arrangement.spacedBy(BahrSpacing.xl),
         ) {
             item {
-                Box(
+                // surfaceDim is painted first, so the text below never waits on the photo.
+                ImageGround(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .aspectRatio(HeroAspectRatio)
-                            .background(EgSurfaceSunken),
+                            .aspectRatio(HeroAspectRatio),
                 ) {
                     AsyncImage(
                         model = trip.photoUrls.firstOrNull(),
@@ -124,26 +119,41 @@ private fun TripDetailContent(
             item {
                 Column(
                     modifier = Modifier.padding(horizontal = gutter),
-                    verticalArrangement = Arrangement.spacedBy(EgTheme.spacings.md),
+                    verticalArrangement = Arrangement.spacedBy(BahrSpacing.sm),
                 ) {
                     trip.kicker?.let {
-                        Text(text = it, style = EgTheme.typography.kicker, color = EgInkFaint)
-                    }
-                    Text(text = trip.title, style = EgTheme.typography.screenTitle)
-                    Row(horizontalArrangement = Arrangement.spacedBy(EgTheme.spacings.sm)) {
                         Text(
-                            text = MoneyFormatter.format(trip.pricePerPerson.toMoney()),
-                            style = EgTheme.typography.price,
-                            color = EgTeal,
+                            text = it,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Text(text = trip.title, style = MaterialTheme.typography.headlineMedium)
+                    Row(horizontalArrangement = Arrangement.spacedBy(BahrSpacing.xs)) {
+                        Text(
+                            text =
+                                BahrFormat.money(
+                                    trip.pricePerPerson.amount,
+                                    trip.pricePerPerson.currencyCode,
+                                    BahrTheme.locale.isArabic,
+                                ),
+                            style = BahrTheme.type.price,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.alignByBaseline(),
                         )
                         Text(
                             text = stringResource(Res.string.trip_per_person),
-                            style = EgTheme.typography.meta,
-                            color = EgInkSubtle,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.alignByBaseline(),
                         )
                     }
                     trip.deck?.let {
-                        Text(text = it, style = EgTheme.typography.body, color = EgInkSubtle)
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
             }
@@ -154,8 +164,13 @@ private fun TripDetailContent(
                         trip.inclusions.forEach { inclusion ->
                             Text(
                                 text = inclusion.text,
-                                style = EgTheme.typography.body,
-                                color = if (inclusion.included) EgInkSubtle else EgInkFaint,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color =
+                                    if (inclusion.included) {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    } else {
+                                        BahrTheme.colors.onSurfaceDisabled
+                                    },
                                 // An excluded line is struck through rather than
                                 // dropped: knowing lunch is *not* included is
                                 // exactly as useful as knowing it is.
@@ -171,16 +186,16 @@ private fun TripDetailContent(
                 item {
                     Section(title = stringResource(Res.string.trip_itinerary)) {
                         trip.itinerary.forEach { entry ->
-                            Row(horizontalArrangement = Arrangement.spacedBy(EgTheme.spacings.xl)) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(BahrSpacing.md)) {
                                 Text(
                                     text = entry.time.orEmpty(),
-                                    style = EgTheme.typography.meta,
-                                    color = EgTeal,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary,
                                 )
                                 Text(
                                     text = entry.text,
-                                    style = EgTheme.typography.body,
-                                    color = EgInkSubtle,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
@@ -190,7 +205,7 @@ private fun TripDetailContent(
 
             trip.knowledge?.let { knowledge ->
                 item {
-                    Column(verticalArrangement = Arrangement.spacedBy(EgTheme.spacings.x4l)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(BahrSpacing.xl)) {
                         knowledge.whatToBring?.let {
                             Section(stringResource(Res.string.trip_what_to_bring)) { Body(it) }
                         }
@@ -208,10 +223,12 @@ private fun TripDetailContent(
                 item {
                     Section(title = stringResource(Res.string.trip_hosted_by, host.displayName)) {
                         if (host.verified) {
-                            EgBadge(
-                                text = stringResource(Res.string.trip_host_verified),
-                                container = EgSuccessTint,
-                                content = EgSuccess,
+                            BahrBadge(
+                                props =
+                                    BahrBadge.Props(
+                                        text = stringResource(Res.string.trip_host_verified),
+                                        tone = BahrBadge.Tone.Success,
+                                    ),
                             )
                         }
                         host.bio?.let { Body(it) }
@@ -227,10 +244,10 @@ private fun TripDetailContent(
 
             if (state.departures.isNotEmpty()) {
                 item {
-                    Column(verticalArrangement = Arrangement.spacedBy(EgTheme.spacings.xl)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(BahrSpacing.md)) {
                         Text(
                             text = stringResource(Res.string.departures_pick_a_date),
-                            style = EgTheme.typography.cardTitle,
+                            style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.padding(horizontal = gutter),
                         )
                         DeparturePicker(
@@ -245,7 +262,7 @@ private fun TripDetailContent(
 
         val selected = state.selectedDeparture
         Column(modifier = Modifier.padding(gutter)) {
-            EgPrimaryButton(
+            BahrPrimaryButton(
                 text =
                     if (state.allSoldOut) {
                         soldOutLabel
@@ -254,6 +271,7 @@ private fun TripDetailContent(
                     },
                 enabled = selected != null && selected.bookable,
                 onClick = { selected?.let { onContinue(it.id) } },
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }
@@ -265,17 +283,21 @@ private fun Section(
     content: @Composable () -> Unit,
 ) {
     Column(
-        modifier = Modifier.padding(horizontal = EgTheme.spacings.screenGutter),
-        verticalArrangement = Arrangement.spacedBy(EgTheme.spacings.md),
+        modifier = Modifier.padding(horizontal = BahrSpacing.gutter),
+        verticalArrangement = Arrangement.spacedBy(BahrSpacing.sm),
     ) {
-        Text(text = title, style = EgTheme.typography.cardTitle)
+        Text(text = title, style = MaterialTheme.typography.titleMedium)
         content()
     }
 }
 
 @Composable
 private fun Body(text: String) {
-    Text(text = text, style = EgTheme.typography.body, color = EgInkSubtle)
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodyLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }
 
 /** The canvas hero is a 390x330 crop. */

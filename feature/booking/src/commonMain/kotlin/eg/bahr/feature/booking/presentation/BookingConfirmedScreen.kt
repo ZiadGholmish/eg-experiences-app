@@ -3,21 +3,21 @@ package eg.bahr.feature.booking.presentation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import eg.bahr.core.designsystem.component.EgBadge
-import eg.bahr.core.designsystem.component.EgErrorView
-import eg.bahr.core.designsystem.component.EgLoadingView
-import eg.bahr.core.designsystem.component.EgPrimaryButton
-import eg.bahr.core.designsystem.theme.EgInkSubtle
-import eg.bahr.core.designsystem.theme.EgSuccess
-import eg.bahr.core.designsystem.theme.EgSuccessTint
-import eg.bahr.core.designsystem.theme.EgTheme
+import eg.bahr.core.designsystem.components.BahrBadge
+import eg.bahr.core.designsystem.components.BahrErrorView
+import eg.bahr.core.designsystem.components.BahrLoadingView
+import eg.bahr.core.designsystem.components.BahrPrimaryButton
+import eg.bahr.core.designsystem.theme.BahrSpacing
+import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.action_retry
 import eg.bahr.core.localization.generated.resources.booking_confirmed
@@ -41,10 +41,10 @@ fun BookingConfirmedScreen(
     val booking = state.booking
 
     when {
-        state.isLoading -> EgLoadingView(modifier)
+        state.isLoading -> BahrLoadingView(modifier)
 
         booking == null ->
-            EgErrorView(
+            BahrErrorView(
                 message = state.error?.localizedMessage().orEmpty(),
                 retryLabel = stringResource(Res.string.action_retry),
                 onRetry = if (state.error?.isRetryable == true) viewModel::load else null,
@@ -53,42 +53,39 @@ fun BookingConfirmedScreen(
 
         else ->
             Column(
-                modifier = modifier.fillMaxSize().padding(EgTheme.spacings.screenGutter),
-                verticalArrangement = Arrangement.spacedBy(EgTheme.spacings.x4l),
+                modifier = modifier.fillMaxSize().padding(BahrSpacing.gutter),
+                verticalArrangement = Arrangement.spacedBy(BahrSpacing.xl),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                EgBadge(
-                    text = booking.status,
-                    container = EgSuccessTint,
-                    content = EgSuccess,
-                )
+                BahrBadge(props = BahrBadge.Props(text = booking.status, tone = BahrBadge.Tone.Success))
                 Text(
                     text = stringResource(Res.string.booking_confirmed),
-                    style = EgTheme.typography.screenTitle,
+                    style = MaterialTheme.typography.headlineMedium,
                 )
                 Text(
                     text = stringResource(Res.string.booking_your_ref),
-                    style = EgTheme.typography.meta,
-                    color = EgInkSubtle,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 // The reference is the one thing the user is asked to keep, so
                 // it is the largest thing on the screen.
-                Text(text = booking.ref, style = EgTheme.typography.priceLarge)
+                Text(text = booking.ref, style = BahrTheme.type.display)
 
                 booking.tripTitle?.let {
-                    Text(text = it, style = EgTheme.typography.cardTitle)
+                    Text(text = it, style = MaterialTheme.typography.titleMedium)
                 }
                 booking.meetingPoint?.let { point ->
                     Text(
                         text = "${stringResource(Res.string.trip_meeting_point)}: $point",
-                        style = EgTheme.typography.body,
-                        color = EgInkSubtle,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
 
-                EgPrimaryButton(
+                BahrPrimaryButton(
                     text = stringResource(Res.string.trips_title),
                     onClick = onDone,
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
     }

@@ -62,7 +62,7 @@ SECURITY_JWT_SECRET='local-dev-signing-key-at-least-32-bytes!!' ./gradlew :api:b
 
 6. **Money is `{ amount, currency }`, never a bare number, and the client never
    does money arithmetic.** Totals come from the server, which computes them
-   against a ledger. `MoneyFormatter` only formats.
+   against a ledger. `BahrFormat.money` only formats.
 
 7. **No design literals in feature modules.** Colours, spacing, radii and type
    come from `core:designsystem`. See `docs/design-language.md`.

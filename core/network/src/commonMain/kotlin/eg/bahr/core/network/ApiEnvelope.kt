@@ -1,6 +1,5 @@
 package eg.bahr.core.network
 
-import eg.bahr.core.common.money.Money
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -48,11 +47,16 @@ data class PageDto<T>(
     val hasMore: Boolean get() = page + 1 < totalPages
 }
 
-/** Wire form of [Money]. */
+/**
+ * The contract's `Money`: an amount with its currency, never a bare number.
+ *
+ * A number without a currency forces each client to assume one; phase 1 is EGP-only, and carrying
+ * the currency is what makes a second one a feature rather than a bug. [amount] is whole pounds
+ * (`int64` in openapi.yaml). The client never does money arithmetic — totals, refunds and
+ * commission come from the server — so this is only ever formatted, by `BahrFormat.money`.
+ */
 @Serializable
 data class MoneyDto(
-    val amount: Double,
+    val amount: Long,
     @SerialName("currency") val currencyCode: String,
-) {
-    fun toMoney(): Money = Money(amount = amount, currency = currencyCode)
-}
+)

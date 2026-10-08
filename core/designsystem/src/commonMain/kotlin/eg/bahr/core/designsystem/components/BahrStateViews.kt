@@ -1,4 +1,4 @@
-package eg.bahr.core.designsystem.component
+package eg.bahr.core.designsystem.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -6,24 +6,28 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
-import eg.bahr.core.designsystem.theme.EgInkSubtle
-import eg.bahr.core.designsystem.theme.EgTeal
-import eg.bahr.core.designsystem.theme.EgTheme
+import eg.bahr.core.designsystem.theme.BahrSpacing
+
+/*
+ * Full-screen loading / error / empty states. Not in the handoff; kept from the provisional
+ * `Eg*View`s (every screen uses them) with the same signatures, rebuilt on Bahr tokens.
+ */
 
 @Composable
-fun EgLoadingView(modifier: Modifier = Modifier) {
+fun BahrLoadingView(modifier: Modifier = Modifier) {
     Column(
         modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        CircularProgressIndicator(color = EgTeal)
+        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
     }
 }
 
@@ -34,45 +38,49 @@ fun EgLoadingView(modifier: Modifier = Modifier) {
  * serialization error means the contract moved and retrying just fails again.
  */
 @Composable
-fun EgErrorView(
+fun BahrErrorView(
     message: String,
     retryLabel: String,
     modifier: Modifier = Modifier,
     onRetry: (() -> Unit)? = null,
 ) {
     Column(
-        modifier = modifier.fillMaxSize().padding(EgTheme.spacings.x5l),
+        modifier = modifier.fillMaxSize().padding(BahrSpacing.xl),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
             text = message,
-            style = EgTheme.typography.body,
-            color = EgInkSubtle,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
         if (onRetry != null) {
             TextButton(onClick = onRetry, modifier = Modifier.wrapContentWidth()) {
-                Text(text = retryLabel, style = EgTheme.typography.button, color = EgTeal)
+                Text(
+                    text = retryLabel,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                )
             }
         }
     }
 }
 
 @Composable
-fun EgEmptyView(
+fun BahrEmptyView(
     message: String,
     modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier.fillMaxSize().padding(EgTheme.spacings.x5l),
+        modifier = modifier.fillMaxSize().padding(BahrSpacing.xl),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
             text = message,
-            style = EgTheme.typography.body,
-            color = EgInkSubtle,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
     }

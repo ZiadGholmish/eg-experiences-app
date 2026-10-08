@@ -1,85 +1,75 @@
 # Design language
 
-The source of truth for this app's visual language is **the design system on
-claude.ai/design**. The tokens below are checked in so the code has something
-concrete to compile against, and so nobody has to re-derive them from a 3.3 MB
-artifact bundle.
+The source of truth is the **Bahr design system handoff**, vendored in the
+workspace at `../docs/design/` (paths below are relative to `mobile-app/`):
 
-They are **provisional**: where the synced design system disagrees, it wins.
+- `../docs/design/design-system/tokens.json` — **the single source of truth** for
+  every value (palette, colour roles, type scale, shape, elevation, spacing, motion).
+- `../docs/design/design-system/tokens.css` — the same tokens for the web, plus the
+  values of the two alternate themes (`dusk`, `highcontrast`), which `tokens.json`
+  only names.
+- `../docs/design/compose-reference/` — the Kotlin port this module was built from.
+- `../docs/design/HANDOFF.md` — screen-by-screen specs and the token tables;
+  `../docs/design/prototype/Burullus Color.dc.html` — the prototype (EN + AR copy,
+  states).
 
-## Where the tokens came from
+`core:designsystem` (package `eg.bahr.core.designsystem`) is that port. When a
+value changes, change `tokens.json` first, then `tokens.css`, then the Kotlin file
+in the table below. If the Kotlin and `tokens.json` ever disagree, `tokens.json`
+wins.
 
-The old Java backend's plan (in the private Java backend repo, now superseded by
-`../docs/PLAN.md`) cites a design canvas with 8 mobile artboards at 390px:
-home with category filters, map view, trip detail, date + party, checkout with a
-hold timer, confirmation, and a host dashboard. The values in
-`core/designsystem/src/commonMain/kotlin/.../theme/` were read out of that
-canvas's markup.
+## Token mapping
 
-One trap for anyone re-deriving them: the canvas bundle embeds a **map widget**
-whose own chrome uses a different teal (`#14606A`), Roboto, and 3–5px radii.
-That is Leaflet's stylesheet, not this product's design. Read the root canvas
-template, not the nested map page.
-
-## Syncing from claude.ai/design
-
-1. Run `/design-login` in Claude Code once, to grant design-system access.
-2. Run `/design-sync` and pick this app's design system.
-3. The sync writes per-component specs; reconcile them against
-   `core/designsystem` one component at a time, and update this file's tables.
-
-Until step 1 is done, the tables below are what the app ships.
-
-## Colour
-
-| Token | Hex | Used for |
+| tokens.json | Compose | File |
 |---|---|---|
-| `EgTeal` | `#0E7C86` | Primary action, price, active chip, hero |
-| `EgTealTint` | `#EAF7F8` | Chip and icon-pill backgrounds |
-| `EgCoral` | `#FF6B4A` | Urgency: hold timer, "2 seats left" |
-| `EgCoralTint` | `#FFF0E9` | Badge background for the above |
-| `EgCoralDeep` | `#A93C1C` | Text on `EgCoralTint` |
-| `EgInk` | `#12232A` | Primary text |
-| `EgInkMuted` | `#41585F` | Secondary text |
-| `EgInkSubtle` | `#5C6F77` | Body copy |
-| `EgInkFaint` | `#8B9B9F` | Metadata, disabled |
-| `EgSurface` | `#FFFFFF` | Cards, sheets |
-| `EgSurfaceMuted` | `#F7FAFA` | Section backgrounds |
-| `EgSurfaceSunken` | `#F2F6F6` | Image placeholders |
-| `EgStroke` | `#DFE9EA` | Dividers, unselected borders |
-| `EgSuccess` / `EgSuccessTint` | `#1A6B4E` / `#E5F6EF` | Confirmed, verified host |
-| `EgWarning` / `EgWarningTint` | `#C98A0E` / `#FFF6E3` | Pending |
-| `EgDanger` | `#D94F28` | Errors, cancellation |
+| `ref.palette.*` | `BahrPalette.*` (never used by screens) | `theme/BahrColors.kt` |
+| `sys.color.primary / secondary / tertiary / error` (+ `on*`, `*Container`) | `MaterialTheme.colorScheme.*` | `theme/BahrColors.kt` |
+| `surface / surfaceLowest / surfaceLow / surfaceContainer / surfaceDim` | `colorScheme.surface / surfaceContainerLowest / surfaceContainerLow / surfaceContainer / surfaceDim` | `theme/BahrColors.kt` |
+| `onSurface / onSurfaceVariant / outline / outlineVariant` | `colorScheme.*` | `theme/BahrColors.kt` |
+| `primaryDim, primaryBright, primaryDeep, secondaryDim, tertiaryHover, quaternary*, success*, onSurfaceSecondary, onSurfaceDisabled, track, surfaceTranslucent`, scrims | `BahrTheme.colors.*` | `theme/BahrColors.kt` |
+| `typescale.display` | `typography.displaySmall` / `BahrTheme.type.display` | `theme/BahrType.kt` |
+| `typescale.headline / titleLarge / title` | `typography.headlineMedium / titleLarge / titleMedium` | `theme/BahrType.kt` |
+| `typescale.body / bodySmall` | `typography.bodyLarge / bodyMedium` | `theme/BahrType.kt` |
+| `typescale.label / labelSmall` | `typography.labelLarge / labelMedium` | `theme/BahrType.kt` |
+| `typescale.overline` | `BahrTheme.type.overline` + `Overline()` | `theme/BahrType.kt` |
+| price (product style) | `BahrTheme.type.price` | `theme/BahrType.kt` |
+| `ref.typeface.plain / arabic` | Manrope / IBM Plex Sans Arabic, chosen by `BahrLocale` | `theme/BahrFonts.kt` |
+| `shape.*` | `BahrTheme.shapes.*` (M3 `Shapes` gets extraSmall–extraLarge) | `theme/BahrShapeElevationMotion.kt` |
+| `elevation.*` | `Modifier.bahrShadow(BahrElevation.X, shape, BahrTheme.colors)` | `theme/BahrShapeElevationMotion.kt` |
+| `spacing` (4dp base, 18dp gutter) | `BahrSpacing.xs…xxl`, `BahrSpacing.gutter` | `theme/BahrShapeElevationMotion.kt` |
+| `motion` | `BahrMotion` | `theme/BahrShapeElevationMotion.kt` |
+| `[data-theme=dusk / highcontrast]` | `BahrTheme(theme = BahrThemeName.Dusk / HighContrast)` | `theme/BahrColors.kt` |
+| `meta.currency`, `meta.timeFormat` | `BahrFormat` (EGP, 24h, Western digits) | `format/BahrFormat.kt` |
 
-Light only. The canvas has no dark artboards, and a guessed dark palette is
-worse than none.
+`BahrTheme(locale = …)` is set once at the app root from the stored language. It
+picks the font, applies the Arabic type rules (one weight heavier at display
+sizes, looser leading, no tracking, no uppercase) and sets the layout direction.
 
-## Type
+## Components
 
-**Manrope** for Latin, **IBM Plex Sans Arabic** as the fallback in the same
-`FontFamily`. Arabic is the default locale, so the Arabic cut is the common
-case, not the exception.
+From the handoff (`../docs/design/compose-reference/components/BahrComponents.kt`): `BahrPrimaryButton`,
+`BahrFilterChip`, `SeatBadge` (copy now from `core:localization`), `HoldCountdown`, `StickyActionBar`, `ImageGround`,
+`Overline`, `BahrCard`.
 
-Static weight cuts, not the variable Manrope: minSdk is 24 and Android only
-honours variable-font weight axes from API 26.
+Kept from the provisional set and rebuilt on Bahr tokens, because the handoff has
+no equivalent: `BahrBadge` (tone-driven status pill) and `BahrLoadingView` /
+`BahrErrorView` / `BahrEmptyView`.
 
-The canvas runs 10.5–30sp, with **weight** carrying most of the hierarchy — 500
-Medium for body, 700 Bold for labels, 800 ExtraBold for titles and prices. Named
-roles are in `EgTypography`; Material's slots are mapped to the nearest step so
-`MaterialTheme.typography.*` stays usable.
-
-## Shape and spacing
-
-Two radii do almost all the work: **100dp pills** (every chip, badge, primary
-button) and **20dp cards** (photo tiles, content blocks). Sheets are 24dp on the
-top corners only.
-
-The screen gutter is **18dp** — every 390px artboard pads its content by 18.
+New components use `interface X { @Immutable data class Props(…) }` +
+`@Composable fun X(modifier, props)`, and enter the design system only once a
+second caller exists.
 
 ## Rules
 
-- No `.dp`, `Color(0x…)` or `.sp` literals in a feature module. Everything comes
-  from `EgTheme.spacings`, `EgTheme.shapes`, `EgTheme.typography` and the named
-  colours.
-- Lay out with `start`/`end`, never `left`/`right`. Arabic is RTL and is the
-  default, so a hardcoded side is a bug for most users, not an edge case.
+- **No literals in feature code.** No `Color(0x…)`, raw `.dp`/`.sp`, or
+  `FontFamily` in `feature/*` or `composeApp`. Screens read `MaterialTheme.*`,
+  `BahrTheme.*`, `BahrSpacing` and `BahrMotion` only. Check:
+  `grep -rnE --exclude-dir=build "Color\(0x|[^a-zA-Z_][0-9]+(\.[0-9]+)?\.dp\b|FontFamily\(" feature/ composeApp/src`.
+- **Coral (`tertiary`) is the action colour and nothing else.** Only
+  `BahrPrimaryButton`, and the hold / sold-out notices on `tertiaryContainer`.
+- **Arabic is its own layout.** Use `start`/`end` and `Arrangement`, never
+  `left`/`right`. Times and phone numbers stay LTR inside RTL.
+- **Western digits, 24h, EGP** in both languages, through `BahrFormat`. Never a
+  platform formatter with the `ar` locale.
+- **Images never block.** `ImageGround` paints `surfaceDim` first; title, price,
+  duration and CTA render without waiting on images.

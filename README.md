@@ -28,9 +28,9 @@ the plan is `../docs/PLAN.md`.
 mobile-app/
 ├── composeApp/            # The app: entry points, DI wiring, nav graph
 ├── core/
-│   ├── common/            # AppResult, AppError, Money, AppLanguage
-│   ├── network/           # ApiEnvelope, callApi, HttpClient factory
-│   ├── designsystem/      # Colour, type, spacing, shape, shared components
+│   ├── common/            # AppResult, AppError, AppLanguage
+│   ├── network/           # ApiEnvelope, MoneyDto, callApi, HttpClient factory
+│   ├── designsystem/      # BahrTheme, tokens, BahrFormat, shared components
 │   ├── localization/      # ar/en strings, RTL provider, error messages
 │   └── datastore/         # Persisted settings
 ├── feature/

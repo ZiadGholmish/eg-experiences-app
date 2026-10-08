@@ -30,6 +30,10 @@ kotlin {
             implementation(libs.compose.ui)
             implementation(libs.compose.material.icons)
             implementation(libs.compose.components.resources)
+            // Allowed edge (bahr-modularization graph): component copy comes from string resources.
+            implementation(projects.core.localization)
+            // BahrFormat takes LocalDate / LocalTime (tokens: 24h, Western digits).
+            implementation(libs.kotlinx.datetime)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

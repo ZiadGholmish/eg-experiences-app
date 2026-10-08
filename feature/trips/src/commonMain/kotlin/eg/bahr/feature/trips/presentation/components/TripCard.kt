@@ -1,6 +1,5 @@
 package eg.bahr.feature.trips.presentation.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -17,13 +17,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import coil3.compose.AsyncImage
-import eg.bahr.core.common.money.MoneyFormatter
-import eg.bahr.core.designsystem.component.EgBadge
-import eg.bahr.core.designsystem.theme.EgInkFaint
-import eg.bahr.core.designsystem.theme.EgInkSubtle
-import eg.bahr.core.designsystem.theme.EgSurfaceSunken
-import eg.bahr.core.designsystem.theme.EgTeal
-import eg.bahr.core.designsystem.theme.EgTheme
+import eg.bahr.core.designsystem.components.BahrBadge
+import eg.bahr.core.designsystem.components.ImageGround
+import eg.bahr.core.designsystem.format.BahrFormat
+import eg.bahr.core.designsystem.theme.BahrSpacing
+import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.feature.trips.model.TripSummaryDto
 
 /**
@@ -43,56 +41,66 @@ fun TripCard(
         modifier =
             modifier
                 .fillMaxWidth()
-                .clip(EgTheme.shapes.card)
+                .clip(BahrTheme.shapes.card)
                 .clickable(onClick = onClick),
-        verticalArrangement = Arrangement.spacedBy(EgTheme.spacings.lg),
+        verticalArrangement = Arrangement.spacedBy(BahrSpacing.md),
     ) {
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(CoverAspectRatio)
-                    .clip(EgTheme.shapes.card)
-                    .background(EgSurfaceSunken),
-        ) {
-            AsyncImage(
-                model = trip.coverPhotoUrl,
-                contentDescription = trip.title,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxWidth().aspectRatio(CoverAspectRatio),
-            )
+        // surfaceDim is painted first, so title and price never wait on the photo.
+        Box {
+            ImageGround(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(CoverAspectRatio)
+                        .clip(BahrTheme.shapes.card),
+            ) {
+                AsyncImage(
+                    model = trip.coverPhotoUrl,
+                    contentDescription = trip.title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxWidth().aspectRatio(CoverAspectRatio),
+                )
+            }
             trip.category?.let { category ->
-                EgBadge(
-                    text = category,
-                    modifier = Modifier.align(Alignment.TopStart).padding(EgTheme.spacings.xl),
+                BahrBadge(
+                    modifier = Modifier.align(Alignment.TopStart).padding(BahrSpacing.md),
+                    props = BahrBadge.Props(text = category),
                 )
             }
         }
 
-        Column(verticalArrangement = Arrangement.spacedBy(EgTheme.spacings.xs)) {
+        Column(verticalArrangement = Arrangement.spacedBy(BahrSpacing.xs)) {
             trip.kicker?.let { kicker ->
-                Text(text = kicker, style = EgTheme.typography.kicker, color = EgInkFaint)
+                Text(
+                    text = kicker,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
             Text(
                 text = trip.title,
-                style = EgTheme.typography.cardTitle,
+                style = MaterialTheme.typography.titleMedium,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
-            Row(
-                verticalAlignment = Alignment.Bottom,
-                horizontalArrangement = Arrangement.spacedBy(EgTheme.spacings.sm),
-            ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(BahrSpacing.xs)) {
                 Text(
-                    text = MoneyFormatter.format(trip.pricePerPerson.toMoney()),
-                    style = EgTheme.typography.price,
-                    color = EgTeal,
+                    text =
+                        BahrFormat.money(
+                            trip.pricePerPerson.amount,
+                            trip.pricePerPerson.currencyCode,
+                            BahrTheme.locale.isArabic,
+                        ),
+                    style = BahrTheme.type.price,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.alignByBaseline(),
                 )
+                // Baseline alignment replaces the old 2dp bottom nudge, which has no token.
                 Text(
                     text = perPersonLabel,
-                    style = EgTheme.typography.meta,
-                    color = EgInkSubtle,
-                    modifier = Modifier.padding(bottom = EgTheme.spacings.xxs),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.alignByBaseline(),
                 )
             }
         }

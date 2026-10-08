@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -20,11 +21,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import eg.bahr.core.designsystem.component.EgEmptyView
-import eg.bahr.core.designsystem.component.EgErrorView
-import eg.bahr.core.designsystem.component.EgFilterChip
-import eg.bahr.core.designsystem.component.EgLoadingView
-import eg.bahr.core.designsystem.theme.EgTheme
+import eg.bahr.core.designsystem.components.BahrEmptyView
+import eg.bahr.core.designsystem.components.BahrErrorView
+import eg.bahr.core.designsystem.components.BahrFilterChip
+import eg.bahr.core.designsystem.components.BahrLoadingView
+import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.action_retry
 import eg.bahr.core.localization.generated.resources.trip_per_person
@@ -64,11 +65,11 @@ fun TripListScreen(
     }
 
     when {
-        state.isLoading -> EgLoadingView(modifier)
+        state.isLoading -> BahrLoadingView(modifier)
 
         state.error != null && state.trips.isEmpty() -> {
             val error = state.error!!
-            EgErrorView(
+            BahrErrorView(
                 message = error.localizedMessage(),
                 retryLabel = stringResource(Res.string.action_retry),
                 onRetry = if (error.isRetryable) viewModel::refresh else null,
@@ -77,23 +78,23 @@ fun TripListScreen(
         }
 
         state.visibleTrips.isEmpty() ->
-            EgEmptyView(message = stringResource(Res.string.trips_empty), modifier = modifier)
+            BahrEmptyView(message = stringResource(Res.string.trips_empty), modifier = modifier)
 
         else ->
             LazyColumn(
                 state = listState,
                 modifier = modifier.fillMaxSize(),
-                contentPadding = PaddingValues(vertical = EgTheme.spacings.x4l),
-                verticalArrangement = Arrangement.spacedBy(EgTheme.spacings.x5l),
+                contentPadding = PaddingValues(vertical = BahrSpacing.xl),
+                verticalArrangement = Arrangement.spacedBy(BahrSpacing.xl),
             ) {
                 item {
                     Column(
-                        modifier = Modifier.padding(horizontal = EgTheme.spacings.screenGutter),
-                        verticalArrangement = Arrangement.spacedBy(EgTheme.spacings.x3l),
+                        modifier = Modifier.padding(horizontal = BahrSpacing.gutter),
+                        verticalArrangement = Arrangement.spacedBy(BahrSpacing.lg),
                     ) {
                         Text(
                             text = stringResource(Res.string.trips_title),
-                            style = EgTheme.typography.screenTitle,
+                            style = MaterialTheme.typography.headlineMedium,
                         )
                     }
                 }
@@ -102,11 +103,11 @@ fun TripListScreen(
                     item {
                         LazyRow(
                             modifier = Modifier.fillMaxWidth(),
-                            contentPadding = PaddingValues(horizontal = EgTheme.spacings.screenGutter),
-                            horizontalArrangement = Arrangement.spacedBy(EgTheme.spacings.md),
+                            contentPadding = PaddingValues(horizontal = BahrSpacing.gutter),
+                            horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm),
                         ) {
                             items(state.categories) { category ->
-                                EgFilterChip(
+                                BahrFilterChip(
                                     label = category,
                                     selected = state.selectedCategory == category,
                                     onClick = {
@@ -121,7 +122,7 @@ fun TripListScreen(
                 }
 
                 items(state.visibleTrips, key = { it.id }) { trip ->
-                    Row(modifier = Modifier.padding(horizontal = EgTheme.spacings.screenGutter)) {
+                    Row(modifier = Modifier.padding(horizontal = BahrSpacing.gutter)) {
                         TripCard(
                             trip = trip,
                             perPersonLabel = perPersonLabel,
