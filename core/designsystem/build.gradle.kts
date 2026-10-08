@@ -8,7 +8,8 @@ plugins {
 }
 
 compose.resources {
-    publicResClass = true
+    // Internal: features reach fonts and icons only through BahrTheme and BahrIcons.
+    publicResClass = false
     packageOfResClass = "eg.bahr.core.designsystem.generated.resources"
 }
 
@@ -28,7 +29,6 @@ kotlin {
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)
             implementation(libs.compose.ui)
-            implementation(libs.compose.material.icons)
             implementation(libs.compose.components.resources)
             // Allowed edge (bahr-modularization graph): component copy comes from string resources.
             implementation(projects.core.localization)

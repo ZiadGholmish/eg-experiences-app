@@ -52,8 +52,8 @@ import org.jetbrains.compose.resources.stringResource
  * button, and `SeatBadge` reading the theme locale), so these do not follow the Interface + Props
  * pattern new components use.
  *
- * Icons: Material Symbols Rounded (same set as the prototype). Pass ImageVectors from
- * material-icons-extended or a generated Symbols set; components never hard-code icons.
+ * Icons: Material Symbols Rounded, the prototype's set. Callers pass `BahrIcons.X.outlined()` or
+ * `.filled()`; components never hard-code icons.
  */
 
 private const val PRIMARY_BUTTON_MIN_HEIGHT = 54

@@ -10,7 +10,6 @@ androidx-appcompat = "1.7.1"
 androidx-lifecycle = "2.9.6"
 composeMultiplatform = "1.10.0"
 composeMaterial3 = "1.10.0-alpha05"
-composeIcons = "1.7.3"
 kotlin = "2.3.0"
 
 # DI
@@ -57,7 +56,6 @@ compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.re
 compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "composeMultiplatform" }
 compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "composeMaterial3" }
 compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "composeMultiplatform" }
-compose-material-icons = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "composeIcons" }
 compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "composeMultiplatform" }
 compose-uiTooling = { module = "org.jetbrains.compose.ui:ui-tooling", version.ref = "composeMultiplatform" }
 compose-uiToolingPreview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "composeMultiplatform" }

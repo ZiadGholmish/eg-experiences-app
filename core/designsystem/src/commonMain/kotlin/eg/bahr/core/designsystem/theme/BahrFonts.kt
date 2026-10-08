@@ -18,7 +18,9 @@ import org.jetbrains.compose.resources.Font
 /*
  * The only file that knows which font files exist. Everything else asks [bahrFontFamily].
  *
- * Files live in `composeResources/font/` (lower_snake_case), both SIL OFL:
+ * Files live in `composeResources/font/` (lower_snake_case), both SIL OFL, byte-identical to
+ * upstream (sources and hashes in docs/design-language.md, licence texts in
+ * `composeResources/files/licenses/`):
  *   manrope_{regular,medium,semibold,bold,extrabold}.ttf          — ref.typeface.plain
  *   ibm_plex_sans_arabic_{regular,medium,semibold,bold}.ttf       — ref.typeface.arabic
  *
@@ -40,6 +42,10 @@ internal fun manropeFamily(): FontFamily =
  * IBM Plex Sans Arabic stops at Bold (700). The Arabic type rule asks for one weight heavier at
  * display sizes (800 → 900), so ExtraBold and Black are mapped to the Bold cut explicitly: the
  * heaviest real Arabic weight, rather than whatever the platform's font matcher picks.
+ *
+ * So the "one weight heavier" rule cannot show in Arabic: every style it bumps (display,
+ * headline, titleLarge) already asks for 700 or more, and all of them land on this Bold cut. That
+ * is a limit of the typeface, not a bug; no heavier OFL cut of Plex Arabic exists.
  */
 @Composable
 internal fun plexArabicFamily(): FontFamily =
