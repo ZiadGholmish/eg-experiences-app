@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -53,6 +54,7 @@ import eg.bahr.feature.trips.presentation.components.TripItinerary
 import eg.bahr.feature.trips.presentation.components.TripReviews
 import eg.bahr.feature.trips.presentation.components.TripStickyBar
 import eg.bahr.feature.trips.presentation.components.TripTitleBlock
+import eg.bahr.feature.trips.presentation.components.WaitlistPanelState
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -88,8 +90,26 @@ internal fun TripDetailScreen(
         )
         return
     }
+    val form = state.openWaitlist
+    val joinedPhone = state.joinedPhone
+    val maxPartySize = state.maxPartySize
+    // Remembered so an unrelated recomposition hands the band the same instance (it compares by identity).
+    val waitlist =
+        remember(form, joinedPhone, maxPartySize, viewModel) {
+            WaitlistPanelState(
+                form = form,
+                joinedPhone = joinedPhone,
+                maxPartySize = maxPartySize,
+                onOpen = viewModel::openWaitlist,
+                onPhoneChange = viewModel::setWaitlistPhone,
+                onDecrease = viewModel::decreaseWaitlistParty,
+                onIncrease = viewModel::increaseWaitlistParty,
+                onJoin = viewModel::joinWaitlist,
+            )
+        }
     TripPage(
         state = state,
+        waitlist = waitlist,
         onBack = onBack,
         onSelectDeparture = viewModel::selectDeparture,
         onContinue = { departureId -> onContinue(slug, departureId) },
@@ -103,6 +123,7 @@ internal enum class TripSection { Hero, Title, Facts, Inclusions, Itinerary, Hos
 @Composable
 private fun TripPage(
     state: TripDetailUiState,
+    waitlist: WaitlistPanelState,
     onBack: () -> Unit,
     onSelectDeparture: (String) -> Unit,
     onContinue: (String) -> Unit,
@@ -114,7 +135,9 @@ private fun TripPage(
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
 
-    Column(modifier = modifier.fillMaxSize()) {
+    // imePadding: the waiting-list phone field sits low on the page; the list shrinks above the
+    // keyboard (and the sticky bar rides on it) so the focused field can be scrolled into view.
+    Column(modifier = modifier.fillMaxSize().imePadding()) {
         Box(modifier = Modifier.weight(1f)) {
             LazyColumn(
                 state = listState,
@@ -122,7 +145,7 @@ private fun TripPage(
                 contentPadding = PaddingValues(bottom = BahrSpacing.xl),
             ) {
                 items(sections, key = { it.name }) { section ->
-                    Section(section, state, header, trip, onBack, onSelectDeparture)
+                    Section(section, state, header, trip, waitlist, onBack, onSelectDeparture)
                 }
             }
             StatusBarScrim(visible = { listState.firstVisibleItemIndex > 0 })
@@ -139,6 +162,7 @@ private fun TripPage(
                     state.cta == TripCta.ChooseDate -> scope.launch { listState.scrollTo(sections, TripSection.Availability) }
                 }
             },
+            modifier = Modifier.testTag(TRIP_STICKY_BAR_TAG),
         )
     }
 }
@@ -196,6 +220,7 @@ private fun Section(
     state: TripDetailUiState,
     header: TripHeader?,
     trip: TripDetailDto?,
+    waitlist: WaitlistPanelState,
     onBack: () -> Unit,
     onSelectDeparture: (String) -> Unit,
 ) {
@@ -231,6 +256,8 @@ private fun Section(
                 selected = state.selectedDeparture,
                 alternative = state.alternative,
                 policy = trip?.policy,
+                waitlist = waitlist,
+                waitlistOutcome = state.waitlistOutcome,
                 onSelect = onSelectDeparture,
                 modifier = Modifier.padding(top = BahrSpacing.xxl),
             )
@@ -270,6 +297,9 @@ private fun TripDetailDto.photos() = gallery.ifEmpty { listOfNotNull(heroImage ?
 
 /** Lets screenshot tests scroll the page to a section by key. */
 internal const val TRIP_PAGE_TAG = "trip_page"
+
+/** The sticky bar, for the keyboard test (the waiting-list phone field must stay above it). */
+internal const val TRIP_STICKY_BAR_TAG = "trip_sticky_bar"
 
 private const val TITLE_SKELETON_LINES = 3
 private const val ITINERARY_SKELETON_LINES = 5

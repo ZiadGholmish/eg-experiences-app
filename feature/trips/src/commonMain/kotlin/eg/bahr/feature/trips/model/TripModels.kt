@@ -8,7 +8,8 @@ import kotlinx.serialization.Serializable
  * Wire shapes for `/api/v1/trips`, field for field with `../docs/api/openapi.yaml`.
  *
  * The list side is [TripPageDto] and [TripCardDto]; the trip page is [TripDetailDto] (`TripDetail`)
- * and [DepartureDto] (`Departure`, also `GET /trips/{slug}/departures`).
+ * and [DepartureDto] (`Departure`, also `GET /trips/{slug}/departures`). Joining a sold-out date's
+ * waiting list sends a [WaitlistRequest].
  *
  * The backend omits null fields, so everything the contract does not mark `required` is nullable
  * with a default here. When the backend adds a field, add it the same way: the JSON parser ignores
@@ -283,4 +284,18 @@ internal data class DepartureDto(
     val bookable: Boolean,
     val unavailableReason: String? = null,
     val price: MoneyDto,
+)
+
+/**
+ * openapi `WaitlistRequest` (`POST /departures/{departureId}/waitlist`, `joinWaitlist`): a phone and a
+ * party size for a sold-out date (D3: only `SOLD_OUT` has a list).
+ *
+ * [locale] is left out (null is not sent): the contract defaults it to the request's
+ * `Accept-Language`, which is already the app's stored language.
+ */
+@Serializable
+internal data class WaitlistRequest(
+    val phone: String,
+    val partySize: Int,
+    val locale: String? = null,
 )

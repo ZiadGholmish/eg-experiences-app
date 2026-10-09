@@ -8,7 +8,7 @@ import eg.bahr.feature.trips.model.DepartureDto
  *
  * Read from the contract's `unavailableReason`, never from `soldOut`: a cancelled date that was
  * also full has `soldOut: true` but reads [Cancelled], and a full date past its cutoff reads
- * [Closed]. Only [SoldOut] can be picked to show the sold-out notice (and, in M2-M3, the waitlist).
+ * [Closed]. Only [SoldOut] can be picked to show the sold-out notice and its waiting list.
  */
 internal enum class DateAvailability { Open, SoldOut, Cancelled, Closed }
 

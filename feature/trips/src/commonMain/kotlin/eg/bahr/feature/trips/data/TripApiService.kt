@@ -5,9 +5,12 @@ import eg.bahr.core.network.callApi
 import eg.bahr.feature.trips.model.DepartureDto
 import eg.bahr.feature.trips.model.TripDetailDto
 import eg.bahr.feature.trips.model.TripPageDto
+import eg.bahr.feature.trips.model.WaitlistRequest
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
 
 /**
  * The public catalogue. None of these require a token: a trip link dropped into
@@ -37,6 +40,22 @@ internal class TripApiService(
     suspend fun departuresFor(slug: String): AppResult<List<DepartureDto>> =
         callApi {
             client.get("trips/$slug/departures")
+        }
+
+    /**
+     * `joinWaitlist`: puts a phone on a sold-out date's waiting list. Lives with the trip page, not
+     * in `feature:booking`, because the button sits on the trip page's sold-out notice and the call
+     * is a departure-level public endpoint; owning it here avoids a feature-to-feature edge.
+     *
+     * The 201 body is `{"success":true}` and says nothing more (a repeat join answers the same), so
+     * it reads as [Unit].
+     */
+    suspend fun joinWaitlist(
+        departureId: String,
+        request: WaitlistRequest,
+    ): AppResult<Unit> =
+        callApi {
+            client.post("departures/$departureId/waitlist") { setBody(request) }
         }
 
     companion object {

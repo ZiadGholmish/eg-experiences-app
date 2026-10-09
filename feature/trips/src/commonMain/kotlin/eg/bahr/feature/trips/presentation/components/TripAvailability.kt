@@ -3,6 +3,7 @@ package eg.bahr.feature.trips.presentation.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -57,6 +58,7 @@ import eg.bahr.feature.trips.model.DepartureDto
 import eg.bahr.feature.trips.model.PolicyDto
 import eg.bahr.feature.trips.presentation.DateAvailability
 import eg.bahr.feature.trips.presentation.TripCta
+import eg.bahr.feature.trips.presentation.WaitlistOutcome
 import eg.bahr.feature.trips.presentation.availability
 import eg.bahr.feature.trips.presentation.isSelectable
 import org.jetbrains.compose.resources.pluralStringResource
@@ -64,9 +66,8 @@ import org.jetbrains.compose.resources.stringResource
 
 /**
  * Availability (item 10): a `primaryContainer` band with a row of date cards, the sold-out notice
- * when a full date is picked, and the policy in small print.
- *
- * The waiting-list button under the notice is not drawn: joining the list is M2 work.
+ * with its waiting list when a full date is picked, what a refused join turned out to mean, and the
+ * policy in small print.
  */
 @Composable
 internal fun TripAvailability(
@@ -75,6 +76,8 @@ internal fun TripAvailability(
     selected: DepartureDto?,
     alternative: DepartureDto?,
     policy: PolicyDto?,
+    waitlist: WaitlistPanelState,
+    waitlistOutcome: WaitlistOutcome?,
     onSelect: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -119,7 +122,8 @@ internal fun TripAvailability(
                     }
                 }
         }
-        if (selected?.availability == DateAvailability.SoldOut) SoldOutNotice(selected, alternative, gutter)
+        waitlistOutcome?.let { WaitlistOutcomeNote(it, gutter) }
+        if (selected?.availability == DateAvailability.SoldOut) SoldOutNotice(selected, alternative, waitlist, gutter)
         policy?.let { PolicyNote(it, gutter) }
     }
 }
@@ -223,12 +227,14 @@ internal fun seatsText(departure: DepartureDto): String =
 
 /**
  * "Sat 17 Oct is full. All 18 seats are booked. Sat 24 Oct has 11 seats left, same price." The
- * price sentence is only said when the two prices are equal (a comparison, never arithmetic).
+ * price sentence is only said when the two prices are equal (a comparison, never arithmetic). Then
+ * the waiting list: the button, its form, or the confirmation ([WaitlistPanel]).
  */
 @Composable
 private fun SoldOutNotice(
     full: DepartureDto,
     alternative: DepartureDto?,
+    waitlist: WaitlistPanelState,
     modifier: Modifier,
 ) {
     val c = MaterialTheme.colorScheme
@@ -263,6 +269,9 @@ private fun SoldOutNotice(
                 style = MaterialTheme.typography.bodyMedium,
                 color = c.onTertiaryContainer,
             )
+        }
+        Box(Modifier.padding(top = BahrSpacing.sm)) {
+            WaitlistPanel(fullDate = BahrFormat.date(full.date), panel = waitlist)
         }
     }
 }

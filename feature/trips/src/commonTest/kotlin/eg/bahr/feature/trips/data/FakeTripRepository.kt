@@ -9,6 +9,7 @@ import eg.bahr.feature.trips.model.NextDepartureDto
 import eg.bahr.feature.trips.model.TripCardDto
 import eg.bahr.feature.trips.model.TripDetailDto
 import eg.bahr.feature.trips.model.TripPageDto
+import eg.bahr.feature.trips.model.WaitlistRequest
 import kotlinx.datetime.LocalDate
 
 /**
@@ -23,8 +24,11 @@ internal class FakeTripRepository(
     var tripBySlug: suspend (slug: String) -> AppResult<TripDetailDto> = { unset() },
     var departuresFor: suspend (slug: String) -> AppResult<List<DepartureDto>> = { unset() },
     var cards: Map<String, TripCardDto> = emptyMap(),
+    var joinWaitlist: suspend (departureId: String, request: WaitlistRequest) -> AppResult<Unit> = { _, _ -> unset() },
 ) : TripRepository {
     val requestedPages = mutableListOf<Int>()
+    val departureReads = mutableListOf<String>()
+    val waitlistJoins = mutableListOf<Pair<String, WaitlistRequest>>()
 
     override suspend fun listTrips(page: Int): AppResult<TripPageDto> {
         requestedPages += page
@@ -33,7 +37,18 @@ internal class FakeTripRepository(
 
     override suspend fun tripBySlug(slug: String): AppResult<TripDetailDto> = tripBySlug.invoke(slug)
 
-    override suspend fun departuresFor(slug: String): AppResult<List<DepartureDto>> = departuresFor.invoke(slug)
+    override suspend fun departuresFor(slug: String): AppResult<List<DepartureDto>> {
+        departureReads += slug
+        return departuresFor.invoke(slug)
+    }
+
+    override suspend fun joinWaitlist(
+        departureId: String,
+        request: WaitlistRequest,
+    ): AppResult<Unit> {
+        waitlistJoins += departureId to request
+        return joinWaitlist.invoke(departureId, request)
+    }
 
     override fun cachedCard(slug: String): TripCardDto? = cards[slug]
 

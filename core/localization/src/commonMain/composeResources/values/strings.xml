@@ -35,6 +35,14 @@
     <string name="trip_sold_out_body">All %1$d seats are booked.</string>
     <string name="trip_sold_out_alternative">%1$s has %2$s left.</string>
     <string name="trip_sold_out_alternative_same_price">%1$s has %2$s left, same price.</string>
+    <string name="trip_waitlist_join">Join the waiting list</string>
+    <string name="trip_waitlist_form_note">Leave your number. If seats open up on this date, we’ll contact you.</string>
+    <string name="trip_waitlist_submit">Add me to the list</string>
+    <string name="trip_waitlist_joined_title">You’re on the waiting list</string>
+    <string name="trip_waitlist_joined_body">If seats open up on %1$s, we’ll contact you on %2$s.</string>
+    <string name="trip_waitlist_full">The waiting list for this date is full.</string>
+    <string name="trip_waitlist_seats_opened">Seats just opened up on %1$s. You can book it now.</string>
+    <string name="trip_waitlist_date_closed">%1$s can’t be booked any more. Pick another date.</string>
     <string name="trip_dates_empty">No dates are open yet.</string>
     <string name="trip_policy_cancellation">Free cancellation up to %1$d hours before departure.</string>
     <string name="trip_policy_units">Prices in EGP, times Cairo (24h).</string>

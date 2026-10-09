@@ -4,15 +4,18 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
+import eg.bahr.core.network.ApiErrorCodes
 import eg.bahr.feature.trips.data.TripRepository
 import eg.bahr.feature.trips.model.DepartureDto
 import eg.bahr.feature.trips.model.TripCardDto
 import eg.bahr.feature.trips.model.TripDetailDto
+import eg.bahr.feature.trips.model.WaitlistRequest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.datetime.LocalDate
 
 /** The sticky bar's button, in the handoff's three states: "Choose a date" → "Continue" → "Sold out". */
 internal enum class TripCta { ChooseDate, Continue, SoldOut }
@@ -27,6 +30,16 @@ internal data class TripDetailUiState(
     val liveDepartures: List<DepartureDto>? = null,
     val liveDeparturesLoading: Boolean = true,
     val selectedDepartureId: String? = null,
+    /** The waiting-list form under the sold-out notice; null until "Join the waiting list" is tapped. */
+    val waitlist: WaitlistForm? = null,
+    /**
+     * Dates joined in this visit, by departure id, with the phone they were joined under (said back in
+     * the confirmation). Kept per date so another date never reads as joined; not stored on the device,
+     * since a repeat join is harmless (the server answers the same either way).
+     */
+    val joinedWaitlists: Map<String, String> = emptyMap(),
+    /** What a refused join turned out to mean, said in the availability band (the notice may be gone). */
+    val waitlistOutcome: WaitlistOutcome? = null,
 ) {
     /**
      * The dates to show: the live list when it has answered, else the trip's own `dates` (the same
@@ -62,6 +75,60 @@ internal data class TripDetailUiState(
             val open = departures.filter { it.availability == DateAvailability.Open }
             return open.firstOrNull { it.date > full.date } ?: open.firstOrNull()
         }
+
+    /** The party limit per booking, from the server's policy (`policy.maxPartySize`), else the handoff's 6. */
+    val maxPartySize: Int
+        get() = trip?.policy?.maxPartySize?.takeIf { it >= MIN_PARTY_SIZE } ?: FALLBACK_MAX_PARTY_SIZE
+
+    /** The form for the selected date, if it is sold out and its form is open. */
+    val openWaitlist: WaitlistForm?
+        get() = waitlist?.takeIf { it.departureId == selectedDeparture?.takeIf { d -> d.availability == DateAvailability.SoldOut }?.id }
+
+    /** The phone the selected date was joined under, if it was joined in this visit. */
+    val joinedPhone: String?
+        get() = selectedDepartureId?.let { joinedWaitlists[it] }
+
+    internal companion object {
+        const val MIN_PARTY_SIZE = 1
+
+        /** Only when the trip does not state `policy.maxPartySize`: the handoff's 6 (as on date + party). */
+        const val FALLBACK_MAX_PARTY_SIZE = 6
+
+        /** The longest value the contract's `Phone` pattern accepts: a `+` and 15 digits. */
+        const val PHONE_MAX_LENGTH = 16
+
+        /** openapi `Phone`. */
+        val PHONE_PATTERN = Regex("""^\+?[0-9]{7,15}$""")
+    }
+}
+
+/**
+ * The waiting-list form for one sold-out date ([departureId]): the phone and party to put on its
+ * list. [error] is a refusal the form can recover from (list full, bad details, no network).
+ */
+internal data class WaitlistForm(
+    val departureId: String,
+    val phone: String = "",
+    val partySize: Int = TripDetailUiState.MIN_PARTY_SIZE,
+    val submitting: Boolean = false,
+    val error: AppError? = null,
+) {
+    /** The contract's `Phone` pattern, so a typo is caught before the request. */
+    val isPhoneValid: Boolean
+        get() = TripDetailUiState.PHONE_PATTERN.matches(phone)
+}
+
+/**
+ * A join the server refused because the date is no longer what the page showed, after which the
+ * dates are read again: [SeatsOpened] (`CONFLICT`: the date has seats, book it instead) or
+ * [DateClosed] (`DEPARTURE_NOT_OPEN` / `NOT_FOUND`: cancelled, past its cutoff, or gone).
+ */
+internal data class WaitlistOutcome(
+    val departureId: String,
+    val date: LocalDate,
+    val kind: Kind,
+) {
+    enum class Kind { SeatsOpened, DateClosed }
 }
 
 /**
@@ -107,17 +174,134 @@ internal class TripDetailViewModel(
         }
     }
 
-    /** Tapping the selected date again clears it; a date that cannot be picked is ignored. */
+    /**
+     * Tapping the selected date again clears it; a date that cannot be picked is ignored. A new pick
+     * drops the waiting-list form and the last join's outcome: both were about the old date.
+     */
     fun selectDeparture(departureId: String) {
         _uiState.update { state ->
             val departure = state.departures.firstOrNull { it.id == departureId }
             when {
                 departure == null || !departure.isSelectable() -> state
-                state.selectedDepartureId == departureId -> state.copy(selectedDepartureId = null)
-                else -> state.copy(selectedDepartureId = departureId)
+                state.selectedDepartureId == departureId -> state.copy(selectedDepartureId = null).withoutWaitlistForm()
+                else -> state.copy(selectedDepartureId = departureId).withoutWaitlistForm()
             }
         }
     }
+
+    /** "Join the waiting list" on the sold-out notice: opens the form for the selected sold-out date. */
+    fun openWaitlist() {
+        _uiState.update { state ->
+            val full = state.selectedDeparture?.takeIf { it.availability == DateAvailability.SoldOut } ?: return@update state
+            if (state.waitlist?.departureId == full.id) state else state.copy(waitlist = WaitlistForm(full.id))
+        }
+    }
+
+    /**
+     * Keeps digits and a leading `+` only, capped at the longest number the contract's `Phone` pattern
+     * accepts (as on date + party). The server compares phones by their digits.
+     */
+    fun setWaitlistPhone(phone: String) {
+        val digits = phone.filter { it.isDigit() }
+        val cleaned = (if (phone.trimStart().startsWith('+')) "+$digits" else digits).take(TripDetailUiState.PHONE_MAX_LENGTH)
+        updateForm { it.copy(phone = cleaned, error = null) }
+    }
+
+    fun increaseWaitlistParty() {
+        val max = _uiState.value.maxPartySize
+        updateForm { it.copy(partySize = (it.partySize + 1).coerceAtMost(max), error = null) }
+    }
+
+    fun decreaseWaitlistParty() {
+        updateForm { it.copy(partySize = (it.partySize - 1).coerceAtLeast(TripDetailUiState.MIN_PARTY_SIZE), error = null) }
+    }
+
+    /**
+     * Sends the form. Branches on the error code only:
+     * - `CONFLICT` (the date has seats again), `DEPARTURE_NOT_OPEN` / `NOT_FOUND` (cancelled, closed or
+     *   gone): the date is no longer what the page showed, so the dates are read again and the band
+     *   says what the fresh read shows ([outcomeAfterReread]);
+     * - anything else (`RATE_LIMITED` = this date's list is full, `VALIDATION_FAILED`, network): stays
+     *   on the form, which shows it.
+     * Seat counts are hints, so a refusal is expected, never a crash.
+     */
+    fun joinWaitlist() {
+        val state = _uiState.value
+        val form = state.openWaitlist ?: return
+        val full = state.selectedDeparture ?: return
+        if (form.submitting || !form.isPhoneValid) return
+        updateForm { it.copy(submitting = true, error = null) }
+        viewModelScope.launch {
+            val result = repository.joinWaitlist(form.departureId, WaitlistRequest(phone = form.phone, partySize = form.partySize))
+            when (result) {
+                is AppResult.Success ->
+                    _uiState.update {
+                        it.copy(
+                            joinedWaitlists = it.joinedWaitlists + (form.departureId to form.phone),
+                            waitlist = it.waitlist?.takeUnless { open -> open.departureId == form.departureId },
+                        )
+                    }
+                is AppResult.Failure ->
+                    when ((result.error as? AppError.Api)?.code) {
+                        ApiErrorCodes.CONFLICT, ApiErrorCodes.DEPARTURE_NOT_OPEN, ApiErrorCodes.NOT_FOUND ->
+                            outcomeAfterReread(form.departureId, full.date, result.error)
+                        else -> updateForm(form.departureId) { it.copy(submitting = false, error = result.error) }
+                    }
+            }
+        }
+    }
+
+    /**
+     * Reads the dates again after a refusal that says the date changed, and only then says how: the
+     * band claims "seats opened up" only when the fresh read shows the date bookable, and "can't be
+     * booked" only when it shows it cancelled, closed or gone. If the read fails, or still shows the
+     * date sold out, nothing is claimed: the form stays, showing [refusal] (a neutral "try again" for
+     * `CONFLICT`), and the dates already shown are kept rather than the trip's own, older copy.
+     */
+    private suspend fun outcomeAfterReread(
+        departureId: String,
+        date: LocalDate,
+        refusal: AppError,
+    ) {
+        val live = (repository.departuresFor(slug) as? AppResult.Success)?.data
+        val fresh = live?.firstOrNull { it.id == departureId }
+        val kind =
+            when {
+                live == null -> null
+                fresh == null -> WaitlistOutcome.Kind.DateClosed
+                else ->
+                    when (fresh.availability) {
+                        DateAvailability.Open -> WaitlistOutcome.Kind.SeatsOpened
+                        DateAvailability.Cancelled, DateAvailability.Closed -> WaitlistOutcome.Kind.DateClosed
+                        DateAvailability.SoldOut -> null
+                    }
+            }
+        _uiState.update { state ->
+            val reread = if (live != null) state.copy(liveDepartures = live).keepingSelection() else state
+            if (kind == null) {
+                val form = reread.waitlist?.takeIf { it.departureId == departureId }
+                reread.copy(waitlist = form?.copy(submitting = false, error = refusal) ?: reread.waitlist)
+            } else {
+                reread.copy(
+                    waitlist = reread.waitlist?.takeUnless { it.departureId == departureId },
+                    waitlistOutcome = WaitlistOutcome(departureId, date, kind),
+                )
+            }
+        }
+    }
+
+    /** Applies [change] to the open form, if it is still for [departureId] (the user may have moved on). */
+    private fun updateForm(
+        departureId: String? = null,
+        change: (WaitlistForm) -> WaitlistForm,
+    ) {
+        _uiState.update { state ->
+            val form = state.waitlist ?: return@update state
+            if (departureId != null && form.departureId != departureId) state else state.copy(waitlist = change(form))
+        }
+    }
+
+    private fun TripDetailUiState.withoutWaitlistForm() = copy(waitlist = null, waitlistOutcome = null)
 
     /** After a refresh, a selection whose date is gone (or no longer pickable) is dropped. */
     private fun TripDetailUiState.keepingSelection(): TripDetailUiState {

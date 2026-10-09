@@ -9,10 +9,12 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performScrollToKey
 import eg.bahr.core.common.locale.AppLanguage
+import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.designsystem.theme.BahrLocale
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.localization.ProvideAppLanguage
+import eg.bahr.core.network.ApiErrorCodes
 import eg.bahr.core.testing.captureScreenshot
 import eg.bahr.feature.trips.data.FakeTripRepository
 import eg.bahr.feature.trips.data.TripDetailPayloads
@@ -36,6 +38,7 @@ import java.util.Locale
 
 /**
  * The trip page × {ar, en} × {loading, loaded, sold-out date selected} (this is also M1-M3's set),
+ * plus the waiting list under the sold-out notice (M2-M3: form, list full, joined, seats opened, date closed),
  * driven through the real view model with a fake repository holding the seeded `burullus-dawn` in
  * each language. Photos are stripped: a golden must not depend on Coil or a running MinIO.
  *
@@ -124,6 +127,135 @@ class TripDetailScreenshotTest {
             serve(TripDetailPayloads.english, TripDetailPayloads.englishDepartures, dates = ::withEveryReason)
         }
 
+    /** M2-M3: the waiting-list form open under the sold-out date, a number typed and a party of two. */
+    @Config(qualifiers = "en-w360dp-h900dp-xhdpi")
+    @Test
+    fun waitlistFormArabic() =
+        snap("trip_detail_waitlist_form", AppLanguage.ARABIC, select = SOLD_OUT_ID, act = ::fillForm) {
+            serve(TripDetailPayloads.arabic, TripDetailPayloads.arabicDepartures)
+        }
+
+    @Config(qualifiers = "en-w360dp-h900dp-xhdpi")
+    @Test
+    fun waitlistFormEnglish() =
+        snap("trip_detail_waitlist_form", AppLanguage.ENGLISH, select = SOLD_OUT_ID, act = ::fillForm) {
+            serve(TripDetailPayloads.english, TripDetailPayloads.englishDepartures)
+        }
+
+    /** The date's list is full (`RATE_LIMITED` on this endpoint): its own sentence, the form stays. */
+    @Config(qualifiers = "en-w360dp-h900dp-xhdpi")
+    @Test
+    fun waitlistFullArabic() =
+        snap("trip_detail_waitlist_full", AppLanguage.ARABIC, select = SOLD_OUT_ID, act = ::fillAndJoin) {
+            serve(TripDetailPayloads.arabic, TripDetailPayloads.arabicDepartures)
+            joinWaitlist = { _, _ -> AppResult.Failure(AppError.Api(ApiErrorCodes.RATE_LIMITED, "full", 429)) }
+        }
+
+    @Config(qualifiers = "en-w360dp-h900dp-xhdpi")
+    @Test
+    fun waitlistFullEnglish() =
+        snap("trip_detail_waitlist_full", AppLanguage.ENGLISH, select = SOLD_OUT_ID, act = ::fillAndJoin) {
+            serve(TripDetailPayloads.english, TripDetailPayloads.englishDepartures)
+            joinWaitlist = { _, _ -> AppResult.Failure(AppError.Api(ApiErrorCodes.RATE_LIMITED, "full", 429)) }
+        }
+
+    /** Joined: the confirmation, with the date and the number (left to right in Arabic too). */
+    @Test
+    fun waitlistJoinedArabic() =
+        snap("trip_detail_waitlist_joined", AppLanguage.ARABIC, select = SOLD_OUT_ID, act = ::fillAndJoin) {
+            serve(TripDetailPayloads.arabic, TripDetailPayloads.arabicDepartures)
+            joinWaitlist = { _, _ -> AppResult.Success(Unit) }
+        }
+
+    @Test
+    fun waitlistJoinedEnglish() =
+        snap("trip_detail_waitlist_joined", AppLanguage.ENGLISH, select = SOLD_OUT_ID, act = ::fillAndJoin) {
+            serve(TripDetailPayloads.english, TripDetailPayloads.englishDepartures)
+            joinWaitlist = { _, _ -> AppResult.Success(Unit) }
+        }
+
+    /**
+     * `CONFLICT`: seats opened up on the date while it showed as full. The dates are read again (here
+     * the re-read answers it bookable), the notice goes and the band says so; the button reads Continue.
+     */
+    @Test
+    fun waitlistSeatsOpenedArabic() =
+        snap("trip_detail_waitlist_seats_opened", AppLanguage.ARABIC, select = SOLD_OUT_ID, act = ::fillAndJoin) {
+            reopenOnConflict(TripDetailPayloads.arabic, TripDetailPayloads.arabicDepartures)
+        }
+
+    @Test
+    fun waitlistSeatsOpenedEnglish() =
+        snap("trip_detail_waitlist_seats_opened", AppLanguage.ENGLISH, select = SOLD_OUT_ID, act = ::fillAndJoin) {
+            reopenOnConflict(TripDetailPayloads.english, TripDetailPayloads.englishDepartures)
+        }
+
+    /**
+     * `DEPARTURE_NOT_OPEN`: the host cancelled the date while it showed as full. The re-read answers it
+     * cancelled, the selection and the notice go, and the band says the date can't be booked.
+     */
+    @Test
+    fun waitlistDateClosedArabic() =
+        snap("trip_detail_waitlist_date_closed", AppLanguage.ARABIC, select = SOLD_OUT_ID, act = ::fillAndJoin) {
+            cancelOnNotOpen(TripDetailPayloads.arabic, TripDetailPayloads.arabicDepartures)
+        }
+
+    @Test
+    fun waitlistDateClosedEnglish() =
+        snap("trip_detail_waitlist_date_closed", AppLanguage.ENGLISH, select = SOLD_OUT_ID, act = ::fillAndJoin) {
+            cancelOnNotOpen(TripDetailPayloads.english, TripDetailPayloads.englishDepartures)
+        }
+
+    private fun FakeTripRepository.cancelOnNotOpen(
+        trip: String,
+        departures: String,
+    ) {
+        var cancelled = false
+        serve(trip, departures)
+        val first = departuresFor
+        departuresFor = { slug ->
+            val read = first(slug)
+            if (cancelled && read is AppResult.Success) AppResult.Success(read.data.map(::cancel)) else read
+        }
+        joinWaitlist = { _, _ ->
+            cancelled = true
+            AppResult.Failure(AppError.Api(ApiErrorCodes.DEPARTURE_NOT_OPEN, "cancelled", 409))
+        }
+    }
+
+    private fun cancel(d: DepartureDto) = if (d.id == SOLD_OUT_ID) d.copy(unavailableReason = "CANCELLED") else d
+
+    private fun FakeTripRepository.reopenOnConflict(
+        trip: String,
+        departures: String,
+    ) {
+        var reopened = false
+        serve(trip, departures)
+        val first = departuresFor
+        departuresFor = { slug ->
+            val read = first(slug)
+            if (reopened && read is AppResult.Success) AppResult.Success(read.data.map(::reopen)) else read
+        }
+        joinWaitlist = { _, _ ->
+            reopened = true
+            AppResult.Failure(AppError.Api(ApiErrorCodes.CONFLICT, "has seats", 409))
+        }
+    }
+
+    private fun reopen(d: DepartureDto) =
+        if (d.id == SOLD_OUT_ID) d.copy(seatsRemaining = 2, soldOut = false, bookable = true, unavailableReason = null) else d
+
+    private fun fillForm(vm: TripDetailViewModel) {
+        vm.openWaitlist()
+        vm.setWaitlistPhone("+201001234567")
+        vm.increaseWaitlistParty()
+    }
+
+    private fun fillAndJoin(vm: TripDetailViewModel) {
+        fillForm(vm)
+        vm.joinWaitlist()
+    }
+
     private fun withEveryReason(dates: List<DepartureDto>) =
         dates.mapIndexed { i, d ->
             when (i) {
@@ -176,6 +308,7 @@ class TripDetailScreenshotTest {
         prefix: String,
         language: AppLanguage,
         select: String? = null,
+        act: (TripDetailViewModel) -> Unit = {},
         stub: FakeTripRepository.() -> Unit,
     ) {
         val viewModel = TripDetailViewModel(SLUG, FakeTripRepository().apply(stub))
@@ -191,10 +324,19 @@ class TripDetailScreenshotTest {
         compose.waitForIdle()
         compose.mainClock.advanceTimeByFrame()
         if (select != null) {
-            compose.runOnUiThread { viewModel.selectDeparture(select) }
+            compose.runOnUiThread {
+                viewModel.selectDeparture(select)
+                act(viewModel)
+            }
+            compose.waitForIdle()
             compose.onNodeWithTag(TRIP_PAGE_TAG).performScrollToKey(TripSection.Availability.name)
             compose.waitForIdle()
             // Let the button's colour change to the disabled fill finish (the clock is paused).
+            compose.mainClock.advanceTimeBy(SETTLE_MS)
+            // Again, now that the band has grown by the notice (and the waiting list): the first
+            // scroll measured the band before they were drawn and stopped short of them.
+            compose.onNodeWithTag(TRIP_PAGE_TAG).performScrollToKey(TripSection.Availability.name)
+            compose.waitForIdle()
             compose.mainClock.advanceTimeBy(SETTLE_MS)
         }
         compose.captureScreenshot("${prefix}_${language.tag}")
