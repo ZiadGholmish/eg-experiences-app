@@ -1,155 +1,204 @@
 package eg.bahr.feature.booking.presentation
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import eg.bahr.core.designsystem.components.BahrFilterChip
+import eg.bahr.core.designsystem.components.BahrErrorView
+import eg.bahr.core.designsystem.components.BahrLoadingView
 import eg.bahr.core.designsystem.components.BahrPrimaryButton
+import eg.bahr.core.designsystem.components.StickyActionBar
 import eg.bahr.core.designsystem.format.BahrFormat
+import eg.bahr.core.designsystem.icon.BahrIcons
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.localization.generated.resources.Res
-import eg.bahr.core.localization.generated.resources.booking_confirm
-import eg.bahr.core.localization.generated.resources.booking_guest_name
-import eg.bahr.core.localization.generated.resources.booking_guest_phone
-import eg.bahr.core.localization.generated.resources.booking_hold_label
-import eg.bahr.core.localization.generated.resources.booking_party_size
-import eg.bahr.core.localization.generated.resources.booking_total
+import eg.bahr.core.localization.generated.resources.action_retry
+import eg.bahr.core.localization.generated.resources.booking_hold_cta
+import eg.bahr.core.localization.generated.resources.booking_hold_note
+import eg.bahr.core.localization.generated.resources.booking_price_per_person
+import eg.bahr.core.localization.generated.resources.booking_step_title
+import eg.bahr.core.localization.generated.resources.format_pair
+import eg.bahr.core.localization.isRetryable
 import eg.bahr.core.localization.localizedMessage
+import eg.bahr.feature.booking.model.BookingTripDto
+import eg.bahr.feature.booking.navigation.HoldRoute
+import eg.bahr.feature.booking.presentation.components.BookingTopBar
+import eg.bahr.feature.booking.presentation.components.DateRows
+import eg.bahr.feature.booking.presentation.components.GuestDetails
+import eg.bahr.feature.booking.presentation.components.PartyStepper
+import eg.bahr.feature.booking.presentation.components.PriceSummary
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
-import eg.bahr.core.designsystem.components.HoldCountdown as HoldCountdownPanel
 
 /**
- * Date + party, then checkout, on one screen.
+ * Date and party (HANDOFF screen 4): the trip's dates as rows, the party stepper, the lead contact,
+ * the price per person, and the coral "Hold seats and pay".
  *
- * The canvas splits them across two artboards; they are one destination here
- * because a hold is placed between them, and a hold that outlives its screen is
- * how seats get stranded.
+ * The handoff collects name and number on the payment screen, but the contract's hold
+ * (`PlaceHoldRequest.guest`) needs them, so they are asked for here, just above the price.
+ *
+ * Once seats are held, [onHeld] gets the hold and the screen stays on the back stack underneath, so
+ * Back returns here; the view model forgets the hold so returning does not navigate forward again.
  */
 @Composable
 internal fun BookingScreen(
-    departureId: Long,
-    onBooked: (ref: String) -> Unit,
-    onHoldExpired: () -> Unit,
+    slug: String,
+    departureId: String,
+    onBack: () -> Unit,
+    onHeld: (HoldRoute) -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: BookingViewModel = koinViewModel { parametersOf(departureId) },
+    viewModel: BookingViewModel = koinViewModel { parametersOf(slug, departureId) },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    LaunchedEffect(state.holdExpired) {
-        if (state.holdExpired) onHoldExpired()
-    }
-    // TODO(payment): this goes straight from a *hold* to the confirmation
-    // screen. There is no payment step because the backend has no payment
-    // endpoint yet (payments land in M3 of `../docs/PLAN.md`).
-    // Until Paymob lands, a "confirmed" booking here is an unpaid hold.
-    LaunchedEffect(state.held?.ref) {
-        state.held?.ref?.let(onBooked)
+    LaunchedEffect(state.held) {
+        val held = state.held ?: return@LaunchedEffect
+        onHeld(
+            HoldRoute(
+                ref = held.ref,
+                holdExpiresAt = held.holdExpiresAt,
+                serverNow = held.serverNow,
+                totalAmount = held.total.amount,
+                totalCurrency = held.total.currencyCode,
+                guestPhone = state.guestPhone,
+            ),
+        )
+        viewModel.onHeldHandled()
     }
 
+    Column(modifier = modifier.fillMaxSize().imePadding()) {
+        BookingTopBar(title = stringResource(Res.string.booking_step_title), step = 1, onBack = onBack)
+        val trip = state.trip
+        val loadError = state.loadError
+        Box(modifier = Modifier.weight(1f)) {
+            when {
+                trip != null -> BookingForm(state, trip, viewModel)
+                loadError != null ->
+                    BahrErrorView(
+                        message = loadError.localizedMessage(),
+                        retryLabel = stringResource(Res.string.action_retry),
+                        onRetry = if (loadError.isRetryable) viewModel::load else null,
+                    )
+                else -> BahrLoadingView()
+            }
+        }
+        HoldBar(state, onHold = viewModel::placeHold)
+    }
+}
+
+@Composable
+private fun BookingForm(
+    state: BookingUiState,
+    trip: BookingTripDto,
+    viewModel: BookingViewModel,
+) {
     Column(
         modifier =
-            modifier
+            Modifier
                 .fillMaxSize()
+                .testTag(BOOKING_FORM_TAG)
                 .verticalScroll(rememberScrollState())
-                .padding(BahrSpacing.gutter),
+                .padding(horizontal = BahrSpacing.gutter, vertical = BahrSpacing.sm),
         verticalArrangement = Arrangement.spacedBy(BahrSpacing.xl),
     ) {
-        state.holdRemaining?.let { remaining ->
-            HoldCountdownPanel(
-                secondsLeft = remaining.inWholeSeconds.toInt(),
-                label = stringResource(Res.string.booking_hold_label),
-            )
-        }
-
-        Column(verticalArrangement = Arrangement.spacedBy(BahrSpacing.md)) {
-            Text(
-                text = stringResource(Res.string.booking_party_size),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm)) {
-                (1..PartySizeShortcuts).forEach { size ->
-                    BahrFilterChip(
-                        label = size.toString(),
-                        selected = state.partySize == size,
-                        onClick = { viewModel.setPartySize(size) },
-                    )
-                }
-            }
-        }
-
-        OutlinedTextField(
-            value = state.guestName,
-            onValueChange = viewModel::setGuestName,
-            label = { Text(text = stringResource(Res.string.booking_guest_name)) },
-            singleLine = true,
-            shape = BahrTheme.shapes.medium,
-            modifier = Modifier.fillMaxWidth(),
+        Heading(trip)
+        DateRows(
+            departures = state.departures,
+            selectedId = state.selectedDeparture?.id,
+            onSelect = viewModel::selectDeparture,
         )
-
-        OutlinedTextField(
-            value = state.guestPhone,
-            onValueChange = viewModel::setGuestPhone,
-            label = { Text(text = stringResource(Res.string.booking_guest_phone)) },
-            singleLine = true,
-            shape = BahrTheme.shapes.medium,
-            modifier = Modifier.fillMaxWidth(),
+        PartyStepper(
+            partySize = state.partySize,
+            maxPartySize = state.maxPartySize,
+            canDecrease = state.canDecreaseParty,
+            canIncrease = state.canIncreaseParty,
+            onDecrease = viewModel::decreaseParty,
+            onIncrease = viewModel::increaseParty,
         )
-
-        state.held?.let { held ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(Res.string.booking_total),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = BahrFormat.money(held.total.amount, held.total.currencyCode, BahrTheme.locale.isArabic),
-                    style = BahrTheme.type.price,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            }
-        }
-
-        state.error?.let { error ->
-            Text(
-                text = error.localizedMessage(),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.error,
-            )
-        }
-
-        // While a hold is in flight the button stays coral with a progress indicator and ignores
-        // taps, so a double tap cannot place two holds and a slow network still shows progress.
-        BahrPrimaryButton(
-            text = stringResource(Res.string.booking_confirm),
-            enabled = state.canPlaceHold,
-            loading = state.isPlacingHold,
-            onClick = viewModel::placeHold,
-            modifier = Modifier.fillMaxWidth(),
+        GuestDetails(
+            name = state.guestName,
+            phone = state.guestPhone,
+            phoneValid = state.isPhoneValid,
+            onNameChange = viewModel::setGuestName,
+            onPhoneChange = viewModel::setGuestPhone,
+            onDone = viewModel::placeHold,
+        )
+        PriceSummary(
+            pricePerPerson = state.selectedDeparture?.price ?: trip.price,
+            partySize = state.partySize,
         )
     }
 }
 
-/** The canvas offers 1–6 as taps; larger parties are a phone call today. */
-private const val PartySizeShortcuts = 6
+/** The trip's title, then "450 EGP per person · 05:00 → 22:00", both from the server. */
+@Composable
+private fun Heading(trip: BookingTripDto) {
+    Column(verticalArrangement = Arrangement.spacedBy(BahrSpacing.xs)) {
+        Text(text = trip.title, style = MaterialTheme.typography.titleLarge)
+        val price =
+            stringResource(
+                Res.string.booking_price_per_person,
+                BahrFormat.money(trip.price.amount, trip.price.currencyCode, BahrTheme.locale.isArabic),
+            )
+        val duration = trip.durationLabel?.takeIf { it.isNotBlank() }
+        Text(
+            text = if (duration != null) stringResource(Res.string.format_pair, price, BahrFormat.ltr(duration)) else price,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/**
+ * The sticky bar: why the last hold failed (if it did), the one coral button, and the hold
+ * explanation. While the hold is in flight the button keeps its coral fill with a progress
+ * indicator and ignores taps, so a double tap cannot place two holds.
+ */
+@Composable
+private fun HoldBar(
+    state: BookingUiState,
+    onHold: () -> Unit,
+) {
+    StickyActionBar {
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(BahrSpacing.sm)) {
+            state.holdError?.let { error ->
+                Text(
+                    text = error.localizedMessage(),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+            BahrPrimaryButton(
+                text = stringResource(Res.string.booking_hold_cta),
+                onClick = onHold,
+                enabled = state.canPlaceHold,
+                loading = state.isPlacingHold,
+                leadingIcon = BahrIcons.ArrowForward.outlined(),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Text(
+                text = stringResource(Res.string.booking_hold_note),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+/** The scrolling form, for tests that scroll to a part of it. */
+internal const val BOOKING_FORM_TAG = "booking_form"

@@ -176,6 +176,16 @@ object BahrSize {
 
     /** A skeleton line while text loads. */
     val skeletonLine = 12.dp
+
+    /** The custom radio on a date row of the date + party screen (HANDOFF screen 4). */
+    val radio = 22.dp
+
+    /** One segment of the booking flow's three-step indicator (24x4px in the handoff). */
+    val stepSegmentWidth = 24.dp
+    val stepSegmentHeight = 4.dp
+
+    /** The party stepper's count, wide enough that 1 → 6 does not move the buttons. */
+    val stepperValue = 30.dp
 }
 
 internal val LocalBahrShapes = staticCompositionLocalOf { BahrShapes() }

@@ -5,7 +5,9 @@ package eg.bahr.feature.trips.data
  * (bahr-be `scripts/seed-burullus.sql`), in both languages: the prototype's copy, four Saturdays
  * with 6, 2, 0 (sold out) and 11 seats left of 18. Null fields are omitted, as the backend omits them
  * (`shareUrl`). Images carry `variants` (390px avif/webp/jpeg) and the host has an avatar, as served since
- * the bahr-be `Image.variants` / `host.avatar` change. Dates are fixed to October 2026; the seed computes them from today.
+ * the bahr-be `Image.variants` / `host.avatar` change, and as M2-B5 serves them (D1, D3, D4): the full date
+ * carries `unavailableReason`, and there is no `host.phone` or `policy.childFreeUnder`. Dates are fixed
+ * to October 2026; the seed computes them from today.
  * LQIPs are shortened: the decode does not look inside them.
  */
 internal object TripDetailPayloads {
@@ -211,8 +213,7 @@ internal object TripDetailPayloads {
    },
    "role": "Boat owner, Burg El Burullus",
    "tripsRun": 11,
-   "verified": true,
-   "phone": "+201000000101"
+   "verified": true
   },
   "tips": [
    {
@@ -297,6 +298,7 @@ internal object TripDetailPayloads {
     "capacity": 18,
     "soldOut": true,
     "bookable": false,
+    "unavailableReason": "SOLD_OUT",
     "price": {
      "amount": 450,
      "currency": "EGP"
@@ -320,7 +322,6 @@ internal object TripDetailPayloads {
   ],
   "policy": {
    "freeCancellationHours": 72,
-   "childFreeUnder": 6,
    "maxPartySize": 6
   },
   "gallery": [
@@ -546,6 +547,7 @@ internal object TripDetailPayloads {
    "capacity": 18,
    "soldOut": true,
    "bookable": false,
+   "unavailableReason": "SOLD_OUT",
    "price": {
     "amount": 450,
     "currency": "EGP"
@@ -772,8 +774,7 @@ internal object TripDetailPayloads {
    },
    "role": "صاحب القارب، برج البرلس",
    "tripsRun": 11,
-   "verified": true,
-   "phone": "+201000000101"
+   "verified": true
   },
   "tips": [
    {
@@ -858,6 +859,7 @@ internal object TripDetailPayloads {
     "capacity": 18,
     "soldOut": true,
     "bookable": false,
+    "unavailableReason": "SOLD_OUT",
     "price": {
      "amount": 450,
      "currency": "EGP"
@@ -881,7 +883,6 @@ internal object TripDetailPayloads {
   ],
   "policy": {
    "freeCancellationHours": 72,
-   "childFreeUnder": 6,
    "maxPartySize": 6
   },
   "gallery": [
@@ -1107,6 +1108,7 @@ internal object TripDetailPayloads {
    "capacity": 18,
    "soldOut": true,
    "bookable": false,
+   "unavailableReason": "SOLD_OUT",
    "price": {
     "amount": 450,
     "currency": "EGP"

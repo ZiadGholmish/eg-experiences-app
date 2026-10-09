@@ -31,6 +31,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import eg.bahr.core.designsystem.format.BahrFormat
 import eg.bahr.core.designsystem.theme.BahrElevation
@@ -40,6 +42,7 @@ import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.designsystem.theme.bahrShadow
 import eg.bahr.core.designsystem.theme.overlineCase
 import eg.bahr.core.localization.generated.resources.Res
+import eg.bahr.core.localization.generated.resources.a11y_busy
 import eg.bahr.core.localization.generated.resources.departure_seats_left
 import eg.bahr.core.localization.generated.resources.departure_sold_out
 import org.jetbrains.compose.resources.pluralStringResource
@@ -126,6 +129,7 @@ fun BahrPrimaryButton(
         tween(BahrMotion.Short, easing = BahrMotion.Standard),
     )
     val shape = BahrTheme.shapes.full
+    val busy = stringResource(Res.string.a11y_busy)
     Row(
         modifier
             .heightIn(min = PRIMARY_BUTTON_MIN_HEIGHT.dp)
@@ -133,6 +137,9 @@ fun BahrPrimaryButton(
             .clip(shape)
             .background(bg)
             .clickable(src, indication = null, enabled = appearance.clickable, role = Role.Button, onClick = onClick)
+            // While loading, `clickable` reports the button as disabled; without a state a screen reader
+            // would say the same as for an invalid form. This says it is busy (M0-M2 review R2-1).
+            .then(if (appearance.showsProgress) Modifier.semantics { stateDescription = busy } else Modifier)
             .padding(horizontal = BahrSpacing.xl),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm, Alignment.CenterHorizontally),

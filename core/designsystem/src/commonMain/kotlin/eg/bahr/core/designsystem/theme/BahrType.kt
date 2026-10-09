@@ -81,6 +81,11 @@ internal fun bahrTypography(
     labelLarge = style(family, 12f, FontWeight.Bold, 1.3f, arabic = arabic),
     // typescale.labelSmall
     labelMedium = style(family, 11f, FontWeight.SemiBold, 1.3f, arabic = arabic),
+    // Not a token: Material's text fields animate their label between bodyLarge and bodySmall. Left at
+    // Material's default, bodySmall's letter-spacing is in sp while ours is in em, and that animation
+    // throws ("Cannot perform operation for Em and Sp") the moment a labelled field gets text or
+    // focus. Sized as Material's floating label (12sp), on the Bahr family and rules.
+    bodySmall = style(family, 12f, FontWeight.Normal, 1.4f, arabic = arabic),
 )
 
 internal fun bahrExtendedType(

@@ -107,6 +107,33 @@ class TripDetailScreenshotTest {
         }
 
     /**
+     * D3: one date of each kind side by side — cancelled (also full), open, sold out (picked, with
+     * its notice) and booking closed — each drawn by its reason. Wide enough for all four cards.
+     */
+    @Config(qualifiers = "en-w480dp-h640dp-xhdpi")
+    @Test
+    fun dateReasonsArabic() =
+        snap("trip_detail_date_reasons", AppLanguage.ARABIC, select = SOLD_OUT_ID) {
+            serve(TripDetailPayloads.arabic, TripDetailPayloads.arabicDepartures, dates = ::withEveryReason)
+        }
+
+    @Config(qualifiers = "en-w480dp-h640dp-xhdpi")
+    @Test
+    fun dateReasonsEnglish() =
+        snap("trip_detail_date_reasons", AppLanguage.ENGLISH, select = SOLD_OUT_ID) {
+            serve(TripDetailPayloads.english, TripDetailPayloads.englishDepartures, dates = ::withEveryReason)
+        }
+
+    private fun withEveryReason(dates: List<DepartureDto>) =
+        dates.mapIndexed { i, d ->
+            when (i) {
+                0 -> d.copy(seatsRemaining = 0, soldOut = true, bookable = false, unavailableReason = "CANCELLED")
+                dates.lastIndex -> d.copy(bookable = false, unavailableReason = "CLOSED")
+                else -> d
+            }
+        }
+
+    /**
      * The photo counter ("1 / 3") over a three-photo gallery, which must read left to right in Arabic
      * too (M1-M1 review #1). The URLs point at a closed local port, so Coil draws nothing and the
      * golden does not depend on the network; the counter and the ground still render.
@@ -127,9 +154,10 @@ class TripDetailScreenshotTest {
         trip: String,
         departures: String,
         photos: List<ImageDto> = emptyList(),
+        dates: (List<DepartureDto>) -> List<DepartureDto> = { it },
     ) {
         val detail = withoutPhotos(json.decodeFromString<Envelope<TripDetailDto>>(trip).data).copy(gallery = photos)
-        val dates = json.decodeFromString<Envelope<List<DepartureDto>>>(departures).data
+        val dates = dates(json.decodeFromString<Envelope<List<DepartureDto>>>(departures).data)
         tripBySlug = { AppResult.Success(detail) }
         departuresFor = { AppResult.Success(dates) }
     }

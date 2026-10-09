@@ -37,7 +37,6 @@
     <string name="trip_sold_out_alternative_same_price">%1$s has %2$s left, same price.</string>
     <string name="trip_dates_empty">No dates are open yet.</string>
     <string name="trip_policy_cancellation">Free cancellation up to %1$d hours before departure.</string>
-    <string name="trip_policy_children">Children under %1$d travel free, without a seat.</string>
     <string name="trip_policy_units">Prices in EGP, times Cairo (24h).</string>
     <string name="trip_bar_per_person">Per person</string>
     <string name="trip_cta_choose_date">Choose a date</string>
@@ -63,7 +62,8 @@
         <item quantity="one">%1$d seat</item>
         <item quantity="other">%1$d seats</item>
     </plurals>
-    <string name="departure_closed">Closed</string>
+    <string name="departure_closed">Booking closed</string>
+    <string name="departure_cancelled">Cancelled</string>
     <string name="departure_sold_out">Sold out</string>
 
     <!-- Formats. Day and month names are the date's words only; BahrFormat puts them in order
@@ -95,9 +95,9 @@
     </string-array>
 
     <!-- Booking -->
-    <string name="booking_party_size">How many people?</string>
-    <string name="booking_guest_name">Name</string>
-    <string name="booking_guest_phone">Phone</string>
+    <string name="booking_party_size">How many people</string>
+    <string name="booking_guest_name">Full name</string>
+    <string name="booking_guest_phone">Mobile number</string>
     <string name="booking_continue">Continue</string>
     <string name="booking_hold_label">Seats held for</string>
     <string name="booking_confirm">Confirm booking</string>
@@ -106,11 +106,40 @@
     <string name="booking_confirmed">You’re booked</string>
     <string name="booking_cancel">Cancel booking</string>
 
+    <!-- Date + party (HANDOFF screen 4). Copy from the prototype; D1: no child fare, so no child note. -->
+    <string name="booking_step_title">Date and party</string>
+    <string name="booking_step_of">Step %1$d of %2$d</string>
+    <string name="booking_price_per_person">%1$s per person</string>
+    <plurals name="booking_party_max">
+        <item quantity="one">Maximum %1$d person per booking.</item>
+        <item quantity="other">Maximum %1$d people per booking.</item>
+    </plurals>
+    <plurals name="booking_party_count">
+        <item quantity="one">%1$d person</item>
+        <item quantity="other">%1$d people</item>
+    </plurals>
+    <string name="booking_party_decrease">Fewer people</string>
+    <string name="booking_party_increase">More people</string>
+    <string name="booking_guest_title">Your details</string>
+    <string name="booking_guest_phone_invalid">Enter a valid mobile number.</string>
+    <string name="booking_summary_price">Price per person</string>
+    <string name="booking_summary_party">People</string>
+    <string name="booking_summary_total_note">Your total is confirmed when the seats are held, before you pay.</string>
+    <string name="booking_hold_cta">Hold seats and pay</string>
+    <string name="booking_hold_note">Seats are held for 15 minutes while you pay. Nothing is charged until you confirm.</string>
+    <string name="booking_held_title">Your seats are held</string>
+    <string name="booking_held_next">Payment is the next step.</string>
+
     <!-- Errors -->
     <string name="error_network">No connection. Check your internet and try again.</string>
     <string name="error_timeout">That took too long. Try again.</string>
     <string name="error_generic">Something went wrong. Try again.</string>
     <string name="error_hold_expired">Your seats were released. Pick a date again.</string>
     <string name="error_no_seats_available">Those seats just went. Try a different date.</string>
+    <string name="error_departure_not_open">Booking just closed for this date. Pick another one.</string>
+    <string name="error_validation">Check your details and try again.</string>
+    <string name="error_rate_limited">Too many tries. Wait a minute and try again.</string>
+    <!-- Screen-reader state of a button whose action is in flight. -->
+    <string name="a11y_busy">Loading</string>
     <string name="action_retry">Try again</string>
 </resources>

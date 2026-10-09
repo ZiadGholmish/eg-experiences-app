@@ -127,6 +127,8 @@ class TripDetailApiServiceTest {
             assertEquals(listOf(true, true, false, true), dates.map { it.bookable })
             val full = dates[2]
             assertTrue(full.soldOut)
+            assertEquals("SOLD_OUT", full.unavailableReason)
+            assertEquals(listOf(null, null, "SOLD_OUT", null), dates.map { it.unavailableReason })
             assertEquals(LocalDate(2026, 10, 24), full.date)
             assertEquals("0199c3a0-5eed-7000-8000-000000000603", full.id)
             assertEquals("Sat 24 Oct", full.dayLabel)
@@ -142,6 +144,21 @@ class TripDetailApiServiceTest {
             assertEquals("إيه اللي تجيبه معاك", trip.tips.first().title)
             val dates = success(service(TripDetailPayloads.arabicDepartures, language = "ar").departuresFor("burullus-dawn"))
             assertEquals("السبت 10 أكتوبر", dates.first().dayLabel)
+        }
+
+    @Test
+    fun `an unavailable reason this build does not know still decodes`() =
+        runTest {
+            // The contract says a reason may be added later; an enum would fail the whole list here.
+            val body =
+                """
+                {"success":true,"data":[{"id":"d-1","date":"2026-10-10","seatsRemaining":4,"capacity":18,
+                "soldOut":false,"bookable":false,"unavailableReason":"WEATHER","price":{"amount":450,"currency":"EGP"}}]}
+                """.trimIndent()
+
+            val dates = success(service(body).departuresFor("burullus-dawn"))
+
+            assertEquals("WEATHER", dates.single().unavailableReason)
         }
 
     @Test

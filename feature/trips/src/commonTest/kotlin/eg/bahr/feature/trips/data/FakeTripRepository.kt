@@ -83,6 +83,7 @@ internal object TripFixtures {
                 capacity = 18,
                 soldOut = left == 0,
                 bookable = left > 0,
+                unavailableReason = if (left == 0) "SOLD_OUT" else null,
                 price = MoneyDto(amount = 450, currencyCode = "EGP"),
             )
         }

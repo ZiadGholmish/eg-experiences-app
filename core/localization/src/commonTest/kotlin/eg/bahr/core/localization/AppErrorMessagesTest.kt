@@ -2,11 +2,14 @@ package eg.bahr.core.localization
 
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.localization.generated.resources.Res
+import eg.bahr.core.localization.generated.resources.error_departure_not_open
 import eg.bahr.core.localization.generated.resources.error_generic
 import eg.bahr.core.localization.generated.resources.error_hold_expired
 import eg.bahr.core.localization.generated.resources.error_network
 import eg.bahr.core.localization.generated.resources.error_no_seats_available
+import eg.bahr.core.localization.generated.resources.error_rate_limited
 import eg.bahr.core.localization.generated.resources.error_timeout
+import eg.bahr.core.localization.generated.resources.error_validation
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -26,6 +29,9 @@ class AppErrorMessagesTest {
     fun `mapped codes branch on the code and ignore the message`() {
         assertEquals(Res.string.error_no_seats_available, api("NO_SEATS_AVAILABLE").messageRes())
         assertEquals(Res.string.error_hold_expired, api("HOLD_EXPIRED", message = null).messageRes())
+        assertEquals(Res.string.error_departure_not_open, api("DEPARTURE_NOT_OPEN").messageRes())
+        assertEquals(Res.string.error_validation, api("VALIDATION_FAILED").messageRes())
+        assertEquals(Res.string.error_rate_limited, api("RATE_LIMITED").messageRes())
     }
 
     @Test

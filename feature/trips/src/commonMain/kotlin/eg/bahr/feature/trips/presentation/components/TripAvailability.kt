@@ -21,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import eg.bahr.core.designsystem.components.BahrPrimaryButton
 import eg.bahr.core.designsystem.components.StickyActionBar
@@ -33,6 +34,7 @@ import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.designsystem.theme.bahrShadow
 import eg.bahr.core.localization.generated.resources.Res
+import eg.bahr.core.localization.generated.resources.departure_cancelled
 import eg.bahr.core.localization.generated.resources.departure_closed
 import eg.bahr.core.localization.generated.resources.departure_seats_left
 import eg.bahr.core.localization.generated.resources.departure_sold_out
@@ -45,7 +47,6 @@ import eg.bahr.core.localization.generated.resources.trip_cta_continue
 import eg.bahr.core.localization.generated.resources.trip_cta_sold_out
 import eg.bahr.core.localization.generated.resources.trip_dates_empty
 import eg.bahr.core.localization.generated.resources.trip_policy_cancellation
-import eg.bahr.core.localization.generated.resources.trip_policy_children
 import eg.bahr.core.localization.generated.resources.trip_policy_units
 import eg.bahr.core.localization.generated.resources.trip_sold_out_alternative
 import eg.bahr.core.localization.generated.resources.trip_sold_out_alternative_same_price
@@ -54,7 +55,9 @@ import eg.bahr.core.localization.generated.resources.trip_sold_out_title
 import eg.bahr.core.network.MoneyDto
 import eg.bahr.feature.trips.model.DepartureDto
 import eg.bahr.feature.trips.model.PolicyDto
+import eg.bahr.feature.trips.presentation.DateAvailability
 import eg.bahr.feature.trips.presentation.TripCta
+import eg.bahr.feature.trips.presentation.availability
 import eg.bahr.feature.trips.presentation.isSelectable
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
@@ -116,15 +119,22 @@ internal fun TripAvailability(
                     }
                 }
         }
-        if (selected != null && selected.soldOut) SoldOutNotice(selected, alternative, gutter)
+        if (selected?.availability == DateAvailability.SoldOut) SoldOutNotice(selected, alternative, gutter)
         policy?.let { PolicyNote(it, gutter) }
     }
 }
 
 /**
- * One date: weekday, day and month, and the seats left. Selected = primary fill with
- * `elevation.raised`; sold out = muted with a `block` icon, and when picked a coral-family ground
- * ringed in `error` (the sold-out colour) rather than the prototype's coral, which is for actions.
+ * One date: weekday, day and month, and the seats left or why it cannot be booked. Selected = primary
+ * fill with `elevation.raised`. A date that cannot be booked is drawn by its reason (D3), so the three
+ * never look alike:
+ * - sold out: muted `surfaceContainer` with a `block` icon; it can be picked (it shows the sold-out
+ *   notice), and when picked a coral-family ground ringed in `error` rather than the prototype's
+ *   coral, which is for actions;
+ * - cancelled: the same muted ground, but label and `event_busy` icon in `error`: the host called the
+ *   date off, which is news, not just "full";
+ * - booking closed: no fill at all, only an `outlineVariant` hairline and a `lock` icon, so it reads
+ *   as past rather than taken.
  */
 @Composable
 private fun DateCard(
@@ -135,28 +145,33 @@ private fun DateCard(
     val c = MaterialTheme.colorScheme
     val x = BahrTheme.colors
     val shape = BahrTheme.shapes.extraLarge
-    val open = departure.bookable
-    val (background, content) =
-        when {
-            open && selected -> c.primary to c.onPrimary
-            open -> c.surface to c.onSurface
-            selected -> c.tertiaryContainer to c.onTertiaryContainer
-            else -> c.surfaceContainer to x.onSurfaceDisabled
-        }
-    val elevation =
-        when {
-            !open -> null
-            selected -> BahrElevation.Raised
-            else -> BahrElevation.Level1
+    val availability = departure.availability
+    val look =
+        when (availability) {
+            DateAvailability.Open ->
+                if (selected) {
+                    DateCardLook(c.primary, c.onPrimary, BahrIcons.EventSeat, BahrElevation.Raised)
+                } else {
+                    DateCardLook(c.surface, c.onSurface, BahrIcons.EventSeat, BahrElevation.Level1)
+                }
+            DateAvailability.SoldOut ->
+                if (selected) {
+                    DateCardLook(c.tertiaryContainer, c.onTertiaryContainer, BahrIcons.Block, ring = c.error)
+                } else {
+                    DateCardLook(c.surfaceContainer, x.onSurfaceDisabled, BahrIcons.Block)
+                }
+            DateAvailability.Cancelled -> DateCardLook(c.surfaceContainer, c.error, BahrIcons.EventBusy)
+            DateAvailability.Closed -> DateCardLook(null, c.onSurfaceVariant, BahrIcons.Lock, hairline = c.outlineVariant)
         }
     Column(
         modifier =
             Modifier
                 .width(BahrSize.dateCard)
-                .then(if (elevation != null) Modifier.bahrShadow(elevation, shape, x) else Modifier)
+                .then(if (look.elevation != null) Modifier.bahrShadow(look.elevation, shape, x) else Modifier)
                 .clip(shape)
-                .background(background)
-                .then(if (selected && !open) Modifier.border(BahrBorder.selected, c.error, shape) else Modifier)
+                .then(if (look.background != null) Modifier.background(look.background) else Modifier)
+                .then(if (look.ring != null) Modifier.border(BahrBorder.selected, look.ring, shape) else Modifier)
+                .then(if (look.hairline != null) Modifier.border(BahrBorder.hairline, look.hairline, shape) else Modifier)
                 .selectable(
                     selected = selected,
                     enabled = departure.isSelectable(),
@@ -166,6 +181,7 @@ private fun DateCard(
                 .padding(BahrSpacing.md),
         verticalArrangement = Arrangement.spacedBy(BahrSpacing.xs),
     ) {
+        val content = look.content
         Text(text = BahrFormat.weekday(departure.date), style = MaterialTheme.typography.labelMedium, color = content)
         Text(text = BahrFormat.dayMonth(departure.date), style = MaterialTheme.typography.titleMedium, color = content, maxLines = 1)
         Row(
@@ -174,7 +190,7 @@ private fun DateCard(
             horizontalArrangement = Arrangement.spacedBy(BahrSpacing.xs),
         ) {
             Icon(
-                imageVector = (if (open) BahrIcons.EventSeat else BahrIcons.Block).outlined(),
+                imageVector = look.icon.outlined(),
                 contentDescription = null,
                 tint = content,
                 modifier = Modifier.size(BahrSize.iconSmall),
@@ -185,13 +201,24 @@ private fun DateCard(
     }
 }
 
-/** "6 seats left" / "Sold out" / "Closed" (cancelled or past its cutoff). */
+/** A date card's colours, icon and edge for one availability × selection. */
+private class DateCardLook(
+    val background: Color?,
+    val content: Color,
+    val icon: BahrIcons,
+    val elevation: BahrElevation? = null,
+    val ring: Color? = null,
+    val hairline: Color? = null,
+)
+
+/** "6 seats left" / "Sold out" / "Cancelled" / "Booking closed", from the date's [availability]. */
 @Composable
 internal fun seatsText(departure: DepartureDto): String =
-    when {
-        departure.soldOut -> stringResource(Res.string.departure_sold_out)
-        !departure.bookable -> stringResource(Res.string.departure_closed)
-        else -> pluralStringResource(Res.plurals.departure_seats_left, departure.seatsRemaining, departure.seatsRemaining)
+    when (departure.availability) {
+        DateAvailability.Open -> pluralStringResource(Res.plurals.departure_seats_left, departure.seatsRemaining, departure.seatsRemaining)
+        DateAvailability.SoldOut -> stringResource(Res.string.departure_sold_out)
+        DateAvailability.Cancelled -> stringResource(Res.string.departure_cancelled)
+        DateAvailability.Closed -> stringResource(Res.string.departure_closed)
     }
 
 /**
@@ -240,7 +267,7 @@ private fun SoldOutNotice(
     }
 }
 
-/** Cancellation and children rules, from the server's policy, then the units line. */
+/** The cancellation rule from the server's policy, then the units line. No child fare (D1): every seat is charged. */
 @Composable
 private fun PolicyNote(
     policy: PolicyDto,
@@ -250,7 +277,6 @@ private fun PolicyNote(
     val style = MaterialTheme.typography.labelMedium
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(BahrSpacing.xs)) {
         policy.freeCancellationHours?.let { Text(stringResource(Res.string.trip_policy_cancellation, it), style = style, color = color) }
-        policy.childFreeUnder?.let { Text(stringResource(Res.string.trip_policy_children, it), style = style, color = color) }
         Text(stringResource(Res.string.trip_policy_units), style = style, color = color)
     }
 }

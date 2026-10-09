@@ -45,12 +45,12 @@ internal data class TripDetailUiState(
     val cta: TripCta
         get() {
             val selected = selectedDeparture ?: return TripCta.ChooseDate
-            return if (selected.bookable) TripCta.Continue else TripCta.SoldOut
+            return if (selected.availability == DateAvailability.Open) TripCta.Continue else TripCta.SoldOut
         }
 
     /** The date "Continue" books. Null unless the selected date is bookable, so sold out never continues. */
     val continueDepartureId: String?
-        get() = selectedDeparture?.takeIf { it.bookable }?.id
+        get() = selectedDeparture?.takeIf { it.availability == DateAvailability.Open }?.id
 
     /**
      * Under a selected sold-out date, the date the notice points to instead: the next bookable one
@@ -58,18 +58,22 @@ internal data class TripDetailUiState(
      */
     val alternative: DepartureDto?
         get() {
-            val full = selectedDeparture?.takeIf { it.soldOut } ?: return null
-            val open = departures.filter { it.bookable }
+            val full = selectedDeparture?.takeIf { it.availability == DateAvailability.SoldOut } ?: return null
+            val open = departures.filter { it.availability == DateAvailability.Open }
             return open.firstOrNull { it.date > full.date } ?: open.firstOrNull()
         }
 }
 
 /**
  * A date can be picked when it can be booked, or when it is sold out: picking a full date shows the
- * sold-out notice (HANDOFF screen 3). A date that is closed for another reason (cancelled, past its
- * cutoff) is shown but cannot be picked: the contract does not say why, so there is nothing to tell.
+ * sold-out notice (HANDOFF screen 3). A cancelled or closed date is shown with its reason on the card
+ * but cannot be picked: there is no notice or waitlist for it (D3: only sold-out dates get one).
  */
-internal fun DepartureDto.isSelectable(): Boolean = bookable || soldOut
+internal fun DepartureDto.isSelectable(): Boolean =
+    when (availability) {
+        DateAvailability.Open, DateAvailability.SoldOut -> true
+        DateAvailability.Cancelled, DateAvailability.Closed -> false
+    }
 
 internal class TripDetailViewModel(
     private val slug: String,

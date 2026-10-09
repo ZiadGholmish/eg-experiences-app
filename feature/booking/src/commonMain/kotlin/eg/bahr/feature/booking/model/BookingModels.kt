@@ -1,55 +1,112 @@
 package eg.bahr.feature.booking.model
 
 import eg.bahr.core.network.MoneyDto
+import kotlinx.datetime.LocalDate
 import kotlinx.serialization.Serializable
 
-/**
- * Wire shapes for `/api/v1/bookings`.
+/*
+ * Wire shapes for the date + party screen, field for field with `../docs/api/openapi.yaml`.
  *
- * Target: the booking schemas in `../docs/api/openapi.yaml` (`PlaceHoldRequest`,
- * `HeldSeats`, `Booking`). These are still the Java-era shapes until M2 realigns
- * them: ids here are `Long` where the contract uses uuid strings, the hold lacks
- * `serverNow` (needed for the deadline-driven countdown) and `fee`, and the
- * contract's `Booking` nests `trip{}`, `departure{}` and `host{}` where this is flat.
+ * This feature reads the trip and its dates itself rather than taking them from `feature:trips`:
+ * features do not depend on each other, and only the slug and the picked departure id travel through
+ * navigation (bahr-modularization: "pass ids, let each feature fetch its own").
+ *
+ * Everything the contract does not mark `required` is nullable with a default, as the backend omits
+ * nulls; the JSON parser ignores unknown keys, so an old app keeps working when a field is added.
+ */
+
+/**
+ * openapi `TripDetail`, only the fields this screen shows: the heading, the per-person price and the
+ * party limit. The other fields of the shape are ignored on decode.
  */
 @Serializable
+internal data class BookingTripDto(
+    val slug: String,
+    val title: String,
+    val durationLabel: String? = null,
+    val price: MoneyDto,
+    val dates: List<BookingDepartureDto> = emptyList(),
+    val policy: BookingPolicyDto? = null,
+)
+
+/** openapi `TripDetail.policy`. [maxPartySize] is the stepper's upper bound (`policy.maxPartySize`). */
+@Serializable
+internal data class BookingPolicyDto(
+    val freeCancellationHours: Int? = null,
+    val maxPartySize: Int? = null,
+)
+
+/**
+ * openapi `Departure` (`GET /trips/{slug}/departures`). [id] is a UUID string. [departTime] and
+ * [returnTime] are "HH:mm" Cairo time. [seatsRemaining] is a display hint only: the hold is the
+ * authoritative check and can still answer `NO_SEATS_AVAILABLE`.
+ *
+ * [unavailableReason] (`SOLD_OUT`, `CANCELLED`, `CLOSED`, absent when bookable) is a string, not an
+ * enum, so a reason added to the contract later cannot fail the decode; see `DateAvailability`.
+ */
+@Serializable
+internal data class BookingDepartureDto(
+    val id: String,
+    val date: LocalDate,
+    val dayLabel: String? = null,
+    val departTime: String? = null,
+    val returnTime: String? = null,
+    val seatsRemaining: Int,
+    val capacity: Int,
+    val soldOut: Boolean,
+    val bookable: Boolean,
+    val unavailableReason: String? = null,
+    val price: MoneyDto,
+)
+
+/** openapi `PlaceHoldRequest`. */
+@Serializable
 internal data class PlaceHoldRequest(
-    val departureId: Long,
+    val departureId: String,
     val partySize: Int,
     val guest: GuestRequest,
 )
 
 /**
- * The lead contact. A booking can be made without an account — the whole point
- * of release 1 is that someone opens a shared link and books cold — so the name
- * and phone travel with the request rather than coming from a session.
+ * The lead contact. A booking can be made without an account (someone opens a shared link and books
+ * cold), so the name and phone travel with the request rather than coming from a session.
+ *
+ * [locale] is left out: the contract defaults it to the request's `Accept-Language`, which is already
+ * the app's stored language.
  */
 @Serializable
 internal data class GuestRequest(
     val name: String,
     val phone: String,
-    val locale: String,
+    val locale: String? = null,
 )
 
 /**
- * Seats held, not yet paid for.
+ * openapi `HeldSeats`: seats held, not yet paid for.
  *
- * [holdExpiresAt] is the server's clock, not the device's. The countdown the
- * checkout screen shows is computed against it, and when it runs out the
- * client must re-read rather than assume the hold survived.
+ * [holdExpiresAt] is the server's deadline and [serverNow] the server's clock when it answered; the
+ * countdown (M2-M2) runs against the first, corrected by the skew between the second and the device.
+ * [total] is the server's sum: the client never multiplies a price by a party size. [fee] is not
+ * served in R1.
  */
 @Serializable
 internal data class HeldSeatsDto(
     val ref: String,
-    val departureId: Long,
-    val partySize: Int,
-    val pricePerPerson: MoneyDto,
+    val departureId: String? = null,
+    val partySize: Int? = null,
+    val pricePerPerson: MoneyDto? = null,
+    val fee: MoneyDto? = null,
     val total: MoneyDto,
-    val holdExpiresAt: String? = null,
-    val seatsRemaining: Int = 0,
+    val holdExpiresAt: String,
+    val serverNow: String,
+    val seatsRemaining: Int? = null,
 )
 
-/** The ticket. Everything needed to show up in the right place at the right time. */
+/**
+ * The confirmation screen's booking. Still the Java-era flat shape (`departureId: Long`, no
+ * `serverNow`, no nested `trip`/`departure`/`host`), which does not decode the contract's `Booking`;
+ * the confirmation screen that reads it is unreachable until M3 rewrites it on the contract.
+ */
 @Serializable
 internal data class BookingDto(
     val ref: String,

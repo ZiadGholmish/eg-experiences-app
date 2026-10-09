@@ -36,7 +36,6 @@
     <string name="trip_sold_out_alternative_same_price">%1$s فيه %2$s بنفس السعر.</string>
     <string name="trip_dates_empty">مفيش مواعيد متاحة لسه.</string>
     <string name="trip_policy_cancellation">الإلغاء مجاني حتى %1$d ساعة قبل القيام.</string>
-    <string name="trip_policy_children">الأطفال أقل من %1$d سنين مجانًا بدون مقعد.</string>
     <string name="trip_policy_units">الأسعار بالجنيه والمواعيد بتوقيت القاهرة (24 ساعة).</string>
     <string name="trip_bar_per_person">للفرد</string>
     <string name="trip_cta_choose_date">اختار التاريخ</string>
@@ -78,7 +77,8 @@
         <item quantity="many">%1$d مقعدًا</item>
         <item quantity="other">%1$d مقعد</item>
     </plurals>
-    <string name="departure_closed">مقفول</string>
+    <string name="departure_closed">الحجز مقفول</string>
+    <string name="departure_cancelled">اتلغت</string>
     <string name="departure_sold_out">اكتمل العدد</string>
 
     <string name="format_pair">%1$s · %2$s</string>
@@ -107,9 +107,9 @@
         <item>ديسمبر</item>
     </string-array>
 
-    <string name="booking_party_size">كم عدد الأشخاص؟</string>
-    <string name="booking_guest_name">الاسم</string>
-    <string name="booking_guest_phone">رقم الهاتف</string>
+    <string name="booking_party_size">عدد الأفراد</string>
+    <string name="booking_guest_name">الاسم بالكامل</string>
+    <string name="booking_guest_phone">رقم الموبايل</string>
     <string name="booking_continue">متابعة</string>
     <string name="booking_hold_label">المقاعد محجوزة لمدة</string>
     <string name="booking_confirm">تأكيد الحجز</string>
@@ -118,10 +118,47 @@
     <string name="booking_confirmed">تم الحجز</string>
     <string name="booking_cancel">إلغاء الحجز</string>
 
+    <string name="booking_step_title">التاريخ والأفراد</string>
+    <string name="booking_step_of">خطوة %1$d من %2$d</string>
+    <string name="booking_price_per_person">%1$s للفرد</string>
+    <!-- CLDR ar: one = 1, two = 2, few = 3–10, many = 11–99, other = 0 and 100+. -->
+    <plurals name="booking_party_max">
+        <item quantity="zero">أقصى حجز %1$d فرد.</item>
+        <item quantity="one">أقصى حجز فرد واحد.</item>
+        <item quantity="two">أقصى حجز فردين.</item>
+        <item quantity="few">أقصى حجز %1$d أفراد.</item>
+        <item quantity="many">أقصى حجز %1$d فردًا.</item>
+        <item quantity="other">أقصى حجز %1$d فرد.</item>
+    </plurals>
+    <plurals name="booking_party_count">
+        <item quantity="zero">%1$d فرد</item>
+        <item quantity="one">فرد واحد</item>
+        <item quantity="two">فردان</item>
+        <item quantity="few">%1$d أفراد</item>
+        <item quantity="many">%1$d فردًا</item>
+        <item quantity="other">%1$d فرد</item>
+    </plurals>
+    <string name="booking_party_decrease">قلّل العدد</string>
+    <string name="booking_party_increase">زوّد العدد</string>
+    <string name="booking_guest_title">بياناتك</string>
+    <string name="booking_guest_phone_invalid">اكتب رقم موبايل صحيح.</string>
+    <string name="booking_summary_price">سعر الفرد</string>
+    <string name="booking_summary_party">عدد الأفراد</string>
+    <string name="booking_summary_total_note">الإجمالي بيتأكد لما المقاعد تتحجز، قبل ما تدفع.</string>
+    <string name="booking_hold_cta">احجز المقاعد وادفع</string>
+    <string name="booking_hold_note">المقاعد محجوزة لك 15 دقيقة لحد ما تدفع. مش هيتم خصم أي مبلغ قبل التأكيد.</string>
+    <string name="booking_held_title">المقاعد محجوزة لك</string>
+    <string name="booking_held_next">الدفع هو الخطوة الجاية.</string>
+
     <string name="error_network">لا يوجد اتصال. تحقق من الإنترنت وحاول مرة أخرى.</string>
     <string name="error_timeout">استغرق الأمر وقتًا طويلًا. حاول مرة أخرى.</string>
     <string name="error_generic">حدث خطأ ما. حاول مرة أخرى.</string>
     <string name="error_hold_expired">انتهى حجز مقاعدك المؤقت. اختر التاريخ من جديد.</string>
     <string name="error_no_seats_available">نفدت هذه المقاعد للتو. جرّب تاريخًا آخر.</string>
+    <string name="error_departure_not_open">الحجز اتقفل للتاريخ ده. اختار تاريخ تاني.</string>
+    <string name="error_validation">راجع بياناتك وجرّب تاني.</string>
+    <string name="error_rate_limited">محاولات كتير. استنى دقيقة وجرّب تاني.</string>
+    <!-- Screen-reader state of a button whose action is in flight. -->
+    <string name="a11y_busy">جاري التحميل</string>
     <string name="action_retry">حاول مرة أخرى</string>
 </resources>

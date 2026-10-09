@@ -3,11 +3,14 @@ package eg.bahr.core.localization
 import androidx.compose.runtime.Composable
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.localization.generated.resources.Res
+import eg.bahr.core.localization.generated.resources.error_departure_not_open
 import eg.bahr.core.localization.generated.resources.error_generic
 import eg.bahr.core.localization.generated.resources.error_hold_expired
 import eg.bahr.core.localization.generated.resources.error_network
 import eg.bahr.core.localization.generated.resources.error_no_seats_available
+import eg.bahr.core.localization.generated.resources.error_rate_limited
 import eg.bahr.core.localization.generated.resources.error_timeout
+import eg.bahr.core.localization.generated.resources.error_validation
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -34,6 +37,9 @@ fun AppError.messageRes(): StringResource =
             when (code) {
                 HOLD_EXPIRED -> Res.string.error_hold_expired
                 NO_SEATS_AVAILABLE -> Res.string.error_no_seats_available
+                DEPARTURE_NOT_OPEN -> Res.string.error_departure_not_open
+                VALIDATION_FAILED -> Res.string.error_validation
+                RATE_LIMITED -> Res.string.error_rate_limited
                 else -> Res.string.error_generic
             }
         is AppError.Serialization -> Res.string.error_generic
@@ -44,6 +50,9 @@ fun AppError.messageRes(): StringResource =
 // matching line in feature:booking's ErrorCodeMessagesTest, or it is not pinned.
 private const val HOLD_EXPIRED = "HOLD_EXPIRED"
 private const val NO_SEATS_AVAILABLE = "NO_SEATS_AVAILABLE"
+private const val DEPARTURE_NOT_OPEN = "DEPARTURE_NOT_OPEN"
+private const val VALIDATION_FAILED = "VALIDATION_FAILED"
+private const val RATE_LIMITED = "RATE_LIMITED"
 
 /** [messageRes], resolved in the composition's language. */
 @Composable

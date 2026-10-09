@@ -199,7 +199,8 @@ internal data class ItineraryStopDto(
 
 /**
  * The host card. The contract has no id or display-name field: [name] is what is shown. [avatar] may
- * be absent (a host without one), so the card falls back to the initial. [phone] is decoded but not shown on the trip page (open product question D4).
+ * be absent (a host without one), so the card falls back to the initial. The public page carries no
+ * phone number: that is only on a paid booking (product decision D4).
  */
 @Serializable
 internal data class HostDto(
@@ -208,7 +209,6 @@ internal data class HostDto(
     val role: String? = null,
     val tripsRun: Int? = null,
     val verified: Boolean = false,
-    val phone: String? = null,
 )
 
 /** A host tip. [key] is the contract's lowercase `bring`/`best_time`/`look_out`/`know`. */
@@ -237,11 +237,14 @@ internal data class ReviewDto(
     val tone: String? = null,
 )
 
-/** The rules the booking engine applies, stated on the page (from the backend's policy config). */
+/**
+ * The rules the booking engine applies, stated on the page (from the backend's policy config). Every
+ * seat is charged the trip's price whatever the passenger's age (product decision D1), so there is no
+ * child rule to state.
+ */
 @Serializable
 internal data class PolicyDto(
     val freeCancellationHours: Int? = null,
-    val childFreeUnder: Int? = null,
     val maxPartySize: Int? = null,
 )
 
@@ -262,6 +265,10 @@ internal data class OpenGraphDto(
  * the user taps; the authoritative check is the conditional update the backend runs when placing a
  * hold, which is why a hold can still fail with `NO_SEATS_AVAILABLE` against a date that looked
  * bookable. [bookable] is false when sold out, cancelled or past the cutoff.
+ *
+ * [unavailableReason] says why a date cannot be booked (`SOLD_OUT`, `CANCELLED`, `CLOSED`) and is
+ * absent when it can. It is a string, not an enum, because the contract may add a reason and an
+ * unknown enum value would fail the whole page's decode; see `DateAvailability` for how it is read.
  */
 @Serializable
 internal data class DepartureDto(
@@ -274,5 +281,6 @@ internal data class DepartureDto(
     val capacity: Int,
     val soldOut: Boolean,
     val bookable: Boolean,
+    val unavailableReason: String? = null,
     val price: MoneyDto,
 )

@@ -44,7 +44,8 @@ wins.
 
 **Code-only sizes.** `BahrSize` holds fixed sizes the handoff draws with but tokens.json does not
 name: the icon sizes (`iconSmall/Medium/Large`, M1-M1a review #9) and component dimensions from the
-trip page (`marker`, `avatar`, `avatarSmall`, `timeColumn`, `connector`, `dateCard`, `skeletonLine`).
+trip page (`marker`, `avatar`, `avatarSmall`, `timeColumn`, `connector`, `dateCard`, `skeletonLine`) and
+the date + party screen (`radio`, `stepSegmentWidth/Height`, `stepperValue`, M2-M1).
 They exist so `feature/*` holds no `.dp` (ModuleGraphTest). They are not design tokens: changing one
 changes a component, not the theme, and none has a Dusk/HighContrast variant. If design adds a size
 to tokens.json, move it to the token's own group and port it from there.
@@ -52,6 +53,10 @@ to tokens.json, move it to the token's own group and port it from there.
 `BahrTheme(locale = …)` is set once at the app root from the stored language. It
 picks the font, applies the Arabic type rules (one weight heavier at display
 sizes, looser leading, no tracking, no uppercase) and sets the layout direction.
+
+The typography also sets Material's `bodySmall` (not a token): text fields animate their label between
+`bodyLarge` and `bodySmall`, and Material's default `bodySmall` has its letter-spacing in sp where ours
+is in em, which throws the moment a labelled field gets text or focus (found in M2-M1).
 
 ## Components
 

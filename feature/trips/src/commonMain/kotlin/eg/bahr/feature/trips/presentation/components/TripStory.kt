@@ -135,8 +135,8 @@ private fun ItineraryStopDto.kindColors() =
 
 /**
  * The host card (item 8): avatar, name with the verified mark, "role · N trips run", then the host's
- * tips as tinted panels. The phone the contract serves is not shown here (open question D4), and
- * there is no chat button until there is somewhere for it to go.
+ * tips as tinted panels. Name and photo only: the host's phone is never on the public page, it comes
+ * with a paid booking (product decision D4), so there is no call or chat button here.
  */
 @Composable
 internal fun TripHostCard(

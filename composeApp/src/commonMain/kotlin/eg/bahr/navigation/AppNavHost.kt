@@ -16,7 +16,9 @@ import eg.bahr.deeplink.DeepLinkInbox
 import eg.bahr.deeplink.DeepLinkParser
 import eg.bahr.feature.booking.navigation.bookingConfirmedScreen
 import eg.bahr.feature.booking.navigation.bookingScreen
-import eg.bahr.feature.booking.navigation.navigateToBookingConfirmed
+import eg.bahr.feature.booking.navigation.holdScreen
+import eg.bahr.feature.booking.navigation.navigateToBooking
+import eg.bahr.feature.booking.navigation.navigateToHold
 import eg.bahr.feature.splash.navigation.SplashRoute
 import eg.bahr.feature.splash.navigation.splashScreen
 import eg.bahr.feature.trips.navigation.TripListRoute
@@ -65,15 +67,16 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
 
         tripDetailScreen(
             onBack = { navController.popBackStack() },
-            // Intentionally a no-op until M2: the date + party screen is M2-M1, and the existing
-            // BookingRoute still takes the Java-era `Long` departure id, not the contract's UUID.
-            onContinue = { _, _ -> },
+            onContinue = navController::navigateToBooking,
         )
 
         bookingScreen(
-            onBooked = navController::navigateToBookingConfirmed,
-            onHoldExpired = { navController.popBackStack() },
+            onBack = { navController.popBackStack() },
+            onHeld = navController::navigateToHold,
         )
+
+        // Placeholder until M2-M2's countdown; Back returns to date + party.
+        holdScreen(onBack = { navController.popBackStack() })
 
         bookingConfirmedScreen(
             onDone = {

@@ -91,7 +91,7 @@ class TripDetailViewModelTest {
     @Test
     fun `a closed date that is not sold out cannot be picked and neither can an unknown one`() =
         runViewModelTest {
-            val dates = saturdays().mapIndexed { i, d -> if (i == 0) d.copy(bookable = false) else d }
+            val dates = saturdays().mapIndexed { i, d -> if (i == 0) d.copy(bookable = false, unavailableReason = "CLOSED") else d }
             val repo = FakeTripRepository(tripBySlug = { AppResult.Success(detail()) }, departuresFor = { AppResult.Success(dates) })
             val vm = TripDetailViewModel("burullus-dawn", repo)
             advanceUntilIdle()
@@ -100,6 +100,21 @@ class TripDetailViewModelTest {
             vm.selectDeparture("nope")
 
             assertNull(vm.uiState.value.selectedDepartureId)
+        }
+
+    @Test
+    fun `a cancelled full date gets no sold-out notice and no alternative`() =
+        runViewModelTest {
+            // soldOut is true, but the reason is CANCELLED (D3 precedence): not pickable, no notice.
+            val dates = saturdays().mapIndexed { i, d -> if (i == 2) d.copy(unavailableReason = "CANCELLED") else d }
+            val repo = FakeTripRepository(tripBySlug = { AppResult.Success(detail()) }, departuresFor = { AppResult.Success(dates) })
+            val vm = TripDetailViewModel("burullus-dawn", repo)
+            advanceUntilIdle()
+
+            vm.selectDeparture("dep-3")
+
+            assertNull(vm.uiState.value.selectedDepartureId)
+            assertNull(vm.uiState.value.alternative)
         }
 
     @Test
