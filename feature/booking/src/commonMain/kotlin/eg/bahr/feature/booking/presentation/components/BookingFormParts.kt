@@ -7,12 +7,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardActions
@@ -25,6 +29,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,10 +39,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -68,6 +75,7 @@ import eg.bahr.core.localization.generated.resources.booking_party_decrease
 import eg.bahr.core.localization.generated.resources.booking_party_increase
 import eg.bahr.core.localization.generated.resources.booking_party_max
 import eg.bahr.core.localization.generated.resources.booking_party_size
+import eg.bahr.core.localization.generated.resources.booking_seats_left_cap
 import eg.bahr.core.localization.generated.resources.booking_summary_party
 import eg.bahr.core.localization.generated.resources.booking_summary_price
 import eg.bahr.core.localization.generated.resources.booking_summary_total_note
@@ -259,13 +267,15 @@ private class PillLook(
 
 /**
  * "How many people", a pill-shaped `surfaceContainer` track holding a white − button, the count and a
- * `primary` + button, then the party limit from the server's policy. Each end disables itself at its
- * bound; the count is announced when it changes.
+ * `primary` + button, then the limit: the selected date's seats left when that is lower than the
+ * server's policy (a hint, the hold still decides), else the policy's maximum. Each end disables
+ * itself at its bound; the count is announced when it changes.
  */
 @Composable
 internal fun PartyStepper(
     partySize: Int,
     maxPartySize: Int,
+    seatsLeftCap: Int?,
     canDecrease: Boolean,
     canIncrease: Boolean,
     onDecrease: () -> Unit,
@@ -313,8 +323,14 @@ internal fun PartyStepper(
                 onClick = onIncrease,
             )
         }
+        // The tighter limit is the one worth saying: the date's seats left, else the policy's maximum.
         Text(
-            text = pluralStringResource(Res.plurals.booking_party_max, maxPartySize, maxPartySize),
+            text =
+                if (seatsLeftCap != null) {
+                    pluralStringResource(Res.plurals.booking_seats_left_cap, seatsLeftCap, seatsLeftCap)
+                } else {
+                    pluralStringResource(Res.plurals.booking_party_max, maxPartySize, maxPartySize)
+                },
             style = MaterialTheme.typography.bodyMedium,
             color = c.onSurfaceVariant,
         )
@@ -373,7 +389,7 @@ internal fun GuestDetails(
             shape = BahrTheme.shapes.medium,
             colors = fieldColors(),
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().keptAboveKeyboard(),
         )
         OutlinedTextField(
             value = phone,
@@ -388,9 +404,26 @@ internal fun GuestDetails(
             colors = fieldColors(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { onDone() }),
-            modifier = Modifier.fillMaxWidth().onFocusChanged { phoneFocused = it.isFocused },
+            modifier = Modifier.fillMaxWidth().keptAboveKeyboard().onFocusChanged { phoneFocused = it.isFocused },
         )
     }
+}
+
+/**
+ * Scrolls a focused field back into view once the keyboard has opened. The field gets focus before
+ * the keyboard has shrunk the form (the screen pads itself by the IME inset), so the text field's own
+ * bring-into-view runs against the old, taller viewport and the field ends up under the sticky bar.
+ * Asking again as the inset grows, while focused, settles it in view when the keyboard is fully up.
+ */
+@Composable
+private fun Modifier.keptAboveKeyboard(): Modifier {
+    val requester = remember { BringIntoViewRequester() }
+    var focused by remember { mutableStateOf(false) }
+    val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
+    LaunchedEffect(focused, imeBottom) {
+        if (focused && imeBottom > 0) requester.bringIntoView()
+    }
+    return bringIntoViewRequester(requester).onFocusEvent { focused = it.isFocused }
 }
 
 /** HANDOFF screen 5's inputs: `surfaceLowest` with an `outlineVariant` border. */
@@ -441,8 +474,9 @@ internal fun PriceSummary(
     }
 }
 
+/** A label and its value on the price panel; also the held-seats screen's party row. */
 @Composable
-private fun SummaryRow(
+internal fun SummaryRow(
     label: String,
     value: String,
 ) {

@@ -126,9 +126,34 @@
     <string name="booking_summary_party">People</string>
     <string name="booking_summary_total_note">Your total is confirmed when the seats are held, before you pay.</string>
     <string name="booking_hold_cta">Hold seats and pay</string>
-    <string name="booking_hold_note">Seats are held for 15 minutes while you pay. Nothing is charged until you confirm.</string>
-    <string name="booking_held_title">Your seats are held</string>
-    <string name="booking_held_next">Payment is the next step.</string>
+    <!-- No length in the copy: the hold's length is server policy, and nothing is held yet to read it from. -->
+    <string name="booking_hold_note">Seats are held for a few minutes while you pay. Nothing is charged until you confirm.</string>
+    <plurals name="booking_seats_left_cap">
+        <item quantity="one">Only %1$d seat left on this date.</item>
+        <item quantity="other">Only %1$d seats left on this date.</item>
+    </plurals>
+
+    <!-- Held seats (HANDOFF screen 5, "Payment", step 2 of 3). Payment itself is M3. -->
+    <string name="booking_pay_step_title">Payment</string>
+    <!-- Spoken once a minute by screen readers, never every second. -->
+    <plurals name="booking_hold_minutes_left">
+        <item quantity="one">%1$d minute left to pay</item>
+        <item quantity="other">%1$d minutes left to pay</item>
+    </plurals>
+    <string name="booking_hold_already_held">You already have seats on hold. Finish this booking, or go back to release them first.</string>
+    <string name="booking_hold_time_up">Time is up</string>
+    <string name="booking_hold_checking">Checking your seats…</string>
+    <string name="booking_hold_check_failed">Couldn’t check your seats. Trying again…</string>
+    <string name="booking_departs_from">Departs %1$s, %2$s, %3$s</string>
+    <string name="booking_departs_at">Departs %1$s, %2$s</string>
+    <string name="booking_pay_cta">Pay %1$s</string>
+    <string name="booking_pay_coming">Paying in the app arrives in the next update. Your seats stay held until the timer ends.</string>
+    <string name="booking_leave_title">Leave and release your seats?</string>
+    <string name="booking_leave_body">Someone else can book them straight away.</string>
+    <string name="booking_leave_confirm">Release seats</string>
+    <string name="booking_leave_stay">Keep my seats</string>
+    <string name="booking_leave_failed">We couldn’t release your seats. They are freed on their own when the timer ends.</string>
+    <string name="booking_leave_anyway">Leave anyway</string>
 
     <!-- Errors -->
     <string name="error_network">No connection. Check your internet and try again.</string>

@@ -14,11 +14,15 @@ import eg.bahr.deeplink.AppDeepLinkInbox
 import eg.bahr.deeplink.DeepLinkDestinations
 import eg.bahr.deeplink.DeepLinkInbox
 import eg.bahr.deeplink.DeepLinkParser
+import eg.bahr.deeplink.TripLinkPlacement
+import eg.bahr.deeplink.tripLinkPlacement
 import eg.bahr.feature.booking.navigation.bookingConfirmedScreen
 import eg.bahr.feature.booking.navigation.bookingScreen
+import eg.bahr.feature.booking.navigation.hasBookingInProgress
 import eg.bahr.feature.booking.navigation.holdScreen
 import eg.bahr.feature.booking.navigation.navigateToBooking
 import eg.bahr.feature.booking.navigation.navigateToHold
+import eg.bahr.feature.booking.navigation.returnToDateSelection
 import eg.bahr.feature.splash.navigation.SplashRoute
 import eg.bahr.feature.splash.navigation.splashScreen
 import eg.bahr.feature.trips.navigation.TripListRoute
@@ -75,8 +79,8 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
             onHeld = navController::navigateToHold,
         )
 
-        // Placeholder until M2-M2's countdown; Back returns to date + party.
-        holdScreen(onBack = { navController.popBackStack() })
+        // Released or run out: back to date + party under it, which re-reads its dates.
+        holdScreen(onEnded = navController::returnToDateSelection)
 
         bookingConfirmedScreen(
             onDone = {
@@ -92,9 +96,10 @@ private class NavControllerDeepLinkDestinations(
     private val navController: NavHostController,
 ) : DeepLinkDestinations {
     override fun openTrip(slug: String) {
+        val placement = tripLinkPlacement(bookingInProgress = navController.hasBookingInProgress())
         navController.navigateToTripDetail(slug) {
-            // Whatever was open goes, the list stays: back from the linked trip is the list.
-            popUpTo<TripListRoute>()
+            // Otherwise whatever was open goes and the list stays: back from the linked trip is the list.
+            if (placement == TripLinkPlacement.AboveList) popUpTo<TripListRoute>()
             // The same trip already on top is not pushed twice.
             launchSingleTop = true
         }

@@ -107,8 +107,96 @@ class BookingApiServiceTest {
             assertEquals(listOf(null, "SOLD_OUT"), list.map { it.unavailableReason })
         }
 
+    @Test
+    fun `reads a held booking with the guest's phone encoded plus as percent-2B`() =
+        runTest {
+            val result = service(BOOKING_HELD).heldBooking("BRL-Y4GHX1PW", "+201000000777")
+
+            val sent = requests.single()
+            assertEquals(HttpMethod.Get, sent.method)
+            assertEquals("/api/v1/bookings/BRL-Y4GHX1PW", sent.url.encodedPath)
+            // A bare + in a query decodes as a space; the server compares digits, so it would not notice.
+            assertEquals("phone=%2B201000000777", sent.url.encodedQuery)
+
+            val booking = (result as AppResult.Success).data
+            assertEquals("HELD", booking.status)
+            assertEquals("2026-10-09T23:20:40.39219+03:00", booking.holdExpiresAt)
+            assertEquals("2026-10-09T23:05:40.453816+03:00", booking.serverNow)
+            assertEquals("Dawn on Lake Burullus", booking.trip?.title)
+            assertEquals("Abdel Moneim Riad", booking.departure?.placeName)
+            assertEquals("05:00", booking.departure?.timeLocal)
+            assertEquals(1, booking.partySize)
+            assertEquals(MoneyDto(450, "EGP"), booking.total)
+        }
+
+    @Test
+    fun `a released hold reads without a deadline`() =
+        runTest {
+            val booking = (service(BOOKING_CANCELLED).heldBooking("BRL-Y4GHX1PW", "+201000000777") as AppResult.Success).data
+
+            assertEquals("CANCELLED", booking.status)
+            assertEquals(null, booking.holdExpiresAt)
+        }
+
+    @Test
+    fun `releases a hold with a 204 that has no body and no content type`() =
+        runTest {
+            val engine =
+                MockEngine { request ->
+                    requests += request
+                    // Exactly as the local api answers: 204, no body, no Content-Type.
+                    respond("", HttpStatusCode.NoContent)
+                }
+            val api = BookingApiService(apiHttpClient(engine, ApiConfig(BASE_URL, isDebug = false)) { "ar" })
+
+            val result = api.releaseHold("BRL-Y4GHX1PW", "+201000000777")
+
+            assertIs<AppResult.Success<Unit>>(result)
+            val sent = requests.single()
+            assertEquals(HttpMethod.Delete, sent.method)
+            assertEquals("/api/v1/bookings/BRL-Y4GHX1PW/hold", sent.url.encodedPath)
+            assertEquals("phone=%2B201000000777", sent.url.encodedQuery)
+        }
+
+    @Test
+    fun `releasing a hold whose payment started is a conflict`() =
+        runTest {
+            val result = service(CONFLICT, HttpStatusCode.Conflict).releaseHold("BRL-Y4GHX1PW", "+201000000777")
+
+            val error = (result as AppResult.Failure).error
+            assertIs<AppError.Api>(error)
+            assertEquals(ApiErrorCodes.CONFLICT, error.code)
+        }
+
     private companion object {
         const val BASE_URL = "http://localhost/api/v1/"
+
+        /** As served by the local api (2026-10-09) for `getBooking` on a fresh hold; the contract's `Booking`. */
+        val BOOKING_HELD =
+            """
+            {"success":true,"data":{"ref":"BRL-Y4GHX1PW","status":"HELD","holdExpiresAt":"2026-10-09T23:20:40.39219+03:00",
+            "serverNow":"2026-10-09T23:05:40.453816+03:00","trip":{"slug":"burullus-dawn","title":"Dawn on Lake Burullus",
+            "cardImage":{"url":"http://localhost:9000/bahr-assets/seed/card-dawn.png","width":600,"height":600,
+            "alt":"The lake at dawn","lqip":"data:image/png;base64,iVBORw0KGgo=","variants":[{"url":
+            "http://localhost:9000/bahr-assets/seed/card-dawn.png?w=390&fm=webp","width":390,"format":"webp"}]}},
+            "date":"2026-11-07","dayLabel":"Sat 7 Nov","departure":{"placeName":"Abdel Moneim Riad","city":"Cairo",
+            "governorate":"Cairo","lat":30.0566,"lng":31.2288,"timeLocal":"05:00","arriveBy":"04:45"},"returnTime":"22:00",
+            "partySize":1,"total":{"amount":450,"currency":"EGP"}}}
+            """.trimIndent()
+
+        /** The same booking after `releaseHold`: CANCELLED, no `holdExpiresAt`. */
+        val BOOKING_CANCELLED =
+            """
+            {"success":true,"data":{"ref":"BRL-Y4GHX1PW","status":"CANCELLED","serverNow":"2026-10-09T23:05:40.496852+03:00",
+            "trip":{"slug":"burullus-dawn","title":"Dawn on Lake Burullus"},"date":"2026-11-07","dayLabel":"Sat 7 Nov",
+            "departure":{"placeName":"Abdel Moneim Riad","city":"Cairo","timeLocal":"05:00"},"returnTime":"22:00",
+            "partySize":1,"total":{"amount":450,"currency":"EGP"}}}
+            """.trimIndent()
+
+        val CONFLICT =
+            """
+            {"success":false,"error":{"code":"CONFLICT","message":"Payment has started"}}
+            """.trimIndent()
 
         /** As served by the local api (M2-B2) for `placeHold`; the contract's `HeldSeats`. */
         val HELD =

@@ -186,6 +186,9 @@ object BahrSize {
 
     /** The party stepper's count, wide enough that 1 → 6 does not move the buttons. */
     val stepperValue = 30.dp
+
+    /** The trip thumbnail on the payment screen's summary card (62px in the handoff). */
+    val thumbnail = 62.dp
 }
 
 internal val LocalBahrShapes = staticCompositionLocalOf { BahrShapes() }

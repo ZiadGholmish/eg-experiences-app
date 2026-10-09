@@ -12,6 +12,23 @@ internal interface DeepLinkDestinations {
     fun openList()
 }
 
+/** Where a linked trip page goes on the back stack. */
+internal enum class TripLinkPlacement {
+    /** Everything above the trip list is dropped: back from the linked trip is the list. */
+    AboveList,
+
+    /** On top of what is open: back returns to it. */
+    OnTop,
+}
+
+/**
+ * A booking under way (date + party, or held seats with a live countdown) is kept under a linked
+ * trip rather than dropped with its hold (decided 2026-10-09, M1-M2 review S2): Back from the trip
+ * returns to it, and the held-seats screen re-reads its deadline when it shows again.
+ */
+internal fun tripLinkPlacement(bookingInProgress: Boolean): TripLinkPlacement =
+    if (bookingInProgress) TripLinkPlacement.OnTop else TripLinkPlacement.AboveList
+
 /**
  * Holds the latest link the platform delivered until the NavHost can open it.
  *

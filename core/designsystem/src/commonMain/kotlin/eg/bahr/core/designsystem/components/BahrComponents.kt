@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -30,7 +31,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
@@ -71,7 +76,13 @@ private const val SEAT_BADGE_PADDING_V = 3
 private const val FEW_SEATS_THRESHOLD = 4
 private const val URGENT_SECONDS = 120
 private const val HOLD_PANEL_PADDING = 14
-private const val HOLD_PANEL_GAP = 10
+private const val HOLD_ICON_CIRCLE = 42
+private const val HOLD_ICON = 21
+private const val HOLD_BAR_WIDTH = 70
+private const val HOLD_BAR_HEIGHT = 6
+
+/** The handoff's `rgba(217,79,40,.2)` track: coral at 20 %. */
+private const val HOLD_BAR_TRACK_ALPHA = .2f
 private const val SCRIM_TOP_ALPHA = .45f
 private const val SCRIM_TOP_END = .4f
 private const val SCRIM_BOTTOM_START = .38f
@@ -270,30 +281,82 @@ fun SeatBadge(
     )
 }
 
-/** The 15-minute seat hold. Turns error-coloured in the last 2 minutes. */
+/**
+ * The seat-hold panel (HANDOFF screen 5): a coral circle with [icon], the overline [label], `mm:ss`
+ * (left to right in Arabic too) and a bar draining with [progress] (1 → 0). The time turns
+ * error-coloured in the last 2 minutes.
+ *
+ * Screen readers: with [announcement] set, the panel reads as that text alone and is a polite live
+ * region, so it is spoken when the text changes. Callers change it once a minute (HANDOFF: the
+ * countdown is announced at minute boundaries, never every second); the per-second `mm:ss` is not
+ * exposed.
+ */
 @Composable
 fun HoldCountdown(
     secondsLeft: Int,
     label: String,
     modifier: Modifier = Modifier,
+    progress: Float? = null,
+    icon: ImageVector? = null,
+    announcement: String? = null,
 ) {
     val c = MaterialTheme.colorScheme
     val urgent = secondsLeft <= URGENT_SECONDS
+    val semantics =
+        if (announcement != null) {
+            Modifier.clearAndSetSemantics {
+                contentDescription = announcement
+                liveRegion = LiveRegionMode.Polite
+            }
+        } else {
+            Modifier
+        }
     Row(
         modifier
             .fillMaxWidth()
-            .clip(BahrTheme.shapes.large)
+            .clip(BahrTheme.shapes.card)
             .background(c.tertiaryContainer)
-            .padding(HOLD_PANEL_PADDING.dp),
+            .then(semantics)
+            .padding(horizontal = BahrSpacing.lg, vertical = HOLD_PANEL_PADDING.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(HOLD_PANEL_GAP.dp),
+        horizontalArrangement = Arrangement.spacedBy(BahrSpacing.md),
     ) {
-        Text(label, style = MaterialTheme.typography.bodyMedium, color = c.onTertiaryContainer, modifier = Modifier.weight(1f))
-        Text(
-            BahrFormat.countdown(secondsLeft),
-            style = BahrTheme.type.price,
-            color = if (urgent) c.error else c.onTertiaryContainer,
-        )
+        if (icon != null) {
+            Box(
+                Modifier.size(HOLD_ICON_CIRCLE.dp).clip(BahrTheme.shapes.full).background(c.tertiary),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(icon, contentDescription = null, tint = c.onTertiary, modifier = Modifier.size(HOLD_ICON.dp))
+            }
+        }
+        Column(Modifier.weight(1f)) {
+            Text(
+                label.overlineCase(BahrTheme.locale.isArabic),
+                style = BahrTheme.type.overline,
+                color = c.onTertiaryContainer,
+            )
+            Text(
+                BahrFormat.ltr(BahrFormat.countdown(secondsLeft)),
+                style = MaterialTheme.typography.headlineMedium,
+                color = if (urgent) c.error else c.onTertiaryContainer,
+            )
+        }
+        if (progress != null) {
+            Box(
+                Modifier
+                    .size(width = HOLD_BAR_WIDTH.dp, height = HOLD_BAR_HEIGHT.dp)
+                    .clip(BahrTheme.shapes.full)
+                    .background(c.tertiary.copy(alpha = HOLD_BAR_TRACK_ALPHA)),
+            ) {
+                Box(
+                    Modifier
+                        .fillMaxHeight()
+                        .fillMaxWidth(progress.coerceIn(0f, 1f))
+                        .clip(BahrTheme.shapes.full)
+                        .background(if (urgent) c.error else c.tertiary),
+                )
+            }
+        }
     }
 }
 

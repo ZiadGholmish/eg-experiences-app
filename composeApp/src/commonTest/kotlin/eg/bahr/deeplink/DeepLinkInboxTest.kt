@@ -65,6 +65,12 @@ class DeepLinkInboxTest {
         assertTrue(opened.calls.isEmpty())
     }
 
+    @Test
+    fun `a linked trip goes on top of a booking under way and above the list otherwise`() {
+        assertEquals(TripLinkPlacement.OnTop, tripLinkPlacement(bookingInProgress = true))
+        assertEquals(TripLinkPlacement.AboveList, tripLinkPlacement(bookingInProgress = false))
+    }
+
     private class RecordingDestinations : DeepLinkDestinations {
         val calls = mutableListOf<String>()
 

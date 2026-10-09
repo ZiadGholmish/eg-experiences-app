@@ -124,3 +124,59 @@ internal data class BookingDto(
     val holdExpiresAt: String? = null,
     val confirmedAt: String? = null,
 )
+
+/**
+ * openapi `Booking` (`GET /bookings/{ref}`), read by the held-seats screen to re-sync its countdown
+ * and to show the trip summary. Separate from [BookingDto], the Java-era shape the M3 confirmation
+ * screen still uses, so that rewrite stays M3's.
+ *
+ * [status] is a string, not an enum: anything other than `HELD` / `PAYMENT_PENDING` means the seats
+ * are no longer held for this booking, and a status added later must not fail the decode. A released
+ * hold reads `CANCELLED`; one past its deadline reads `EXPIRED` with no [holdExpiresAt].
+ * `host` is left out: it is only served on a paid booking, which this screen never shows.
+ */
+@Serializable
+internal data class HeldBookingDto(
+    val ref: String,
+    val status: String,
+    val holdExpiresAt: String? = null,
+    val serverNow: String,
+    val trip: BookingTripSummaryDto? = null,
+    val date: LocalDate,
+    val dayLabel: String? = null,
+    val departure: BookingDeparturePlaceDto? = null,
+    val returnTime: String? = null,
+    val partySize: Int,
+    val total: MoneyDto,
+    val paid: MoneyDto? = null,
+    val method: String? = null,
+)
+
+/** openapi `Booking.trip`. */
+@Serializable
+internal data class BookingTripSummaryDto(
+    val slug: String? = null,
+    val title: String? = null,
+    val cardImage: BookingImageDto? = null,
+)
+
+/** openapi `Image`, the fields this screen draws: the photo and its LQIP placeholder. */
+@Serializable
+internal data class BookingImageDto(
+    val url: String,
+    val width: Int,
+    val height: Int,
+    val alt: String? = null,
+    val lqip: String? = null,
+)
+
+/** openapi `Booking.departure`: a `Place` plus the local departure time. */
+@Serializable
+internal data class BookingDeparturePlaceDto(
+    val placeName: String? = null,
+    val city: String? = null,
+    val governorate: String? = null,
+    val timeLocal: String? = null,
+    val arriveBy: String? = null,
+    val whereToStand: String? = null,
+)

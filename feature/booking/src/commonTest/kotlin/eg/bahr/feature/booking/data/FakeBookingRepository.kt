@@ -4,9 +4,12 @@ import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.network.MoneyDto
 import eg.bahr.feature.booking.model.BookingDepartureDto
+import eg.bahr.feature.booking.model.BookingDeparturePlaceDto
 import eg.bahr.feature.booking.model.BookingDto
 import eg.bahr.feature.booking.model.BookingPolicyDto
 import eg.bahr.feature.booking.model.BookingTripDto
+import eg.bahr.feature.booking.model.BookingTripSummaryDto
+import eg.bahr.feature.booking.model.HeldBookingDto
 import eg.bahr.feature.booking.model.HeldSeatsDto
 import eg.bahr.feature.booking.model.PlaceHoldRequest
 import kotlinx.datetime.LocalDate
@@ -19,8 +22,14 @@ internal class FakeBookingRepository(
     var tripBySlug: suspend (slug: String) -> AppResult<BookingTripDto> = { unset() },
     var departuresFor: suspend (slug: String) -> AppResult<List<BookingDepartureDto>> = { unset() },
     var placeHold: suspend (request: PlaceHoldRequest) -> AppResult<HeldSeatsDto> = { unset() },
+    var heldBooking: suspend (ref: String, phone: String) -> AppResult<HeldBookingDto> = { _, _ -> unset() },
+    var releaseHold: suspend (ref: String, phone: String) -> AppResult<Unit> = { _, _ -> unset() },
 ) : BookingRepository {
     val holdRequests = mutableListOf<PlaceHoldRequest>()
+
+    /** `ref to phone` of every booking read and every release, in order. */
+    val bookingReads = mutableListOf<Pair<String, String>>()
+    val releases = mutableListOf<Pair<String, String>>()
     var departureReads = 0
         private set
 
@@ -40,6 +49,22 @@ internal class FakeBookingRepository(
         ref: String,
         phone: String?,
     ): AppResult<BookingDto> = unset()
+
+    override suspend fun heldBooking(
+        ref: String,
+        phone: String,
+    ): AppResult<HeldBookingDto> {
+        bookingReads += ref to phone
+        return heldBooking.invoke(ref, phone)
+    }
+
+    override suspend fun releaseHold(
+        ref: String,
+        phone: String,
+    ): AppResult<Unit> {
+        releases += ref to phone
+        return releaseHold.invoke(ref, phone)
+    }
 
     private companion object {
         fun unset(): AppResult.Failure = AppResult.Failure(AppError.Unknown("FakeBookingRepository: call not stubbed"))
@@ -95,4 +120,30 @@ internal object BookingFixtures {
             serverNow = "2026-10-09T22:27:30+03:00",
             seatsRemaining = 4,
         )
+
+    /**
+     * `GET /bookings/{ref}` for the hold above, as the local api answers it: [status] HELD with the
+     * deadline, or (anything else) without one. Times are the server's, with their +03:00 offset.
+     */
+    fun heldBooking(
+        status: String = "HELD",
+        holdExpiresAt: String? = "2026-10-09T22:42:30+03:00",
+        serverNow: String = "2026-10-09T22:27:30+03:00",
+        title: String = "الفجر على بحيرة البرلس",
+        dayLabel: String = "السبت 10 أكتوبر",
+        city: String = "القاهرة",
+        placeName: String = "موقف عبد المنعم رياض",
+    ) = HeldBookingDto(
+        ref = "BRL-7K4M2X9P",
+        status = status,
+        holdExpiresAt = holdExpiresAt.takeIf { status == "HELD" || status == "PAYMENT_PENDING" },
+        serverNow = serverNow,
+        trip = BookingTripSummaryDto(slug = SLUG, title = title),
+        date = LocalDate.parse("2026-10-10"),
+        dayLabel = dayLabel,
+        departure = BookingDeparturePlaceDto(placeName = placeName, city = city, timeLocal = "05:00", arriveBy = "04:45"),
+        returnTime = "22:00",
+        partySize = 2,
+        total = MoneyDto(amount = 900, currencyCode = "EGP"),
+    )
 }

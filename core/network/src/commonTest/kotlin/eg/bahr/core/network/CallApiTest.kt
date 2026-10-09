@@ -94,12 +94,41 @@ class CallApiTest {
     @Test
     fun `an empty-body success is accepted for Unit callers`() =
         runTest {
-            // POST /bookings/{ref}/cancel returns ApiResponse.ok(null).
+            // A success envelope with no data: ApiResponse.ok(null).
             val client = clientReturning("""{"success":true}""")
 
             val result = callApi<Unit> { client.get("bookings/BRL-4417/cancel") }
 
             assertIs<AppResult.Success<Unit>>(result)
+        }
+
+    @Test
+    fun `a 204 with no body and no content type is a success for Unit callers`() =
+        runTest {
+            // As the real server answers DELETE /bookings/{ref}/hold: no body, no Content-Type.
+            val client =
+                HttpClient(MockEngine { _ -> respond(content = "", status = HttpStatusCode.NoContent) }) {
+                    expectSuccess = false
+                    install(ContentNegotiation) { json(HttpClientFactory.json) }
+                }
+
+            val result = callApi<Unit> { client.get("bookings/BRL-4417/hold") }
+
+            assertIs<AppResult.Success<Unit>>(result)
+        }
+
+    @Test
+    fun `a 204 is not a success for a caller that expects data`() =
+        runTest {
+            val client =
+                HttpClient(MockEngine { _ -> respond(content = "", status = HttpStatusCode.NoContent) }) {
+                    expectSuccess = false
+                    install(ContentNegotiation) { json(HttpClientFactory.json) }
+                }
+
+            val result = callApi<Payload> { client.get("trips") }
+
+            assertIs<AppResult.Failure>(result)
         }
 
     @Test

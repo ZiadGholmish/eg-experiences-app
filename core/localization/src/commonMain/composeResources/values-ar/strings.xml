@@ -146,9 +146,39 @@
     <string name="booking_summary_party">عدد الأفراد</string>
     <string name="booking_summary_total_note">الإجمالي بيتأكد لما المقاعد تتحجز، قبل ما تدفع.</string>
     <string name="booking_hold_cta">احجز المقاعد وادفع</string>
-    <string name="booking_hold_note">المقاعد محجوزة لك 15 دقيقة لحد ما تدفع. مش هيتم خصم أي مبلغ قبل التأكيد.</string>
-    <string name="booking_held_title">المقاعد محجوزة لك</string>
-    <string name="booking_held_next">الدفع هو الخطوة الجاية.</string>
+    <string name="booking_hold_note">المقاعد بتتحجز لك كام دقيقة لحد ما تدفع. مش هيتم خصم أي مبلغ قبل التأكيد.</string>
+    <plurals name="booking_seats_left_cap">
+        <item quantity="zero">مفيش مقاعد فاضية في اليوم ده.</item>
+        <item quantity="one">فاضل مقعد واحد بس في اليوم ده.</item>
+        <item quantity="two">فاضل مقعدين بس في اليوم ده.</item>
+        <item quantity="few">فاضل %1$d مقاعد بس في اليوم ده.</item>
+        <item quantity="many">فاضل %1$d مقعد بس في اليوم ده.</item>
+        <item quantity="other">فاضل %1$d مقعد بس في اليوم ده.</item>
+    </plurals>
+
+    <string name="booking_pay_step_title">الدفع</string>
+    <plurals name="booking_hold_minutes_left">
+        <item quantity="zero">باقي %1$d دقيقة للدفع</item>
+        <item quantity="one">باقي دقيقة واحدة للدفع</item>
+        <item quantity="two">باقي دقيقتين للدفع</item>
+        <item quantity="few">باقي %1$d دقايق للدفع</item>
+        <item quantity="many">باقي %1$d دقيقة للدفع</item>
+        <item quantity="other">باقي %1$d دقيقة للدفع</item>
+    </plurals>
+    <string name="booking_hold_already_held">عندك مقاعد محجوزة بالفعل. كمّل الحجز ده، أو ارجع وسيب المقاعد الأول.</string>
+    <string name="booking_hold_time_up">الوقت خلص</string>
+    <string name="booking_hold_checking">بنتأكد من مقاعدك…</string>
+    <string name="booking_hold_check_failed">مقدرناش نتأكد من مقاعدك. بنحاول تاني…</string>
+    <string name="booking_departs_from">القيام من %1$s، %2$s، %3$s</string>
+    <string name="booking_departs_at">القيام من %1$s، %2$s</string>
+    <string name="booking_pay_cta">ادفع %1$s</string>
+    <string name="booking_pay_coming">الدفع من التطبيق جاي في التحديث الجاي. مقاعدك محجوزة لحد ما الوقت يخلص.</string>
+    <string name="booking_leave_title">هتمشي وتسيب المقاعد؟</string>
+    <string name="booking_leave_body">حد تاني هيقدر يحجزها على طول.</string>
+    <string name="booking_leave_confirm">سيب المقاعد</string>
+    <string name="booking_leave_stay">خلّي المقاعد ليا</string>
+    <string name="booking_leave_failed">مقدرناش نسيب المقاعد. هتتفك لوحدها لما الوقت يخلص.</string>
+    <string name="booking_leave_anyway">امشي برضه</string>
 
     <string name="error_network">لا يوجد اتصال. تحقق من الإنترنت وحاول مرة أخرى.</string>
     <string name="error_timeout">استغرق الأمر وقتًا طويلًا. حاول مرة أخرى.</string>

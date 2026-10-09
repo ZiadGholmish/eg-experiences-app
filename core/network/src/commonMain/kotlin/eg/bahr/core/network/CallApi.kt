@@ -6,6 +6,7 @@ import io.ktor.client.call.NoTransformationFoundException
 import io.ktor.client.call.body
 import io.ktor.client.plugins.HttpRequestTimeoutException
 import io.ktor.client.statement.HttpResponse
+import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.ContentConvertException
 import io.ktor.util.network.UnresolvedAddressException
 import io.ktor.utils.io.errors.IOException
@@ -24,9 +25,14 @@ import kotlinx.serialization.SerializationException
 suspend inline fun <reified T> callApi(crossinline block: suspend () -> HttpResponse): AppResult<T> =
     try {
         val response = block()
-        val envelope: ApiEnvelope<T>? = response.decodeEnvelopeOrNull()
+        // `204 No Content` (e.g. `releaseHold`) has no envelope to decode, and no Content-Type
+        // either, so it would otherwise read as NON_JSON_RESPONSE: a success reported as a failure.
+        val envelope: ApiEnvelope<T>? =
+            if (response.status == HttpStatusCode.NoContent) null else response.decodeEnvelopeOrNull()
 
         when {
+            response.status == HttpStatusCode.NoContent && Unit is T -> AppResult.Success(Unit as T)
+
             envelope == null ->
                 // Not JSON at all: a proxy's HTML 502, a captive portal, an
                 // empty body from a crashed server. There is no error code to
@@ -41,8 +47,8 @@ suspend inline fun <reified T> callApi(crossinline block: suspend () -> HttpResp
 
             envelope.success && envelope.data != null -> AppResult.Success(envelope.data)
 
-            // A successful envelope with no body: `POST /bookings/{ref}/cancel`
-            // answers `ApiResponse.ok(null)`. Only Unit callers can accept it.
+            // A successful envelope with no data (`ApiResponse.ok(null)`). Only Unit callers can
+            // accept it.
             envelope.success && Unit is T -> AppResult.Success(Unit as T)
 
             else ->

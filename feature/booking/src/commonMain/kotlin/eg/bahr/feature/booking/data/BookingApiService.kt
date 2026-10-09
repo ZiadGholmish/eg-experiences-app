@@ -5,9 +5,11 @@ import eg.bahr.core.network.callApi
 import eg.bahr.feature.booking.model.BookingDepartureDto
 import eg.bahr.feature.booking.model.BookingDto
 import eg.bahr.feature.booking.model.BookingTripDto
+import eg.bahr.feature.booking.model.HeldBookingDto
 import eg.bahr.feature.booking.model.HeldSeatsDto
 import eg.bahr.feature.booking.model.PlaceHoldRequest
 import io.ktor.client.HttpClient
+import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 import io.ktor.client.request.post
@@ -50,5 +52,27 @@ internal class BookingApiService(
             client.get("bookings/$ref") {
                 phone?.let { parameter("phone", it) }
             }
+        }
+
+    /**
+     * `getBooking` as the held-seats screen reads it: the fresh `holdExpiresAt` + `serverNow` the
+     * countdown re-syncs from, and the trip summary. [phone] proves a guest's ownership; Ktor encodes
+     * its `+` as `%2B` (a bare `+` in a query decodes as a space).
+     */
+    suspend fun heldBooking(
+        ref: String,
+        phone: String,
+    ): AppResult<HeldBookingDto> =
+        callApi {
+            client.get("bookings/$ref") { parameter("phone", phone) }
+        }
+
+    /** `releaseHold`: 204 on success (also when already released or expired), `CONFLICT` once payment started. */
+    suspend fun releaseHold(
+        ref: String,
+        phone: String,
+    ): AppResult<Unit> =
+        callApi {
+            client.delete("bookings/$ref/hold") { parameter("phone", phone) }
         }
 }

@@ -31,6 +31,7 @@ import eg.bahr.core.localization.generated.resources.booking_hold_cta
 import eg.bahr.core.localization.generated.resources.booking_hold_note
 import eg.bahr.core.localization.generated.resources.booking_price_per_person
 import eg.bahr.core.localization.generated.resources.booking_step_title
+import eg.bahr.core.localization.generated.resources.error_hold_expired
 import eg.bahr.core.localization.generated.resources.format_pair
 import eg.bahr.core.localization.isRetryable
 import eg.bahr.core.localization.localizedMessage
@@ -62,23 +63,23 @@ internal fun BookingScreen(
     onBack: () -> Unit,
     onHeld: (HoldRoute) -> Unit,
     modifier: Modifier = Modifier,
+    holdEnded: Boolean? = null,
+    onHoldEndedHandled: () -> Unit = {},
     viewModel: BookingViewModel = koinViewModel { parametersOf(slug, departureId) },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(state.held) {
         val held = state.held ?: return@LaunchedEffect
-        onHeld(
-            HoldRoute(
-                ref = held.ref,
-                holdExpiresAt = held.holdExpiresAt,
-                serverNow = held.serverNow,
-                totalAmount = held.total.amount,
-                totalCurrency = held.total.currencyCode,
-                guestPhone = state.guestPhone,
-            ),
-        )
+        onHeld(held)
         viewModel.onHeldHandled()
+    }
+
+    // Back from the held seats: [holdEnded] is true when the hold ran out, false when it was released.
+    LaunchedEffect(holdEnded) {
+        val expired = holdEnded ?: return@LaunchedEffect
+        viewModel.onHoldEnded(expired)
+        onHoldEndedHandled()
     }
 
     Column(modifier = modifier.fillMaxSize().imePadding()) {
@@ -125,6 +126,7 @@ private fun BookingForm(
         PartyStepper(
             partySize = state.partySize,
             maxPartySize = state.maxPartySize,
+            seatsLeftCap = state.seatsLeftCap,
             canDecrease = state.canDecreaseParty,
             canIncrease = state.canIncreaseParty,
             onDecrease = viewModel::decreaseParty,
@@ -176,9 +178,15 @@ private fun HoldBar(
 ) {
     StickyActionBar {
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(BahrSpacing.sm)) {
-            state.holdError?.let { error ->
+            val message =
+                when {
+                    state.holdError != null -> state.holdError.localizedMessage()
+                    state.holdExpired -> stringResource(Res.string.error_hold_expired)
+                    else -> null
+                }
+            message?.let {
                 Text(
-                    text = error.localizedMessage(),
+                    text = it,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.error,
                 )

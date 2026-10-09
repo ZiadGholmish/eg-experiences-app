@@ -5,6 +5,7 @@ import androidx.compose.ui.test.onRoot
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.RoborazziOptions
 import com.github.takahirom.roborazzi.captureRoboImage
+import com.github.takahirom.roborazzi.captureScreenRoboImage
 import com.github.takahirom.roborazzi.roborazziSystemPropertyOutputDirectory
 
 /**
@@ -21,6 +22,19 @@ import com.github.takahirom.roborazzi.roborazziSystemPropertyOutputDirectory
 fun ComposeContentTestRule.captureScreenshot(name: String) {
     waitForIdle()
     onRoot().captureRoboImage(
+        filePath = "${roborazziSystemPropertyOutputDirectory()}/$name.png",
+        roborazziOptions = RoborazziOptions(),
+    )
+}
+
+/**
+ * As [captureScreenshot], but the whole screen, every window included. A dialog is a second
+ * window (a second compose root), which [captureScreenshot]'s single root cannot show.
+ */
+@OptIn(ExperimentalRoborazziApi::class)
+fun ComposeContentTestRule.captureFullScreen(name: String) {
+    waitForIdle()
+    captureScreenRoboImage(
         filePath = "${roborazziSystemPropertyOutputDirectory()}/$name.png",
         roborazziOptions = RoborazziOptions(),
     )

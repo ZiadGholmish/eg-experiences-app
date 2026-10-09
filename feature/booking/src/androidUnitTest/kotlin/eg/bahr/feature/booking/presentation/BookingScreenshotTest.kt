@@ -19,7 +19,6 @@ import eg.bahr.feature.booking.data.BookingFixtures
 import eg.bahr.feature.booking.data.BookingFixtures.SLUG
 import eg.bahr.feature.booking.data.FakeBookingRepository
 import eg.bahr.feature.booking.model.BookingDepartureDto
-import eg.bahr.feature.booking.navigation.HoldRoute
 import kotlinx.coroutines.awaitCancellation
 import org.junit.After
 import org.junit.Before
@@ -32,12 +31,13 @@ import org.robolectric.annotation.GraphicsMode
 import java.util.Locale
 
 /**
- * Date + party × {ar, en} × {loading, loaded, no seats}, driven through the real view model with a
- * fake repository; plus the held-seats placeholder.
+ * Date + party × {ar, en} × {loading, loaded, no seats, back from an expired hold}, driven through
+ * the real view model with a fake repository. The held seats are in `HoldScreenshotTest`.
  *
  * - loading: the bar, title and button are drawn while the trip loads.
  * - loaded: the date picked on the trip page selected, a party of 2 and the guest filled in, so the
  *   coral button is live.
+ * - hold expired: back from held seats that ran out, on a date with fewer seats than the policy allows.
  * - no seats: the hold came back `NO_SEATS_AVAILABLE` and the re-read dates show every D3 reason
  *   (cancelled, sold out, booking closed) next to the open ones; the error sits above the button.
  *
@@ -83,13 +83,11 @@ class BookingScreenshotTest {
     @Test
     fun noSeatsEnglish() = snapNoSeats(AppLanguage.ENGLISH, "Dawn on Lake Burullus", "Nada Hassan")
 
-    @Config(qualifiers = "en-w360dp-h640dp-xhdpi")
     @Test
-    fun heldArabic() = snapHeld(AppLanguage.ARABIC)
+    fun holdExpiredArabic() = snapHoldExpired(AppLanguage.ARABIC, "الفجر على بحيرة البرلس", "ندى حسن")
 
-    @Config(qualifiers = "en-w360dp-h640dp-xhdpi")
     @Test
-    fun heldEnglish() = snapHeld(AppLanguage.ENGLISH)
+    fun holdExpiredEnglish() = snapHoldExpired(AppLanguage.ENGLISH, "Dawn on Lake Burullus", "Nada Hassan")
 
     private fun snapLoading(language: AppLanguage) {
         val repo = FakeBookingRepository(tripBySlug = { awaitCancellation() }, departuresFor = { awaitCancellation() })
@@ -140,18 +138,29 @@ class BookingScreenshotTest {
         capture("booking_no_seats", language)
     }
 
-    private fun snapHeld(language: AppLanguage) {
-        val hold =
-            HoldRoute(
-                ref = "BRL-7K4M2X9P",
-                holdExpiresAt = "2026-10-09T22:42:30+03:00",
-                serverNow = "2026-10-09T22:27:30+03:00",
-                totalAmount = 900,
-                totalCurrency = "EGP",
-                guestPhone = "01012345678",
+    /**
+     * Back from a hold that ran out, on the date with only 2 seats left: the expiry notice above the
+     * button, the stepper capped at 2 with the "only 2 seats" note.
+     */
+    private fun snapHoldExpired(
+        language: AppLanguage,
+        title: String,
+        name: String,
+    ) {
+        val repo =
+            FakeBookingRepository(
+                tripBySlug = { AppResult.Success(BookingFixtures.trip(title = title)) },
+                departuresFor = { AppResult.Success(BookingFixtures.saturdays()) },
             )
-        setContent(language) { HoldScreen(hold = hold, onBack = {}) }
-        capture("booking_held", language)
+        val vm = BookingViewModel(SLUG, "dep-2", repo)
+        show(language, vm)
+        compose.runOnUiThread {
+            repeat(3) { vm.increaseParty() }
+            vm.setGuestName(name)
+            vm.setGuestPhone("010 1234 5678")
+            vm.onHoldEnded(expired = true)
+        }
+        capture("booking_hold_expired", language)
     }
 
     /** dep-1 cancelled (it was also full), dep-2 just sold out, dep-3 sold out, dep-4 booking closed. */

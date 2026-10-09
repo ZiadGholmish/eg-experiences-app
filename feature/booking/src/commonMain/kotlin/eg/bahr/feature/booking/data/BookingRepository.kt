@@ -4,6 +4,7 @@ import eg.bahr.core.common.result.AppResult
 import eg.bahr.feature.booking.model.BookingDepartureDto
 import eg.bahr.feature.booking.model.BookingDto
 import eg.bahr.feature.booking.model.BookingTripDto
+import eg.bahr.feature.booking.model.HeldBookingDto
 import eg.bahr.feature.booking.model.HeldSeatsDto
 import eg.bahr.feature.booking.model.PlaceHoldRequest
 
@@ -22,6 +23,16 @@ internal interface BookingRepository {
         ref: String,
         phone: String? = null,
     ): AppResult<BookingDto>
+
+    suspend fun heldBooking(
+        ref: String,
+        phone: String,
+    ): AppResult<HeldBookingDto>
+
+    suspend fun releaseHold(
+        ref: String,
+        phone: String,
+    ): AppResult<Unit>
 }
 
 /** A pass-through for now: nothing on this screen is worth caching between visits. */
@@ -38,4 +49,14 @@ internal class DefaultBookingRepository(
         ref: String,
         phone: String?,
     ): AppResult<BookingDto> = api.bookingByRef(ref, phone)
+
+    override suspend fun heldBooking(
+        ref: String,
+        phone: String,
+    ): AppResult<HeldBookingDto> = api.heldBooking(ref, phone)
+
+    override suspend fun releaseHold(
+        ref: String,
+        phone: String,
+    ): AppResult<Unit> = api.releaseHold(ref, phone)
 }

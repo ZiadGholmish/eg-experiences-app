@@ -17,6 +17,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -157,10 +158,119 @@ class BookingViewModelTest {
             assertEquals("01012345678", request.guest.phone)
             // Left to the server: it defaults to the request's Accept-Language.
             assertNull(request.guest.locale)
-            assertEquals(held(), vm.uiState.value.held)
+            val route = assertNotNull(vm.uiState.value.held)
+            assertEquals(held().ref, route.ref)
+            assertEquals(held().holdExpiresAt, route.holdExpiresAt)
+            assertEquals(held().serverNow, route.serverNow)
+            assertEquals(900, route.totalAmount)
+            assertEquals("EGP", route.totalCurrency)
+            assertEquals("01012345678", route.guestPhone)
 
             vm.onHeldHandled()
             assertNull(vm.uiState.value.held)
+        }
+
+    @Test
+    fun `the hold carries the phone it was placed with not one typed while it was in flight`() =
+        runViewModelTest {
+            val answer = CompletableDeferred<AppResult<HeldSeatsDto>>()
+            val repo = loaded().apply { placeHold = { answer.await() } }
+            val vm = BookingViewModel(SLUG, "dep-1", repo)
+            advanceUntilIdle()
+            vm.fillGuest()
+
+            vm.placeHold()
+            runCurrent()
+            vm.setGuestPhone("01099999999")
+            answer.complete(AppResult.Success(held()))
+            advanceUntilIdle()
+
+            assertEquals(
+                "01012345678",
+                vm.uiState.value.held
+                    ?.guestPhone,
+            )
+        }
+
+    @Test
+    fun `the stepper is capped at the selected date's seats left`() =
+        runViewModelTest {
+            // dep-2 has 2 seats left, dep-4 has 11; the policy allows 6.
+            val vm = BookingViewModel(SLUG, "dep-2", loaded())
+            advanceUntilIdle()
+
+            repeat(5) { vm.increaseParty() }
+            assertEquals(2, vm.uiState.value.partySize)
+            assertEquals(2, vm.uiState.value.seatsLeftCap)
+            assertFalse(vm.uiState.value.canIncreaseParty)
+
+            vm.selectDeparture("dep-4")
+            assertNull(vm.uiState.value.seatsLeftCap)
+            repeat(3) { vm.increaseParty() }
+            assertEquals(5, vm.uiState.value.partySize)
+
+            // Back to the small date: the party comes down to what fits, and the note says why.
+            vm.selectDeparture("dep-2")
+            assertEquals(2, vm.uiState.value.partySize)
+            assertEquals(2, vm.uiState.value.seatsLeftCap)
+        }
+
+    @Test
+    fun `fresh counts after a failed hold bring the party down to the seats left`() =
+        runViewModelTest {
+            var dates = saturdays()
+            val repo =
+                loaded { dates }.apply {
+                    placeHold = { AppResult.Failure(AppError.Api(ApiErrorCodes.NO_SEATS_AVAILABLE, null, 409)) }
+                }
+            val vm = BookingViewModel(SLUG, "dep-1", repo)
+            advanceUntilIdle()
+            vm.fillGuest()
+            repeat(3) { vm.increaseParty() }
+            assertEquals(4, vm.uiState.value.partySize)
+
+            // Someone took 3 of dep-1's 6 seats: 3 are left, so a party of 4 no longer fits.
+            dates = saturdays().map { if (it.id == "dep-1") it.copy(seatsRemaining = 3) else it }
+            vm.placeHold()
+            advanceUntilIdle()
+
+            assertEquals("dep-1", vm.uiState.value.selectedDepartureId)
+            assertEquals(3, vm.uiState.value.partySize)
+            assertEquals(3, vm.uiState.value.seatsLeftCap)
+        }
+
+    @Test
+    fun `back from a hold that ran out says so and re-reads the dates`() =
+        runViewModelTest {
+            val repo = loaded()
+            val vm = BookingViewModel(SLUG, "dep-1", repo)
+            advanceUntilIdle()
+            val reads = repo.departureReads
+
+            vm.onHoldEnded(expired = true)
+            advanceUntilIdle()
+
+            assertTrue(vm.uiState.value.holdExpired)
+            assertEquals(reads + 1, repo.departureReads)
+
+            // Picking a date again clears the notice.
+            vm.selectDeparture("dep-4")
+            assertFalse(vm.uiState.value.holdExpired)
+        }
+
+    @Test
+    fun `back from a released hold re-reads the dates without a notice`() =
+        runViewModelTest {
+            val repo = loaded()
+            val vm = BookingViewModel(SLUG, "dep-1", repo)
+            advanceUntilIdle()
+            val reads = repo.departureReads
+
+            vm.onHoldEnded(expired = false)
+            advanceUntilIdle()
+
+            assertFalse(vm.uiState.value.holdExpired)
+            assertEquals(reads + 1, repo.departureReads)
         }
 
     @Test

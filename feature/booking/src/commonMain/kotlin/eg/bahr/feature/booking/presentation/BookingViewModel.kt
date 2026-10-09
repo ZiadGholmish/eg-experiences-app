@@ -9,8 +9,8 @@ import eg.bahr.feature.booking.data.BookingRepository
 import eg.bahr.feature.booking.model.BookingDepartureDto
 import eg.bahr.feature.booking.model.BookingTripDto
 import eg.bahr.feature.booking.model.GuestRequest
-import eg.bahr.feature.booking.model.HeldSeatsDto
 import eg.bahr.feature.booking.model.PlaceHoldRequest
+import eg.bahr.feature.booking.navigation.HoldRoute
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,8 +31,14 @@ internal data class BookingUiState(
     val isPlacingHold: Boolean = false,
     /** Why the last hold failed; cleared by the next edit. */
     val holdError: AppError? = null,
-    /** Set once a hold is placed, until the screen has navigated on ([BookingViewModel.onHeldHandled]). */
-    val held: HeldSeatsDto? = null,
+    /**
+     * Set once a hold is placed, until the screen has navigated on ([BookingViewModel.onHeldHandled]).
+     * Built from the request that placed the hold, so the phone it carries is the one the hold was
+     * made under even if the field is edited while the request is in flight.
+     */
+    val held: HoldRoute? = null,
+    /** The last hold on this screen ran out (the held-seats screen came back at 00:00). */
+    val holdExpired: Boolean = false,
 ) {
     /**
      * The live dates when they have answered, else the trip's own `dates` (the same shape, read with
@@ -44,12 +50,28 @@ internal data class BookingUiState(
     val selectedDeparture: BookingDepartureDto?
         get() = departures.firstOrNull { it.id == selectedDepartureId }
 
-    /** The stepper's upper bound, from the server's policy (`policy.maxPartySize`). */
+    /** The party limit per booking, from the server's policy (`policy.maxPartySize`). */
     val maxPartySize: Int
         get() = trip?.policy?.maxPartySize?.takeIf { it >= MIN_PARTY_SIZE } ?: FALLBACK_MAX_PARTY_SIZE
 
+    /**
+     * The selected date's seats left, when fewer than [maxPartySize]. A hint, not a decision: the
+     * hold still decides. It caps the stepper so a party that cannot fit is not sent only to come
+     * back as "those seats just went", which would mislead when a smaller party fits.
+     */
+    val seatsLeftCap: Int?
+        get() =
+            selectedDeparture
+                ?.takeIf { it.isOpen }
+                ?.seatsRemaining
+                ?.takeIf { it < maxPartySize }
+                ?.coerceAtLeast(MIN_PARTY_SIZE)
+
+    /** The stepper's upper bound: the policy's limit or the selected date's seats, whichever is lower. */
+    val partyCap: Int get() = seatsLeftCap ?: maxPartySize
+
     val canDecreaseParty: Boolean get() = partySize > MIN_PARTY_SIZE
-    val canIncreaseParty: Boolean get() = partySize < maxPartySize
+    val canIncreaseParty: Boolean get() = partySize < partyCap
 
     val isNameValid: Boolean
         get() = guestName.isNotBlank() && guestName.trim().length <= NAME_MAX_LENGTH
@@ -66,7 +88,7 @@ internal data class BookingUiState(
         get() =
             !isPlacingHold &&
                 selectedDeparture?.isOpen == true &&
-                partySize in MIN_PARTY_SIZE..maxPartySize &&
+                partySize in MIN_PARTY_SIZE..partyCap &&
                 isNameValid &&
                 isPhoneValid
 
@@ -92,7 +114,7 @@ internal data class BookingUiState(
 
 /**
  * Date + party (HANDOFF screen 4): pick one of the trip's dates, the party size and the lead
- * contact, then place the 15-minute seat hold.
+ * contact, then place the seat hold (its length is the server's policy).
  *
  * [departureId] is the date picked on the trip page; it starts selected if it can still be booked.
  */
@@ -126,11 +148,15 @@ internal class BookingViewModel(
     fun selectDeparture(departureId: String) {
         _uiState.update { state ->
             val departure = state.departures.firstOrNull { it.id == departureId }
-            if (departure?.isOpen == true) state.copy(selectedDepartureId = departureId, holdError = null) else state
+            if (departure?.isOpen == true) {
+                state.copy(selectedDepartureId = departureId, holdError = null, holdExpired = false).withValidParty()
+            } else {
+                state
+            }
         }
     }
 
-    fun increaseParty() = _uiState.update { it.copy(partySize = (it.partySize + 1).coerceAtMost(it.maxPartySize), holdError = null) }
+    fun increaseParty() = _uiState.update { it.copy(partySize = (it.partySize + 1).coerceAtMost(it.partyCap), holdError = null) }
 
     fun decreaseParty() =
         _uiState.update {
@@ -153,18 +179,29 @@ internal class BookingViewModel(
         val state = _uiState.value
         val departure = state.selectedDeparture
         if (!state.canPlaceHold || departure == null) return
-        _uiState.update { it.copy(isPlacingHold = true, holdError = null) }
+        _uiState.update { it.copy(isPlacingHold = true, holdError = null, holdExpired = false) }
 
+        val request =
+            PlaceHoldRequest(
+                departureId = departure.id,
+                partySize = state.partySize,
+                guest = GuestRequest(name = state.guestName.trim(), phone = state.guestPhone),
+            )
         viewModelScope.launch {
-            val request =
-                PlaceHoldRequest(
-                    departureId = departure.id,
-                    partySize = state.partySize,
-                    guest = GuestRequest(name = state.guestName.trim(), phone = state.guestPhone),
-                )
             when (val result = repository.placeHold(request)) {
-                is AppResult.Success ->
-                    _uiState.update { it.copy(isPlacingHold = false, held = result.data) }
+                is AppResult.Success -> {
+                    val seats = result.data
+                    val route =
+                        HoldRoute(
+                            ref = seats.ref,
+                            holdExpiresAt = seats.holdExpiresAt,
+                            serverNow = seats.serverNow,
+                            totalAmount = seats.total.amount,
+                            totalCurrency = seats.total.currencyCode,
+                            guestPhone = request.guest.phone,
+                        )
+                    _uiState.update { it.copy(isPlacingHold = false, held = route) }
+                }
 
                 is AppResult.Failure -> {
                     _uiState.update { it.copy(isPlacingHold = false, holdError = result.error) }
@@ -178,6 +215,15 @@ internal class BookingViewModel(
 
     /** The screen has moved on to the held seats; going back here must not navigate again. */
     fun onHeldHandled() = _uiState.update { it.copy(held = null) }
+
+    /**
+     * Back from the held seats: released by the user, or run out ([expired]). Either way the seats
+     * went back on sale, so the counts on screen are stale and are read again.
+     */
+    fun onHoldEnded(expired: Boolean) {
+        _uiState.update { it.copy(holdExpired = expired, holdError = null) }
+        refreshDepartures()
+    }
 
     private fun refreshDepartures() {
         viewModelScope.launch {
@@ -194,12 +240,15 @@ internal class BookingViewModel(
         // selection that matches no date selects nothing: see `selectedDeparture`).
         if (departures.isEmpty()) return this
         val stillOpen = departures.any { it.id == selected && it.isOpen }
-        return if (stillOpen) this else copy(selectedDepartureId = null)
+        return if (stillOpen) withValidParty() else copy(selectedDepartureId = null)
     }
 
-    /** A party chosen before the policy arrived may be over its limit. */
+    /**
+     * A party chosen before the policy arrived, or before a fresh seat count, may be over the cap;
+     * the stepper's note says why it went down.
+     */
     private fun BookingUiState.withValidParty(): BookingUiState =
-        copy(partySize = partySize.coerceIn(BookingUiState.MIN_PARTY_SIZE, maxPartySize))
+        copy(partySize = partySize.coerceIn(BookingUiState.MIN_PARTY_SIZE, partyCap))
 
     private fun AppError.isStaleDates(): Boolean =
         this is AppError.Api && (code == ApiErrorCodes.NO_SEATS_AVAILABLE || code == ApiErrorCodes.DEPARTURE_NOT_OPEN)
