@@ -20,6 +20,12 @@ val localBaseUrl: String =
         "http://10.0.2.2:8084/api/v1/",
     )
 
+// The host of the share links (`https://<host>/t/{slug}`) the local build opens. `localhost` matches
+// the api's own default `SITE_PUBLIC_BASE_URL` (http://localhost:8084), so the "Open in app" link the
+// local SSR page builds (`intent://localhost:8084/t/…`) resolves to this app. Set it to a tunnel's
+// host to check App Links verification end to end; see README → Deep links.
+val localAppLinkHost: String = localProperties.getProperty("LOCAL_APP_LINK_HOST", "localhost")
+
 kotlin {
     sourceSets {
         androidMain.dependencies {
@@ -73,25 +79,44 @@ android {
 
     flavorDimensions += "environment"
 
-    // BASE_URL is the only per-environment value so far. Both dev and prod hosts
-    // are placeholders until the api deployable is actually deployed — see
-    // ../docs/PLAN.md (M7).
+    // Per environment: the api's BASE_URL and the share-link host (App Links). The dev hosts are
+    // placeholders until the deployables are actually deployed — see ../docs/PLAN.md (M7). The app
+    // link host is set twice from one value: the manifest's intent filter (placeholder) and the
+    // shared parser (BuildConfig), so the two cannot disagree.
     productFlavors {
         create("local") {
             dimension = "environment"
             applicationIdSuffix = ".local"
             versionNameSuffix = "-local"
             buildConfigField("String", "BASE_URL", "\"$localBaseUrl\"")
+            appLinks(host = localAppLinkHost, allowsHttp = true)
         }
         create("dev") {
             dimension = "environment"
             applicationIdSuffix = ".dev"
             versionNameSuffix = "-dev"
             buildConfigField("String", "BASE_URL", "\"https://api-dev.example.invalid/api/v1/\"")
+            appLinks(host = "dev.example.invalid", allowsHttp = false)
         }
         create("prod") {
             dimension = "environment"
             buildConfigField("String", "BASE_URL", "\"https://api.example.invalid/api/v1/\"")
+            appLinks(host = "bahr.eg", allowsHttp = false)
         }
     }
+}
+
+/**
+ * App Links for one flavor. Only `local` takes plain http: the local api serves its share page over
+ * http, so its "Open in app" intent says `scheme=http`. Every other flavor's filter lists https
+ * twice, which is the same as once.
+ */
+fun com.android.build.api.dsl.ApplicationProductFlavor.appLinks(
+    host: String,
+    allowsHttp: Boolean,
+) {
+    manifestPlaceholders["appLinkHost"] = host
+    manifestPlaceholders["appLinkLocalScheme"] = if (allowsHttp) "http" else "https"
+    buildConfigField("String", "APP_LINK_HOST", "\"$host\"")
+    buildConfigField("boolean", "APP_LINK_ALLOWS_HTTP", allowsHttp.toString())
 }

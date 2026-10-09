@@ -12,3 +12,8 @@ sdk.dir=/Users/<you>/Library/Android/sdk
 # HTTP. If a local release build is ever needed (e.g. to check R8), copy that file to
 # composeApp/src/androidLocal/res/xml/ for the run, or put the backend behind HTTPS.
 LOCAL_BASE_URL=http://10.0.2.2:8084/api/v1/
+
+# Share-link host the `local` flavor claims with App Links (https://<host>/t/{slug}; http too, in local
+# only). `localhost` matches the api's default SITE_PUBLIC_BASE_URL, so its "Open in app" link opens
+# this app. To check App Links verification, set it to an https tunnel's host — README → Deep links.
+LOCAL_APP_LINK_HOST=localhost

@@ -5,5 +5,9 @@
 // and Release (Prod). Add a `Dev` configuration pointing here when one exists.
 BASE_URL = https:/$()/api-dev.example.invalid/api/v1/
 
+// Placeholder share-link host, matching composeApp's `dev` flavor (appLinks).
+APP_LINK_HOST = dev.example.invalid
+CODE_SIGN_ENTITLEMENTS = iosApp/iosApp.entitlements
+
 PRODUCT_BUNDLE_IDENTIFIER = eg.bahr.app.dev
 DISPLAY_NAME = Bahr Dev

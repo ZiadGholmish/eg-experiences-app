@@ -10,6 +10,7 @@ import eg.bahr.core.datastore.di.dataStoreModule
 import eg.bahr.core.network.ApiConfig
 import eg.bahr.core.network.LanguageTagProvider
 import eg.bahr.core.network.di.networkModule
+import eg.bahr.deeplink.DeepLinkParser
 import eg.bahr.feature.booking.di.bookingModule
 import eg.bahr.feature.trips.di.tripsModule
 import kotlinx.coroutines.flow.first
@@ -20,15 +21,26 @@ import org.koin.dsl.KoinAppDeclaration
 import org.koin.dsl.module
 
 /**
- * Bindings only the app module can make: the API base URL lives in the build
+ * Where share links point, per environment: the host, and whether plain http is accepted (the local
+ * flavor only, whose api serves its share page over http).
+ */
+data class AppLinkConfig(
+    val host: String,
+    val allowsHttp: Boolean,
+)
+
+/**
+ * Bindings only the app module can make: the API base URL and the share-link host live in the build
  * config, and the preferences file path is platform-specific.
  */
 fun appModule(
     baseUrl: String,
     isDebug: Boolean,
+    appLinks: AppLinkConfig,
     preferencesPath: () -> String,
 ) = module {
     single { ApiConfig(baseUrl = baseUrl, isDebug = isDebug) }
+    single { DeepLinkParser(host = appLinks.host, allowsHttp = appLinks.allowsHttp) }
     single<DataStore<Preferences>> { createPreferencesDataStore(preferencesPath) }
 
     // One per app: view models report transient errors here, App's BahrErrorHost shows them.
@@ -54,13 +66,14 @@ fun appModule(
 fun initKoin(
     baseUrl: String,
     isDebug: Boolean,
+    appLinks: AppLinkConfig,
     preferencesPath: () -> String,
     appDeclaration: KoinAppDeclaration = {},
 ): KoinApplication =
     startKoin {
         appDeclaration()
         modules(
-            appModule(baseUrl, isDebug, preferencesPath),
+            appModule(baseUrl, isDebug, appLinks, preferencesPath),
             networkModule,
             dataStoreModule,
             tripsModule,

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Universal Links: iOS fetches https://$(APP_LINK_HOST)/.well-known/apple-app-site-association,
+	     served by the backend (team id + bundle id from its SITE_APP_LINKS_IOS_* config).
+	     Applied by Dev.xcconfig and Prod.xcconfig only (CODE_SIGN_ENTITLEMENTS); see Local.xcconfig. -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:$(APP_LINK_HOST)</string>
+	</array>
+</dict>
+</plist>

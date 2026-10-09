@@ -16,10 +16,28 @@
             android:name=".MainActivity"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|layoutDirection|uiMode"
             android:exported="true"
+            android:launchMode="singleTask"
             android:windowSoftInputMode="adjustResize">
+            <!-- singleTask: a link tapped while the app runs reaches this instance through onNewIntent,
+                 instead of stacking a second activity with its own NavHost on top of the first. -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- Android App Links: the trip share link https://<host>/t/{slug} (PLAN §6). The host is
+                 per flavor (composeApp/build.gradle.kts → appLinks); the backend proves this app owns
+                 it with /.well-known/assetlinks.json. No android:port, so any port matches (the local
+                 api is on 8084). appLinkLocalScheme is http for the local flavor only, https otherwise.
+                 /b/{ref} is not claimed until the confirmation screen opens from a link. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:scheme="${appLinkLocalScheme}" />
+                <data android:host="${appLinkHost}" />
+                <data android:pathPrefix="/t/" />
             </intent-filter>
         </activity>
     </application>

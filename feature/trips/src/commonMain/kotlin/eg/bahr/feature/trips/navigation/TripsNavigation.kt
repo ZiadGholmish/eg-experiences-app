@@ -34,4 +34,7 @@ fun NavGraphBuilder.tripDetailScreen(
 
 fun NavController.navigateToTripList(builder: NavOptionsBuilder.() -> Unit = {}) = navigate(TripListRoute, builder)
 
-fun NavController.navigateToTripDetail(slug: String) = navigate(TripDetailRoute(slug))
+fun NavController.navigateToTripDetail(
+    slug: String,
+    builder: NavOptionsBuilder.() -> Unit = {},
+) = navigate(TripDetailRoute(slug), builder)

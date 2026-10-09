@@ -2,3 +2,7 @@
 
 // Placeholder until a prod host is deployed — matches composeApp's `prod` flavor.
 BASE_URL = https:/$()/api.example.invalid/api/v1/
+
+// Universal Links: https://bahr.eg/t/{slug} (PLAN §6). The entitlement reads APP_LINK_HOST too.
+APP_LINK_HOST = bahr.eg
+CODE_SIGN_ENTITLEMENTS = iosApp/iosApp.entitlements

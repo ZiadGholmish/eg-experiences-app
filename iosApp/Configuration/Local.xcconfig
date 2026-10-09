@@ -13,5 +13,12 @@ BASE_URL = http:/$()/localhost:8084/api/v1/
 // simulator still builds without one.
 #include? "Local.private.xcconfig"
 
+// Share-link host for the parser. Matches the api's local default (SITE_PUBLIC_BASE_URL =
+// http://localhost:8084). No Associated Domains entitlement here (CODE_SIGN_ENTITLEMENTS unset):
+// Universal Links need a public https host, so applinks:localhost could never verify, and the
+// capability needs a paid team in the provisioning profile, which would stop a device build signed
+// by a personal team. See README → Deep links.
+APP_LINK_HOST = localhost
+
 PRODUCT_BUNDLE_IDENTIFIER = eg.bahr.app.local
 DISPLAY_NAME = Bahr Local
