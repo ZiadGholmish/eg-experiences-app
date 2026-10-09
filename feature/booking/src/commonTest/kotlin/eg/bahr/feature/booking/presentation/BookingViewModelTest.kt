@@ -2,16 +2,22 @@ package eg.bahr.feature.booking.presentation
 
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
+import eg.bahr.core.datastore.ActiveHoldStore
+import eg.bahr.core.datastore.StoredHold
 import eg.bahr.core.network.ApiErrorCodes
 import eg.bahr.core.testing.runViewModelTest
 import eg.bahr.feature.booking.data.BookingFixtures.SLUG
 import eg.bahr.feature.booking.data.BookingFixtures.held
+import eg.bahr.feature.booking.data.BookingFixtures.heldBooking
 import eg.bahr.feature.booking.data.BookingFixtures.saturdays
 import eg.bahr.feature.booking.data.BookingFixtures.trip
+import eg.bahr.feature.booking.data.FakeActiveHoldStore
 import eg.bahr.feature.booking.data.FakeBookingRepository
+import eg.bahr.feature.booking.model.HeldBookingDto
 import eg.bahr.feature.booking.model.HeldSeatsDto
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlin.test.Test
@@ -37,7 +43,7 @@ class BookingViewModelTest {
     @Test
     fun `the date picked on the trip page starts selected`() =
         runViewModelTest {
-            val vm = BookingViewModel(SLUG, "dep-2", loaded())
+            val vm = BookingViewModel(SLUG, "dep-2", loaded(), FakeActiveHoldStore())
             advanceUntilIdle()
 
             val state = vm.uiState.value
@@ -50,7 +56,7 @@ class BookingViewModelTest {
     fun `a picked date that is no longer bookable is dropped`() =
         runViewModelTest {
             // dep-3 is sold out by the time the screen reads the dates.
-            val vm = BookingViewModel(SLUG, "dep-3", loaded())
+            val vm = BookingViewModel(SLUG, "dep-3", loaded(), FakeActiveHoldStore())
             advanceUntilIdle()
 
             assertNull(vm.uiState.value.selectedDepartureId)
@@ -61,7 +67,7 @@ class BookingViewModelTest {
     fun `only an open date can be picked`() =
         runViewModelTest {
             val dates = saturdays().mapIndexed { i, d -> if (i == 0) d.copy(bookable = false, unavailableReason = "CANCELLED") else d }
-            val vm = BookingViewModel(SLUG, "dep-2", loaded { dates })
+            val vm = BookingViewModel(SLUG, "dep-2", loaded { dates }, FakeActiveHoldStore())
             advanceUntilIdle()
 
             vm.selectDeparture("dep-1") // cancelled
@@ -77,7 +83,7 @@ class BookingViewModelTest {
     fun `an unknown reason is not bookable even if bookable says so`() =
         runViewModelTest {
             val dates = saturdays().mapIndexed { i, d -> if (i == 1) d.copy(unavailableReason = "WEATHER") else d }
-            val vm = BookingViewModel(SLUG, "dep-2", loaded { dates })
+            val vm = BookingViewModel(SLUG, "dep-2", loaded { dates }, FakeActiveHoldStore())
             advanceUntilIdle()
 
             assertNull(vm.uiState.value.selectedDepartureId)
@@ -87,7 +93,7 @@ class BookingViewModelTest {
     fun `the party stays between one and the policy's maximum`() =
         runViewModelTest {
             val repo = loaded().apply { tripBySlug = { AppResult.Success(trip(maxPartySize = 3)) } }
-            val vm = BookingViewModel(SLUG, "dep-1", repo)
+            val vm = BookingViewModel(SLUG, "dep-1", repo, FakeActiveHoldStore())
             advanceUntilIdle()
 
             vm.decreaseParty()
@@ -104,7 +110,7 @@ class BookingViewModelTest {
     fun `without a stated policy the party limit falls back to six`() =
         runViewModelTest {
             val repo = loaded().apply { tripBySlug = { AppResult.Success(trip(maxPartySize = null)) } }
-            val vm = BookingViewModel(SLUG, "dep-1", repo)
+            val vm = BookingViewModel(SLUG, "dep-1", repo, FakeActiveHoldStore())
             advanceUntilIdle()
 
             assertEquals(BookingUiState.FALLBACK_MAX_PARTY_SIZE, vm.uiState.value.maxPartySize)
@@ -113,7 +119,7 @@ class BookingViewModelTest {
     @Test
     fun `the phone keeps digits and a leading plus and must match the contract's pattern`() =
         runViewModelTest {
-            val vm = BookingViewModel(SLUG, "dep-1", loaded())
+            val vm = BookingViewModel(SLUG, "dep-1", loaded(), FakeActiveHoldStore())
             advanceUntilIdle()
 
             vm.setGuestPhone("+20 10-1234 5678")
@@ -127,7 +133,7 @@ class BookingViewModelTest {
     @Test
     fun `a hold needs an open date and a name and a valid phone`() =
         runViewModelTest {
-            val vm = BookingViewModel(SLUG, "dep-1", loaded())
+            val vm = BookingViewModel(SLUG, "dep-1", loaded(), FakeActiveHoldStore())
             advanceUntilIdle()
             assertFalse(vm.uiState.value.canPlaceHold)
 
@@ -143,7 +149,7 @@ class BookingViewModelTest {
     fun `placing a hold sends the date and party and guest and hands over the server's hold once`() =
         runViewModelTest {
             val repo = loaded()
-            val vm = BookingViewModel(SLUG, "dep-1", repo)
+            val vm = BookingViewModel(SLUG, "dep-1", repo, FakeActiveHoldStore())
             advanceUntilIdle()
             vm.increaseParty()
             vm.fillGuest()
@@ -171,11 +177,146 @@ class BookingViewModelTest {
         }
 
     @Test
+    fun `a placed hold is stored for Home before the hold screen opens`() =
+        runViewModelTest {
+            val store = FakeActiveHoldStore()
+            val vm = BookingViewModel(SLUG, "dep-1", loaded(), store)
+            advanceUntilIdle()
+            vm.fillGuest()
+
+            vm.placeHold()
+            advanceUntilIdle()
+
+            assertNotNull(vm.uiState.value.held)
+            assertEquals(StoredHold(held().ref, "01012345678", held().holdExpiresAt, held().serverNow), store.hold.value)
+        }
+
+    @Test
+    fun `with a live stored hold no second hold is placed and the stored one is handed back`() =
+        runViewModelTest {
+            // The first hold survived a restart; the back stack no longer knows about it.
+            val stored = StoredHold("BRL-OLD00001", "+201011111111", "2026-10-09T22:40:00+03:00", "2026-10-09T22:25:00+03:00")
+            val store = FakeActiveHoldStore(stored)
+            val repo = loaded().apply { heldBooking = { _, _ -> AppResult.Success(heldBooking()) } }
+            val vm = BookingViewModel(SLUG, "dep-1", repo, store)
+            advanceUntilIdle()
+            vm.fillGuest()
+
+            vm.placeHold()
+            advanceUntilIdle()
+
+            assertTrue(repo.holdRequests.isEmpty())
+            assertEquals(listOf(stored.ref to stored.guestPhone), repo.bookingReads)
+            val route = assertNotNull(vm.uiState.value.held)
+            assertTrue(vm.uiState.value.heldAlready)
+            assertEquals(stored.ref, route.ref)
+            assertEquals(stored.guestPhone, route.guestPhone)
+            // The fresh read's pair for the countdown, so it is right before the hold screen's own
+            // re-read; the placement's pair only for the bar's 100 % (15 minutes).
+            assertEquals(heldBooking().holdExpiresAt, route.holdExpiresAt)
+            assertEquals(heldBooking().serverNow, route.serverNow)
+            assertEquals(900L, route.holdLengthSeconds)
+            assertEquals(900, route.totalAmount)
+            assertEquals(stored, store.hold.value)
+
+            vm.onHeldHandled()
+            assertFalse(vm.uiState.value.heldAlready)
+        }
+
+    @Test
+    fun `a stored hold with an unreadable deadline counts as over as on Home and the hold screen`() =
+        runViewModelTest {
+            val stored = StoredHold("BRL-OLD00001", "+201011111111", "2026-10-09T22:40:00+03:00", "2026-10-09T22:25:00+03:00")
+            val store = FakeActiveHoldStore(stored)
+            val repo = loaded().apply { heldBooking = { _, _ -> AppResult.Success(heldBooking(serverNow = "garbled")) } }
+            val vm = BookingViewModel(SLUG, "dep-1", repo, store)
+            advanceUntilIdle()
+            vm.fillGuest()
+
+            vm.placeHold()
+            advanceUntilIdle()
+
+            assertEquals(1, repo.holdRequests.size)
+            assertFalse(vm.uiState.value.heldAlready)
+            assertEquals(listOf(stored.ref), store.clears)
+        }
+
+    @Test
+    fun `a hold that cannot be stored on the device still opens`() =
+        runViewModelTest {
+            val store =
+                object : ActiveHoldStore {
+                    override val hold = MutableStateFlow<StoredHold?>(null)
+
+                    override suspend fun save(hold: StoredHold): Unit = throw IllegalStateException("disk full")
+
+                    override suspend fun clear(ref: String) = Unit
+                }
+            val vm = BookingViewModel(SLUG, "dep-1", loaded(), store)
+            advanceUntilIdle()
+            vm.fillGuest()
+
+            vm.placeHold()
+            advanceUntilIdle()
+
+            assertEquals(
+                held().ref,
+                vm.uiState.value.held
+                    ?.ref,
+            )
+            assertFalse(vm.uiState.value.isPlacingHold)
+        }
+
+    @Test
+    fun `a stored hold the server calls over is forgotten and the new hold placed`() =
+        runViewModelTest {
+            for (answer in listOf<AppResult<HeldBookingDto>>(
+                AppResult.Success(heldBooking(status = "EXPIRED")),
+                AppResult.Failure(AppError.Api(ApiErrorCodes.NOT_FOUND, null, 404)),
+            )) {
+                val stored = StoredHold("BRL-OLD00001", "+201011111111", "2026-10-09T22:40:00+03:00", "2026-10-09T22:25:00+03:00")
+                val store = FakeActiveHoldStore(stored)
+                val repo = loaded().apply { heldBooking = { _, _ -> answer } }
+                val vm = BookingViewModel(SLUG, "dep-1", repo, store)
+                advanceUntilIdle()
+                vm.fillGuest()
+
+                vm.placeHold()
+                advanceUntilIdle()
+
+                assertEquals(1, repo.holdRequests.size, "$answer")
+                assertFalse(vm.uiState.value.heldAlready)
+                assertEquals(held().ref, store.hold.value?.ref, "$answer")
+                assertEquals(listOf(stored.ref), store.clears)
+            }
+        }
+
+    @Test
+    fun `no answer about the stored hold places nothing and says why`() =
+        runViewModelTest {
+            val stored = StoredHold("BRL-OLD00001", "+201011111111", "2026-10-09T22:40:00+03:00", "2026-10-09T22:25:00+03:00")
+            val store = FakeActiveHoldStore(stored)
+            val repo = loaded().apply { heldBooking = { _, _ -> AppResult.Failure(AppError.Network) } }
+            val vm = BookingViewModel(SLUG, "dep-1", repo, store)
+            advanceUntilIdle()
+            vm.fillGuest()
+
+            vm.placeHold()
+            advanceUntilIdle()
+
+            assertTrue(repo.holdRequests.isEmpty())
+            assertNull(vm.uiState.value.held)
+            assertEquals(AppError.Network, vm.uiState.value.holdError)
+            assertFalse(vm.uiState.value.isPlacingHold)
+            assertEquals(stored, store.hold.value)
+        }
+
+    @Test
     fun `the hold carries the phone it was placed with not one typed while it was in flight`() =
         runViewModelTest {
             val answer = CompletableDeferred<AppResult<HeldSeatsDto>>()
             val repo = loaded().apply { placeHold = { answer.await() } }
-            val vm = BookingViewModel(SLUG, "dep-1", repo)
+            val vm = BookingViewModel(SLUG, "dep-1", repo, FakeActiveHoldStore())
             advanceUntilIdle()
             vm.fillGuest()
 
@@ -196,7 +337,7 @@ class BookingViewModelTest {
     fun `the stepper is capped at the selected date's seats left`() =
         runViewModelTest {
             // dep-2 has 2 seats left, dep-4 has 11; the policy allows 6.
-            val vm = BookingViewModel(SLUG, "dep-2", loaded())
+            val vm = BookingViewModel(SLUG, "dep-2", loaded(), FakeActiveHoldStore())
             advanceUntilIdle()
 
             repeat(5) { vm.increaseParty() }
@@ -223,7 +364,7 @@ class BookingViewModelTest {
                 loaded { dates }.apply {
                     placeHold = { AppResult.Failure(AppError.Api(ApiErrorCodes.NO_SEATS_AVAILABLE, null, 409)) }
                 }
-            val vm = BookingViewModel(SLUG, "dep-1", repo)
+            val vm = BookingViewModel(SLUG, "dep-1", repo, FakeActiveHoldStore())
             advanceUntilIdle()
             vm.fillGuest()
             repeat(3) { vm.increaseParty() }
@@ -243,7 +384,7 @@ class BookingViewModelTest {
     fun `back from a hold that ran out says so and re-reads the dates`() =
         runViewModelTest {
             val repo = loaded()
-            val vm = BookingViewModel(SLUG, "dep-1", repo)
+            val vm = BookingViewModel(SLUG, "dep-1", repo, FakeActiveHoldStore())
             advanceUntilIdle()
             val reads = repo.departureReads
 
@@ -262,7 +403,7 @@ class BookingViewModelTest {
     fun `back from a released hold re-reads the dates without a notice`() =
         runViewModelTest {
             val repo = loaded()
-            val vm = BookingViewModel(SLUG, "dep-1", repo)
+            val vm = BookingViewModel(SLUG, "dep-1", repo, FakeActiveHoldStore())
             advanceUntilIdle()
             val reads = repo.departureReads
 
@@ -278,7 +419,7 @@ class BookingViewModelTest {
         runViewModelTest {
             val answer = CompletableDeferred<AppResult<HeldSeatsDto>>()
             val repo = loaded().apply { placeHold = { answer.await() } }
-            val vm = BookingViewModel(SLUG, "dep-1", repo)
+            val vm = BookingViewModel(SLUG, "dep-1", repo, FakeActiveHoldStore())
             advanceUntilIdle()
             vm.fillGuest()
 
@@ -303,7 +444,7 @@ class BookingViewModelTest {
                 loaded { dates }.apply {
                     placeHold = { AppResult.Failure(AppError.Api(ApiErrorCodes.NO_SEATS_AVAILABLE, "gone", 409)) }
                 }
-            val vm = BookingViewModel(SLUG, "dep-2", repo)
+            val vm = BookingViewModel(SLUG, "dep-2", repo, FakeActiveHoldStore())
             advanceUntilIdle()
             vm.fillGuest()
             val readsBefore = repo.departureReads
@@ -337,7 +478,7 @@ class BookingViewModelTest {
                 loaded().apply {
                     placeHold = { AppResult.Failure(AppError.Api(ApiErrorCodes.DEPARTURE_NOT_OPEN, null, 409)) }
                 }
-            val vm = BookingViewModel(SLUG, "dep-1", repo)
+            val vm = BookingViewModel(SLUG, "dep-1", repo, FakeActiveHoldStore())
             advanceUntilIdle()
             vm.fillGuest()
             val readsBefore = repo.departureReads
@@ -352,7 +493,7 @@ class BookingViewModelTest {
     fun `another failure keeps the dates and shows the error until the next edit`() =
         runViewModelTest {
             val repo = loaded().apply { placeHold = { AppResult.Failure(AppError.Network) } }
-            val vm = BookingViewModel(SLUG, "dep-1", repo)
+            val vm = BookingViewModel(SLUG, "dep-1", repo, FakeActiveHoldStore())
             advanceUntilIdle()
             vm.fillGuest()
             val readsBefore = repo.departureReads
@@ -371,7 +512,7 @@ class BookingViewModelTest {
     fun `failed live dates fall back to the trip's own dates`() =
         runViewModelTest {
             val repo = loaded().apply { departuresFor = { AppResult.Failure(AppError.Network) } }
-            val vm = BookingViewModel(SLUG, "dep-1", repo)
+            val vm = BookingViewModel(SLUG, "dep-1", repo, FakeActiveHoldStore())
             advanceUntilIdle()
 
             assertEquals(4, vm.uiState.value.departures.size)
@@ -387,7 +528,7 @@ class BookingViewModelTest {
                     tripBySlug = { if (fail) AppResult.Failure(AppError.Network) else AppResult.Success(trip()) }
                     departuresFor = { awaitCancellation() }
                 }
-            val vm = BookingViewModel(SLUG, "dep-1", repo)
+            val vm = BookingViewModel(SLUG, "dep-1", repo, FakeActiveHoldStore())
             advanceUntilIdle()
             assertEquals(AppError.Network, vm.uiState.value.loadError)
 

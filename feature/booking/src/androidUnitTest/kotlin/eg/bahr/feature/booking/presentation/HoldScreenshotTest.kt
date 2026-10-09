@@ -18,6 +18,7 @@ import eg.bahr.core.localization.ProvideAppLanguage
 import eg.bahr.core.testing.captureFullScreen
 import eg.bahr.core.testing.captureScreenshot
 import eg.bahr.feature.booking.data.BookingFixtures
+import eg.bahr.feature.booking.data.FakeActiveHoldStore
 import eg.bahr.feature.booking.data.FakeBookingRepository
 import eg.bahr.feature.booking.navigation.HoldRoute
 import kotlinx.coroutines.awaitCancellation
@@ -107,18 +108,30 @@ class HoldScreenshotTest {
     @Test
     fun leaveEnglish() = snapLeave(AppLanguage.ENGLISH)
 
+    @Test
+    fun alreadyHeldArabic() = snapAlreadyHeld(AppLanguage.ARABIC)
+
+    @Test
+    fun alreadyHeldEnglish() = snapAlreadyHeld(AppLanguage.ENGLISH)
+
+    /** Continue elsewhere turned back to this live hold (M2-M2 guard, M2-M4 stored-hold guard). */
+    private fun snapAlreadyHeld(language: AppLanguage) {
+        show(language, HoldViewModel(hold, answering(language), FakeActiveHoldStore(), clock), alreadyHeldNotice = true)
+        capture("hold_already_held", language)
+    }
+
     private fun snapLoading(language: AppLanguage) {
-        show(language, HoldViewModel(hold, FakeBookingRepository(heldBooking = { _, _ -> awaitCancellation() }), clock))
+        show(language, HoldViewModel(hold, neverAnswers(), FakeActiveHoldStore(), clock))
         capture("hold_loading", language)
     }
 
     private fun snapLoaded(language: AppLanguage) {
-        show(language, HoldViewModel(hold, answering(language), clock))
+        show(language, HoldViewModel(hold, answering(language), FakeActiveHoldStore(), clock))
         capture("hold_loaded", language)
     }
 
     private fun snapChecking(language: AppLanguage) {
-        val vm = HoldViewModel(hold, FakeBookingRepository(heldBooking = { _, _ -> AppResult.Failure(AppError.Network) }), clock)
+        val vm = HoldViewModel(hold, offline(), FakeActiveHoldStore(), clock)
         // The phone was away past the deadline; on return the re-read cannot get through.
         now += 16.minutes
         show(language, vm)
@@ -126,13 +139,19 @@ class HoldScreenshotTest {
     }
 
     private fun snapLeave(language: AppLanguage) {
-        val vm = HoldViewModel(hold, answering(language), clock)
+        val vm = HoldViewModel(hold, answering(language), FakeActiveHoldStore(), clock)
         show(language, vm)
         compose.runOnUiThread { vm.requestLeave() }
         compose.waitForIdle()
         compose.mainClock.advanceTimeBy(SETTLE_MS)
         compose.captureFullScreen("hold_leave_${language.tag}")
     }
+
+    /** The re-read never answers (a slow network): the summary waits, the countdown does not. */
+    private fun neverAnswers() = FakeBookingRepository(heldBooking = { _, _ -> awaitCancellation() })
+
+    /** The re-read cannot get through. */
+    private fun offline() = FakeBookingRepository(heldBooking = { _, _ -> AppResult.Failure(AppError.Network) })
 
     /** The re-read, answered 8 seconds after the hold was placed. */
     private fun answering(language: AppLanguage): FakeBookingRepository {
@@ -151,6 +170,7 @@ class HoldScreenshotTest {
     private fun show(
         language: AppLanguage,
         viewModel: HoldViewModel,
+        alreadyHeldNotice: Boolean = false,
     ) {
         compose.setContent {
             ProvideAppLanguage(language) {
@@ -161,7 +181,7 @@ class HoldScreenshotTest {
                         LocalNavigationEventDispatcherOwner provides rememberNavigationEventDispatcherOwner(parent = null),
                     ) {
                         Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-                            HoldScreen(hold = hold, onEnded = {}, viewModel = viewModel)
+                            HoldScreen(hold = hold, onEnded = {}, alreadyHeldNotice = alreadyHeldNotice, viewModel = viewModel)
                         }
                     }
                 }

@@ -21,6 +21,13 @@ data class BookingRoute(
  * [total] is the server's total, as an amount and currency, because the client never computes one.
  * [guestPhone] is the guest's proof of ownership: without an account, `GET /bookings/{ref}` and
  * `DELETE /bookings/{ref}/hold` need it.
+ *
+ * [holdExpiresAt] + [serverNow] must come from the latest server answer: the screen's first deadline
+ * is built from them before its own re-read lands, and stays if that re-read fails. A hold reopened
+ * later (Home's "Continue your booking" card, or handed back instead of a second hold) passes a
+ * fresh pair, and the hold's full length, the progress bar's 100 %, in [holdLengthSeconds], since a
+ * fresh pair no longer measures it. Null when the pair is the placement's own (the bar then measures
+ * `holdExpiresAt − serverNow`).
  */
 @Serializable
 data class HoldRoute(
@@ -30,6 +37,7 @@ data class HoldRoute(
     val totalAmount: Long,
     val totalCurrency: String,
     val guestPhone: String,
+    val holdLengthSeconds: Long? = null,
 )
 
 /**

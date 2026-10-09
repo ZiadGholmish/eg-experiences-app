@@ -17,6 +17,7 @@ import eg.bahr.core.network.ApiErrorCodes
 import eg.bahr.core.testing.captureScreenshot
 import eg.bahr.feature.booking.data.BookingFixtures
 import eg.bahr.feature.booking.data.BookingFixtures.SLUG
+import eg.bahr.feature.booking.data.FakeActiveHoldStore
 import eg.bahr.feature.booking.data.FakeBookingRepository
 import eg.bahr.feature.booking.model.BookingDepartureDto
 import kotlinx.coroutines.awaitCancellation
@@ -91,7 +92,7 @@ class BookingScreenshotTest {
 
     private fun snapLoading(language: AppLanguage) {
         val repo = FakeBookingRepository(tripBySlug = { awaitCancellation() }, departuresFor = { awaitCancellation() })
-        show(language, BookingViewModel(SLUG, "dep-2", repo))
+        show(language, BookingViewModel(SLUG, "dep-2", repo, FakeActiveHoldStore()))
         capture("booking_loading", language)
     }
 
@@ -105,7 +106,7 @@ class BookingScreenshotTest {
                 tripBySlug = { AppResult.Success(BookingFixtures.trip(title = title)) },
                 departuresFor = { AppResult.Success(BookingFixtures.saturdays()) },
             )
-        val vm = BookingViewModel(SLUG, "dep-2", repo)
+        val vm = BookingViewModel(SLUG, "dep-2", repo, FakeActiveHoldStore())
         show(language, vm)
         compose.runOnUiThread {
             vm.increaseParty()
@@ -127,7 +128,7 @@ class BookingScreenshotTest {
                 departuresFor = { AppResult.Success(dates) },
                 placeHold = { AppResult.Failure(AppError.Api(ApiErrorCodes.NO_SEATS_AVAILABLE, null, CONFLICT)) },
             )
-        val vm = BookingViewModel(SLUG, "dep-2", repo)
+        val vm = BookingViewModel(SLUG, "dep-2", repo, FakeActiveHoldStore())
         show(language, vm)
         dates = everyReason(dates)
         compose.runOnUiThread {
@@ -152,7 +153,7 @@ class BookingScreenshotTest {
                 tripBySlug = { AppResult.Success(BookingFixtures.trip(title = title)) },
                 departuresFor = { AppResult.Success(BookingFixtures.saturdays()) },
             )
-        val vm = BookingViewModel(SLUG, "dep-2", repo)
+        val vm = BookingViewModel(SLUG, "dep-2", repo, FakeActiveHoldStore())
         show(language, vm)
         compose.runOnUiThread {
             repeat(3) { vm.increaseParty() }
@@ -178,7 +179,7 @@ class BookingScreenshotTest {
         language: AppLanguage,
         viewModel: BookingViewModel,
     ) = setContent(language) {
-        BookingScreen(slug = SLUG, departureId = "dep-2", onBack = {}, onHeld = {}, viewModel = viewModel)
+        BookingScreen(slug = SLUG, departureId = "dep-2", onBack = {}, onHeld = { _, _ -> }, viewModel = viewModel)
     }
 
     private fun setContent(

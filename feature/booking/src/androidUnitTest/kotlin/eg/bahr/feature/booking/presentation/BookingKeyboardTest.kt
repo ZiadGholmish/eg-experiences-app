@@ -6,11 +6,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.unit.toSize
 import androidx.core.graphics.Insets
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
@@ -23,7 +27,9 @@ import eg.bahr.core.localization.ProvideAppLanguage
 import eg.bahr.core.testing.captureScreenshot
 import eg.bahr.feature.booking.data.BookingFixtures
 import eg.bahr.feature.booking.data.BookingFixtures.SLUG
+import eg.bahr.feature.booking.data.FakeActiveHoldStore
 import eg.bahr.feature.booking.data.FakeBookingRepository
+import eg.bahr.feature.booking.presentation.components.PHONE_FIELD_TAG
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -38,7 +44,15 @@ import kotlin.test.assertTrue
  * follow-up, M2-M2 review #2). The keyboard is a real IME inset dispatched to the window, the way the
  * platform delivers it; the field is focused first, as a tap does, and the inset arrives after.
  *
- * Without `keptAboveKeyboard` the field ends up under the bar, and this test fails.
+ * No app code does this: Compose's own bring-into-view for a focused text field re-runs as the IME
+ * inset shrinks the form. M2-M2 shipped a helper for it (`keptAboveKeyboard`); with it stubbed out
+ * this test still passed and its goldens were pixel-identical (M2-M2 review R2-1), so it was removed
+ * in M2-M4 and this test stays as the guard for the platform behaviour. A real soft keyboard on a
+ * device is still the M2 integration check's.
+ *
+ * The asserts measure the phone field itself (by tag) with unclipped geometry, `positionInRoot` +
+ * `size`: the floating label sits on the field's top border, and `boundsInRoot` is clipped by the
+ * scroll viewport, so either would pass with the field half hidden.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -54,14 +68,13 @@ class BookingKeyboardTest {
     }
 
     @Test
-    fun phoneFieldStaysAboveTheBarEnglish() = check(AppLanguage.ENGLISH, "Mobile number", "Hold seats and pay")
+    fun phoneFieldStaysAboveTheBarEnglish() = check(AppLanguage.ENGLISH, "Hold seats and pay")
 
     @Test
-    fun phoneFieldStaysAboveTheBarArabic() = check(AppLanguage.ARABIC, "رقم الموبايل", "احجز المقاعد وادفع")
+    fun phoneFieldStaysAboveTheBarArabic() = check(AppLanguage.ARABIC, "احجز المقاعد وادفع")
 
     private fun check(
         language: AppLanguage,
-        phoneLabel: String,
         cta: String,
     ) {
         val repo =
@@ -69,12 +82,12 @@ class BookingKeyboardTest {
                 tripBySlug = { AppResult.Success(BookingFixtures.trip()) },
                 departuresFor = { AppResult.Success(BookingFixtures.saturdays()) },
             )
-        val vm = BookingViewModel(SLUG, "dep-2", repo)
+        val vm = BookingViewModel(SLUG, "dep-2", repo, FakeActiveHoldStore())
         compose.setContent {
             ProvideAppLanguage(language) {
                 BahrTheme(locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English) {
                     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-                        BookingScreen(slug = SLUG, departureId = "dep-2", onBack = {}, onHeld = {}, viewModel = vm)
+                        BookingScreen(slug = SLUG, departureId = "dep-2", onBack = {}, onHeld = { _, _ -> }, viewModel = vm)
                     }
                 }
             }
@@ -83,7 +96,7 @@ class BookingKeyboardTest {
 
         // Scrolled so the field sits just above the bar, then tapped: the worst case, where the
         // keyboard's arrival alone pushes it under the bar.
-        compose.onNodeWithText(phoneLabel, useUnmergedTree = true).performScrollTo().performClick()
+        compose.onNodeWithTag(PHONE_FIELD_TAG).performScrollTo().performClick()
         compose.waitForIdle()
 
         val rootHeight =
@@ -105,14 +118,17 @@ class BookingKeyboardTest {
         compose.mainClock.advanceTimeBy(SETTLE_MS)
         compose.waitForIdle()
 
-        val field = compose.onNodeWithText(phoneLabel, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
-        val button = compose.onNodeWithText(cta).fetchSemanticsNode().boundsInRoot
+        val field = compose.onNodeWithTag(PHONE_FIELD_TAG).fetchSemanticsNode().unclippedBounds()
+        val button = compose.onNodeWithText(cta).fetchSemanticsNode().unclippedBounds()
         assertTrue(button.bottom <= rootHeight - imeHeight + 1, "the bar sits on the keyboard: $button, ime from ${rootHeight - imeHeight}")
         assertTrue(field.bottom <= button.top, "the phone field ($field) is above the bar's button ($button)")
         assertTrue(field.top >= 0f, "the phone field ($field) is on screen")
 
         compose.captureScreenshot("booking_keyboard_${language.tag}")
     }
+
+    /** Where the node really is, clipped by nothing (`boundsInRoot` is cut to the scroll viewport). */
+    private fun SemanticsNode.unclippedBounds(): Rect = Rect(positionInRoot, size.toSize())
 
     private companion object {
         /** A phone keyboard takes about 40 % of the screen's height. */

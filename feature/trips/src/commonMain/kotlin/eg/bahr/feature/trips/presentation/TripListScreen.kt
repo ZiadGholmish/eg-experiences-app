@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -39,10 +40,18 @@ import eg.bahr.feature.trips.presentation.components.TripCard
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
+/**
+ * Home: the trips on sale. [header] is drawn under the title in the list, and at the top of the
+ * loading, error and empty views (which have no title), so it is never hidden behind a failed list;
+ * another feature fills it
+ * through `tripListScreen(header = …)` (M2-M4: "Continue your booking"). It must draw nothing when
+ * it has nothing to show, or the list's spacing leaves a gap.
+ */
 @Composable
 internal fun TripListScreen(
     onTripClick: (slug: String) -> Unit,
     modifier: Modifier = Modifier,
+    header: @Composable () -> Unit = {},
     viewModel: TripListViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -75,52 +84,67 @@ internal fun TripListScreen(
     // The last card scrolls clear of the gesture bar (M1-M1a review #10).
     val listBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + BahrSpacing.xl
 
-    when {
-        state.isLoading -> BahrLoadingView(stateModifier)
+    // The full-screen states keep the header above them; the list scrolls it with the trips.
+    if (state.isLoading || state.trips.isEmpty()) {
+        Column(modifier = stateModifier) {
+            // The zero-size anchor puts the gap above the header only when the header draws
+            // something: spacedBy adds no space after a last child, and an empty header emits none.
+            Column(
+                modifier = Modifier.padding(horizontal = BahrSpacing.gutter),
+                verticalArrangement = Arrangement.spacedBy(BahrSpacing.xl),
+            ) {
+                Spacer(Modifier)
+                header()
+            }
+            val fill = Modifier.weight(1f)
+            val error = state.error
+            when {
+                state.isLoading -> BahrLoadingView(fill)
 
-        state.error != null && state.trips.isEmpty() -> {
-            val error = state.error!!
-            BahrErrorView(
-                message = error.localizedMessage(),
-                retryLabel = stringResource(Res.string.action_retry),
-                onRetry = if (error.isRetryable) viewModel::refresh else null,
-                modifier = stateModifier,
-            )
+                error != null -> {
+                    BahrErrorView(
+                        message = error.localizedMessage(),
+                        retryLabel = stringResource(Res.string.action_retry),
+                        onRetry = if (error.isRetryable) viewModel::refresh else null,
+                        modifier = fill,
+                    )
+                }
+
+                else -> BahrEmptyView(message = stringResource(Res.string.trips_empty), modifier = fill)
+            }
         }
+        return
+    }
 
-        state.trips.isEmpty() ->
-            BahrEmptyView(message = stringResource(Res.string.trips_empty), modifier = stateModifier)
-
-        else ->
-            LazyColumn(
-                state = listState,
-                modifier = modifier.fillMaxSize(),
-                contentPadding = PaddingValues(top = listTop, bottom = listBottom),
-                // The handoff's 16px gap between trip cards.
+    LazyColumn(
+        state = listState,
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(top = listTop, bottom = listBottom),
+        // The handoff's 16px gap between trip cards.
+        verticalArrangement = Arrangement.spacedBy(BahrSpacing.lg),
+    ) {
+        item {
+            Column(
+                modifier = Modifier.padding(horizontal = BahrSpacing.gutter),
                 verticalArrangement = Arrangement.spacedBy(BahrSpacing.lg),
             ) {
-                item {
-                    Column(
-                        modifier = Modifier.padding(horizontal = BahrSpacing.gutter),
-                        verticalArrangement = Arrangement.spacedBy(BahrSpacing.lg),
-                    ) {
-                        Text(
-                            text = stringResource(Res.string.trips_title),
-                            style = MaterialTheme.typography.headlineMedium,
-                        )
-                    }
-                }
-
-                items(state.trips, key = { it.slug }) { trip ->
-                    Row(modifier = Modifier.padding(horizontal = BahrSpacing.gutter)) {
-                        TripCard(
-                            trip = trip,
-                            perPersonLabel = perPersonLabel,
-                            onClick = { onTripClick(trip.slug) },
-                        )
-                    }
-                }
+                Text(
+                    text = stringResource(Res.string.trips_title),
+                    style = MaterialTheme.typography.headlineMedium,
+                )
+                header()
             }
+        }
+
+        items(state.trips, key = { it.slug }) { trip ->
+            Row(modifier = Modifier.padding(horizontal = BahrSpacing.gutter)) {
+                TripCard(
+                    trip = trip,
+                    perPersonLabel = perPersonLabel,
+                    onClick = { onTripClick(trip.slug) },
+                )
+            }
+        }
     }
 }
 

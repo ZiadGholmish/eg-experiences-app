@@ -2,8 +2,11 @@ package eg.bahr.feature.booking.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import co.touchlab.kermit.Logger
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
+import eg.bahr.core.datastore.ActiveHoldStore
+import eg.bahr.core.datastore.StoredHold
 import eg.bahr.core.network.ApiErrorCodes
 import eg.bahr.feature.booking.data.BookingRepository
 import eg.bahr.feature.booking.model.BookingDepartureDto
@@ -11,11 +14,14 @@ import eg.bahr.feature.booking.model.BookingTripDto
 import eg.bahr.feature.booking.model.GuestRequest
 import eg.bahr.feature.booking.model.PlaceHoldRequest
 import eg.bahr.feature.booking.navigation.HoldRoute
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.time.Clock
 
 internal data class BookingUiState(
     val trip: BookingTripDto? = null,
@@ -37,6 +43,11 @@ internal data class BookingUiState(
      * made under even if the field is edited while the request is in flight.
      */
     val held: HoldRoute? = null,
+    /**
+     * [held] is not a new hold but the one this device already had (stored, still live): the hold
+     * screen says so instead of a second hold being placed.
+     */
+    val heldAlready: Boolean = false,
     /** The last hold on this screen ran out (the held-seats screen came back at 00:00). */
     val holdExpired: Boolean = false,
 ) {
@@ -122,6 +133,8 @@ internal class BookingViewModel(
     private val slug: String,
     departureId: String,
     private val repository: BookingRepository,
+    private val activeHold: ActiveHoldStore,
+    private val clock: Clock = Clock.System,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(BookingUiState(selectedDepartureId = departureId))
     val uiState: StateFlow<BookingUiState> = _uiState.asStateFlow()
@@ -188,6 +201,19 @@ internal class BookingViewModel(
                 guest = GuestRequest(name = state.guestName.trim(), phone = state.guestPhone),
             )
         viewModelScope.launch {
+            // One hold at a time. The back stack guards this within a session (navigateToBooking);
+            // after a restart, or once a link reset the stack, only the stored hold knows.
+            when (val existing = liveStoredHold()) {
+                is StoredHoldCheck.Live -> {
+                    _uiState.update { it.copy(isPlacingHold = false, held = existing.route, heldAlready = true) }
+                    return@launch
+                }
+                is StoredHoldCheck.Unknown -> {
+                    _uiState.update { it.copy(isPlacingHold = false, holdError = existing.error) }
+                    return@launch
+                }
+                StoredHoldCheck.None -> Unit
+            }
             when (val result = repository.placeHold(request)) {
                 is AppResult.Success -> {
                     val seats = result.data
@@ -200,7 +226,10 @@ internal class BookingViewModel(
                             totalCurrency = seats.total.currencyCode,
                             guestPhone = request.guest.phone,
                         )
-                    _uiState.update { it.copy(isPlacingHold = false, held = route) }
+                    // Stored before the hold screen opens, so there is never a live hold on screen
+                    // that a restart would forget.
+                    storeHold(StoredHold(seats.ref, request.guest.phone, seats.holdExpiresAt, seats.serverNow))
+                    _uiState.update { it.copy(isPlacingHold = false, held = route, heldAlready = false) }
                 }
 
                 is AppResult.Failure -> {
@@ -213,8 +242,64 @@ internal class BookingViewModel(
         }
     }
 
+    /**
+     * A failed local write (a full disk) must not cost the user a hold the server already gave them:
+     * they still go on to it; it just will not survive a restart.
+     */
+    private suspend fun storeHold(hold: StoredHold) {
+        try {
+            activeHold.save(hold)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (failed: Exception) {
+            Logger.withTag(LOG_TAG).w(failed) { "Could not store the hold; Home will not offer to continue it" }
+        }
+    }
+
+    /**
+     * The stored hold, read again: still held → hand over to it; over (or unknown to the server) →
+     * forget it and go on; no answer → do not place a second hold blind, say why.
+     */
+    private suspend fun liveStoredHold(): StoredHoldCheck {
+        val stored = activeHold.hold.first() ?: return StoredHoldCheck.None
+        return when (val read = repository.heldBooking(stored.ref, stored.guestPhone)) {
+            is AppResult.Success -> {
+                val booking = read.data
+                // The same "still held" rule as Home's card and the hold screen.
+                val holdExpiresAt = booking.holdExpiresAt
+                if (holdExpiresAt != null && booking.liveDeadline(clock.now()) != null) {
+                    // The fresh pair, just read: the hold screen's countdown is right from its
+                    // first frame even if its own re-read fails.
+                    StoredHoldCheck.Live(reopenedHold(stored, booking, holdExpiresAt))
+                } else {
+                    activeHold.clear(stored.ref)
+                    StoredHoldCheck.None
+                }
+            }
+            is AppResult.Failure ->
+                if (read.error.isNotFound()) {
+                    activeHold.clear(stored.ref)
+                    StoredHoldCheck.None
+                } else {
+                    StoredHoldCheck.Unknown(read.error)
+                }
+        }
+    }
+
+    private sealed interface StoredHoldCheck {
+        data object None : StoredHoldCheck
+
+        data class Live(
+            val route: HoldRoute,
+        ) : StoredHoldCheck
+
+        data class Unknown(
+            val error: AppError,
+        ) : StoredHoldCheck
+    }
+
     /** The screen has moved on to the held seats; going back here must not navigate again. */
-    fun onHeldHandled() = _uiState.update { it.copy(held = null) }
+    fun onHeldHandled() = _uiState.update { it.copy(held = null, heldAlready = false) }
 
     /**
      * Back from the held seats: released by the user, or run out ([expired]). Either way the seats
@@ -253,3 +338,5 @@ internal class BookingViewModel(
     private fun AppError.isStaleDates(): Boolean =
         this is AppError.Api && (code == ApiErrorCodes.NO_SEATS_AVAILABLE || code == ApiErrorCodes.DEPARTURE_NOT_OPEN)
 }
+
+private const val LOG_TAG = "booking"

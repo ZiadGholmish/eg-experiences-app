@@ -144,6 +144,8 @@
     <string name="booking_hold_time_up">Time is up</string>
     <string name="booking_hold_checking">Checking your seats…</string>
     <string name="booking_hold_check_failed">Couldn’t check your seats. Trying again…</string>
+    <!-- Home's card for a live hold (M2-M4). -->
+    <string name="booking_continue_title">Continue your booking</string>
     <string name="booking_departs_from">Departs %1$s, %2$s, %3$s</string>
     <string name="booking_departs_at">Departs %1$s, %2$s</string>
     <string name="booking_pay_cta">Pay %1$s</string>

@@ -127,8 +127,13 @@ internal data class BookingDto(
 
 /**
  * openapi `Booking` (`GET /bookings/{ref}`), read by the held-seats screen to re-sync its countdown
- * and to show the trip summary. Separate from [BookingDto], the Java-era shape the M3 confirmation
- * screen still uses, so that rewrite stays M3's.
+ * and to show the trip summary, and by Home's "Continue your booking" card. Separate from
+ * [BookingDto], the Java-era shape the M3 confirmation screen still uses, so that rewrite stays M3's.
+ *
+ * **A partial copy of the contract's `Booking`, on purpose:** only the fields these screens read.
+ * Left out: `host`, `calendar`, `Place.lat`/`lng` and `Image.variants` (unknown keys are ignored on
+ * decode, so the full payload still parses). Whoever needs one of them adds it here, nullable with a
+ * default, field-for-field with `openapi.yaml`.
  *
  * [status] is a string, not an enum: anything other than `HELD` / `PAYMENT_PENDING` means the seats
  * are no longer held for this booking, and a status added later must not fail the decode. A released

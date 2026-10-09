@@ -111,6 +111,39 @@ class BookingNavigationTest {
     }
 
     @Test
+    fun `a stored hold handed back instead of a second one replaces that date and party`() {
+        onNav {
+            navigate(TripStub("burullus-murals"))
+            navigateToBooking("burullus-murals", "dep-9")
+            navigateToHold(hold, alreadyHeld = true)
+        }
+
+        assertTrue(onTop<HoldRoute>())
+        assertEquals(true, nav.currentBackStackEntry?.savedStateHandle?.get<Boolean>(ALREADY_HELD_KEY))
+        // The date + party that was about to place a second hold is gone: it belonged to another booking.
+        assertEquals(0, nav.currentBackStack.value.count { it.destination.hasRoute<BookingRoute>() })
+
+        // When the hold ends the user lands on the trip they were on.
+        onNav { returnToDateSelection(holdExpired = false) }
+        assertTrue(onTop<TripStub>())
+    }
+
+    @Test
+    fun `the Home card opens the hold once however often it is tapped and its end returns to Home`() {
+        onNav {
+            navigateToHold(hold)
+            navigateToHold(hold)
+        }
+
+        assertTrue(onTop<HoldRoute>())
+        assertEquals(1, nav.currentBackStack.value.count { it.destination.hasRoute<HoldRoute>() })
+        assertEquals(null, nav.currentBackStackEntry?.savedStateHandle?.get<Boolean>(ALREADY_HELD_KEY))
+
+        onNav { returnToDateSelection(holdExpired = true) }
+        assertTrue(onTop<ListStub>())
+    }
+
+    @Test
     fun `a hold that ran out returns to its date and party and says so`() {
         onNav {
             navigateToBooking("burullus-dawn", "dep-2")

@@ -3,7 +3,11 @@ package eg.bahr.feature.trips.presentation
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -13,7 +17,9 @@ import eg.bahr.core.common.error.AppErrorController
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
+import eg.bahr.core.designsystem.components.BahrCard
 import eg.bahr.core.designsystem.theme.BahrLocale
+import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.localization.ProvideAppLanguage
 import eg.bahr.core.testing.captureScreenshot
@@ -111,6 +117,43 @@ class TripListScreenshotTest {
     @Test
     fun loading() = snapEach("trip_list_loading") { listTrips = { awaitCancellation() } }
 
+    // The header slot (M2-M4: booking's "Continue your booking" card, filled by :composeApp). A
+    // stand-in card here, since this feature may not import booking; the real card has its own
+    // goldens in feature:booking. Shows where the slot sits: under the title in the list, above the
+    // full-screen states. The goldens without a header above are the "slot draws nothing" case.
+    @Test
+    fun loadedWithHeaderArabic() =
+        snapEach("trip_list_header_loaded", AppLanguage.ARABIC, header = { HeaderStandIn() }) {
+            listTrips = {
+                loadedPage(
+                    dawn = "الفجر على بحيرة البرلس" to "الأكثر حجزًا",
+                    kayak = "قنوات قطّاعي البوص بالكياك" to "موسم الفلامنجو",
+                )
+            }
+        }
+
+    @Test
+    fun loadedWithHeaderEnglish() =
+        snapEach("trip_list_header_loaded", AppLanguage.ENGLISH, header = { HeaderStandIn() }) {
+            listTrips = {
+                loadedPage(
+                    dawn = "Dawn on Lake Burullus" to "Most booked",
+                    kayak = "Reed-cutters' channels, by kayak" to "Flamingo season",
+                )
+            }
+        }
+
+    @Test
+    fun errorWithHeader() =
+        snapEach("trip_list_header_error", header = { HeaderStandIn() }) { listTrips = { AppResult.Failure(AppError.Network) } }
+
+    @Composable
+    private fun HeaderStandIn() {
+        BahrCard(modifier = Modifier.fillMaxWidth()) {
+            Text("Header slot", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(BahrSpacing.lg))
+        }
+    }
+
     @Test
     fun error() = snapEach("trip_list_error") { listTrips = { AppResult.Failure(AppError.Network) } }
 
@@ -120,6 +163,7 @@ class TripListScreenshotTest {
     private fun snapEach(
         prefix: String,
         vararg languages: AppLanguage = AppLanguage.entries.toTypedArray(),
+        header: @Composable () -> Unit = {},
         stub: FakeTripRepository.() -> Unit,
     ) {
         val viewModel = TripListViewModel(FakeTripRepository().apply(stub), AppErrorController())
@@ -128,7 +172,7 @@ class TripListScreenshotTest {
             ProvideAppLanguage(language) {
                 BahrTheme(locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English) {
                     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-                        TripListScreen(onTripClick = {}, viewModel = viewModel)
+                        TripListScreen(onTripClick = {}, header = header, viewModel = viewModel)
                     }
                 }
             }

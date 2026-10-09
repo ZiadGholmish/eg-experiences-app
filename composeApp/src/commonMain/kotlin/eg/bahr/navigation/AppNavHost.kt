@@ -16,6 +16,7 @@ import eg.bahr.deeplink.DeepLinkInbox
 import eg.bahr.deeplink.DeepLinkParser
 import eg.bahr.deeplink.TripLinkPlacement
 import eg.bahr.deeplink.tripLinkPlacement
+import eg.bahr.feature.booking.navigation.ContinueBookingSlot
 import eg.bahr.feature.booking.navigation.bookingConfirmedScreen
 import eg.bahr.feature.booking.navigation.bookingScreen
 import eg.bahr.feature.booking.navigation.hasBookingInProgress
@@ -67,7 +68,11 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
             },
         )
 
-        tripListScreen(onTripClick = navController::navigateToTripDetail)
+        tripListScreen(
+            onTripClick = navController::navigateToTripDetail,
+            // A live seat hold (survives a restart) sits at the top of Home; tap → the held seats.
+            header = { ContinueBookingSlot(onOpen = { navController.navigateToHold(it) }) },
+        )
 
         tripDetailScreen(
             onBack = { navController.popBackStack() },

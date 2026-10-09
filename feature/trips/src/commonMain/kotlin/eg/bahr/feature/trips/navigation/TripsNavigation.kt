@@ -1,5 +1,6 @@
 package eg.bahr.feature.trips.navigation
 
+import androidx.compose.runtime.Composable
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavOptionsBuilder
@@ -12,10 +13,17 @@ import eg.bahr.feature.trips.presentation.TripListScreen
  * The trips feature's public surface: destinations for the app's NavHost, and how to reach them.
  * What happens *after* a trips screen (booking) is the caller's lambda, so this feature never
  * imports another feature.
+ *
+ * Home. [header] is drawn under the list's title (and at the top of its loading, error and empty
+ * views); the app fills it from another feature (M2-M4: booking's "Continue your booking" card)
+ * without this feature knowing what it is. It must draw nothing when it has nothing to show.
  */
-fun NavGraphBuilder.tripListScreen(onTripClick: (slug: String) -> Unit) {
+fun NavGraphBuilder.tripListScreen(
+    onTripClick: (slug: String) -> Unit,
+    header: @Composable () -> Unit = {},
+) {
     composable<TripListRoute> {
-        TripListScreen(onTripClick = onTripClick)
+        TripListScreen(onTripClick = onTripClick, header = header)
     }
 }
 

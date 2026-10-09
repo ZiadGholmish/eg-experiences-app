@@ -55,13 +55,15 @@ import org.koin.core.parameter.parametersOf
  *
  * Once seats are held, [onHeld] gets the hold and the screen stays on the back stack underneath, so
  * Back returns here; the view model forgets the hold so returning does not navigate forward again.
+ * `alreadyHeld` is true when no new hold was placed because this device already had a live one
+ * (M2-M4: one hold at a time, also across a restart); [onHeld] then gets that one.
  */
 @Composable
 internal fun BookingScreen(
     slug: String,
     departureId: String,
     onBack: () -> Unit,
-    onHeld: (HoldRoute) -> Unit,
+    onHeld: (hold: HoldRoute, alreadyHeld: Boolean) -> Unit,
     modifier: Modifier = Modifier,
     holdEnded: Boolean? = null,
     onHoldEndedHandled: () -> Unit = {},
@@ -71,7 +73,7 @@ internal fun BookingScreen(
 
     LaunchedEffect(state.held) {
         val held = state.held ?: return@LaunchedEffect
-        onHeld(held)
+        onHeld(held, state.heldAlready)
         viewModel.onHeldHandled()
     }
 

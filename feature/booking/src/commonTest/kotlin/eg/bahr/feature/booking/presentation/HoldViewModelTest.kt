@@ -2,8 +2,10 @@ package eg.bahr.feature.booking.presentation
 
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
+import eg.bahr.core.datastore.StoredHold
 import eg.bahr.core.testing.runViewModelTest
 import eg.bahr.feature.booking.data.BookingFixtures
+import eg.bahr.feature.booking.data.FakeActiveHoldStore
 import eg.bahr.feature.booking.data.FakeBookingRepository
 import eg.bahr.feature.booking.model.HeldBookingDto
 import eg.bahr.feature.booking.navigation.HoldRoute
@@ -67,8 +69,14 @@ class HoldViewModelTest {
         )
     }
 
-    private fun TestScope.started(repo: FakeBookingRepository): HoldViewModel {
-        val vm = HoldViewModel(hold, repo, deviceClock())
+    /** The device's stored hold, as date + party saved it when the hold was placed. */
+    private fun storedHold() = FakeActiveHoldStore(StoredHold(hold.ref, hold.guestPhone, hold.holdExpiresAt, hold.serverNow))
+
+    private fun TestScope.started(
+        repo: FakeBookingRepository,
+        store: FakeActiveHoldStore = storedHold(),
+    ): HoldViewModel {
+        val vm = HoldViewModel(hold, repo, store, deviceClock())
         vm.onStart()
         runCurrent()
         return vm
@@ -135,7 +143,9 @@ class HoldViewModelTest {
     fun `at zero it re-reads the booking and ends when the server says the hold is gone`() =
         runViewModelTest {
             val repo = FakeBookingRepository(heldBooking = { _, _ -> serverAnswer() })
-            val vm = started(repo)
+            val store = storedHold()
+            val vm = started(repo, store)
+            assertEquals(hold.ref, store.hold.value?.ref)
 
             advanceTimeBy(15.minutes)
             runCurrent()
@@ -143,6 +153,8 @@ class HoldViewModelTest {
             assertEquals(HoldPhase.Expired, vm.uiState.value.phase)
             assertEquals(0, vm.uiState.value.secondsLeft)
             assertEquals(2, repo.bookingReads.size)
+            // Over: Home no longer offers it, and the phone leaves the device's storage.
+            assertNull(store.hold.value)
 
             // Ended: no more ticks, no more reads.
             advanceTimeBy(1.minutes)
@@ -245,15 +257,49 @@ class HoldViewModelTest {
         }
 
     @Test
+    fun `reopened 12 minutes in with the first re-read failing it shows 3 minutes not 15`() =
+        runViewModelTest {
+            // As Home's card and the second-hold guard hand it over: the fresh pair, plus the full length.
+            val reopened =
+                hold.copy(
+                    serverNow = (placedAt + 12.minutes).toString(),
+                    holdExpiresAt = (placedAt + 15.minutes).toString(),
+                    holdLengthSeconds = 900,
+                )
+            val vm =
+                HoldViewModel(
+                    reopened,
+                    FakeBookingRepository(heldBooking = {
+                        _,
+                        _,
+                        ->
+                        AppResult.Failure(AppError.Network)
+                    }),
+                    storedHold(),
+                    deviceClock(),
+                )
+            vm.onStart()
+            runCurrent()
+            val left = vm.uiState.value.secondsLeft
+            val progress = vm.uiState.value.progress
+            vm.onStop()
+
+            assertEquals(180, left)
+            assertEquals(0.2f, progress, 0.001f)
+        }
+
+    @Test
     fun `a hold released elsewhere ends the screen on start`() =
         runViewModelTest {
             val repo =
                 FakeBookingRepository(
                     heldBooking = { _, _ -> AppResult.Success(BookingFixtures.heldBooking(status = "CANCELLED")) },
                 )
-            val vm = started(repo)
+            val store = storedHold()
+            val vm = started(repo, store)
 
             assertEquals(HoldPhase.Expired, vm.uiState.value.phase)
+            assertNull(store.hold.value)
         }
 
     @Test
@@ -264,7 +310,8 @@ class HoldViewModelTest {
                     heldBooking = { _, _ -> serverAnswer() },
                     releaseHold = { _, _ -> AppResult.Success(Unit) },
                 )
-            val vm = started(repo)
+            val store = storedHold()
+            val vm = started(repo, store)
 
             vm.requestLeave()
             assertTrue(vm.uiState.value.isLeaveConfirmVisible)
@@ -275,6 +322,7 @@ class HoldViewModelTest {
 
             assertEquals(listOf(hold.ref to "+201012345678"), repo.releases)
             assertEquals(HoldPhase.Released, vm.uiState.value.phase)
+            assertNull(store.hold.value)
             assertFalse(vm.uiState.value.isLeaveConfirmVisible)
         }
 
@@ -301,7 +349,8 @@ class HoldViewModelTest {
                     heldBooking = { _, _ -> serverAnswer() },
                     releaseHold = { _, _ -> AppResult.Failure(AppError.Network) },
                 )
-            val vm = started(repo)
+            val store = storedHold()
+            val vm = started(repo, store)
 
             vm.requestLeave()
             vm.confirmLeave()
@@ -313,13 +362,16 @@ class HoldViewModelTest {
 
             vm.leaveWithoutRelease()
             assertEquals(HoldPhase.LeftUnreleased, vm.uiState.value.phase)
+            // The seats are still held on the server: Home's card stays the way back to them.
+            assertEquals(hold.ref, store.hold.value?.ref)
+            assertTrue(store.clears.isEmpty())
         }
 
     @Test
     fun `an unparseable deadline shows zero and checks with the server`() =
         runViewModelTest {
             val repo = FakeBookingRepository(heldBooking = { _, _ -> AppResult.Failure(AppError.Network) })
-            val vm = HoldViewModel(hold.copy(holdExpiresAt = "garbled"), repo, deviceClock())
+            val vm = HoldViewModel(hold.copy(holdExpiresAt = "garbled"), repo, FakeActiveHoldStore(), deviceClock())
             assertEquals(0, vm.uiState.value.secondsLeft)
 
             vm.onStart()

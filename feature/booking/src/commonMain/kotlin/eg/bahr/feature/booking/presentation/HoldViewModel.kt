@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
+import eg.bahr.core.datastore.ActiveHoldStore
 import eg.bahr.feature.booking.data.BookingRepository
 import eg.bahr.feature.booking.model.HeldBookingDto
 import eg.bahr.feature.booking.navigation.HoldRoute
@@ -77,18 +78,26 @@ internal data class HoldUiState(
  *
  * At zero nothing is assumed: the booking is re-read. Still held with time left (the device clock
  * ran fast) → keep counting; anything else → [HoldPhase.Expired]; no answer → retry with backoff.
+ *
+ * The device's stored hold ([activeHold], Home's "Continue your booking") is forgotten as soon as
+ * the seats are released or the server says they are no longer held. Not when the user leaves after
+ * a failed release ([leaveWithoutRelease]): the seats are still held then, and the Home card is the
+ * way back to them.
  */
 internal class HoldViewModel(
     private val hold: HoldRoute,
     private val repository: BookingRepository,
+    private val activeHold: ActiveHoldStore,
     private val clock: Clock = Clock.System,
 ) : ViewModel() {
     /** The hold's full length by the server's clock, from the answer that placed it; never re-derived. */
-    private val holdLength: Duration? = HoldDeadline.length(hold.holdExpiresAt, hold.serverNow)
+    private val holdLength: Duration? =
+        hold.holdLengthSeconds?.seconds?.takeIf { it.isPositive() } ?: HoldDeadline.length(hold.holdExpiresAt, hold.serverNow)
 
     /**
      * Until the first re-read answers, the route's own answer stands in. It is fresh on a normal
-     * open; after process death it is stale (too generous), which the re-read on start corrects.
+     * open and on a reopen ([reopenedHold]: the caller has just read the booking); after process
+     * death it is stale (too generous), which the re-read on start corrects.
      */
     private var deadline: HoldDeadline? = HoldDeadline.from(hold.holdExpiresAt, hold.serverNow, clock.now())
 
@@ -155,6 +164,7 @@ internal class HoldViewModel(
             when (val result = repository.releaseHold(hold.ref, hold.guestPhone)) {
                 is AppResult.Success -> {
                     stopAll()
+                    activeHold.clear(hold.ref)
                     _uiState.update { it.copy(isReleasing = false, isLeaveConfirmVisible = false, phase = HoldPhase.Released) }
                 }
                 is AppResult.Failure ->
@@ -213,14 +223,17 @@ internal class HoldViewModel(
             }
     }
 
-    private fun onBookingRead(booking: HeldBookingDto) {
+    private suspend fun onBookingRead(booking: HeldBookingDto) {
         if (_uiState.value.phase.isEnded) return
         val receivedAt = clock.now()
-        val fresh = HoldDeadline.from(booking.holdExpiresAt, booking.serverNow, receivedAt)
-        val stillHeld = booking.status in HELD_STATUSES && fresh != null
+        val fresh = booking.liveDeadline(receivedAt)
+        val stillHeld = fresh != null
         _uiState.update { it.copy(booking = booking, checkError = null) }
         when {
             !stillHeld -> {
+                // Cleared before the phase change: Expired ends the screen, which clears this view
+                // model and its scope, and an unfinished clear would leave the phone stored.
+                activeHold.clear(hold.ref)
                 stopAll()
                 _uiState.update { it.copy(phase = HoldPhase.Expired, isLeaveConfirmVisible = false) }
             }
@@ -243,8 +256,7 @@ internal class HoldViewModel(
 
     private fun scheduleNextCheck() {
         emptyChecks++
-        val backoff = (FIRST_RECHECK * (1 shl (emptyChecks - 1).coerceAtMost(MAX_BACKOFF_SHIFT))).coerceAtMost(MAX_RECHECK)
-        nextCheckAt = clock.now() + backoff
+        nextCheckAt = clock.now() + recheckBackoff(emptyChecks)
     }
 
     private fun stopAll() {
@@ -260,7 +272,6 @@ internal class HoldViewModel(
         /** The first re-read after an empty or failed one at zero; doubled each time up to [MAX_RECHECK]. */
         val FIRST_RECHECK = 2.seconds
         val MAX_RECHECK = 30.seconds
-        private const val MAX_BACKOFF_SHIFT = 4
 
         /** Statuses in which the seats are still held for this booking. */
         val HELD_STATUSES = setOf("HELD", "PAYMENT_PENDING")

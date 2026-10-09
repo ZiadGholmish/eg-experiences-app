@@ -1,12 +1,8 @@
 package eg.bahr.core.datastore
 
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.mutablePreferencesOf
 import androidx.datastore.preferences.core.stringPreferencesKey
 import eg.bahr.core.common.locale.AppLanguage
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -40,15 +36,4 @@ class AppSettingsStoreTest {
             val corrupt = mutablePreferencesOf(stringPreferencesKey("language") to "xx")
             assertEquals(AppLanguage.ARABIC, AppSettingsStore(InMemoryPreferences(corrupt)).language.first())
         }
-}
-
-/** A DataStore without a file, so the test runs the same on the JVM and on iOS. */
-private class InMemoryPreferences(
-    initial: Preferences = emptyPreferences(),
-) : DataStore<Preferences> {
-    private val state = MutableStateFlow(initial)
-    override val data = state
-
-    override suspend fun updateData(transform: suspend (t: Preferences) -> Preferences): Preferences =
-        transform(state.value).also { state.value = it }
 }

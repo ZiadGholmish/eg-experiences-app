@@ -15,11 +15,12 @@ import eg.bahr.feature.booking.presentation.HoldScreen
  * The booking feature's public surface: destinations for the app's NavHost, and how to reach them.
  *
  * [onHeld] gets the placed hold once seats are held; the caller decides where it goes (the held
- * seats, [holdScreen]).
+ * seats, [holdScreen], via [navigateToHold]). `alreadyHeld` is true when, instead of placing a second
+ * hold, the device's stored live hold is handed back (M2-M4).
  */
 fun NavGraphBuilder.bookingScreen(
     onBack: () -> Unit,
-    onHeld: (HoldRoute) -> Unit,
+    onHeld: (hold: HoldRoute, alreadyHeld: Boolean) -> Unit,
 ) {
     composable<BookingRoute> { entry ->
         val route = entry.toRoute<BookingRoute>()
@@ -81,8 +82,22 @@ fun NavController.navigateToBooking(
  * Date + party stays under the held seats, so Back returns to date selection (HANDOFF: the back
  * button pops the stack; at 00:00 the user goes back to date selection). The screen does not
  * navigate forward again on return: it consumes the hold once.
+ *
+ * [alreadyHeld]: the hold is the device's existing one, not the one this date + party was about to
+ * place. That date + party leaves the stack (it belongs to another booking) and the hold screen
+ * shows the "already held" notice. Also how Home's "Continue your booking" card opens the hold, with
+ * [alreadyHeld] false; single-top, so a double tap does not stack it twice.
  */
-fun NavController.navigateToHold(hold: HoldRoute) = navigate(hold)
+fun NavController.navigateToHold(
+    hold: HoldRoute,
+    alreadyHeld: Boolean = false,
+) {
+    navigate(hold) {
+        if (alreadyHeld) popUpTo<BookingRoute> { inclusive = true }
+        launchSingleTop = true
+    }
+    if (alreadyHeld) currentBackStackEntry?.savedStateHandle?.set(ALREADY_HELD_KEY, true)
+}
 
 /**
  * Back from the held seats to date + party under them (HANDOFF: at 00:00 the user goes back to date
@@ -90,7 +105,9 @@ fun NavController.navigateToHold(hold: HoldRoute) = navigate(hold)
  *
  * Pops up to the topmost held-seats entry rather than "one back": if a trip opened by a link sits
  * above the hold, the hold is not what plain `popBackStack()` would remove. Only the held-seats screen
- * calls this, and only while it is showing, so the entry under it is its date + party.
+ * calls this, and only while it is showing. The entry under it is usually its date + party; when the
+ * hold was opened from Home's "Continue your booking" card (or handed back instead of a second hold)
+ * it is Home or a trip page, which ignore the key, so the user lands there.
  */
 fun NavController.returnToDateSelection(holdExpired: Boolean) {
     if (currentBackStackEntry?.destination?.hasRoute<HoldRoute>() == true) {

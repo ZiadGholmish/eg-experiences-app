@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.BasicAlertDialog
@@ -24,7 +23,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.compose.LifecycleStartEffect
@@ -32,11 +30,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
-import coil3.compose.AsyncImage
 import eg.bahr.core.designsystem.components.BahrCard
 import eg.bahr.core.designsystem.components.BahrPrimaryButton
 import eg.bahr.core.designsystem.components.HoldCountdown
-import eg.bahr.core.designsystem.components.ImageGround
 import eg.bahr.core.designsystem.components.StickyActionBar
 import eg.bahr.core.designsystem.format.BahrFormat
 import eg.bahr.core.designsystem.icon.BahrIcons
@@ -67,6 +63,7 @@ import eg.bahr.core.localization.generated.resources.booking_total
 import eg.bahr.core.localization.generated.resources.format_pair
 import eg.bahr.feature.booking.model.HeldBookingDto
 import eg.bahr.feature.booking.navigation.HoldRoute
+import eg.bahr.feature.booking.presentation.components.BookingThumbnail
 import eg.bahr.feature.booking.presentation.components.BookingTopBar
 import eg.bahr.feature.booking.presentation.components.SummaryRow
 import org.jetbrains.compose.resources.pluralStringResource
@@ -193,7 +190,7 @@ private fun Countdown(state: HoldUiState) {
 private fun TripSummary(booking: HeldBookingDto?) {
     BahrCard(modifier = Modifier.fillMaxWidth()) {
         Row(modifier = Modifier.padding(BahrSpacing.md), horizontalArrangement = Arrangement.spacedBy(BahrSpacing.md)) {
-            Thumbnail(booking)
+            BookingThumbnail(booking?.trip?.cardImage)
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(BahrSpacing.xs)) {
                 if (booking == null) {
                     SkeletonLine(widthFraction = TITLE_SKELETON)
@@ -225,20 +222,6 @@ private fun departsLine(booking: HeldBookingDto): String? {
 @Composable
 private fun SecondaryLine(text: String) {
     Text(text = text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-}
-
-/** The size is fixed before anything loads; the LQIP draws first, the photo over it. */
-@Composable
-private fun Thumbnail(booking: HeldBookingDto?) {
-    val image = booking?.trip?.cardImage
-    ImageGround(modifier = Modifier.size(BahrSize.thumbnail).clip(BahrTheme.shapes.medium)) {
-        image?.lqip?.let {
-            AsyncImage(model = it, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-        }
-        image?.let {
-            AsyncImage(model = it.url, contentDescription = it.alt, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-        }
-    }
 }
 
 @Composable

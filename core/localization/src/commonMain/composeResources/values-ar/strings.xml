@@ -169,6 +169,8 @@
     <string name="booking_hold_time_up">الوقت خلص</string>
     <string name="booking_hold_checking">بنتأكد من مقاعدك…</string>
     <string name="booking_hold_check_failed">مقدرناش نتأكد من مقاعدك. بنحاول تاني…</string>
+    <!-- Home's card for a live hold (M2-M4). -->
+    <string name="booking_continue_title">كمّل حجزك</string>
     <string name="booking_departs_from">القيام من %1$s، %2$s، %3$s</string>
     <string name="booking_departs_at">القيام من %1$s، %2$s</string>
     <string name="booking_pay_cta">ادفع %1$s</string>
