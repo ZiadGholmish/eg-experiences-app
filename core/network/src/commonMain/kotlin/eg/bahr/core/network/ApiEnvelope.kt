@@ -12,21 +12,24 @@ import kotlinx.serialization.Serializable
  * handling that differs per platform.
  */
 @Serializable
-data class ApiEnvelope<T>(
+@PublishedApi
+internal data class ApiEnvelope<T>(
     val success: Boolean,
     val data: T? = null,
     val error: ApiErrorDto? = null,
 )
 
 @Serializable
-data class ApiErrorDto(
+@PublishedApi
+internal data class ApiErrorDto(
     val code: String,
     val message: String? = null,
     val violations: List<FieldViolationDto>? = null,
 )
 
 @Serializable
-data class FieldViolationDto(
+@PublishedApi
+internal data class FieldViolationDto(
     val field: String,
     val message: String,
 )

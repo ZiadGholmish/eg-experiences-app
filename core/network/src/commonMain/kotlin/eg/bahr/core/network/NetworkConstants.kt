@@ -1,6 +1,6 @@
 package eg.bahr.core.network
 
-object NetworkConstants {
+internal object NetworkConstants {
     /**
      * Content locale. The backend resolves it from `Accept-Language` and falls
      * back to Arabic when unspecified, so this header is what decides whether a

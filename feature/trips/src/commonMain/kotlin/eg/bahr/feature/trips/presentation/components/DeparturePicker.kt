@@ -31,7 +31,7 @@ import org.jetbrains.compose.resources.stringResource
  * trip barely runs. It is simply not selectable.
  */
 @Composable
-fun DeparturePicker(
+internal fun DeparturePicker(
     departures: List<DepartureDto>,
     selectedId: Long?,
     onSelect: (Long) -> Unit,

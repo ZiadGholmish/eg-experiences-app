@@ -1,6 +1,5 @@
 package eg.bahr.core.network
 
-import eg.bahr.core.common.result.ApiErrorCodes
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
 import io.ktor.client.call.NoTransformationFoundException
@@ -77,7 +76,8 @@ suspend inline fun <reified T> callApi(crossinline block: suspend () -> HttpResp
  * neither is an `IOException`, so both would otherwise escape [callApi] and
  * crash the caller.
  */
-suspend inline fun <reified T> HttpResponse.decodeEnvelopeOrNull(): ApiEnvelope<T>? =
+@PublishedApi
+internal suspend inline fun <reified T> HttpResponse.decodeEnvelopeOrNull(): ApiEnvelope<T>? =
     try {
         body<ApiEnvelope<T>>()
     } catch (noTransformation: NoTransformationFoundException) {

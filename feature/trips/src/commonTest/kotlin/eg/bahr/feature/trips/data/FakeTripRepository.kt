@@ -15,7 +15,7 @@ import eg.bahr.feature.trips.model.TripSummaryDto
  *
  * Template for other features: one fake per repository interface, in that feature's commonTest.
  */
-class FakeTripRepository(
+internal class FakeTripRepository(
     var listTrips: suspend (page: Int) -> AppResult<PageDto<TripSummaryDto>> = { unset() },
     var tripBySlug: suspend (slug: String) -> AppResult<TripDetailDto> = { unset() },
     var departuresFor: suspend (slug: String) -> AppResult<List<DepartureDto>> = { unset() },
@@ -37,7 +37,7 @@ class FakeTripRepository(
 }
 
 /** Test data. Copy is Arabic because Arabic is what most users see. */
-object TripFixtures {
+internal object TripFixtures {
     fun trip(
         id: Long,
         title: String = "رحلة رقم $id",

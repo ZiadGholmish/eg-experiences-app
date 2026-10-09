@@ -1,7 +1,6 @@
 package eg.bahr.core.localization
 
 import androidx.compose.runtime.Composable
-import eg.bahr.core.common.result.ApiErrorCodes
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.error_generic
@@ -21,6 +20,11 @@ import org.jetbrains.compose.resources.stringResource
  *
  * Returns the resource rather than the text so non-composable callers (the
  * app-wide error host) can carry it and resolve it in the current locale.
+ *
+ * The codes are literals on purpose: their constants (`ApiErrorCodes`) live in
+ * `core:network`, which this module may not depend on (bahr-modularization graph).
+ * `ErrorCodeMessagesTest` in `feature:booking`, which sees both modules, fails if a
+ * literal here drifts from its constant.
  */
 fun AppError.messageRes(): StringResource =
     when (this) {
@@ -28,13 +32,18 @@ fun AppError.messageRes(): StringResource =
         AppError.Timeout -> Res.string.error_timeout
         is AppError.Api ->
             when (code) {
-                ApiErrorCodes.HOLD_EXPIRED -> Res.string.error_hold_expired
-                ApiErrorCodes.NO_SEATS_AVAILABLE -> Res.string.error_no_seats_available
+                HOLD_EXPIRED -> Res.string.error_hold_expired
+                NO_SEATS_AVAILABLE -> Res.string.error_no_seats_available
                 else -> Res.string.error_generic
             }
         is AppError.Serialization -> Res.string.error_generic
         is AppError.Unknown -> Res.string.error_generic
     }
+
+// Mirrors core:network's ApiErrorCodes; see messageRes. Every literal added here needs a
+// matching line in feature:booking's ErrorCodeMessagesTest, or it is not pinned.
+private const val HOLD_EXPIRED = "HOLD_EXPIRED"
+private const val NO_SEATS_AVAILABLE = "NO_SEATS_AVAILABLE"
 
 /** [messageRes], resolved in the composition's language. */
 @Composable

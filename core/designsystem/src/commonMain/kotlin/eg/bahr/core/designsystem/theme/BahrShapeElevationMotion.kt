@@ -27,7 +27,7 @@ data class BahrShapes(
     val full: RoundedCornerShape = RoundedCornerShape(100.dp),
 )
 
-fun BahrShapes.toMaterial() =
+internal fun BahrShapes.toMaterial() =
     Shapes(
         extraSmall = extraSmall,
         small = small,

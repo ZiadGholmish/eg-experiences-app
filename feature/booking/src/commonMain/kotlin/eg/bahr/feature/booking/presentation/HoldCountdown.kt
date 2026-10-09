@@ -16,7 +16,7 @@ import kotlin.time.Instant
  * client re-reads the booking when the countdown hits zero instead of deciding
  * on its own that the hold is gone.
  */
-object HoldCountdown {
+internal object HoldCountdown {
     fun remaining(
         holdExpiresAt: String?,
         now: Instant = Clock.System.now(),

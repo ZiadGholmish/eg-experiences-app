@@ -16,18 +16,14 @@ import java.util.Locale
  * Without this, a first launch on an English device rendered the Arabic theme (RTL, Plex) with
  * English strings: layout direction followed the app language, strings followed the device.
  */
-actual object LocalAppLocale {
-    /** The device locale, captured before the first override so `provides(null)` can restore it. */
-    private var deviceDefault: Locale? = null
-
+internal actual object LocalAppLocale {
     actual val current: String
         @Composable get() = LocalConfiguration.current.locales[0].toLanguageTag()
 
     @Composable
-    actual infix fun provides(value: String?): ProvidedValue<*> {
+    actual infix fun provides(value: String): ProvidedValue<*> {
         val base = LocalConfiguration.current
-        val device = deviceDefault ?: Locale.getDefault().also { deviceDefault = it }
-        val locale = value?.let(Locale::forLanguageTag) ?: device
+        val locale = appLocale(value)
         // A side effect during composition, on purpose: it must happen before the children read
         // Locale.current, and ProvideAppLanguage's key(language) re-runs it on every switch.
         Locale.setDefault(locale)
@@ -39,9 +35,24 @@ actual object LocalAppLocale {
     }
 }
 
+/**
+ * The app language with Latin digits forced (`ar` → `ar-u-nu-latn`).
+ *
+ * The rule is Western digits in every language (BahrFormat formats them by hand). Plain `ar` as
+ * the process default would make any `String.format`, `NumberFormat` or `DateFormat` — ours by
+ * mistake, or a library's — emit Arabic-Indic digits (١٢). The `nu` extension changes only the
+ * numbering system: resource lookup still matches `values-ar`, and the language is still `ar`.
+ */
+internal fun appLocale(languageTag: String): Locale =
+    Locale
+        .Builder()
+        .setLanguageTag(languageTag)
+        .setUnicodeLocaleKeyword("nu", "latn")
+        .build()
+
 /** The locale is applied in [LocalAppLocale.provides]; nothing left to do per subtree. */
 @Composable
-actual fun ApplyPlatformLocale(
+internal actual fun ApplyPlatformLocale(
     languageTag: String,
     content: @Composable () -> Unit,
 ) {

@@ -15,7 +15,7 @@ import io.ktor.client.request.parameter
  * a social post is opened cold by someone with no account, and that is the
  * funnel release 1 exists to test.
  */
-class TripApiService(
+internal class TripApiService(
     private val client: HttpClient,
 ) {
     suspend fun listTrips(

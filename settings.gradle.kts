@@ -2,6 +2,8 @@ rootProject.name = "Bahr"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {
+    // Convention plugins (bahr.kmp.library, bahr.kmp.feature, bahr.kmp.app, …).
+    includeBuild("build-logic")
     repositories {
         google {
             mavenContent {
@@ -44,3 +46,6 @@ include(":core:testing")
 include(":feature:splash")
 include(":feature:trips")
 include(":feature:booking")
+
+// JVM, test-only: ModuleGraphTest (Konsist) enforces the bahr-modularization rules.
+include(":architecture-tests")

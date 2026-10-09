@@ -2,18 +2,17 @@ package eg.bahr
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import eg.bahr.core.common.error.AppErrorController
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.datastore.AppSettingsStore
 import eg.bahr.core.designsystem.error.BahrErrorHost
+import eg.bahr.core.designsystem.error.BahrErrorMessage
 import eg.bahr.core.designsystem.theme.BahrLocale
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.localization.ProvideAppLanguage
 import eg.bahr.core.localization.messageRes
 import eg.bahr.navigation.AppNavHost
-import kotlinx.coroutines.flow.map
 import org.koin.compose.koinInject
 
 /**
@@ -28,13 +27,18 @@ fun App() {
     val settings: AppSettingsStore = koinInject()
     val language by settings.language.collectAsStateWithLifecycle(initialValue = AppLanguage.default)
 
+    // App-scoped (Koin single), so a message on screen survives the language switch's re-keyed
+    // composition and an Activity recreation: it leaves the queue only on dismiss.
     val errors: AppErrorController = koinInject()
-    val errorMessages = remember(errors) { errors.errors.map { it.messageRes() } }
+    val pendingError by errors.current.collectAsStateWithLifecycle(initialValue = null)
 
     ProvideAppLanguage(language) {
         BahrTheme(locale = language.toBahrLocale()) {
             // Inside the theme and the language: the snackbar is themed, mirrored and localized.
-            BahrErrorHost(messages = errorMessages) {
+            BahrErrorHost(
+                message = pendingError?.let { BahrErrorMessage(id = it.id, text = it.error.messageRes()) },
+                onDismissed = { shown -> errors.dismiss(shown.id) },
+            ) {
                 AppNavHost()
             }
         }

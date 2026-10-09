@@ -38,7 +38,7 @@ import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-fun TripListScreen(
+internal fun TripListScreen(
     onTripClick: (slug: String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: TripListViewModel = koinViewModel(),

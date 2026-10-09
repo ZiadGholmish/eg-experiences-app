@@ -31,7 +31,7 @@ import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
 @Composable
-fun BookingConfirmedScreen(
+internal fun BookingConfirmedScreen(
     ref: String,
     onDone: () -> Unit,
     modifier: Modifier = Modifier,

@@ -70,4 +70,41 @@ class ProvideAppLanguageTest {
         compose.onNodeWithText("Trips").assertExists()
         assertEquals(LayoutDirection.Ltr, direction)
     }
+
+    /**
+     * The process default follows the app language, so platform formatting would follow it too:
+     * plain `ar` gives Arabic-Indic digits (١٢٣٤) from `String.format`. The default is
+     * `ar-u-nu-latn`, a backstop for code that bypasses BahrFormat.
+     * (This runs on the JVM's CLDR data under Robolectric, not on Android's ICU.)
+     */
+    @Test
+    fun `Arabic app language keeps Western digits in platform number formatting`() {
+        // Control: without the backstop this JVM really does print Arabic-Indic digits, so the
+        // assertion below can fail.
+        assertEquals("١٢٣٤", String.format(Locale.forLanguageTag("ar"), "%d", 1234))
+
+        compose.setContent {
+            ProvideAppLanguage(AppLanguage.ARABIC) {
+                BasicText(stringResource(Res.string.trips_title))
+            }
+        }
+
+        compose.onNodeWithText("الرحلات").assertExists()
+        assertEquals("ar", Locale.getDefault().language)
+        assertEquals("latn", Locale.getDefault().getUnicodeLocaleType("nu"))
+        assertEquals("1234 12.5", String.format("%d %.1f", 1234, 12.5))
+    }
+
+    @Test
+    fun `English app language keeps Western digits in platform number formatting`() {
+        compose.setContent {
+            ProvideAppLanguage(AppLanguage.ENGLISH) {
+                BasicText(stringResource(Res.string.trips_title))
+            }
+        }
+
+        compose.onNodeWithText("Trips").assertExists()
+        assertEquals("en", Locale.getDefault().language)
+        assertEquals("1234 12.5", String.format("%d %.1f", 1234, 12.5))
+    }
 }

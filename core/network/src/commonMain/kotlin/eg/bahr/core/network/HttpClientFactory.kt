@@ -20,7 +20,7 @@ import kotlinx.serialization.json.Json
  * in `androidMain` and Darwin in `iosMain` of the app module. Keeping the engine
  * out of here is what lets `core:network` stay platform-agnostic.
  */
-object HttpClientFactory {
+internal object HttpClientFactory {
     /**
      * `ignoreUnknownKeys` is on because the contract serves two clients: the web
      * client can gain a field without this app shipping a release to tolerate it.

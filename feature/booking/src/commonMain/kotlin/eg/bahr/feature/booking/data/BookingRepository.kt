@@ -5,7 +5,7 @@ import eg.bahr.feature.booking.model.BookingDto
 import eg.bahr.feature.booking.model.HeldSeatsDto
 import eg.bahr.feature.booking.model.PlaceHoldRequest
 
-class BookingRepository(
+internal class BookingRepository(
     private val api: BookingApiService,
 ) {
     suspend fun placeHold(request: PlaceHoldRequest): AppResult<HeldSeatsDto> = api.placeHold(request)

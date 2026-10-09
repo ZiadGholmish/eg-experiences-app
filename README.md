@@ -26,7 +26,8 @@ the plan is `../docs/PLAN.md`.
 
 ```
 mobile-app/
-├── composeApp/            # The app: entry points, DI wiring, nav graph
+├── build-logic/           # Convention plugins: bahr.kmp.library / .feature / .app, …
+├── composeApp/            # The app: entry points, DI wiring, nav graph (no screens)
 ├── core/
 │   ├── common/            # AppResult, AppError, AppLanguage
 │   ├── network/           # ApiEnvelope, MoneyDto, callApi, HttpClient factory
@@ -38,10 +39,13 @@ mobile-app/
 │   ├── splash/
 │   ├── trips/             # GET /trips, /trips/{slug}, /trips/{slug}/departures
 │   └── booking/           # POST /bookings, GET+cancel /bookings/{ref}
+├── architecture-tests/    # JVM: ModuleGraphTest (Konsist), the module rules
 └── docs/design-language.md
 ```
 
-A `core` module never depends on a `feature` module.
+A `core` module never depends on a `feature` module, and a feature never depends
+on another feature; `./gradlew :architecture-tests:test` enforces the whole graph
+(see `../.claude/skills/bahr-modularization/SKILL.md`).
 
 ## Getting started
 
@@ -131,7 +135,8 @@ anyone can run one without that team; a device build needs their own.
 | Re-record goldens after an intended UI change | `./gradlew recordRoborazziDebug` (then review the PNG diff before staging) |
 | Coverage, `core:*` + view models | `./gradlew koverHtmlReportMobile` → `build/reports/kover/htmlMobile/index.html` |
 | Coverage gate | `./gradlew koverVerifyMobile` (also part of `check`) |
-| String-resource lint (`\'`, bare `%s`/`%d`) | `./gradlew checkStringResources` (also part of `check`) |
+| String-resource lint (`\'`, bare `%s`/`%d`) | `./gradlew checkStringResources` (every module; also part of `check`) |
+| Module graph, no screens in `:composeApp`, no design literals in features, feature layout + `internal` | `./gradlew :architecture-tests:test` (also part of `build`) |
 
 - **View models:** `commonTest`, hand-written fake repositories, and
   `runViewModelTest { … }` from `core:testing`, which points `Dispatchers.Main`
@@ -147,15 +152,14 @@ anyone can run one without that team; a device build needs their own.
   pixel difference.
 - **Transient errors** (the screen stays usable): inject `AppErrorController`
   into the view model and call `show(error)`; the app root's `BahrErrorHost`
-  shows it as a localized snackbar. Errors that *are* the screen's state stay in
+  shows it as a localized snackbar. A message leaves the queue only when its
+  snackbar times out, so one on screen during a language switch or an Activity
+  recreation is shown again (in the new language, for a fresh 4 s); process
+  death drops the queue. Errors that *are* the screen's state stay in
   the `UiState`.
 
 ## Known gaps
 
-- **Module-graph deviations (fixed in M0-M5).** `feature:booking` depends on
-  `feature:trips` (`feature/booking/build.gradle.kts:48`, unused in source), and
-  `ApiErrorCodes` sits in `core:common` instead of `core:network`. See
-  `AGENTS.md` → Conventions.
 - **No payment step.** `BookingScreen` goes from a seat *hold* straight to the
   confirmation screen, because the backend has no payment endpoint yet. Until
   Paymob lands, a "confirmed" booking is an unpaid hold.

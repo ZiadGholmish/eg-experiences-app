@@ -12,13 +12,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-data class BookingConfirmedUiState(
+internal data class BookingConfirmedUiState(
     val isLoading: Boolean = true,
     val booking: BookingDto? = null,
     val error: AppError? = null,
 )
 
-class BookingConfirmedViewModel(
+internal class BookingConfirmedViewModel(
     private val ref: String,
     private val repository: BookingRepository,
 ) : ViewModel() {

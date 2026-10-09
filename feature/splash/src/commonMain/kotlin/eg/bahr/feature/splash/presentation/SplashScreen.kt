@@ -1,4 +1,4 @@
-package eg.bahr.feature.splash
+package eg.bahr.feature.splash.presentation
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -21,7 +21,7 @@ import org.jetbrains.compose.resources.stringResource
  * animation with a fixed duration.
  */
 @Composable
-fun SplashScreen(
+internal fun SplashScreen(
     onReady: () -> Unit,
     modifier: Modifier = Modifier,
 ) {

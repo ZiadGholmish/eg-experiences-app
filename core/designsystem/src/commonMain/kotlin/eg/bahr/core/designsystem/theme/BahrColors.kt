@@ -17,7 +17,7 @@ import androidx.compose.ui.graphics.Color
  * Reference palette — hues sampled from Lake Burullus.
  * Mirrors `ref.palette` in tokens.json. Screens never use these directly.
  */
-object BahrPalette {
+internal object BahrPalette {
     val Teal30 = Color(0xFF0A5B63)
     val Teal40 = Color(0xFF0E7C86)
     val Teal50 = Color(0xFF12A09A)
@@ -95,7 +95,7 @@ data class BahrExtendedColors(
     val outlinedElevation: Boolean,
 )
 
-data class BahrColorTheme(
+internal data class BahrColorTheme(
     val scheme: ColorScheme,
     val extended: BahrExtendedColors,
 )
@@ -108,7 +108,7 @@ private const val CTA_SHADOW_ALPHA = .34f
 private const val CHIP_SHADOW_ALPHA = .26f
 private const val DUSK_CTA_SHADOW_ALPHA = .3f
 
-val LakeBurullus =
+internal val LakeBurullus =
     BahrColorTheme(
         scheme =
             lightColorScheme(
@@ -172,7 +172,7 @@ val LakeBurullus =
     )
 
 /** Alternate theme: cooler navy primary, brick action colour. Matches `[data-theme="dusk"]`. */
-val Dusk =
+internal val Dusk =
     LakeBurullus.let { base ->
         BahrColorTheme(
             scheme =
@@ -203,7 +203,7 @@ val Dusk =
  * Alternate theme: darker ink; cards use a 1dp outline instead of shadow.
  * Matches `[data-theme="highcontrast"]`.
  */
-val HighContrast =
+internal val HighContrast =
     LakeBurullus.let { base ->
         BahrColorTheme(
             scheme =
@@ -225,7 +225,7 @@ val HighContrast =
 
 enum class BahrThemeName { LakeBurullus, Dusk, HighContrast }
 
-fun bahrColorTheme(name: BahrThemeName) =
+internal fun bahrColorTheme(name: BahrThemeName) =
     when (name) {
         BahrThemeName.LakeBurullus -> LakeBurullus
         BahrThemeName.Dusk -> Dusk

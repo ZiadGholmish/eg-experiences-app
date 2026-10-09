@@ -12,17 +12,20 @@ import androidx.compose.runtime.ProvidedValue
  * iOS writes `AppleLanguages` (read by `NSLocale.preferredLanguages`), Android
  * sets the JVM default locale (read by `LocaleList.getDefault()`). The stored
  * app language is the only input; the device language never wins.
+ *
+ * On Android the default locale also forces Latin digits (`ar-u-nu-latn`), so platform number
+ * formatting cannot emit Arabic-Indic digits; see `appLocale` in the Android actual.
  */
-expect object LocalAppLocale {
+internal expect object LocalAppLocale {
     val current: String
         @Composable get
 
     @Composable
-    infix fun provides(value: String?): ProvidedValue<*>
+    infix fun provides(value: String): ProvidedValue<*>
 }
 
 @Composable
-expect fun ApplyPlatformLocale(
+internal expect fun ApplyPlatformLocale(
     languageTag: String,
     content: @Composable () -> Unit,
 )

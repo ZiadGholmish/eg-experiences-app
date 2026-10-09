@@ -13,7 +13,7 @@ import kotlinx.serialization.Serializable
  * contract's `Booking` nests `trip{}`, `departure{}` and `host{}` where this is flat.
  */
 @Serializable
-data class PlaceHoldRequest(
+internal data class PlaceHoldRequest(
     val departureId: Long,
     val partySize: Int,
     val guest: GuestRequest,
@@ -25,7 +25,7 @@ data class PlaceHoldRequest(
  * and phone travel with the request rather than coming from a session.
  */
 @Serializable
-data class GuestRequest(
+internal data class GuestRequest(
     val name: String,
     val phone: String,
     val locale: String,
@@ -39,7 +39,7 @@ data class GuestRequest(
  * client must re-read rather than assume the hold survived.
  */
 @Serializable
-data class HeldSeatsDto(
+internal data class HeldSeatsDto(
     val ref: String,
     val departureId: Long,
     val partySize: Int,
@@ -51,7 +51,7 @@ data class HeldSeatsDto(
 
 /** The ticket. Everything needed to show up in the right place at the right time. */
 @Serializable
-data class BookingDto(
+internal data class BookingDto(
     val ref: String,
     val status: String,
     val departureId: Long,

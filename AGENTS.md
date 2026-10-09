@@ -25,6 +25,12 @@ The Java backend in `../be/` is a superseded, read-only reference.
 - `./gradlew spotlessApply` before every commit. `./gradlew installGitHooks`
   once after cloning installs a pre-commit hook that enforces it.
 - `./gradlew allTests` — common tests on both targets.
+- `./gradlew :architecture-tests:test` — `ModuleGraphTest` (Konsist): the module
+  graph from the `bahr-modularization` skill, read from the real Gradle
+  dependencies (`implementation` only, never `api`), plus no feature→feature or
+  core→feature imports, no screens in `:composeApp`, no design literals in
+  `feature/*`, the feature package layout, and `internal` outside a feature's
+  `navigation/` and `di/`. Part of `build`.
 - `./gradlew verifyRoborazziDebug` — screenshot diffs against the committed
   goldens; `./gradlew recordRoborazziDebug` re-records them after an intended UI
   change. `./gradlew koverHtmlReportMobile` — coverage. See README → Testing.
@@ -59,8 +65,8 @@ SECURITY_JWT_SECRET='local-dev-signing-key-at-least-32-bytes!!' ./gradlew :api:b
    client-side duration: a backgrounded app, a slow network and a wrong device
    clock all make one lie. When it hits zero, re-read — do not assume.
 
-5. **Branch on the error `code`, never the message.** `ApiErrorCodes` mirrors the
-   `ApiError.code` enum in `openapi.yaml`. An unmapped code shows the generic
+5. **Branch on the error `code`, never the message.** `ApiErrorCodes`
+   (`core:network`) mirrors the `ApiError.code` enum in `openapi.yaml`. An unmapped code shows the generic
    string, never a raw server message.
 
 6. **Money is `{ amount, currency }`, never a bare number, and the client never
@@ -77,14 +83,18 @@ SECURITY_JWT_SECRET='local-dev-signing-key-at-least-32-bytes!!' ./gradlew :api:b
   never depends on another feature** — cross-feature navigation goes through
   lambdas wired in `:composeApp`, which holds no screens. The full graph is in
   the `bahr-modularization` skill; a new edge is a plan change.
-- **Known deviations (fixed in M0-M5).** Today's code breaks the graph in two
-  places, so don't copy either one:
-  - `feature:booking → feature:trips` (`feature/booking/build.gradle.kts:48`).
-    No source uses it; M0-M5 deletes the line.
-  - `ApiErrorCodes` lives in `core:common`. The graph puts it in `core:network`.
+- **Build files are a few lines.** Shared setup lives in the `build-logic`
+  convention plugins: `bahr.kmp.library` (every `core:*`), `bahr.kmp.feature`
+  (adds the standard `core:*` edges and libraries), `bahr.kmp.app`
+  (`:composeApp`), `bahr.kmp.compose`, `bahr.kmp.screenshots` (Roborazzi),
+  `bahr.root`. A module's own build file declares only what is specific to it.
+  Convention plugins never add a `feature:*` edge.
 - Inside a feature: `model/` (wire DTOs), `data/` (api service + repository),
   `presentation/` (screen + view model, `components/` for parts), `navigation/`
-  (type-safe routes), `di/` (one Koin module).
+  (type-safe routes, `NavGraphBuilder.xScreen(callbacks)`,
+  `NavController.navigateToX()`), `di/` (one Koin module).
+  **Everything outside `navigation/` and `di/` is `internal`**: `:composeApp`
+  wires destinations with `xScreen(...)` and never imports a screen.
 - DTOs are `@Serializable` data classes, field-for-field with the schemas in
   `openapi.yaml`. New fields are added nullable with a default — the parser
   ignores unknown keys, so an old app keeps working, and a non-nullable addition
@@ -92,5 +102,10 @@ SECURITY_JWT_SECRET='local-dev-signing-key-at-least-32-bytes!!' ./gradlew :api:b
 - Repositories return `AppResult<T>`. `callApi` is the only place that catches
   transport failures; `CancellationException` is always rethrown.
 - View models expose one `StateFlow<…UiState>` and no other public state.
+- **Numbers on screen go through `BahrFormat`** (Western digits, EGP, 24 h).
+  Never `String.format`, `NumberFormat` or `java.text.*` for user-visible
+  numbers. As a backstop, Android's process locale is the app language with
+  `-u-nu-latn` (`ar-u-nu-latn`), so a stray platform formatter still prints
+  `1234`, not `١٢٣٤`; iOS has no such backstop.
 - ktlint via Spotless, 4-space indent, trailing commas. Comments explain *why*.
 - Do not commit; leave changes staged for the human to review.

@@ -88,7 +88,7 @@ class TripListViewModelTest {
             assertEquals(listOf(1L), state.trips.map { it.id })
             assertNull(state.error, "the list stays usable, so the screen must not switch to its error state")
             assertFalse(state.isLoadingMore)
-            assertEquals(AppError.Timeout, errors.errors.first())
+            assertEquals(AppError.Timeout, errors.current.first()?.error)
         }
 
     @Test

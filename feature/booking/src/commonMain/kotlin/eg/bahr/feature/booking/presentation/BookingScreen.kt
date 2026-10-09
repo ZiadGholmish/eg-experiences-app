@@ -43,7 +43,7 @@ import eg.bahr.core.designsystem.components.HoldCountdown as HoldCountdownPanel
  * how seats get stranded.
  */
 @Composable
-fun BookingScreen(
+internal fun BookingScreen(
     departureId: Long,
     onBooked: (ref: String) -> Unit,
     onHoldExpired: () -> Unit,

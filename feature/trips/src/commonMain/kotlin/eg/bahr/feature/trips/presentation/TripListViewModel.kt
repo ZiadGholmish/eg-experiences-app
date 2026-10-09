@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-data class TripListUiState(
+internal data class TripListUiState(
     val isLoading: Boolean = true,
     val isLoadingMore: Boolean = false,
     val trips: List<TripSummaryDto> = emptyList(),
@@ -28,7 +28,7 @@ data class TripListUiState(
         get() = selectedCategory?.let { category -> trips.filter { it.category == category } } ?: trips
 }
 
-class TripListViewModel(
+internal class TripListViewModel(
     private val repository: TripRepository,
     private val errors: AppErrorController,
 ) : ViewModel() {

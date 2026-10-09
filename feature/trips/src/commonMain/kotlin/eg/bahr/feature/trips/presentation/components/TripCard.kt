@@ -31,7 +31,7 @@ import eg.bahr.feature.trips.model.TripSummaryDto
  * default locale, so this card is mirrored for most users.
  */
 @Composable
-fun TripCard(
+internal fun TripCard(
     trip: TripSummaryDto,
     perPersonLabel: String,
     onClick: () -> Unit,

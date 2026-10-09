@@ -10,7 +10,7 @@ import eg.bahr.feature.trips.model.TripSummaryDto
  * The trips data the view models read. An interface so view-model tests can hand in a fake
  * (the project uses hand-written fakes, no mocking library).
  */
-interface TripRepository {
+internal interface TripRepository {
     suspend fun listTrips(page: Int = 0): AppResult<PageDto<TripSummaryDto>>
 
     suspend fun tripBySlug(slug: String): AppResult<TripDetailDto>
@@ -23,7 +23,7 @@ interface TripRepository {
  * requirements doc calls for an offline-renderable ticket, and trip detail is
  * the other read worth holding onto between launches.
  */
-class DefaultTripRepository(
+internal class DefaultTripRepository(
     private val api: TripApiService,
 ) : TripRepository {
     override suspend fun listTrips(page: Int): AppResult<PageDto<TripSummaryDto>> = api.listTrips(page = page)

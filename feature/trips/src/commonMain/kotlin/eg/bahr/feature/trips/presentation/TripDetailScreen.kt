@@ -49,7 +49,7 @@ import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
 @Composable
-fun TripDetailScreen(
+internal fun TripDetailScreen(
     slug: String,
     onContinue: (departureId: Long) -> Unit,
     modifier: Modifier = Modifier,

@@ -61,7 +61,7 @@ private fun style(
 private const val TRACKING_TIGHT = -.02f
 private const val TRACKING_OVERLINE = .1f
 
-fun bahrTypography(
+internal fun bahrTypography(
     family: FontFamily,
     arabic: Boolean,
 ) = Typography(
@@ -83,7 +83,7 @@ fun bahrTypography(
     labelMedium = style(family, 11f, FontWeight.SemiBold, 1.3f, arabic = arabic),
 )
 
-fun bahrExtendedType(
+internal fun bahrExtendedType(
     family: FontFamily,
     arabic: Boolean,
 ) = BahrExtendedType(

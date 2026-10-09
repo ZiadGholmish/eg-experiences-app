@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.time.Duration
 
-data class BookingUiState(
+internal data class BookingUiState(
     val departureId: Long,
     val partySize: Int = 1,
     val guestName: String = "",
@@ -49,7 +49,7 @@ data class BookingUiState(
     }
 }
 
-class BookingViewModel(
+internal class BookingViewModel(
     departureId: Long,
     private val repository: BookingRepository,
     private val settings: AppSettingsStore,

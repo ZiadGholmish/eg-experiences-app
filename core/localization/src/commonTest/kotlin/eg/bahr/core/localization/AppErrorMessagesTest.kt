@@ -1,6 +1,5 @@
 package eg.bahr.core.localization
 
-import eg.bahr.core.common.result.ApiErrorCodes
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.error_generic
@@ -25,8 +24,8 @@ class AppErrorMessagesTest {
 
     @Test
     fun `mapped codes branch on the code and ignore the message`() {
-        assertEquals(Res.string.error_no_seats_available, api(ApiErrorCodes.NO_SEATS_AVAILABLE).messageRes())
-        assertEquals(Res.string.error_hold_expired, api(ApiErrorCodes.HOLD_EXPIRED, message = null).messageRes())
+        assertEquals(Res.string.error_no_seats_available, api("NO_SEATS_AVAILABLE").messageRes())
+        assertEquals(Res.string.error_hold_expired, api("HOLD_EXPIRED", message = null).messageRes())
     }
 
     @Test

@@ -19,7 +19,7 @@ enum class BahrLocale(
     val isArabic get() = this == Arabic
 }
 
-val LocalBahrLocale = staticCompositionLocalOf { BahrLocale.Arabic }
+internal val LocalBahrLocale = staticCompositionLocalOf { BahrLocale.Arabic }
 
 /**
  * Wrap every screen in this. Changing [theme] or [locale] re-themes / re-flows the whole app —

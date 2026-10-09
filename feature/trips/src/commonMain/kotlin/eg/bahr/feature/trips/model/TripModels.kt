@@ -15,7 +15,7 @@ import kotlinx.serialization.Serializable
  * non-nullable addition here would break it instead.
  */
 @Serializable
-data class TripSummaryDto(
+internal data class TripSummaryDto(
     val id: Long,
     val slug: String,
     val category: String? = null,
@@ -28,7 +28,7 @@ data class TripSummaryDto(
 )
 
 @Serializable
-data class TripDetailDto(
+internal data class TripDetailDto(
     val id: Long,
     val slug: String,
     val category: String? = null,
@@ -51,7 +51,7 @@ data class TripDetailDto(
 )
 
 @Serializable
-data class HostDto(
+internal data class HostDto(
     val id: Long,
     val displayName: String,
     val verified: Boolean = false,
@@ -60,7 +60,7 @@ data class HostDto(
 
 /** The four host-knowledge fields the requirements doc asks every host for. */
 @Serializable
-data class HostKnowledgeDto(
+internal data class HostKnowledgeDto(
     val whatToBring: String? = null,
     val bestTimeOfYear: String? = null,
     val whatToLookOutFor: String? = null,
@@ -69,13 +69,13 @@ data class HostKnowledgeDto(
 
 /** `included = false` renders as a struck-through "not included" row. */
 @Serializable
-data class InclusionDto(
+internal data class InclusionDto(
     val included: Boolean,
     val text: String,
 )
 
 @Serializable
-data class ItineraryEntryDto(
+internal data class ItineraryEntryDto(
     val time: String? = null,
     val icon: String? = null,
     val text: String,
@@ -90,7 +90,7 @@ data class ItineraryEntryDto(
  * fail with `NO_SEATS_AVAILABLE` against a departure that looked bookable.
  */
 @Serializable
-data class DepartureDto(
+internal data class DepartureDto(
     val id: Long,
     val date: String,
     val departTime: String? = null,

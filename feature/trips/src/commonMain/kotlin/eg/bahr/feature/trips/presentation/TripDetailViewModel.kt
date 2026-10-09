@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-data class TripDetailUiState(
+internal data class TripDetailUiState(
     val isLoading: Boolean = true,
     val trip: TripDetailDto? = null,
     val departures: List<DepartureDto> = emptyList(),
@@ -29,7 +29,7 @@ data class TripDetailUiState(
         get() = departures.isNotEmpty() && departures.none { it.bookable }
 }
 
-class TripDetailViewModel(
+internal class TripDetailViewModel(
     private val slug: String,
     private val repository: TripRepository,
 ) : ViewModel() {

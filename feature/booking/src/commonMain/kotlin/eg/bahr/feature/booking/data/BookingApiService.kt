@@ -11,7 +11,7 @@ import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 
-class BookingApiService(
+internal class BookingApiService(
     private val client: HttpClient,
 ) {
     /**

@@ -1,12 +1,7 @@
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.util.Properties
 
 plugins {
-    alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.androidApplication)
-    alias(libs.plugins.composeMultiplatform)
-    alias(libs.plugins.composeCompiler)
-    alias(libs.plugins.kotlinSerialization)
+    id("bahr.kmp.app")
 }
 
 // `local.properties` is gitignored, so each developer points the local flavor at
@@ -26,25 +21,6 @@ val localBaseUrl: String =
     )
 
 kotlin {
-    androidTarget {
-        compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_11)
-        }
-    }
-
-    listOf(
-        iosArm64(),
-        iosSimulatorArm64(),
-    ).forEach { iosTarget ->
-        iosTarget.binaries.framework {
-            baseName = "ComposeApp"
-            isStatic = true
-            // Without this the linker cannot infer a bundle ID and falls back
-            // to the bundle name, which breaks crash symbolication later.
-            binaryOption("bundleId", "eg.bahr.shared")
-        }
-    }
-
     sourceSets {
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
@@ -53,11 +29,9 @@ kotlin {
             implementation(libs.koin.android)
             implementation(libs.ktor.client.okhttp)
         }
-
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
         }
-
         commonMain.dependencies {
             implementation(projects.feature.splash)
             implementation(projects.feature.trips)
@@ -69,57 +43,30 @@ kotlin {
             implementation(projects.core.localization)
             implementation(projects.core.datastore)
 
-            implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)
-            implementation(libs.compose.ui)
             implementation(libs.compose.components.resources)
             implementation(libs.compose.uiToolingPreview)
-
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
-
             implementation(libs.koin.core)
             implementation(libs.koin.compose)
             implementation(libs.koin.compose.viewmodel)
-
             implementation(libs.navigation.compose)
-
             implementation(libs.coil.compose)
             implementation(libs.coil.network.ktor)
-
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.kotlinx.coroutines.core)
-        }
-
-        commonTest.dependencies {
-            implementation(libs.kotlin.test)
-            implementation(libs.kotlinx.coroutines.test)
         }
     }
 }
 
 android {
+    // Keeps BuildConfig in `eg.bahr`, where the entry points import it from.
     namespace = "eg.bahr"
-    compileSdk =
-        libs.versions.android.compileSdk
-            .get()
-            .toInt()
-
-    buildFeatures {
-        buildConfig = true
-    }
 
     defaultConfig {
         applicationId = "eg.bahr.app"
-        minSdk =
-            libs.versions.android.minSdk
-                .get()
-                .toInt()
-        targetSdk =
-            libs.versions.android.targetSdk
-                .get()
-                .toInt()
         versionCode = 1
         versionName = "0.1"
     }
@@ -147,28 +94,4 @@ android {
             buildConfigField("String", "BASE_URL", "\"https://api.example.invalid/api/v1/\"")
         }
     }
-
-    packaging {
-        resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-        }
-    }
-
-    buildTypes {
-        getByName("release") {
-            isMinifyEnabled = false
-            // Debug keystore so a release build is installable before there is a
-            // signing config. Replace before any store submission.
-            signingConfig = signingConfigs.getByName("debug")
-        }
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
-}
-
-dependencies {
-    debugImplementation(libs.compose.uiTooling)
 }
