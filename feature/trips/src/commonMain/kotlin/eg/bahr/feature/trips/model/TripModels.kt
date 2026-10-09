@@ -7,9 +7,8 @@ import kotlinx.serialization.Serializable
 /*
  * Wire shapes for `/api/v1/trips`, field for field with `../docs/api/openapi.yaml`.
  *
- * The list side ([TripPageDto], [TripCardDto] and its parts) follows the contract. The detail side
- * ([TripDetailDto], [DepartureDto] and below) is still the Java-era shape and moves to the
- * contract's `TripDetail` / `Departure` with the rest of M1-M1.
+ * The list side is [TripPageDto] and [TripCardDto]; the trip page is [TripDetailDto] (`TripDetail`)
+ * and [DepartureDto] (`Departure`, also `GET /trips/{slug}/departures`).
  *
  * The backend omits null fields, so everything the contract does not mark `required` is nullable
  * with a default here. When the backend adds a field, add it the same way: the JSON parser ignores
@@ -74,6 +73,19 @@ internal data class ImageDto(
     val height: Int,
     val alt: String? = null,
     val lqip: String? = null,
+    val variants: List<ImageVariantDto> = emptyList(),
+)
+
+/**
+ * openapi `ImageVariant`: a smaller re-encoded copy. [format] is the contract's lowercase
+ * `avif`/`webp`/`jpeg`, kept as a string so a new format cannot fail the decode. Decoded but not
+ * picked from yet: the app loads [ImageDto.url].
+ */
+@Serializable
+internal data class ImageVariantDto(
+    val url: String,
+    val width: Int,
+    val format: String,
 )
 
 /**
@@ -111,76 +123,156 @@ internal data class LocationDto(
     val label: String? = null,
 )
 
+/**
+ * openapi `TripDetail`: the [TripCardDto] fields (the contract's `allOf` merges them flat) plus the
+ * trip page. [shareUrl] is served since M1-B5 and not used yet (no share button); [dates] are the same `Departure`
+ * shape as the departures endpoint.
+ */
 @Serializable
 internal data class TripDetailDto(
-    val id: Long,
     val slug: String,
-    val category: String? = null,
     val title: String,
-    val kicker: String? = null,
-    val deck: String? = null,
-    val description: String? = null,
-    val pricePerPerson: MoneyDto,
-    val capacity: Int = 0,
+    val subtitle: String? = null,
+    val durationLabel: String,
     val durationMinutes: Int? = null,
-    val departurePoint: String? = null,
-    val meetingPoint: String? = null,
-    val latitude: Double? = null,
-    val longitude: Double? = null,
+    val price: MoneyDto,
+    val categories: List<String> = emptyList(),
+    val heroImage: ImageDto? = null,
+    val cardImage: ImageDto? = null,
+    val nextDeparture: NextDepartureDto? = null,
+    val badge: BadgeDto? = null,
+    val rating: RatingDto? = null,
+    val location: LocationDto? = null,
+    val deck: String? = null,
+    val departure: DeparturePointDto? = null,
+    val destination: DestinationDto? = null,
+    val included: List<String> = emptyList(),
+    val excluded: List<String> = emptyList(),
+    val itinerary: List<ItineraryStopDto> = emptyList(),
     val host: HostDto? = null,
-    val knowledge: HostKnowledgeDto? = null,
-    val photoUrls: List<String> = emptyList(),
-    val itinerary: List<ItineraryEntryDto> = emptyList(),
-    val inclusions: List<InclusionDto> = emptyList(),
+    val tips: List<TipDto> = emptyList(),
+    val reviews: ReviewsDto? = null,
+    val dates: List<DepartureDto> = emptyList(),
+    val policy: PolicyDto? = null,
+    val gallery: List<ImageDto> = emptyList(),
+    val og: OpenGraphDto? = null,
+    val shareUrl: String? = null,
 )
 
+/** openapi `Place` + `timeLocal`/`arriveBy` ("HH:mm", Cairo): the facts grid's "Bus leaves" cell. */
 @Serializable
-internal data class HostDto(
-    val id: Long,
-    val displayName: String,
-    val verified: Boolean = false,
-    val bio: String? = null,
+internal data class DeparturePointDto(
+    val placeName: String? = null,
+    val city: String? = null,
+    val governorate: String? = null,
+    val lat: Double? = null,
+    val lng: Double? = null,
+    val timeLocal: String? = null,
+    val arriveBy: String? = null,
 )
 
-/** The four host-knowledge fields the requirements doc asks every host for. */
+/** openapi `Place` + `distanceKm`/`travelTime` ("2h40"): the facts grid's "Trip is at" cell. */
 @Serializable
-internal data class HostKnowledgeDto(
-    val whatToBring: String? = null,
-    val bestTimeOfYear: String? = null,
-    val whatToLookOutFor: String? = null,
-    val whatToKnow: String? = null,
-)
-
-/** `included = false` renders as a struck-through "not included" row. */
-@Serializable
-internal data class InclusionDto(
-    val included: Boolean,
-    val text: String,
-)
-
-@Serializable
-internal data class ItineraryEntryDto(
-    val time: String? = null,
-    val icon: String? = null,
-    val text: String,
+internal data class DestinationDto(
+    val placeName: String? = null,
+    val city: String? = null,
+    val governorate: String? = null,
+    val lat: Double? = null,
+    val lng: Double? = null,
+    val distanceKm: Int? = null,
+    val travelTime: String? = null,
 )
 
 /**
- * A dated instance of a trip — and the seat inventory of record.
+ * One stop of the day. [time] is "HH:mm"; [approximate] means the client prints it as approximate.
+ * [icon] is a Material Symbols name and [kind] the contract's lowercase `transit`/`meal`/`activity`,
+ * both kept as strings so a new value falls back instead of failing the page.
+ */
+@Serializable
+internal data class ItineraryStopDto(
+    val time: String? = null,
+    val text: String? = null,
+    val icon: String? = null,
+    val kind: String? = null,
+    val approximate: Boolean = false,
+)
+
+/**
+ * The host card. The contract has no id or display-name field: [name] is what is shown. [avatar] may
+ * be absent (a host without one), so the card falls back to the initial. [phone] is decoded but not shown on the trip page (open product question D4).
+ */
+@Serializable
+internal data class HostDto(
+    val name: String? = null,
+    val avatar: ImageDto? = null,
+    val role: String? = null,
+    val tripsRun: Int? = null,
+    val verified: Boolean = false,
+    val phone: String? = null,
+)
+
+/** A host tip. [key] is the contract's lowercase `bring`/`best_time`/`look_out`/`know`. */
+@Serializable
+internal data class TipDto(
+    val key: String? = null,
+    val title: String? = null,
+    val body: String? = null,
+)
+
+/** The authored rating summary and the curated reviews under it. */
+@Serializable
+internal data class ReviewsDto(
+    val average: Double? = null,
+    val count: Int? = null,
+    val items: List<ReviewDto> = emptyList(),
+)
+
+/** One review. [tone] tints the author's initial (the contract's `Tone`). */
+@Serializable
+internal data class ReviewDto(
+    val author: String? = null,
+    val dateISO: LocalDate? = null,
+    val body: String? = null,
+    val partyLabel: String? = null,
+    val tone: String? = null,
+)
+
+/** The rules the booking engine applies, stated on the page (from the backend's policy config). */
+@Serializable
+internal data class PolicyDto(
+    val freeCancellationHours: Int? = null,
+    val childFreeUnder: Int? = null,
+    val maxPartySize: Int? = null,
+)
+
+/** Link-preview fields; the app does not render them. */
+@Serializable
+internal data class OpenGraphDto(
+    val image: ImageDto? = null,
+    val title: String? = null,
+    val description: String? = null,
+)
+
+/**
+ * openapi `Departure`: one date and the seat inventory of record. [id] is a UUID string. [departTime]
+ * and [returnTime] are "HH:mm" Cairo time. [dayLabel] is the server's localised "Sat 10 Oct"; the
+ * date card formats [date] itself because it shows the day and the date on two lines.
  *
- * [seatsRemaining] is a display hint only. It is read at list time and can be
- * stale by the time the user taps; the authoritative check is the conditional
- * update the backend runs when placing a hold, which is why a hold can still
- * fail with `NO_SEATS_AVAILABLE` against a departure that looked bookable.
+ * [seatsRemaining] is a display hint only. It is read at list time and can be stale by the time
+ * the user taps; the authoritative check is the conditional update the backend runs when placing a
+ * hold, which is why a hold can still fail with `NO_SEATS_AVAILABLE` against a date that looked
+ * bookable. [bookable] is false when sold out, cancelled or past the cutoff.
  */
 @Serializable
 internal data class DepartureDto(
-    val id: Long,
-    val date: String,
+    val id: String,
+    val date: LocalDate,
+    val dayLabel: String? = null,
     val departTime: String? = null,
     val returnTime: String? = null,
-    val seatsRemaining: Int = 0,
-    val soldOut: Boolean = false,
-    val bookable: Boolean = false,
-    val status: String? = null,
+    val seatsRemaining: Int,
+    val capacity: Int,
+    val soldOut: Boolean,
+    val bookable: Boolean,
+    val price: MoneyDto,
 )

@@ -3,7 +3,6 @@ package eg.bahr.core.designsystem.components
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -34,7 +33,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import eg.bahr.core.designsystem.format.BahrFormat
-import eg.bahr.core.designsystem.theme.BahrBorder
 import eg.bahr.core.designsystem.theme.BahrElevation
 import eg.bahr.core.designsystem.theme.BahrMotion
 import eg.bahr.core.designsystem.theme.BahrSpacing
@@ -44,6 +42,7 @@ import eg.bahr.core.designsystem.theme.overlineCase
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.departure_seats_left
 import eg.bahr.core.localization.generated.resources.departure_sold_out
+import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
 /*
@@ -234,8 +233,9 @@ fun seatState(left: Int) =
 /**
  * Seats-left badge used in the date strip, calendar and host view.
  *
- * Copy comes from `core:localization` (the handoff hard-coded EN/AR here); the few/available
- * distinction is carried by colour, as both read "N seats left".
+ * Copy comes from `core:localization` (the handoff hard-coded EN/AR here) as a plural, so Arabic
+ * reads right for 1, 2, 3–10 and 11+ (M0-M2 review R2-2); the few/available distinction is
+ * carried by colour, as both read "N seats left".
  */
 @Composable
 fun SeatBadge(
@@ -244,7 +244,7 @@ fun SeatBadge(
 ) {
     val x = BahrTheme.colors
     val c = MaterialTheme.colorScheme
-    val seatsLeft = stringResource(Res.string.departure_seats_left, left)
+    val seatsLeft = pluralStringResource(Res.plurals.departure_seats_left, left, left)
     val (bg, fg, text) =
         when (seatState(left)) {
             SeatState.SoldOut -> Triple(c.errorContainer, c.error, stringResource(Res.string.departure_sold_out))
@@ -355,7 +355,7 @@ fun Overline(
     )
 }
 
-/** Surface card. HighContrast swaps the shadow for a 1dp outline automatically. */
+/** Surface card. HighContrast swaps the shadow for a 1dp outline ([bahrShadow] draws it). */
 @Composable
 fun BahrCard(
     modifier: Modifier = Modifier,
@@ -369,13 +369,7 @@ fun BahrCard(
             .bahrShadow(BahrElevation.Level1, shape, x)
             .clip(shape)
             .background(MaterialTheme.colorScheme.surface)
-            .then(
-                if (x.outlinedElevation) {
-                    Modifier.border(BahrBorder.hairline, MaterialTheme.colorScheme.onSurface, shape)
-                } else {
-                    Modifier
-                },
-            ).then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
         content = content,
     )
 }

@@ -72,11 +72,72 @@ class BahrFormatTest {
         assertEquals("00:00", BahrFormat.countdown(-119))
     }
 
+    // The words come from core:localization at runtime (BahrFormatResourcesTest checks those); here
+    // they are fixed, to test the ordering, the indexing and the digits.
+    private val english =
+        BahrFormat.DateNames(
+            weekdays = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"),
+            months = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"),
+        )
+    private val arabic =
+        BahrFormat.DateNames(
+            weekdays = listOf("الاتنين", "التلات", "الأربع", "الخميس", "الجمعة", "السبت", "الحد"),
+            months =
+                listOf(
+                    "يناير",
+                    "فبراير",
+                    "مارس",
+                    "أبريل",
+                    "مايو",
+                    "يونيو",
+                    "يوليو",
+                    "أغسطس",
+                    "سبتمبر",
+                    "أكتوبر",
+                    "نوفمبر",
+                    "ديسمبر",
+                ),
+        )
+
     @Test
     fun `dates use western digits in both languages`() {
         val date = LocalDate(2026, 10, 17) // a Saturday
-        assertEquals("Sat 17 Oct", BahrFormat.date(date, arabic = false))
-        assertEquals("السبت 17 أكتوبر", BahrFormat.date(date, arabic = true))
+        assertEquals("Sat 17 Oct", BahrFormat.date(date, english))
+        assertEquals("السبت 17 أكتوبر", BahrFormat.date(date, arabic))
+    }
+
+    @Test
+    fun `the date card lines and the review date`() {
+        val monday = LocalDate(2026, 1, 5)
+        assertEquals("Mon", BahrFormat.weekday(monday, english))
+        assertEquals("5 Jan", BahrFormat.dayMonth(monday, english))
+        val sunday = LocalDate(2026, 12, 27)
+        assertEquals("الحد", BahrFormat.weekday(sunday, arabic))
+        assertEquals("27 ديسمبر", BahrFormat.dayMonth(sunday, arabic))
+        assertEquals("21 Sep 2026", BahrFormat.dayMonthYear(LocalDate(2026, 9, 21), english))
+        assertEquals("21 سبتمبر 2026", BahrFormat.dayMonthYear(LocalDate(2026, 9, 21), arabic))
+    }
+
+    @Test
+    fun `names that have not loaded yet show the ISO date instead of failing`() {
+        val none = BahrFormat.DateNames(emptyList(), emptyList())
+        val date = LocalDate(2026, 10, 17)
+        assertEquals("2026-10-17", BahrFormat.date(date, none))
+        assertEquals("2026-10-17", BahrFormat.weekday(date, none))
+        assertEquals("2026-10-17", BahrFormat.dayMonth(date, none))
+        assertEquals("2026-10-17", BahrFormat.dayMonthYear(date, none))
+    }
+
+    @Test
+    fun `ratings have one decimal and western digits`() {
+        assertEquals("4.8", BahrFormat.rating(4.8))
+        assertEquals("5.0", BahrFormat.rating(5.0))
+        assertEquals("4.7", BahrFormat.rating(4.66))
+    }
+
+    @Test
+    fun `ltr wraps text in an isolate`() {
+        assertEquals("\u206605:00 → 22:00\u2069", BahrFormat.ltr("05:00 → 22:00"))
     }
 
     @Test

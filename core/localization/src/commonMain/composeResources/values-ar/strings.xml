@@ -7,20 +7,105 @@
     <string name="trips_empty">لا توجد رحلات بعد. تابعنا قريبًا.</string>
     <string name="trip_per_person">للفرد</string>
     <string name="trip_duration_hours">%1$s ساعات</string>
-    <string name="trip_whats_included">ما يشمله السعر</string>
-    <string name="trip_itinerary">برنامج اليوم</string>
+    <string name="trip_whats_included">الرحلة تشمل</string>
+    <string name="trip_itinerary">اليوم بالترتيب</string>
     <string name="trip_host_knowledge">معلومات مفيدة</string>
-    <string name="trip_what_to_bring">ماذا تحضر معك</string>
+    <string name="trip_what_to_bring">إيه اللي تجيبه معاك</string>
     <string name="trip_best_time">أفضل وقت في السنة</string>
-    <string name="trip_look_out_for">ما ينبغي الانتباه له</string>
+    <string name="trip_look_out_for">إيه اللي تركز عليه</string>
+    <string name="trip_what_to_know">حاجات لازم تعرفها</string>
     <string name="trip_meeting_point">نقطة اللقاء</string>
     <string name="trip_departure_point">نقطة الانطلاق</string>
-    <string name="trip_hosted_by">يستضيفها %1$s</string>
     <string name="trip_host_verified">مضيف موثّق</string>
 
-    <string name="departures_pick_a_date">اختر التاريخ</string>
-    <string name="departure_seats_left">متبقي %1$d مقاعد</string>
+    <!-- صفحة الرحلة، بنفس كلام النموذج (عامية مصرية). -->
+    <string name="trip_reviews">التقييمات</string>
+    <string name="trip_photo_counter">%1$d / %2$d</string>
+    <string name="trip_fact_price">السعر</string>
+    <string name="trip_fact_price_note">للفرد، شامل كل حاجة</string>
+    <string name="trip_fact_day">يوم واحد</string>
+    <string name="trip_fact_bus">الأتوبيس من</string>
+    <string name="trip_fact_bus_be_there">اتواجد %1$s</string>
+    <string name="trip_fact_place">الرحلة في</string>
+    <string name="trip_fact_distance">%1$d كم</string>
+    <string name="trip_day_note">المواعيد اللي عليها ≈ تقريبية.</string>
+    <string name="trip_time_approximate">≈%1$s</string>
+    <string name="trip_sold_out_title">%1$s كامل</string>
+    <string name="trip_sold_out_body">المقاعد الـ%1$d كلها محجوزة.</string>
+    <string name="trip_sold_out_alternative">%1$s فيه %2$s.</string>
+    <string name="trip_sold_out_alternative_same_price">%1$s فيه %2$s بنفس السعر.</string>
+    <string name="trip_dates_empty">مفيش مواعيد متاحة لسه.</string>
+    <string name="trip_policy_cancellation">الإلغاء مجاني حتى %1$d ساعة قبل القيام.</string>
+    <string name="trip_policy_children">الأطفال أقل من %1$d سنين مجانًا بدون مقعد.</string>
+    <string name="trip_policy_units">الأسعار بالجنيه والمواعيد بتوقيت القاهرة (24 ساعة).</string>
+    <string name="trip_bar_per_person">للفرد</string>
+    <string name="trip_cta_choose_date">اختار التاريخ</string>
+    <string name="trip_cta_continue">كمّل</string>
+    <string name="trip_cta_sold_out">كامل</string>
+    <string name="action_back">رجوع</string>
+    <plurals name="trip_hours_door_to_door">
+        <item quantity="zero">%1$d ساعة من الباب للباب</item>
+        <item quantity="one">ساعة واحدة من الباب للباب</item>
+        <item quantity="two">ساعتين من الباب للباب</item>
+        <item quantity="few">%1$d ساعات من الباب للباب</item>
+        <item quantity="many">%1$d ساعة من الباب للباب</item>
+        <item quantity="other">%1$d ساعة من الباب للباب</item>
+    </plurals>
+    <plurals name="trip_host_trips_run">
+        <item quantity="zero">نظّم %1$d رحلة</item>
+        <item quantity="one">نظّم رحلة واحدة</item>
+        <item quantity="two">نظّم رحلتين</item>
+        <item quantity="few">نظّم %1$d رحلات</item>
+        <item quantity="many">نظّم %1$d رحلة</item>
+        <item quantity="other">نظّم %1$d رحلة</item>
+    </plurals>
+
+    <string name="departures_pick_a_date">اختار التاريخ</string>
+    <!-- CLDR ar: one = 1, two = 2, few = 3–10, many = 11–99, other = 0 and 100+ (zero = 0). -->
+    <plurals name="departure_seats_left">
+        <item quantity="zero">باقي %1$d مقعد</item>
+        <item quantity="one">باقي مقعد واحد</item>
+        <item quantity="two">باقي مقعدان</item>
+        <item quantity="few">باقي %1$d مقاعد</item>
+        <item quantity="many">باقي %1$d مقعدًا</item>
+        <item quantity="other">باقي %1$d مقعد</item>
+    </plurals>
+    <plurals name="seat_count">
+        <item quantity="zero">%1$d مقعد</item>
+        <item quantity="one">مقعد واحد</item>
+        <item quantity="two">مقعدان</item>
+        <item quantity="few">%1$d مقاعد</item>
+        <item quantity="many">%1$d مقعدًا</item>
+        <item quantity="other">%1$d مقعد</item>
+    </plurals>
+    <string name="departure_closed">مقفول</string>
     <string name="departure_sold_out">اكتمل العدد</string>
+
+    <string name="format_pair">%1$s · %2$s</string>
+    <string name="format_rating_count">%1$s (%2$d)</string>
+    <string-array name="weekdays_short">
+        <item>الاتنين</item>
+        <item>التلات</item>
+        <item>الأربع</item>
+        <item>الخميس</item>
+        <item>الجمعة</item>
+        <item>السبت</item>
+        <item>الحد</item>
+    </string-array>
+    <string-array name="months_short">
+        <item>يناير</item>
+        <item>فبراير</item>
+        <item>مارس</item>
+        <item>أبريل</item>
+        <item>مايو</item>
+        <item>يونيو</item>
+        <item>يوليو</item>
+        <item>أغسطس</item>
+        <item>سبتمبر</item>
+        <item>أكتوبر</item>
+        <item>نوفمبر</item>
+        <item>ديسمبر</item>
+    </string-array>
 
     <string name="booking_party_size">كم عدد الأشخاص؟</string>
     <string name="booking_guest_name">الاسم</string>

@@ -1,6 +1,7 @@
 package eg.bahr.core.designsystem.theme
 
 import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Shapes
 import androidx.compose.runtime.Immutable
@@ -70,19 +71,42 @@ enum class BahrElevation(
 
     /** Tint and alpha come from [BahrExtendedColors.chipShadow]. */
     Chip(6.dp, inkAlpha = 0f, outlinedInHighContrast = false),
+
+    /**
+     * `elevation.raised` (`0 6px 16px`): the selected availability card (HANDOFF screen 3). Tint and
+     * alpha come from [BahrExtendedColors.raisedShadow]. tokens.css does not override it in
+     * HighContrast, so it keeps its shadow there.
+     */
+    Raised(8.dp, inkAlpha = 0f, outlinedInHighContrast = false),
+
+    /**
+     * `elevation.float` (`0 2px 8px rgba(0,0,0,.18)`): circular buttons floating over photos. Tint
+     * and alpha come from [BahrExtendedColors.floatShadow]; not outlined in HighContrast either.
+     */
+    Float(4.dp, inkAlpha = 0f, outlinedInHighContrast = false),
 }
 
+/**
+ * The token's shadow, or under HighContrast (`outlinedElevation`) the 1dp outline tokens.css puts
+ * in place of `level1..3`. The outline is drawn here rather than by each caller, so any elevated
+ * surface gets it, not only [eg.bahr.core.designsystem.components.BahrCard] (M0-M2 review #5).
+ * `border` draws over what follows it in the chain, so the outline sits on top of the surface's
+ * background.
+ */
 fun Modifier.bahrShadow(
     level: BahrElevation,
     shape: Shape,
     colors: BahrExtendedColors,
 ): Modifier {
-    // HighContrast draws a 1dp outline instead of level1..3 (see BahrCard); sticky keeps its shadow.
-    if (colors.outlinedElevation && level.outlinedInHighContrast) return this
+    if (colors.outlinedElevation && level.outlinedInHighContrast) {
+        return border(BahrBorder.hairline, colors.shadowInk, shape)
+    }
     val tint: Color =
         when (level) {
             BahrElevation.Cta -> colors.ctaShadow
             BahrElevation.Chip -> colors.chipShadow
+            BahrElevation.Raised -> colors.raisedShadow
+            BahrElevation.Float -> colors.floatShadow
             else -> colors.shadowInk.copy(alpha = level.inkAlpha)
         }
     return shadow(level.dp, shape, clip = false, ambientColor = tint, spotColor = tint)
@@ -93,6 +117,14 @@ object BahrMotion {
     const val Short = 150
     const val Medium = 250
     const val Long = 400
+
+    /** The loading shimmer's cycle (HANDOFF: `sh` keyframes, opacity .5 → .9 → .5 over 1.5s). */
+    const val Shimmer = 1500
+    const val ShimmerAlphaLow = .5f
+    const val ShimmerAlphaHigh = .9f
+
+    /** CSS `ease-in-out` (`cubic-bezier(.42,0,.58,1)`): the shimmer's easing in the handoff. */
+    val EaseInOut = CubicBezierEasing(.42f, 0f, .58f, 1f)
     val Standard = CubicBezierEasing(.2f, 0f, 0f, 1f)
     val Emphasized = CubicBezierEasing(.05f, .7f, .1f, 1f)
 }
@@ -103,6 +135,47 @@ object BahrMotion {
  */
 object BahrBorder {
     val hairline = 1.dp
+
+    /** The prototype's `inset 0 0 0 2px` ring on a selected sold-out date card. */
+    val selected = 2.dp
+}
+
+/* ---------- Sizes ----------
+ * Code-only, not tokens: tokens.json has no size group. The icon sizes answer M1-M1a review #9; the
+ * rest are component dimensions from the handoff's trip page (its px at the 390px viewport). They are
+ * named here so feature code holds no `.dp` (ModuleGraphTest) and a second screen reuses them, and
+ * they do not vary by theme. See docs/design-language.md → "Code-only sizes".
+ */
+object BahrSize {
+    /** Icons inside a 26px marker, the seat icon on a date card, the check/close on included rows. */
+    val iconSmall = 16.dp
+
+    /** Tip and eyebrow icons. */
+    val iconMedium = 18.dp
+
+    /** The facts grid's icons. */
+    val iconLarge = 22.dp
+
+    /** Itinerary dots and the circles in front of included/excluded rows. */
+    val marker = 26.dp
+
+    /** Reviewers' initial circles. */
+    val avatarSmall = 32.dp
+
+    /** The host card's photo. */
+    val avatar = 52.dp
+
+    /** The itinerary's time column, wide enough for "≈12:15". */
+    val timeColumn = 52.dp
+
+    /** The vertical line joining itinerary dots. */
+    val connector = 2.dp
+
+    /** One date card in the availability row. */
+    val dateCard = 100.dp
+
+    /** A skeleton line while text loads. */
+    val skeletonLine = 12.dp
 }
 
 internal val LocalBahrShapes = staticCompositionLocalOf { BahrShapes() }

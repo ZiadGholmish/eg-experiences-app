@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -71,6 +72,8 @@ internal fun TripListScreen(
     val statusBar = WindowInsets.statusBars
     val stateModifier = modifier.windowInsetsPadding(statusBar)
     val listTop = statusBar.asPaddingValues().calculateTopPadding() + BahrSpacing.xl
+    // The last card scrolls clear of the gesture bar (M1-M1a review #10).
+    val listBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + BahrSpacing.xl
 
     when {
         state.isLoading -> BahrLoadingView(stateModifier)
@@ -92,7 +95,7 @@ internal fun TripListScreen(
             LazyColumn(
                 state = listState,
                 modifier = modifier.fillMaxSize(),
-                contentPadding = PaddingValues(top = listTop, bottom = BahrSpacing.xl),
+                contentPadding = PaddingValues(top = listTop, bottom = listBottom),
                 // The handoff's 16px gap between trip cards.
                 verticalArrangement = Arrangement.spacedBy(BahrSpacing.lg),
             ) {

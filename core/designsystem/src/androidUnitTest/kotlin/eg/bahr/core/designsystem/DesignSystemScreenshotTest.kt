@@ -2,12 +2,15 @@ package eg.bahr.core.designsystem
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -15,16 +18,22 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.test.junit4.createComposeRule
 import eg.bahr.core.common.locale.AppLanguage
+import eg.bahr.core.designsystem.components.BahrCard
 import eg.bahr.core.designsystem.components.BahrPrimaryButton
 import eg.bahr.core.designsystem.components.SeatBadge
 import eg.bahr.core.designsystem.error.BahrErrorSnackbar
 import eg.bahr.core.designsystem.format.BahrFormat
 import eg.bahr.core.designsystem.icon.BahrIcons
+import eg.bahr.core.designsystem.theme.BahrElevation
 import eg.bahr.core.designsystem.theme.BahrLocale
+import eg.bahr.core.designsystem.theme.BahrSize
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
+import eg.bahr.core.designsystem.theme.BahrThemeName
+import eg.bahr.core.designsystem.theme.bahrShadow
 import eg.bahr.core.localization.ProvideAppLanguage
 import eg.bahr.core.localization.generated.resources.booking_confirm
 import eg.bahr.core.localization.generated.resources.error_no_seats_available
@@ -124,17 +133,40 @@ class DesignSystemScreenshotTest {
         }
 
     /**
+     * HighContrast: every `level1..3` surface swaps its shadow for a 1dp ink outline, drawn by
+     * `bahrShadow` itself, so a bare elevated surface gets it as well as a [BahrCard] (M0-M2 review #5).
+     * `raised` keeps its shadow, as in tokens.css.
+     */
+    @Test
+    fun highContrastElevation() =
+        snapEach(listOf(AppLanguage.ENGLISH to "elevation_high_contrast"), theme = BahrThemeName.HighContrast) {
+            val surface = MaterialTheme.colorScheme.surface
+            BahrCard(Modifier.fillMaxWidth().height(BahrSize.dateCard)) {}
+            listOf(BahrElevation.Level1, BahrElevation.Raised).forEach { level ->
+                val shape = BahrTheme.shapes.extraLarge
+                Box(
+                    Modifier
+                        .size(BahrSize.dateCard)
+                        .bahrShadow(level, shape, BahrTheme.colors)
+                        .clip(shape)
+                        .background(surface),
+                )
+            }
+        }
+
+    /**
      * One composition per test (a compose rule allows a single `setContent`), re-rendered per
      * language by flipping the language the same way the app's in-place toggle does.
      */
     private fun snapEach(
         shots: List<Pair<AppLanguage, String>>,
+        theme: BahrThemeName = BahrThemeName.LakeBurullus,
         content: @Composable () -> Unit,
     ) {
         var language by mutableStateOf(shots.first().first)
         compose.setContent {
             ProvideAppLanguage(language) {
-                BahrTheme(locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English) {
+                BahrTheme(locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English, theme = theme) {
                     Column(
                         modifier =
                             Modifier

@@ -86,6 +86,10 @@ data class BahrExtendedColors(
     val ctaShadow: Color,
     /** `elevation.chip` — teal-tinted, under a selected filter chip. */
     val chipShadow: Color,
+    /** `elevation.raised` — teal-tinted, under the selected availability card. */
+    val raisedShadow: Color,
+    /** `elevation.float` — plain black, under buttons floating over photos. */
+    val floatShadow: Color,
     /**
      * Ink of the untinted shadows (`level1..3`, `sticky`). Each level applies its own alpha from
      * tokens.json, so this carries the hue only.
@@ -106,6 +110,8 @@ private const val SURFACE_TRANSLUCENT_ALPHA = .94f
 private const val SCRIM_ALPHA = .5f
 private const val CTA_SHADOW_ALPHA = .34f
 private const val CHIP_SHADOW_ALPHA = .26f
+private const val RAISED_SHADOW_ALPHA = .3f
+private const val FLOAT_SHADOW_ALPHA = .18f
 private const val DUSK_CTA_SHADOW_ALPHA = .3f
 
 internal val LakeBurullus =
@@ -166,6 +172,8 @@ internal val LakeBurullus =
                 scrimInk = P.Ink,
                 ctaShadow = P.Coral60.copy(alpha = CTA_SHADOW_ALPHA),
                 chipShadow = P.Teal40.copy(alpha = CHIP_SHADOW_ALPHA),
+                raisedShadow = P.Teal40.copy(alpha = RAISED_SHADOW_ALPHA),
+                floatShadow = Color.Black.copy(alpha = FLOAT_SHADOW_ALPHA),
                 shadowInk = P.Neutral10,
                 outlinedElevation = false,
             ),
@@ -195,6 +203,7 @@ internal val Dusk =
                     surfaceLow = Color(0xFFF8F7F5),
                     ctaShadow = Color(0xFFC8552F).copy(alpha = DUSK_CTA_SHADOW_ALPHA),
                     chipShadow = Color(0xFF1B4A6B).copy(alpha = CHIP_SHADOW_ALPHA),
+                    raisedShadow = Color(0xFF1B4A6B).copy(alpha = RAISED_SHADOW_ALPHA),
                 ),
         )
     }

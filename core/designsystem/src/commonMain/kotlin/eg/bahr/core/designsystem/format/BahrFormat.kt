@@ -1,7 +1,13 @@
 package eg.bahr.core.designsystem.format
 
+import androidx.compose.runtime.Composable
+import eg.bahr.core.localization.generated.resources.Res
+import eg.bahr.core.localization.generated.resources.months_short
+import eg.bahr.core.localization.generated.resources.weekdays_short
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
+import org.jetbrains.compose.resources.stringArrayResource
+import kotlin.math.round
 
 /**
  * Product rules: prices in EGP, 24-hour times, Western digits (0-9) in BOTH languages.
@@ -78,21 +84,85 @@ object BahrFormat {
 
     private fun Int.twoDigits() = toString().padStart(TWO_DIGITS, '0')
 
-    private val daysEn = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
-    private val daysAr = listOf("الاتنين", "التلات", "الأربع", "الخميس", "الجمعة", "السبت", "الحد")
-    private val monthsEn = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
-    private val monthsAr =
-        listOf("يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر")
+    /**
+     * "Sat 17 Oct" / "السبت 17 أكتوبر". The day and month words come from `core:localization`
+     * (`weekdays_short`, `months_short`), so the composition's language picks them; the digits are
+     * Kotlin's, so they stay Western in Arabic.
+     */
+    @Composable
+    fun date(d: LocalDate): String = date(d, dateNames())
 
-    /** "Sat 17 Oct" / "السبت 17 أكتوبر" */
-    fun date(
+    /** "Sat" / "السبت": the first line of a date card. */
+    @Composable
+    fun weekday(d: LocalDate): String = weekday(d, dateNames())
+
+    /** "17 Oct" / "17 أكتوبر": the second line of a date card. */
+    @Composable
+    fun dayMonth(d: LocalDate): String = dayMonth(d, dateNames())
+
+    /** "21 Sep 2026" / "21 سبتمبر 2026": a review's date. */
+    @Composable
+    fun dayMonthYear(d: LocalDate): String = dayMonthYear(d, dateNames())
+
+    // Pure cores, so the arithmetic is tested without a composition. Both languages put the parts in
+    // the same order (weekday, day, month, year), so the order lives here and only the words are
+    // translated. Until the arrays load (compose-resources reads them asynchronously on some
+    // platforms) the names are empty, and the ISO date is shown rather than an index failure.
+    internal fun date(
         d: LocalDate,
-        arabic: Boolean,
-    ): String {
-        val i = d.dayOfWeek.ordinal
-        val m = d.monthNumber - 1
-        return if (arabic) "${daysAr[i]} ${d.dayOfMonth} ${monthsAr[m]}" else "${daysEn[i]} ${d.dayOfMonth} ${monthsEn[m]}"
+        names: DateNames,
+    ): String = if (names.isComplete) "${weekday(d, names)} ${dayMonth(d, names)}" else d.toString()
+
+    internal fun weekday(
+        d: LocalDate,
+        names: DateNames,
+    ): String = names.weekdays.getOrNull(d.dayOfWeek.ordinal) ?: d.toString()
+
+    internal fun dayMonth(
+        d: LocalDate,
+        names: DateNames,
+    ): String = names.months.getOrNull(d.monthNumber - 1)?.let { "${d.dayOfMonth} $it" } ?: d.toString()
+
+    internal fun dayMonthYear(
+        d: LocalDate,
+        names: DateNames,
+    ): String = if (names.isComplete) "${dayMonth(d, names)} ${d.year}" else d.toString()
+
+    /** Weekday names Monday first (ISO order), month names January first. */
+    internal data class DateNames(
+        val weekdays: List<String>,
+        val months: List<String>,
+    ) {
+        val isComplete get() = weekdays.size == DAYS_IN_WEEK && months.size == MONTHS_IN_YEAR
     }
+
+    @Composable
+    private fun dateNames() =
+        DateNames(
+            weekdays = stringArrayResource(Res.array.weekdays_short),
+            months = stringArrayResource(Res.array.months_short),
+        )
+
+    private const val DAYS_IN_WEEK = 7
+    private const val MONTHS_IN_YEAR = 12
+
+    /**
+     * A review average with one decimal: `4.8`, `5.0`. Hand-rolled, like [money], because a platform
+     * formatter in Arabic would print `٤٫٨`.
+     */
+    fun rating(value: Double): String {
+        val tenths = round(value * TENTHS).toLong()
+        return "${tenths / TENTHS}.${tenths % TENTHS}"
+    }
+
+    private const val TENTHS = 10
+
+    /**
+     * Wraps server text that must read left to right inside an Arabic line, e.g. the trip's
+     * `durationLabel` "05:00 → 22:00": the same isolates as [timeRange], for times that arrive
+     * already formatted.
+     */
+    fun ltr(text: String): String = "$LTR_ISOLATE$text$POP_ISOLATE"
 
     /** Booking reference, e.g. BHR-7K4Q. Uppercase, no 0/O or 1/I so it survives being read aloud. */
     const val REF_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"

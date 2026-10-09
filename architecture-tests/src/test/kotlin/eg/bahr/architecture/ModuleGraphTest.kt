@@ -184,7 +184,9 @@ class ModuleGraphTest {
 
         val designLiterals =
             listOf(
-                Regex("""\bColor\(\s*0x""") to "raw colour",
+                // Any constructor call, not just a hex literal: `Color(red, green, blue)` and
+                // `Color(0xFF…)` are both a colour a theme cannot change (M0-M5 review S5).
+                Regex("""\bColor\(""") to "raw colour",
                 // Any receiver, not just a number: `GAP.dp` with a feature-local constant is still a
                 // raw size (the M0-M2 grep was `\.dp\b`). Tokens are values, never `.dp`/`.sp` calls.
                 Regex("""\.(dp|sp)\b""") to "raw size",

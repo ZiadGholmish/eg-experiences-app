@@ -37,9 +37,17 @@ wins.
 | `shape.*` | `BahrTheme.shapes.*` (M3 `Shapes` gets extraSmall–extraLarge) | `theme/BahrShapeElevationMotion.kt` |
 | `elevation.*` | `Modifier.bahrShadow(BahrElevation.X, shape, BahrTheme.colors)` | `theme/BahrShapeElevationMotion.kt` |
 | `spacing` (4dp base, 18dp gutter) | `BahrSpacing.xs…xxl`, `BahrSpacing.gutter` | `theme/BahrShapeElevationMotion.kt` |
-| `motion` | `BahrMotion` | `theme/BahrShapeElevationMotion.kt` |
+| `motion` | `BahrMotion` (+ `Shimmer*`, `EaseInOut` for the handoff's loading shimmer) | `theme/BahrShapeElevationMotion.kt` |
+| *(not in tokens.json)* component sizes from the handoff's px | `BahrSize.*`, `BahrBorder.*`, `BahrSpacing.minTouch` | `theme/BahrShapeElevationMotion.kt` |
 | `[data-theme=dusk / highcontrast]` | `BahrTheme(theme = BahrThemeName.Dusk / HighContrast)` | `theme/BahrColors.kt` |
 | `meta.currency`, `meta.timeFormat` | `BahrFormat` (EGP, 24h, Western digits) | `format/BahrFormat.kt` |
+
+**Code-only sizes.** `BahrSize` holds fixed sizes the handoff draws with but tokens.json does not
+name: the icon sizes (`iconSmall/Medium/Large`, M1-M1a review #9) and component dimensions from the
+trip page (`marker`, `avatar`, `avatarSmall`, `timeColumn`, `connector`, `dateCard`, `skeletonLine`).
+They exist so `feature/*` holds no `.dp` (ModuleGraphTest). They are not design tokens: changing one
+changes a component, not the theme, and none has a Dusk/HighContrast variant. If design adds a size
+to tokens.json, move it to the token's own group and port it from there.
 
 `BahrTheme(locale = …)` is set once at the app root from the stored language. It
 picks the font, applies the Arabic type rules (one weight heavier at display

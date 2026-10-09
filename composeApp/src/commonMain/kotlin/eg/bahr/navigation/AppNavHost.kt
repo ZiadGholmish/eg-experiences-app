@@ -6,7 +6,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
 import eg.bahr.feature.booking.navigation.bookingConfirmedScreen
 import eg.bahr.feature.booking.navigation.bookingScreen
-import eg.bahr.feature.booking.navigation.navigateToBooking
 import eg.bahr.feature.booking.navigation.navigateToBookingConfirmed
 import eg.bahr.feature.splash.navigation.SplashRoute
 import eg.bahr.feature.splash.navigation.splashScreen
@@ -37,7 +36,12 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
 
         tripListScreen(onTripClick = navController::navigateToTripDetail)
 
-        tripDetailScreen(onContinue = navController::navigateToBooking)
+        tripDetailScreen(
+            onBack = { navController.popBackStack() },
+            // Intentionally a no-op until M2: the date + party screen is M2-M1, and the existing
+            // BookingRoute still takes the Java-era `Long` departure id, not the contract's UUID.
+            onContinue = { _, _ -> },
+        )
 
         bookingScreen(
             onBooked = navController::navigateToBookingConfirmed,

@@ -19,9 +19,16 @@ fun NavGraphBuilder.tripListScreen(onTripClick: (slug: String) -> Unit) {
     }
 }
 
-fun NavGraphBuilder.tripDetailScreen(onContinue: (departureId: Long) -> Unit) {
+/**
+ * [onContinue] gets the trip and the picked date (a UUID string, as the contract has it); it is only
+ * called for a bookable date.
+ */
+fun NavGraphBuilder.tripDetailScreen(
+    onBack: () -> Unit,
+    onContinue: (slug: String, departureId: String) -> Unit,
+) {
     composable<TripDetailRoute> { entry ->
-        TripDetailScreen(slug = entry.toRoute<TripDetailRoute>().slug, onContinue = onContinue)
+        TripDetailScreen(slug = entry.toRoute<TripDetailRoute>().slug, onBack = onBack, onContinue = onContinue)
     }
 }
 

@@ -144,7 +144,7 @@ private fun ScheduleRow(
         )
         Spacer(Modifier.weight(1f))
         date?.let {
-            Text(text = BahrFormat.date(it, BahrTheme.locale.isArabic), style = style, color = color, maxLines = 1)
+            Text(text = BahrFormat.date(it), style = style, color = color, maxLines = 1)
         }
     }
 }
