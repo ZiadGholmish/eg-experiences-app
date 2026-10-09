@@ -6,7 +6,7 @@ import eg.bahr.core.common.error.AppErrorController
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.feature.trips.data.TripRepository
-import eg.bahr.feature.trips.model.TripSummaryDto
+import eg.bahr.feature.trips.model.TripCardDto
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,17 +16,11 @@ import kotlinx.coroutines.launch
 internal data class TripListUiState(
     val isLoading: Boolean = true,
     val isLoadingMore: Boolean = false,
-    val trips: List<TripSummaryDto> = emptyList(),
-    val categories: List<String> = emptyList(),
-    val selectedCategory: String? = null,
+    val trips: List<TripCardDto> = emptyList(),
     val error: AppError? = null,
     val page: Int = 0,
     val hasMore: Boolean = false,
-) {
-    /** Category filtering is client-side: the list endpoint takes no filter yet. */
-    val visibleTrips: List<TripSummaryDto>
-        get() = selectedCategory?.let { category -> trips.filter { it.category == category } } ?: trips
-}
+)
 
 internal class TripListViewModel(
     private val repository: TripRepository,
@@ -51,10 +45,6 @@ internal class TripListViewModel(
         load(page = state.page + 1, append = true)
     }
 
-    fun selectCategory(category: String?) {
-        _uiState.update { it.copy(selectedCategory = category) }
-    }
-
     private fun load(
         page: Int,
         append: Boolean,
@@ -64,12 +54,14 @@ internal class TripListViewModel(
                 is AppResult.Success -> {
                     val items = result.data.items
                     _uiState.update { state ->
-                        val trips = if (append) state.trips + items else items
+                        // A trip published between two page reads shifts the pages, so the next
+                        // page can repeat a card. The list is keyed by slug, and a repeated key
+                        // crashes a LazyColumn.
+                        val trips = if (append) (state.trips + items).distinctBy { it.slug } else items
                         state.copy(
                             isLoading = false,
                             isLoadingMore = false,
                             trips = trips,
-                            categories = trips.mapNotNull { it.category }.distinct(),
                             page = result.data.page,
                             hasMore = result.data.hasMore,
                             error = null,

@@ -4,11 +4,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
@@ -23,7 +25,6 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import eg.bahr.core.designsystem.components.BahrEmptyView
 import eg.bahr.core.designsystem.components.BahrErrorView
-import eg.bahr.core.designsystem.components.BahrFilterChip
 import eg.bahr.core.designsystem.components.BahrLoadingView
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.localization.generated.resources.Res
@@ -64,8 +65,15 @@ internal fun TripListScreen(
             .collect { if (it) viewModel.loadMore() }
     }
 
+    // The app is edge-to-edge. The list scrolls under the status bar but starts below it, and the
+    // full-screen states sit below it. Applied here, not at the NavHost, because the trip detail
+    // hero is meant to run full-bleed under the bar.
+    val statusBar = WindowInsets.statusBars
+    val stateModifier = modifier.windowInsetsPadding(statusBar)
+    val listTop = statusBar.asPaddingValues().calculateTopPadding() + BahrSpacing.xl
+
     when {
-        state.isLoading -> BahrLoadingView(modifier)
+        state.isLoading -> BahrLoadingView(stateModifier)
 
         state.error != null && state.trips.isEmpty() -> {
             val error = state.error!!
@@ -73,19 +81,20 @@ internal fun TripListScreen(
                 message = error.localizedMessage(),
                 retryLabel = stringResource(Res.string.action_retry),
                 onRetry = if (error.isRetryable) viewModel::refresh else null,
-                modifier = modifier,
+                modifier = stateModifier,
             )
         }
 
-        state.visibleTrips.isEmpty() ->
-            BahrEmptyView(message = stringResource(Res.string.trips_empty), modifier = modifier)
+        state.trips.isEmpty() ->
+            BahrEmptyView(message = stringResource(Res.string.trips_empty), modifier = stateModifier)
 
         else ->
             LazyColumn(
                 state = listState,
                 modifier = modifier.fillMaxSize(),
-                contentPadding = PaddingValues(vertical = BahrSpacing.xl),
-                verticalArrangement = Arrangement.spacedBy(BahrSpacing.xl),
+                contentPadding = PaddingValues(top = listTop, bottom = BahrSpacing.xl),
+                // The handoff's 16px gap between trip cards.
+                verticalArrangement = Arrangement.spacedBy(BahrSpacing.lg),
             ) {
                 item {
                     Column(
@@ -99,29 +108,7 @@ internal fun TripListScreen(
                     }
                 }
 
-                if (state.categories.isNotEmpty()) {
-                    item {
-                        LazyRow(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentPadding = PaddingValues(horizontal = BahrSpacing.gutter),
-                            horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm),
-                        ) {
-                            items(state.categories) { category ->
-                                BahrFilterChip(
-                                    label = category,
-                                    selected = state.selectedCategory == category,
-                                    onClick = {
-                                        viewModel.selectCategory(
-                                            if (state.selectedCategory == category) null else category,
-                                        )
-                                    },
-                                )
-                            }
-                        }
-                    }
-                }
-
-                items(state.visibleTrips, key = { it.id }) { trip ->
+                items(state.trips, key = { it.slug }) { trip ->
                     Row(modifier = Modifier.padding(horizontal = BahrSpacing.gutter)) {
                         TripCard(
                             trip = trip,

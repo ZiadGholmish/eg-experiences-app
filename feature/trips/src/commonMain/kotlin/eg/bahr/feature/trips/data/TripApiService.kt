@@ -1,11 +1,10 @@
 package eg.bahr.feature.trips.data
 
 import eg.bahr.core.common.result.AppResult
-import eg.bahr.core.network.PageDto
 import eg.bahr.core.network.callApi
 import eg.bahr.feature.trips.model.DepartureDto
 import eg.bahr.feature.trips.model.TripDetailDto
-import eg.bahr.feature.trips.model.TripSummaryDto
+import eg.bahr.feature.trips.model.TripPageDto
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
@@ -21,7 +20,7 @@ internal class TripApiService(
     suspend fun listTrips(
         page: Int = 0,
         size: Int = PAGE_SIZE,
-    ): AppResult<PageDto<TripSummaryDto>> =
+    ): AppResult<TripPageDto> =
         callApi {
             client.get("trips") {
                 parameter("page", page)

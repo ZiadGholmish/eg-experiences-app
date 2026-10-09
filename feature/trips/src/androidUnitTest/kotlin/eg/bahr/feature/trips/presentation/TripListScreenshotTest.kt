@@ -20,7 +20,10 @@ import eg.bahr.core.testing.captureScreenshot
 import eg.bahr.feature.trips.data.FakeTripRepository
 import eg.bahr.feature.trips.data.TripFixtures.page
 import eg.bahr.feature.trips.data.TripFixtures.trip
+import eg.bahr.feature.trips.model.BadgeDto
+import eg.bahr.feature.trips.model.NextDepartureDto
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.datetime.LocalDate
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -32,7 +35,7 @@ import org.robolectric.annotation.GraphicsMode
 import java.util.Locale
 
 /**
- * TripListScreen × {ar, en} × {loading, loaded, error}, driven through the real view model with a
+ * TripListScreen × {ar, en} × {loading, loaded, error, empty}, driven through the real view model with a
  * fake repository. The device is English (`en` qualifier) on purpose: the Arabic shots must still
  * be Arabic strings in RTL, which is the first-launch locale bug from M0-M3.
  *
@@ -57,18 +60,53 @@ class TripListScreenshotTest {
     @After
     fun restoreLocale() = Locale.setDefault(deviceLocale)
 
+    // One page per language, because the server answers in the request's `Accept-Language`. The
+    // four-digit price comes first: its leading digit is the one the card corner used to clip.
     @Test
-    fun loaded() =
-        snapEach("trip_list_loaded") {
+    fun loadedArabic() =
+        snapEach("trip_list_loaded", AppLanguage.ARABIC) {
             listTrips = {
-                page(
-                    listOf(
-                        trip(1, title = "فجر بحيرة البرلس", category = "طيور", priceEgp = 450),
-                        trip(2, title = "Sunset sail on Lake Burullus", category = "إبحار", priceEgp = 1200),
-                    ),
+                loadedPage(
+                    dawn = "الفجر على بحيرة البرلس" to "الأكثر حجزًا",
+                    kayak = "قنوات قطّاعي البوص بالكياك" to "موسم الفلامنجو",
                 )
             }
         }
+
+    @Test
+    fun loadedEnglish() =
+        snapEach("trip_list_loaded", AppLanguage.ENGLISH) {
+            listTrips = {
+                loadedPage(
+                    dawn = "Dawn on Lake Burullus" to "Most booked",
+                    kayak = "Reed-cutters' channels, by kayak" to "Flamingo season",
+                )
+            }
+        }
+
+    /** Two seeded trips: one with seats, one sold out. Each pair is (title, badge). */
+    private fun loadedPage(
+        dawn: Pair<String, String>,
+        kayak: Pair<String, String>,
+    ) = page(
+        listOf(
+            trip(
+                1,
+                title = dawn.first,
+                priceEgp = 1450,
+                badge = BadgeDto(label = dawn.second, tone = "primary"),
+                nextDeparture = NextDepartureDto(SATURDAY, seatsRemaining = 6, capacity = 18, soldOut = false),
+            ),
+            trip(
+                2,
+                title = kayak.first,
+                priceEgp = 520,
+                durationLabel = "05:00 → 19:00",
+                badge = BadgeDto(label = kayak.second, tone = "secondary"),
+                nextDeparture = NextDepartureDto(SATURDAY, seatsRemaining = 0, capacity = 18, soldOut = true),
+            ),
+        ),
+    )
 
     @Test
     fun loading() = snapEach("trip_list_loading") { listTrips = { awaitCancellation() } }
@@ -76,12 +114,16 @@ class TripListScreenshotTest {
     @Test
     fun error() = snapEach("trip_list_error") { listTrips = { AppResult.Failure(AppError.Network) } }
 
+    @Test
+    fun empty() = snapEach("trip_list_empty") { listTrips = { page(emptyList()) } }
+
     private fun snapEach(
         prefix: String,
+        vararg languages: AppLanguage = AppLanguage.entries.toTypedArray(),
         stub: FakeTripRepository.() -> Unit,
     ) {
         val viewModel = TripListViewModel(FakeTripRepository().apply(stub), AppErrorController())
-        var language by mutableStateOf(AppLanguage.ARABIC)
+        var language by mutableStateOf(languages.first())
         compose.setContent {
             ProvideAppLanguage(language) {
                 BahrTheme(locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English) {
@@ -91,11 +133,15 @@ class TripListScreenshotTest {
                 }
             }
         }
-        AppLanguage.entries.forEach { shotLanguage ->
+        languages.forEach { shotLanguage ->
             compose.runOnUiThread { language = shotLanguage }
             compose.waitForIdle()
             compose.mainClock.advanceTimeByFrame()
             compose.captureScreenshot("${prefix}_${shotLanguage.tag}")
         }
+    }
+
+    private companion object {
+        val SATURDAY = LocalDate(2026, 10, 10)
     }
 }

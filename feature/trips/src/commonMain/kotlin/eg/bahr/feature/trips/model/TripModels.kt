@@ -1,30 +1,114 @@
 package eg.bahr.feature.trips.model
 
 import eg.bahr.core.network.MoneyDto
+import kotlinx.datetime.LocalDate
 import kotlinx.serialization.Serializable
 
-/**
- * Wire shapes for `/api/v1/trips`.
+/*
+ * Wire shapes for `/api/v1/trips`, field for field with `../docs/api/openapi.yaml`.
  *
- * Target: the trip schemas in `../docs/api/openapi.yaml` (`TripCard`,
- * `TripDetail`, `Departure`). These are still the Java-era shapes until M1
- * realigns them: they are keyed by `Long` ids, while the contract uses uuid
- * strings and keys `TripCard` by `slug`.
- * When the backend adds a field, add it here as nullable with a default — the
- * JSON parser ignores unknown keys, so an old app keeps working, and a
- * non-nullable addition here would break it instead.
+ * The list side ([TripPageDto], [TripCardDto] and its parts) follows the contract. The detail side
+ * ([TripDetailDto], [DepartureDto] and below) is still the Java-era shape and moves to the
+ * contract's `TripDetail` / `Departure` with the rest of M1-M1.
+ *
+ * The backend omits null fields, so everything the contract does not mark `required` is nullable
+ * with a default here. When the backend adds a field, add it the same way: the JSON parser ignores
+ * unknown keys, so an old app keeps working, and a non-nullable addition would break it instead.
+ */
+
+/** openapi `TripPage`. [facets] is declared by the contract but not served before M4. */
+@Serializable
+internal data class TripPageDto(
+    val items: List<TripCardDto> = emptyList(),
+    val page: Int = 0,
+    val size: Int = 0,
+    val totalItems: Long = 0,
+    val totalPages: Int = 0,
+    val facets: List<FacetDto> = emptyList(),
+) {
+    val hasMore: Boolean get() = page + 1 < totalPages
+}
+
+/** openapi `Facet`: one filter chip with its live count. */
+@Serializable
+internal data class FacetDto(
+    val key: String? = null,
+    val label: String? = null,
+    val icon: String? = null,
+    val count: Int? = null,
+)
+
+/**
+ * openapi `TripCard`: one trip in a list. Every text arrives already in the request's
+ * `Accept-Language`, so nothing here is translated on the client.
+ *
+ * [categories] are category *keys* (`on_the_boat`), not labels; the labels come with Home (M4).
+ * [durationLabel] is `05:00 → 22:00`, or a bare duration (`17h`) when the times are unknown, and
+ * may be empty.
  */
 @Serializable
-internal data class TripSummaryDto(
-    val id: Long,
+internal data class TripCardDto(
     val slug: String,
-    val category: String? = null,
     val title: String,
-    val kicker: String? = null,
-    val pricePerPerson: MoneyDto,
+    val subtitle: String? = null,
+    val durationLabel: String,
     val durationMinutes: Int? = null,
-    val coverPhotoUrl: String? = null,
-    val host: HostDto? = null,
+    val price: MoneyDto,
+    val categories: List<String> = emptyList(),
+    val heroImage: ImageDto? = null,
+    val cardImage: ImageDto? = null,
+    val nextDeparture: NextDepartureDto? = null,
+    val badge: BadgeDto? = null,
+    val rating: RatingDto? = null,
+    val location: LocationDto? = null,
+)
+
+/**
+ * openapi `Image`. [width] and [height] are there so the photo's space is laid out before it loads;
+ * [lqip] is a tiny blurred `data:` URI shown while the real photo downloads.
+ */
+@Serializable
+internal data class ImageDto(
+    val url: String,
+    val width: Int,
+    val height: Int,
+    val alt: String? = null,
+    val lqip: String? = null,
+)
+
+/**
+ * The trip's next open date. [seatsRemaining] is a display hint, stale the moment it is read;
+ * the seat hold is the authoritative check.
+ */
+@Serializable
+internal data class NextDepartureDto(
+    val date: LocalDate? = null,
+    val seatsRemaining: Int? = null,
+    val capacity: Int? = null,
+    val soldOut: Boolean? = null,
+)
+
+/**
+ * openapi `Badge`. [tone] is the contract's lowercase `Tone` enum, kept as a string so a tone this
+ * build does not know falls back to a default instead of failing the whole page's decode.
+ */
+@Serializable
+internal data class BadgeDto(
+    val label: String? = null,
+    val tone: String? = null,
+)
+
+@Serializable
+internal data class RatingDto(
+    val value: Double? = null,
+    val count: Int? = null,
+)
+
+@Serializable
+internal data class LocationDto(
+    val lat: Double? = null,
+    val lng: Double? = null,
+    val label: String? = null,
 )
 
 @Serializable

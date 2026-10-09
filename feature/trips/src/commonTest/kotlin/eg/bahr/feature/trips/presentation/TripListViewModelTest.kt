@@ -22,7 +22,7 @@ class TripListViewModelTest {
     @Test
     fun `starts loading and then shows the first page`() =
         runViewModelTest {
-            val trips = listOf(trip(1, category = "Birding"), trip(2, category = "Sailing"), trip(3, category = "Birding"))
+            val trips = listOf(trip(1), trip(2), trip(3))
             val repository = FakeTripRepository(listTrips = { page(trips) })
 
             val vm = TripListViewModel(repository, errors)
@@ -33,7 +33,6 @@ class TripListViewModelTest {
             val state = vm.uiState.value
             assertFalse(state.isLoading)
             assertEquals(trips, state.trips)
-            assertEquals(listOf("Birding", "Sailing"), state.categories)
             assertNull(state.error)
             assertEquals(listOf(0), repository.requestedPages)
         }
@@ -53,7 +52,7 @@ class TripListViewModelTest {
     fun `load more appends the next page`() =
         runViewModelTest {
             val repository =
-                FakeTripRepository(listTrips = { p -> page(listOf(trip(p * 10L)), page = p, totalPages = 2) })
+                FakeTripRepository(listTrips = { p -> page(listOf(trip(p * 10)), page = p, totalPages = 2) })
             val vm = TripListViewModel(repository, errors)
             advanceUntilIdle()
 
@@ -61,9 +60,9 @@ class TripListViewModelTest {
             advanceUntilIdle()
 
             assertEquals(
-                listOf(0L, 10L),
+                listOf("trip-0", "trip-10"),
                 vm.uiState.value.trips
-                    .map { it.id },
+                    .map { it.slug },
             )
             assertFalse(vm.uiState.value.hasMore)
             assertEquals(listOf(0, 1), repository.requestedPages)
@@ -85,7 +84,7 @@ class TripListViewModelTest {
             advanceUntilIdle()
 
             val state = vm.uiState.value
-            assertEquals(listOf(1L), state.trips.map { it.id })
+            assertEquals(listOf("trip-1"), state.trips.map { it.slug })
             assertNull(state.error, "the list stays usable, so the screen must not switch to its error state")
             assertFalse(state.isLoadingMore)
             assertEquals(AppError.Timeout, errors.current.first()?.error)
@@ -104,19 +103,59 @@ class TripListViewModelTest {
         }
 
     @Test
-    fun `selecting a category filters the visible trips only`() =
+    fun `a card repeated across pages is shown once`() =
         runViewModelTest {
-            val trips = listOf(trip(1, category = "Birding"), trip(2, category = "Sailing"))
-            val vm = TripListViewModel(FakeTripRepository(listTrips = { page(trips) }), errors)
+            // A trip published between two page reads shifts the next page by one.
+            val first = page(listOf(trip(1), trip(2)), totalPages = 2)
+            val second = page(listOf(trip(2), trip(3)), page = 1, totalPages = 2)
+            val repository = FakeTripRepository(listTrips = { p -> if (p == 0) first else second })
+            val vm = TripListViewModel(repository, errors)
             advanceUntilIdle()
 
-            vm.selectCategory("Sailing")
+            vm.loadMore()
+            advanceUntilIdle()
 
             assertEquals(
-                listOf(2L),
-                vm.uiState.value.visibleTrips
-                    .map { it.id },
+                listOf("trip-1", "trip-2", "trip-3"),
+                vm.uiState.value.trips
+                    .map { it.slug },
             )
-            assertEquals(trips, vm.uiState.value.trips)
+        }
+
+    @Test
+    fun `an empty first page is loaded and is not an error`() =
+        runViewModelTest {
+            val vm = TripListViewModel(FakeTripRepository(listTrips = { page(emptyList()) }), errors)
+
+            advanceUntilIdle()
+
+            val state = vm.uiState.value
+            assertFalse(state.isLoading)
+            assertNull(state.error)
+            assertTrue(state.trips.isEmpty())
+            assertFalse(state.hasMore)
+        }
+
+    @Test
+    fun `refresh after a failed first page loads it again`() =
+        runViewModelTest {
+            var fail = true
+            val repository =
+                FakeTripRepository(listTrips = { if (fail) AppResult.Failure(AppError.Network) else page(listOf(trip(1))) })
+            val vm = TripListViewModel(repository, errors)
+            advanceUntilIdle()
+
+            fail = false
+            vm.refresh()
+            assertTrue(vm.uiState.value.isLoading, "retry shows the loading state again")
+            advanceUntilIdle()
+
+            assertNull(vm.uiState.value.error)
+            assertEquals(
+                listOf("trip-1"),
+                vm.uiState.value.trips
+                    .map { it.slug },
+            )
+            assertEquals(listOf(0, 0), repository.requestedPages)
         }
 }

@@ -3,10 +3,12 @@ package eg.bahr.feature.trips.data
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.network.MoneyDto
-import eg.bahr.core.network.PageDto
+import eg.bahr.feature.trips.model.BadgeDto
 import eg.bahr.feature.trips.model.DepartureDto
+import eg.bahr.feature.trips.model.NextDepartureDto
+import eg.bahr.feature.trips.model.TripCardDto
 import eg.bahr.feature.trips.model.TripDetailDto
-import eg.bahr.feature.trips.model.TripSummaryDto
+import eg.bahr.feature.trips.model.TripPageDto
 
 /**
  * Hand-written fake: each call answers from a lambda the test sets, and every request is
@@ -16,13 +18,13 @@ import eg.bahr.feature.trips.model.TripSummaryDto
  * Template for other features: one fake per repository interface, in that feature's commonTest.
  */
 internal class FakeTripRepository(
-    var listTrips: suspend (page: Int) -> AppResult<PageDto<TripSummaryDto>> = { unset() },
+    var listTrips: suspend (page: Int) -> AppResult<TripPageDto> = { unset() },
     var tripBySlug: suspend (slug: String) -> AppResult<TripDetailDto> = { unset() },
     var departuresFor: suspend (slug: String) -> AppResult<List<DepartureDto>> = { unset() },
 ) : TripRepository {
     val requestedPages = mutableListOf<Int>()
 
-    override suspend fun listTrips(page: Int): AppResult<PageDto<TripSummaryDto>> {
+    override suspend fun listTrips(page: Int): AppResult<TripPageDto> {
         requestedPages += page
         return listTrips.invoke(page)
     }
@@ -36,26 +38,32 @@ internal class FakeTripRepository(
     }
 }
 
-/** Test data. Copy is Arabic because Arabic is what most users see. */
+/**
+ * Test data in the contract's `TripCard` shape. Copy is Arabic because Arabic is what most users
+ * see. No image URLs: a screenshot must not depend on whether a local MinIO happens to be running.
+ */
 internal object TripFixtures {
     fun trip(
-        id: Long,
-        title: String = "رحلة رقم $id",
-        category: String? = null,
+        n: Int,
+        title: String = "رحلة رقم $n",
         priceEgp: Long = 450,
-    ) = TripSummaryDto(
-        id = id,
-        slug = "trip-$id",
-        category = category,
+        durationLabel: String = "05:00 → 22:00",
+        badge: BadgeDto? = null,
+        nextDeparture: NextDepartureDto? = null,
+    ) = TripCardDto(
+        slug = "trip-$n",
         title = title,
-        pricePerPerson = MoneyDto(amount = priceEgp, currencyCode = "EGP"),
+        durationLabel = durationLabel,
+        price = MoneyDto(amount = priceEgp, currencyCode = "EGP"),
+        badge = badge,
+        nextDeparture = nextDeparture,
     )
 
     fun page(
-        trips: List<TripSummaryDto>,
+        trips: List<TripCardDto>,
         page: Int = 0,
         totalPages: Int = 1,
     ) = AppResult.Success(
-        PageDto(items = trips, page = page, size = trips.size, totalItems = trips.size.toLong(), totalPages = totalPages),
+        TripPageDto(items = trips, page = page, size = trips.size, totalItems = trips.size.toLong(), totalPages = totalPages),
     )
 }
