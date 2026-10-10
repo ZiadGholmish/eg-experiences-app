@@ -11,18 +11,24 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.designsystem.components.BahrCard
 import eg.bahr.core.designsystem.components.BahrPrimaryButton
+import eg.bahr.core.designsystem.components.HoldCountdown
 import eg.bahr.core.designsystem.components.SeatBadge
 import eg.bahr.core.designsystem.error.BahrErrorSnackbar
 import eg.bahr.core.designsystem.format.BahrFormat
@@ -36,6 +42,7 @@ import eg.bahr.core.designsystem.theme.BahrThemeName
 import eg.bahr.core.designsystem.theme.bahrShadow
 import eg.bahr.core.localization.ProvideAppLanguage
 import eg.bahr.core.localization.generated.resources.booking_confirm
+import eg.bahr.core.localization.generated.resources.booking_hold_label
 import eg.bahr.core.localization.generated.resources.error_no_seats_available
 import eg.bahr.core.testing.captureScreenshot
 import org.jetbrains.compose.resources.stringResource
@@ -155,6 +162,25 @@ class DesignSystemScreenshotTest {
         }
 
     /**
+     * The hold countdown at twice the font size (M4-M4 review #4): the time shrinks to fit its column
+     * instead of painting into the bar. 260dp wide, so the column is narrower than the time at 2x.
+     */
+    @Test
+    fun holdCountdownLargeFont() =
+        snapEach(perLanguage("hold_countdown_font_2x")) {
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale = LARGE_FONT_SCALE)) {
+                HoldCountdown(
+                    secondsLeft = 14 * 60 + 58,
+                    label = stringResource(L10n.string.booking_hold_label),
+                    progress = .6f,
+                    icon = BahrIcons.Timer.filled(),
+                    modifier = Modifier.width(260.dp),
+                )
+            }
+        }
+
+    /**
      * One composition per test (a compose rule allows a single `setContent`), re-rendered per
      * language by flipping the language the same way the app's in-place toggle does.
      */
@@ -188,4 +214,8 @@ class DesignSystemScreenshotTest {
     }
 
     private fun perLanguage(prefix: String) = AppLanguage.entries.map { it to "${prefix}_${it.tag}" }
+
+    private companion object {
+        const val LARGE_FONT_SCALE = 2f
+    }
 }

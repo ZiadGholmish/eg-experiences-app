@@ -1,16 +1,27 @@
 package eg.bahr.feature.booking.presentation
 
 import android.os.Looper
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.unit.Dp
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.datastore.StoredHold
 import eg.bahr.core.designsystem.theme.BahrLocale
 import eg.bahr.core.designsystem.theme.BahrMotion
+import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.localization.ProvideAppLanguage
+import eg.bahr.core.testing.ANIMATION_SETTLE_MARGIN_MILLIS
 import eg.bahr.feature.booking.data.BookingFixtures
 import eg.bahr.feature.booking.data.FakeActiveHoldStore
 import eg.bahr.feature.booking.data.FakeBookingRepository
@@ -24,6 +35,7 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
@@ -91,8 +103,33 @@ class ContinueBookingMotionTest {
         compose.mainClock.advanceTimeByFrame()
         compose.onNodeWithTag(CONTINUE_BOOKING_TAG).assertExists()
 
-        compose.mainClock.advanceTimeBy(BahrMotion.Medium.toLong() + SETTLE_MARGIN_MILLIS)
+        compose.mainClock.advanceTimeBy(BahrMotion.Medium.toLong() + ANIMATION_SETTLE_MARGIN_MILLIS)
         compose.onNodeWithTag(CONTINUE_BOOKING_TAG).assertDoesNotExist()
+    }
+
+    /**
+     * Nothing below the card jumps (M4-M4 review #5): what sits under the slot (Home's list) moves up
+     * frame by frame as the card leaves, never down and never in one step, and ends where the slot
+     * started, the gap above the card gone with it.
+     */
+    @Test
+    fun `what is below moves up smoothly as the card leaves - never jumps`() {
+        show(reducedMotion = false, withBelow = true)
+        val start = belowTop()
+        val slotTop = compose.onNodeWithTag(SLOT).getBoundsInRoot().top
+
+        expire()
+        val tops = mutableListOf(start)
+        repeat(FRAMES_TO_SAMPLE) {
+            compose.mainClock.advanceTimeByFrame()
+            tops += belowTop()
+        }
+
+        assertTrue(tops.zipWithNext().all { (before, after) -> after <= before }, "never moves down: $tops")
+        val steps = tops.zipWithNext { before, after -> before - after }
+        val travel = start - slotTop
+        assertTrue(steps.all { it < travel / 2 }, "no single frame covers half the way: $steps")
+        assertEquals(slotTop, tops.last(), "ends where the slot began: $tops")
     }
 
     @Test
@@ -118,18 +155,31 @@ class ContinueBookingMotionTest {
     /** Lets the view model's ticker run once (it waits [HoldViewModel.TICK] between ticks). */
     private fun tick() = shadowOf(Looper.getMainLooper()).idleFor(HoldViewModel.TICK.toJavaDuration())
 
-    private fun show(reducedMotion: Boolean) {
+    private fun show(
+        reducedMotion: Boolean,
+        withBelow: Boolean = false,
+    ) {
         val viewModel = ContinueBookingViewModel(store, repository, clock)
         compose.setContent {
             ProvideAppLanguage(AppLanguage.ENGLISH) {
                 BahrTheme(locale = BahrLocale.English, reducedMotion = reducedMotion) {
-                    ContinueBookingCard(onOpen = {}, viewModel = viewModel)
+                    if (withBelow) {
+                        // As Home hosts it: the slot's gap handed to the card, the list right under it.
+                        Column {
+                            Box(
+                                Modifier.testTag(SLOT),
+                            ) { ContinueBookingCard(onOpen = {}, modifier = Modifier.padding(top = GAP), viewModel = viewModel) }
+                            Box(Modifier.fillMaxWidth().height(GAP).testTag(BELOW))
+                        }
+                    } else {
+                        ContinueBookingCard(onOpen = {}, viewModel = viewModel)
+                    }
                 }
             }
         }
         compose.waitForIdle()
         // The card fades in as the first answer lands; let it finish.
-        compose.mainClock.advanceTimeBy(BahrMotion.Medium.toLong() + SETTLE_MARGIN_MILLIS)
+        compose.mainClock.advanceTimeBy(BahrMotion.Medium.toLong() + ANIMATION_SETTLE_MARGIN_MILLIS)
         compose.waitForIdle()
     }
 
@@ -143,11 +193,16 @@ class ContinueBookingMotionTest {
             serverNow = serverNow.toString(),
         )
 
+    private fun belowTop(): Dp = compose.onNodeWithTag(BELOW).getBoundsInRoot().top
+
     private companion object {
         /** What the hold has left when Home first reads it. */
         const val SECONDS_LEFT = 3
+        const val SLOT = "slot"
+        const val BELOW = "below"
+        val GAP = BahrSpacing.lg
 
-        /** A few frames past an animation's end. */
-        const val SETTLE_MARGIN_MILLIS = 64L
+        /** Past the exit's [BahrMotion.Medium] at 60 fps, with a few frames to spare. */
+        const val FRAMES_TO_SAMPLE = 24
     }
 }

@@ -99,9 +99,6 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
                         is HomeAction.OpenCategory -> navController.navigateToCategoryTrips(action.key, action.title, action.sharedKey)
                         // Any other row's "See all": that row's whole list.
                         is HomeAction.OpenSection -> navController.navigateToSectionTrips(action.sectionId, action.title, action.sharedKey)
-                        // No-op: the app has no in-app browser yet (the contract asks for one, not the
-                        // system browser, so a banner never sends the user out of the app).
-                        is HomeAction.OpenUrl -> Unit
                     }
                 },
                 onSearch = { navController.navigateToSearchTrips() },

@@ -16,6 +16,7 @@ import eg.bahr.core.designsystem.theme.BahrMotion
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.localization.ProvideAppLanguage
+import eg.bahr.core.testing.ANIMATION_SETTLE_MARGIN_MILLIS
 import eg.bahr.core.testing.captureScreenshot
 import eg.bahr.feature.booking.data.BookingFixtures
 import eg.bahr.feature.booking.data.FakeActiveHoldStore
@@ -122,7 +123,7 @@ class ContinueBookingScreenshotTest {
         sinceHold: Duration,
         returnDate: LocalDate? = null,
         reducedMotion: Boolean = false,
-        settleMillis: Long = BahrMotion.Medium.toLong() + SETTLE_MARGIN_MILLIS,
+        settleMillis: Long = BahrMotion.Medium.toLong() + ANIMATION_SETTLE_MARGIN_MILLIS,
     ) {
         val arabic = language == AppLanguage.ARABIC
         val booking =
@@ -142,7 +143,7 @@ class ContinueBookingScreenshotTest {
         language: AppLanguage,
         repository: FakeBookingRepository,
         reducedMotion: Boolean = false,
-        settleMillis: Long = BahrMotion.Medium.toLong() + SETTLE_MARGIN_MILLIS,
+        settleMillis: Long = BahrMotion.Medium.toLong() + ANIMATION_SETTLE_MARGIN_MILLIS,
     ) {
         val viewModel = ContinueBookingViewModel(FakeActiveHoldStore(stored), repository, clock)
         compose.setContent {
@@ -175,8 +176,5 @@ class ContinueBookingScreenshotTest {
 
         /** 42 seconds left: under 2 minutes (the time in the error colour) and in the last minute (the pulse). */
         val LAST_MINUTE = 14.minutes + 18.seconds
-
-        /** A few frames past the enter animation's end. */
-        const val SETTLE_MARGIN_MILLIS = 64L
     }
 }

@@ -4,8 +4,9 @@ package eg.bahr.feature.trips.data
  * `GET /api/v1/home` in the contract's shape (openapi `HomeEnvelope`), modelled on the seeded Home
  * (`bahr-be/scripts/seed-home.sql`): the 45:28 hero carousel with a `trip`, a `category` and a `none`
  * banner, the featured row (a day trip and the overnight white-desert trip, M4-B0b), the category
- * chips. Plus what a newer server may send: a section of a type this build does not know, and a
- * `trips` section this build cannot read (an item without its required `slug`).
+ * chips. Plus what a newer server may send: a section of a type this build does not know, a `trips`
+ * row with one card this build cannot read (no required `slug`: only that card is dropped), and a
+ * `trips` section this build cannot read at all (no required `id`).
  */
 internal object HomePayloads {
     const val ENGLISH = """
@@ -88,7 +89,16 @@ internal object HomePayloads {
         "type": "trips",
         "title": "On the water",
         "layout": "row",
-        "items": [ { "title": "No slug", "durationLabel": "", "price": { "amount": 1, "currency": "EGP" } } ]
+        "items": [
+          { "slug": "reed-kayak", "title": "Reed-cutters' channels by kayak", "durationLabel": "05:00 → 21:00", "price": { "amount": 520, "currency": "EGP" } },
+          { "title": "No slug", "durationLabel": "", "price": { "amount": 1, "currency": "EGP" } }
+        ]
+      },
+      {
+        "type": "trips",
+        "title": "No id",
+        "layout": "row",
+        "items": [ { "slug": "a", "title": "A", "durationLabel": "", "price": { "amount": 1, "currency": "EGP" } } ]
       }
     ]
   }

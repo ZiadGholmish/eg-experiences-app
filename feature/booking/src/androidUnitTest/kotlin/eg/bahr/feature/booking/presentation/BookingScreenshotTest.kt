@@ -21,6 +21,8 @@ import eg.bahr.feature.booking.data.FakeActiveHoldStore
 import eg.bahr.feature.booking.data.FakeBookingRepository
 import eg.bahr.feature.booking.model.BookingDepartureDto
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.plus
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -90,6 +92,15 @@ class BookingScreenshotTest {
     @Test
     fun holdExpiredEnglish() = snapHoldExpired(AppLanguage.ENGLISH, "Dawn on Lake Burullus", "Nada Hassan")
 
+    /** Multi-day (M4-B0b, M4-M1a review #7): each date row names the day it is back. */
+    @Test
+    fun multiDayArabic() =
+        snapLoaded(AppLanguage.ARABIC, "ليلة في الصحرا البيضا", "ندى حسن", prefix = "booking_multi_day", overnight = true)
+
+    @Test
+    fun multiDayEnglish() =
+        snapLoaded(AppLanguage.ENGLISH, "A night in the White Desert", "Nada Hassan", prefix = "booking_multi_day", overnight = true)
+
     private fun snapLoading(language: AppLanguage) {
         val repo = FakeBookingRepository(tripBySlug = { awaitCancellation() }, departuresFor = { awaitCancellation() })
         show(language, BookingViewModel(SLUG, "dep-2", repo, FakeActiveHoldStore()))
@@ -100,11 +111,15 @@ class BookingScreenshotTest {
         language: AppLanguage,
         title: String,
         name: String,
+        prefix: String = "booking_loaded",
+        overnight: Boolean = false,
     ) {
+        // One night away: back the day after each departure.
+        val dates = BookingFixtures.saturdays().map { if (overnight) it.copy(returnDate = it.date.plus(1, DateTimeUnit.DAY)) else it }
         val repo =
             FakeBookingRepository(
-                tripBySlug = { AppResult.Success(BookingFixtures.trip(title = title)) },
-                departuresFor = { AppResult.Success(BookingFixtures.saturdays()) },
+                tripBySlug = { AppResult.Success(BookingFixtures.trip(title = title, dates = dates)) },
+                departuresFor = { AppResult.Success(dates) },
             )
         val vm = BookingViewModel(SLUG, "dep-2", repo, FakeActiveHoldStore())
         show(language, vm)
@@ -113,7 +128,7 @@ class BookingScreenshotTest {
             vm.setGuestName(name)
             vm.setGuestPhone("010 1234 5678")
         }
-        capture("booking_loaded", language)
+        capture(prefix, language)
     }
 
     private fun snapNoSeats(

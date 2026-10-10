@@ -4,6 +4,7 @@ package eg.bahr.feature.trips.navigation
  * What a tap on Home asks the app to do: a banner (openapi `HomeAction`), a category chip, or a trip
  * row's "See all" (`HomeSeeAll`, M4-M1b). Public because the app's NavHost decides where each goes; a
  * `none` banner (or one whose value is unusable) is simply not tappable and never produces one of these.
+ * Neither, for now, is a `url` banner: the app has no in-app browser to open it in yet.
  */
 sealed interface HomeAction {
     /** `trip`: open the trip page of [slug]. */
@@ -34,10 +35,5 @@ sealed interface HomeAction {
         val sectionId: String,
         val title: String? = null,
         val sharedKey: String? = null,
-    ) : HomeAction
-
-    /** `url`: an https link, for an in-app browser. Anything not https never gets here. */
-    data class OpenUrl(
-        val url: String,
     ) : HomeAction
 }

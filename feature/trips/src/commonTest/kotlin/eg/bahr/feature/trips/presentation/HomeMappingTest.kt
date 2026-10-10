@@ -14,8 +14,8 @@ class HomeMappingTest {
     }
 
     @Test
-    fun `only an https url opens`() {
-        assertEquals(HomeAction.OpenUrl("https://bahr.eg/about"), HomeActionDto("url", "https://bahr.eg/about").toHomeAction())
+    fun `no url banner is tappable until the app has an in-app browser`() {
+        assertNull(HomeActionDto("url", "https://bahr.eg/about").toHomeAction())
         assertNull(HomeActionDto("url", "http://bahr.eg/about").toHomeAction())
         assertNull(HomeActionDto("url", "javascript:alert(1)").toHomeAction())
     }

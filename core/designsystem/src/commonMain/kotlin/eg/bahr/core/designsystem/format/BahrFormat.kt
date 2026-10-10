@@ -118,10 +118,15 @@ object BahrFormat {
         names: DateNames,
     ): String = names.weekdays.getOrNull(d.dayOfWeek.ordinal) ?: d.toString()
 
+    /**
+     * The day and its month are joined by a no-break space, so a line that wraps never leaves the
+     * month alone on the next line ("… الحد 11" / "أكتوبر", M4-M1a review #11). The weekday may still
+     * wrap away from them: it reads fine on its own.
+     */
     internal fun dayMonth(
         d: LocalDate,
         names: DateNames,
-    ): String = names.months.getOrNull(d.monthNumber - 1)?.let { "${d.dayOfMonth} $it" } ?: d.toString()
+    ): String = names.months.getOrNull(d.monthNumber - 1)?.let { "${d.dayOfMonth}$NO_BREAK_SPACE$it" } ?: d.toString()
 
     internal fun dayMonthYear(
         d: LocalDate,
@@ -144,6 +149,7 @@ object BahrFormat {
         )
 
     private const val DAYS_IN_WEEK = 7
+    private const val NO_BREAK_SPACE = '\u00A0'
     private const val MONTHS_IN_YEAR = 12
 
     /**

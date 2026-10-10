@@ -176,4 +176,5 @@ internal class CategoryTripsViewModel(
     }
 }
 
-private fun AppError.isValidationFailure(): Boolean = this is AppError.Api && code == ApiErrorCodes.VALIDATION_FAILED
+/** A 400 VALIDATION_FAILED: the server refused a key the request sent (a stale category or filter). */
+internal fun AppError.isValidationFailure(): Boolean = this is AppError.Api && code == ApiErrorCodes.VALIDATION_FAILED

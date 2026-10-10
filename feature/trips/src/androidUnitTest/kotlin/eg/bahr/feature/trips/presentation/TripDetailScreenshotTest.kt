@@ -29,6 +29,8 @@ import eg.bahr.feature.trips.model.ImageDto
 import eg.bahr.feature.trips.model.RatingDto
 import eg.bahr.feature.trips.model.TripDetailDto
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.plus
 import kotlinx.serialization.json.Json
 import org.junit.After
 import org.junit.Before
@@ -130,6 +132,27 @@ class TripDetailScreenshotTest {
         snap("trip_detail_date_reasons", AppLanguage.ENGLISH, select = SOLD_OUT_ID) {
             serve(TripDetailPayloads.english, TripDetailPayloads.englishDepartures, dates = ::withEveryReason)
         }
+
+    /**
+     * Multi-day (M4-B0b, M4-M1a review #7): every date is an overnight, so each card names the day it
+     * is back, and the picked one too. Wide enough for the cards to show side by side.
+     */
+    @Config(qualifiers = "en-w480dp-h640dp-xhdpi")
+    @Test
+    fun multiDayDatesArabic() =
+        snap("trip_detail_multi_day_dates", AppLanguage.ARABIC, select = OPEN_ID) {
+            serve(TripDetailPayloads.arabic, TripDetailPayloads.arabicDepartures, dates = ::overnight)
+        }
+
+    @Config(qualifiers = "en-w480dp-h640dp-xhdpi")
+    @Test
+    fun multiDayDatesEnglish() =
+        snap("trip_detail_multi_day_dates", AppLanguage.ENGLISH, select = OPEN_ID) {
+            serve(TripDetailPayloads.english, TripDetailPayloads.englishDepartures, dates = ::overnight)
+        }
+
+    /** One night away: back the day after each departure. */
+    private fun overnight(dates: List<DepartureDto>) = dates.map { it.copy(returnDate = it.date.plus(1, DateTimeUnit.DAY)) }
 
     /** M2-M3: the waiting-list form open under the sold-out date, a number typed and a party of two. */
     @Config(qualifiers = "en-w360dp-h900dp-xhdpi")
@@ -377,6 +400,7 @@ class TripDetailScreenshotTest {
         const val SETTLE_MS = 1_000L
         val UNREACHABLE_PHOTOS = (1..3).map { ImageDto(url = "http://127.0.0.1:9/photo-$it.png", width = 900, height = 560) }
         const val SOLD_OUT_ID = "0199c3a0-5eed-7000-8000-000000000603"
+        const val OPEN_ID = "0199c3a0-5eed-7000-8000-000000000601"
         val json = Json { ignoreUnknownKeys = true }
     }
 }

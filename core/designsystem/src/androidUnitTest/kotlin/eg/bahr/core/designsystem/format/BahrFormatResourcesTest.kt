@@ -61,7 +61,7 @@ class BahrFormatResourcesTest {
     @Test
     fun english() {
         assertEquals(
-            listOf("Sat 17 Oct", "21 Sep 2026", "1 seat left", "2 seats left", "6 seats left", "11 seats left"),
+            listOf("Sat 17\u00A0Oct", "21\u00A0Sep 2026", "1 seat left", "2 seats left", "6 seats left", "11 seats left"),
             resolve(AppLanguage.ENGLISH),
         )
     }
@@ -69,7 +69,7 @@ class BahrFormatResourcesTest {
     @Test
     fun arabic() {
         assertEquals(
-            listOf("السبت 17 أكتوبر", "21 سبتمبر 2026", "باقي مقعد واحد", "باقي مقعدان", "باقي 6 مقاعد", "باقي 11 مقعدًا"),
+            listOf("السبت 17\u00A0أكتوبر", "21\u00A0سبتمبر 2026", "باقي مقعد واحد", "باقي مقعدان", "باقي 6 مقاعد", "باقي 11 مقعدًا"),
             resolve(AppLanguage.ARABIC),
         )
     }

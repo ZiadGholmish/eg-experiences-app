@@ -26,6 +26,12 @@
     <string name="search_recent_clear">امسح الكل</string>
     <string name="search_start">اكتب حرفين على الأقل: اسم رحلة أو مكان أو نوع رحلة أو مضيف. بالعربي أو بالإنجليزي، الاتنين ينفعوا.</string>
     <string name="search_no_results">مفيش رحلة فيها كل كلمات «%1$s». جرّب كلمات أقل أو غيرها.</string>
+    <!-- M4-M1: شعار الشريط العلوي في الرئيسية؛ بالحروف اللاتيني زي التصميم (اسم العلامة، مش كلمة تتترجم). -->
+    <string name="home_wordmark">bahr</string>
+    <!-- M4-M1: اللي بيقوله قارئ الشاشة لكل نقطة تحت الصور المتحركة؛ كل نقطة بتنقل لصورتها. -->
+    <string name="home_slide_of">صورة %1$d من %2$d</string>
+    <!-- M4-M1: ملاحظة آخر الصفحة الرئيسية، من غير مكان أو ميعاد ثابت. -->
+    <string name="home_footer_note">كل الرحلات بتقوم بالأتوبيس. مكان القيام والميعاد مكتوبين في صفحة كل رحلة.</string>
     <plurals name="trip_nights_badge">
         <item quantity="zero">%1$d ليلة</item>
         <item quantity="one">ليلة واحدة</item>

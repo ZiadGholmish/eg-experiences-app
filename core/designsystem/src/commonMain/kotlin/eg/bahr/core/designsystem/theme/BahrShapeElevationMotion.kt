@@ -239,6 +239,9 @@ object BahrSize {
     /** A category's tinted tile (HANDOFF Home → category row: 58px, `extraLarge` radius); the category page's header. */
     val categoryTile = 58.dp
 
+    /** The logo tile in Home's app bar (HANDOFF Home: 34px, `small` radius, the `sailing` icon on primary). */
+    val logoTile = 34.dp
+
     /**
      * A map pin (M4-M2, map.html `.pin`): the stem under the price pill (2x10px, [connector] wide)
      * and the dot at its foot (8px, ringed by [BahrBorder.selected] in the surface colour).

@@ -10,9 +10,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
+import kotlinx.datetime.todayIn
 import kotlin.time.Clock
-import kotlinx.datetime.Instant as DateTimeInstant
 
 /**
  * A waiting-list join this device made (M4-M5), read back from `core:datastore`: [date] is the
@@ -51,14 +50,8 @@ internal class WaitlistMemory(
                 emit(emptyList())
             }
 
-    /**
-     * Today in Cairo. A stored date before it has run: nothing left to wait for.
-     *
-     * Through `kotlinx.datetime.Instant` rather than `Clock.todayIn`: the Android build resolves
-     * kotlinx-datetime 0.6.2 (the catalog's), which only takes its own Instant, while iOS resolves
-     * 0.7.1, which still accepts it.
-     */
-    fun today(): LocalDate = DateTimeInstant.fromEpochMilliseconds(clock.now().toEpochMilliseconds()).toLocalDateTime(CAIRO).date
+    /** Today in Cairo. A stored date before it has run: nothing left to wait for. */
+    fun today(): LocalDate = clock.todayIn(CAIRO)
 
     suspend fun remember(
         departureId: String,

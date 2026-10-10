@@ -26,6 +26,15 @@
     <string name="search_recent_clear">Clear all</string>
     <string name="search_start">Type at least two letters: a trip, a place, a kind of trip or a host. Arabic or English both work.</string>
     <string name="search_no_results">No trip matches all of “%1$s”. Try fewer or different words.</string>
+    <!-- Home's app bar (M4-M1): the wordmark next to the logo tile. The handoff draws it in Latin
+         letters in both languages: it is the brand's mark, not a word to translate. -->
+    <string name="home_wordmark">bahr</string>
+    <!-- Home's banner carousel (M4-M1): what a screen reader says for one of the dots under it, each
+         of which jumps to its slide. %1$d is the slide's number, %2$d how many there are. -->
+    <string name="home_slide_of">Slide %1$d of %2$d</string>
+    <!-- Home's footer note (M4-M1). The handoff's "every trip leaves Abdel Moneim Riad at 05:00"
+         stopped being true once trips left at different times, so it names no stop or time. -->
+    <string name="home_footer_note">Every trip leaves by bus. Where it leaves from, and when, is on each trip’s page.</string>
     <!-- Multi-day trips (M4-B0b): the badge on a card with nights > 0. -->
     <plurals name="trip_nights_badge">
         <item quantity="one">%1$d night</item>

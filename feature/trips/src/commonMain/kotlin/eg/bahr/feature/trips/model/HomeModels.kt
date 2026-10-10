@@ -3,12 +3,15 @@ package eg.bahr.feature.trips.model
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
+import kotlinx.serialization.Transient
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -45,6 +48,9 @@ internal data class BannersSectionDto(
     val layout: String,
     val aspectRatio: String? = null,
     val items: List<HomeBannerDto>,
+    /** How many of the served items did not decode and were left out (see [HomeSectionsSerializer]); logged. */
+    @Transient
+    val droppedItems: Int = 0,
 ) : HomeSectionDto
 
 /**
@@ -62,6 +68,9 @@ internal data class TripsSectionDto(
     val items: List<TripCardDto>,
     val totalItems: Int? = null,
     val seeAll: HomeSeeAllDto? = null,
+    /** How many of the served items did not decode and were left out (see [HomeSectionsSerializer]); logged. */
+    @Transient
+    val droppedItems: Int = 0,
 ) : HomeSectionDto
 
 /**
@@ -89,6 +98,9 @@ internal data class CategoriesSectionDto(
     val layout: String,
     val aspectRatio: String? = null,
     val items: List<HomeCategoryDto>,
+    /** How many of the served items did not decode and were left out (see [HomeSectionsSerializer]); logged. */
+    @Transient
+    val droppedItems: Int = 0,
 ) : HomeSectionDto
 
 /**
@@ -181,13 +193,56 @@ internal object HomeSectionsSerializer : KSerializer<List<HomeSectionDto>> {
             }
         return try {
             when (type) {
-                HomeSectionType.BANNERS -> json.decodeFromJsonElement(BannersSectionDto.serializer(), element)
-                HomeSectionType.TRIPS -> json.decodeFromJsonElement(TripsSectionDto.serializer(), element)
-                HomeSectionType.CATEGORIES -> json.decodeFromJsonElement(CategoriesSectionDto.serializer(), element)
+                HomeSectionType.BANNERS ->
+                    decodeKeepingItems(json, element, BannersSectionDto.serializer(), HomeBannerDto.serializer()) {
+                        copy(droppedItems = it)
+                    }
+
+                HomeSectionType.TRIPS ->
+                    decodeKeepingItems(json, element, TripsSectionDto.serializer(), TripCardDto.serializer()) {
+                        copy(droppedItems = it)
+                    }
+
+                HomeSectionType.CATEGORIES ->
+                    decodeKeepingItems(json, element, CategoriesSectionDto.serializer(), HomeCategoryDto.serializer()) {
+                        copy(droppedItems = it)
+                    }
+
                 else -> SkippedSectionDto(type = type, reason = "unknown type")
             }
         } catch (unreadable: IllegalArgumentException) {
             SkippedSectionDto(type = type, reason = "unreadable: ${unreadable.message}")
         }
     }
+
+    /**
+     * Decodes a section of a known type item by item (M4-M1a review #2): an item that does not decode
+     * (a trip card missing its slug, say) costs that item, not the row. The section itself must still
+     * decode (its own fields, and an `items` array), or the caller skips it. A section left with no
+     * items is dropped later as empty, like one served empty.
+     */
+    private fun <S : HomeSectionDto, I> decodeKeepingItems(
+        json: Json,
+        element: JsonElement,
+        section: KSerializer<S>,
+        item: KSerializer<I>,
+        withDropped: S.(dropped: Int) -> S,
+    ): S {
+        val fields = element.jsonObject
+        val items = fields[ITEMS] as? JsonArray ?: return json.decodeFromJsonElement(section, element)
+        val readable =
+            items.filter { candidate ->
+                try {
+                    json.decodeFromJsonElement(item, candidate)
+                    true
+                } catch (_: IllegalArgumentException) {
+                    false
+                }
+            }
+        val decoded = json.decodeFromJsonElement(section, JsonObject(fields + (ITEMS to JsonArray(readable))))
+        val dropped = items.size - readable.size
+        return if (dropped > 0) decoded.withDropped(dropped) else decoded
+    }
+
+    private const val ITEMS = "items"
 }

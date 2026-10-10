@@ -102,20 +102,20 @@ class BahrFormatTest {
     @Test
     fun `dates use western digits in both languages`() {
         val date = LocalDate(2026, 10, 17) // a Saturday
-        assertEquals("Sat 17 Oct", BahrFormat.date(date, english))
-        assertEquals("السبت 17 أكتوبر", BahrFormat.date(date, arabic))
+        assertEquals("Sat 17\u00A0Oct", BahrFormat.date(date, english))
+        assertEquals("السبت 17\u00A0أكتوبر", BahrFormat.date(date, arabic))
     }
 
     @Test
     fun `the date card lines and the review date`() {
         val monday = LocalDate(2026, 1, 5)
         assertEquals("Mon", BahrFormat.weekday(monday, english))
-        assertEquals("5 Jan", BahrFormat.dayMonth(monday, english))
+        assertEquals("5\u00A0Jan", BahrFormat.dayMonth(monday, english))
         val sunday = LocalDate(2026, 12, 27)
         assertEquals("الحد", BahrFormat.weekday(sunday, arabic))
-        assertEquals("27 ديسمبر", BahrFormat.dayMonth(sunday, arabic))
-        assertEquals("21 Sep 2026", BahrFormat.dayMonthYear(LocalDate(2026, 9, 21), english))
-        assertEquals("21 سبتمبر 2026", BahrFormat.dayMonthYear(LocalDate(2026, 9, 21), arabic))
+        assertEquals("27\u00A0ديسمبر", BahrFormat.dayMonth(sunday, arabic))
+        assertEquals("21\u00A0Sep 2026", BahrFormat.dayMonthYear(LocalDate(2026, 9, 21), english))
+        assertEquals("21\u00A0سبتمبر 2026", BahrFormat.dayMonthYear(LocalDate(2026, 9, 21), arabic))
     }
 
     @Test

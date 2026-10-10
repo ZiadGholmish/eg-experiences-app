@@ -33,6 +33,7 @@ wins.
 | `typescale.label / labelSmall` | `typography.labelLarge / labelMedium` | `theme/BahrType.kt` |
 | `typescale.overline` | `BahrTheme.type.overline` + `Overline()` | `theme/BahrType.kt` |
 | price (product style) | `BahrTheme.type.price` | `theme/BahrType.kt` |
+| wordmark (Home app bar, M4-M1) | `BahrTheme.type.wordmark` | `theme/BahrType.kt` |
 | `ref.typeface.plain / arabic` | Manrope / IBM Plex Sans Arabic, chosen by `BahrLocale` | `theme/BahrFonts.kt` |
 | `shape.*` | `BahrTheme.shapes.*` (M3 `Shapes` gets extraSmall–extraLarge) | `theme/BahrShapeElevationMotion.kt` |
 | `elevation.*` | `Modifier.bahrShadow(BahrElevation.X, shape, BahrTheme.colors)` | `theme/BahrShapeElevationMotion.kt` |

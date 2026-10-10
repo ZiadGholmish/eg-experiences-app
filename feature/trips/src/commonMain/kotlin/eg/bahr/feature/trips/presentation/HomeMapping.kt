@@ -4,21 +4,22 @@ import eg.bahr.feature.trips.model.HomeActionDto
 import eg.bahr.feature.trips.navigation.HomeAction
 
 /**
- * What a banner tap does, or null when it does nothing: `none`, an action type this build does not
- * know, a missing value, or a `url` that is not https (the contract promises https; anything else is
- * not opened, whatever the server says).
+ * What a banner tap does, or null when it does nothing, and then the banner is not a button at all:
+ * `none`, an action type this build does not know, or a missing value.
+ *
+ * `url` is null too, for now: the contract wants an https link opened in an in-app browser, and the
+ * app has none yet. A banner that rippled and then did nothing would read as broken (M4-M1a review
+ * #5b), so it is drawn as a picture until the browser lands; then this maps https links (only) to an
+ * action the NavHost opens.
  */
 internal fun HomeActionDto.toHomeAction(): HomeAction? {
     val target = value?.trim()?.takeIf { it.isNotEmpty() } ?: return null
     return when (type) {
         "trip" -> HomeAction.OpenTrip(target)
         "category" -> HomeAction.OpenCategory(target)
-        "url" -> if (target.startsWith(HTTPS_PREFIX, ignoreCase = true)) HomeAction.OpenUrl(target) else null
         else -> null
     }
 }
-
-private const val HTTPS_PREFIX = "https://"
 
 /**
  * The contract's `aspectRatio` (`"16:9"`, `^[1-9][0-9]*:[1-9][0-9]*$`) as width / height, or null when

@@ -4,6 +4,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
@@ -14,12 +17,16 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextInputSelection
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextRange
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.designsystem.theme.BahrLocale
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.localization.ProvideAppLanguage
 import eg.bahr.feature.trips.data.FakeRecentSearchesStore
 import eg.bahr.feature.trips.data.FakeTripRepository
+import eg.bahr.feature.trips.data.TripApiService
 import eg.bahr.feature.trips.data.TripFixtures.page
 import eg.bahr.feature.trips.data.TripFixtures.trip
 import eg.bahr.feature.trips.data.TripQuery
@@ -87,6 +94,36 @@ class SearchScreenTest {
 
         compose.onNodeWithTag(SEARCH_FIELD_TAG).assertTextEquals("birds", includeEditableText = true)
         assertEquals("birds", vm.uiState.value.text)
+    }
+
+    @Test
+    fun `a control character pasted mid-text is dropped where it is and the cursor stays after the paste`() {
+        val vm = SearchTripsViewModel(FakeTripRepository(), FakeRecentSearchesStore(), waitlistMemory())
+        show(vm)
+        val field = compose.onNodeWithTag(SEARCH_FIELD_TAG)
+        field.performTextInput("bird")
+        field.performTextInputSelection(TextRange(2))
+
+        field.performTextInput("X\u0000Y")
+        compose.waitForIdle()
+
+        field.assertTextEquals("biXYrd", includeEditableText = true)
+        // After "XY", where a paste without the control character would leave it, not at the end.
+        field.assert(SemanticsMatcher.expectValue(SemanticsProperties.TextSelectionRange, TextRange(4)))
+    }
+
+    @Test
+    fun `the field refuses a paste longer than the cap`() {
+        val vm = SearchTripsViewModel(FakeTripRepository(), FakeRecentSearchesStore(), waitlistMemory())
+        show(vm)
+
+        compose.onNodeWithTag(SEARCH_FIELD_TAG).performTextInput("a".repeat(TripApiService.MAX_QUERY_LENGTH + 1))
+        compose.waitForIdle()
+
+        // Refused whole (InputTransformation.maxLength reverts the change), not cut to the cap. The
+        // editable text only: the node's Text also carries the placeholder.
+        compose.onNodeWithTag(SEARCH_FIELD_TAG).assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText, AnnotatedString("")))
+        assertEquals("", vm.uiState.value.text)
     }
 
     @Test

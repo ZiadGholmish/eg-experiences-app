@@ -188,6 +188,27 @@ class ListRequestThrottlingTest {
             assertEquals(listOf(0, 0), repository.requestedPages)
         }
 
+    @Test
+    fun `rapid chip taps on Home collapse to one request for the last - and Home is not read again`() =
+        runViewModelTest {
+            val repository =
+                FakeTripRepository(
+                    listFiltered = { q -> page(listOf(trip(1)), facets = facets(filter = q.filter)) },
+                    home = { AppResult.Failure(AppError.Network) },
+                )
+            val vm = TripListViewModel(repository, waitlistMemory())
+            present(vm.trips)
+            advanceUntilIdle()
+
+            vm.selectFilter("weekend")
+            vm.selectFilter("under_400")
+            vm.selectFilter("half_day")
+            advanceUntilIdle()
+
+            assertEquals(listOf(null, "half_day"), repository.requestedQueries.map { it.filter })
+            assertEquals(1, repository.homeReads)
+        }
+
     /** A presenter on [trips] for the rest of the test, as `collectAsLazyPagingItems` would be. */
     private fun <T : Any> TestScope.present(trips: Flow<PagingData<T>>) {
         val presenter =

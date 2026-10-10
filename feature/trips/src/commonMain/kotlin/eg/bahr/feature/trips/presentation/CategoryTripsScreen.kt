@@ -5,9 +5,7 @@ import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -16,20 +14,15 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
-import eg.bahr.core.designsystem.theme.BahrSize
 import eg.bahr.core.designsystem.theme.BahrSpacing
-import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.designsystem.theme.bahrSharedBounds
 import eg.bahr.core.designsystem.theme.bahrTween
 import eg.bahr.core.localization.generated.resources.Res
@@ -38,18 +31,16 @@ import eg.bahr.core.localization.generated.resources.trips_all_title
 import eg.bahr.core.localization.generated.resources.trips_empty
 import eg.bahr.core.localization.generated.resources.trips_filter_empty
 import eg.bahr.feature.trips.model.FacetDto
+import eg.bahr.feature.trips.presentation.components.CategoryTile
 import eg.bahr.feature.trips.presentation.components.FacetFilterChips
 import eg.bahr.feature.trips.presentation.components.ListHeading
 import eg.bahr.feature.trips.presentation.components.ListTopBar
 import eg.bahr.feature.trips.presentation.components.PagedListStatus
 import eg.bahr.feature.trips.presentation.components.RefreshBarBelow
-import eg.bahr.feature.trips.presentation.components.colors
 import eg.bahr.feature.trips.presentation.components.listBody
 import eg.bahr.feature.trips.presentation.components.rememberListMotion
 import eg.bahr.feature.trips.presentation.components.rememberQueryStatus
 import eg.bahr.feature.trips.presentation.components.selectedOrder
-import eg.bahr.feature.trips.presentation.components.symbolIcon
-import eg.bahr.feature.trips.presentation.components.toneTint
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -179,24 +170,7 @@ private fun CategoryTitleRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(BahrSpacing.md),
     ) {
-        if (facet != null) {
-            val tint = toneTint(facet.tone).colors()
-            Box(
-                modifier =
-                    Modifier
-                        .size(BahrSize.categoryTile)
-                        .clip(BahrTheme.shapes.extraLarge)
-                        .background(tint.container),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = symbolIcon(facet.icon).filled(),
-                    contentDescription = null,
-                    tint = tint.icon,
-                    modifier = Modifier.size(BahrSize.iconLarge),
-                )
-            }
-        }
+        if (facet != null) CategoryTile(icon = facet.icon, tone = facet.tone)
         ListHeading(label = label, totalItems = totalItems, stale = stale)
     }
 }

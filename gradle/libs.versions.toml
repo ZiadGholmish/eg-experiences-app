@@ -42,8 +42,11 @@ kotlinxSerialization = "1.8.1"
 # Coroutines
 kotlinxCoroutines = "1.10.2"
 
-# DateTime — departures are dates, holds are instants; both cross the wire
-kotlinxDatetime = "0.6.2"
+# DateTime — departures are dates, holds are instants; both cross the wire.
+# 0.7.1 on both platforms: Compose Multiplatform material3 (iOS) requests 0.7.1, and a lower catalog
+# version let Android resolve 0.6.2 while iOS resolved 0.7.1, so common code compiled against two
+# APIs (M4-M5 review (b)). Keep this at or above what Compose pulls in.
+kotlinxDatetime = "0.7.1"
 # java.time on Android 7.x (minSdk 24): kotlinx-datetime's JVM artifact is built on it (M4-M5 review #1).
 desugarJdkLibs = "2.1.5"
 

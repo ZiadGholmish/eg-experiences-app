@@ -14,7 +14,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.hasScrollToKeyAction
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.performScrollToKey
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
@@ -25,12 +27,14 @@ import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.localization.ProvideAppLanguage
 import eg.bahr.core.testing.captureScreenshot
 import eg.bahr.feature.trips.data.FakeTripRepository
+import eg.bahr.feature.trips.data.TripFixtures.facets
 import eg.bahr.feature.trips.data.TripFixtures.page
 import eg.bahr.feature.trips.data.TripFixtures.trip
 import eg.bahr.feature.trips.data.waitlistMemory
 import eg.bahr.feature.trips.model.BadgeDto
 import eg.bahr.feature.trips.model.BannersSectionDto
 import eg.bahr.feature.trips.model.CategoriesSectionDto
+import eg.bahr.feature.trips.model.FacetDto
 import eg.bahr.feature.trips.model.HomeActionDto
 import eg.bahr.feature.trips.model.HomeBannerDto
 import eg.bahr.feature.trips.model.HomeCategoryDto
@@ -105,6 +109,7 @@ class TripListScreenshotTest {
     private fun loadedPage(
         dawn: Pair<String, String>,
         kayak: Pair<String, String>,
+        facets: List<FacetDto> = emptyList(),
     ) = page(
         listOf(
             trip(
@@ -123,6 +128,7 @@ class TripListScreenshotTest {
                 nextDeparture = NextDepartureDto(SATURDAY, seatsRemaining = 0, capacity = 18, soldOut = true),
             ),
         ),
+        facets = facets,
     )
 
     @Test
@@ -183,7 +189,13 @@ class TripListScreenshotTest {
     fun homeLoadedArabic() =
         snapEach("home_loaded", AppLanguage.ARABIC) {
             listTrips =
-                { loadedPage(dawn = "الفجر على بحيرة البرلس" to "الأكثر حجزًا", kayak = "قنوات قطّاعي البوص بالكياك" to "موسم الفلامنجو") }
+                {
+                    loadedPage(
+                        dawn = "الفجر على بحيرة البرلس" to "الأكثر حجزًا",
+                        kayak = "قنوات قطّاعي البوص بالكياك" to "موسم الفلامنجو",
+                        facets = facets(arabic = true),
+                    )
+                }
             home = { AppResult.Success(home(arabic = true)) }
         }
 
@@ -197,10 +209,84 @@ class TripListScreenshotTest {
                         dawn = "Dawn on Lake Burullus" to "Most booked",
                         kayak =
                             "Reed-cutters' channels, by kayak" to "Flamingo season",
+                        facets = facets(),
                     )
                 }
             home = { AppResult.Success(home(arabic = false)) }
         }
+
+    // ---------- Home's filter chips and footer (M4-M1) ----------
+
+    /** "Weekend" tapped: its trips under the chips, the chip selected, the count and the footer note. */
+    @Test
+    @Config(qualifiers = HOME_QUALIFIERS)
+    fun homeFilteredArabic() = homeFiltered(AppLanguage.ARABIC)
+
+    @Test
+    @Config(qualifiers = HOME_QUALIFIERS)
+    fun homeFilteredEnglish() = homeFiltered(AppLanguage.ENGLISH)
+
+    private fun homeFiltered(language: AppLanguage) {
+        val arabic = language == AppLanguage.ARABIC
+        snapEach("home_filtered", language, act = { selectFilter("weekend") }) {
+            listFiltered = { q ->
+                val dawn = if (arabic) "الفجر على بحيرة البرلس" else "Dawn on Lake Burullus"
+                page(
+                    listOf(
+                        trip(
+                            1,
+                            title = dawn,
+                            nextDeparture = NextDepartureDto(SATURDAY, seatsRemaining = 6, capacity = 18, soldOut = false),
+                        ),
+                    ),
+                    facets = facets(filter = q.filter, arabic = arabic),
+                )
+            }
+            home = { AppResult.Success(home(arabic)) }
+        }
+    }
+
+    /**
+     * A chip nothing matches: the chips stay (so the filter can be changed back), with the filter's
+     * own "no trips" line under "All trips", never the whole-screen "no trips".
+     */
+    @Test
+    fun homeFilteredEmptyArabic() = homeFilteredEmpty(AppLanguage.ARABIC)
+
+    @Test
+    fun homeFilteredEmptyEnglish() = homeFilteredEmpty(AppLanguage.ENGLISH)
+
+    private fun homeFilteredEmpty(language: AppLanguage) {
+        val arabic = language == AppLanguage.ARABIC
+        snapEach("home_filtered_empty", language, act = { selectFilter("under_400") }) {
+            listFiltered = { q ->
+                val chips = facets(filter = q.filter, arabic = arabic)
+                if (q.filter == null) page(listOf(trip(1)), facets = chips) else page(emptyList(), facets = chips)
+            }
+            home = { AppResult.Success(HomeDto()) }
+        }
+    }
+
+    /**
+     * No trips on sale, but Home has sections (M4-M1a review #9): the sections, then "All trips" and one
+     * "no trips" sentence, without the count line or the all-zero chips (M4-M1 review #1).
+     */
+    @Test
+    @Config(qualifiers = HOME_QUALIFIERS)
+    fun homeListEmptyWithSectionsArabic() = homeListEmptyWithSections(AppLanguage.ARABIC)
+
+    @Test
+    @Config(qualifiers = HOME_QUALIFIERS)
+    fun homeListEmptyWithSectionsEnglish() = homeListEmptyWithSections(AppLanguage.ENGLISH)
+
+    private fun homeListEmptyWithSections(language: AppLanguage) {
+        val arabic = language == AppLanguage.ARABIC
+        snapEach("home_list_empty_with_sections", language) {
+            // As the server answers an empty catalogue: every chip counts 0.
+            listTrips = { page(emptyList(), facets = facets(arabic = arabic).map { it.copy(count = 0) }) }
+            home = { AppResult.Success(home(arabic)) }
+        }
+    }
 
     // The list is in, Home is not: still the one loading state, so the list does not jump later.
     @Test
@@ -216,6 +302,35 @@ class TripListScreenshotTest {
         snapEach("home_error", settle = true) {
             listTrips = { AppResult.Failure(AppError.Network) }
             home = { AppResult.Success(home(arabic = false)) }
+        }
+
+    /** The last page is in: the footer note under the last card (HANDOFF Home footer, M4-M1). */
+    @Test
+    fun homeFooterArabic() =
+        snapEach("home_footer", AppLanguage.ARABIC, scrollToKey = HOME_FOOTER_KEY) {
+            listTrips =
+                {
+                    loadedPage(
+                        dawn = "الفجر على بحيرة البرلس" to "الأكثر حجزًا",
+                        kayak = "قنوات قطّاعي البوص بالكياك" to "موسم الفلامنجو",
+                        facets = facets(arabic = true),
+                    )
+                }
+            home = { AppResult.Success(HomeDto()) }
+        }
+
+    @Test
+    fun homeFooterEnglish() =
+        snapEach("home_footer", AppLanguage.ENGLISH, scrollToKey = HOME_FOOTER_KEY) {
+            listTrips =
+                {
+                    loadedPage(
+                        dawn = "Dawn on Lake Burullus" to "Most booked",
+                        kayak = "Reed-cutters' channels, by kayak" to "Flamingo season",
+                        facets = facets(),
+                    )
+                }
+            home = { AppResult.Success(HomeDto()) }
         }
 
     /** One multi-day card (M4-B0b): words for the duration, the nights badge, sold out. */
@@ -359,6 +474,8 @@ class TripListScreenshotTest {
         vararg languages: AppLanguage = AppLanguage.entries.toTypedArray(),
         header: @Composable (gap: Modifier) -> Unit = {},
         settle: Boolean = false,
+        act: TripListViewModel.() -> Unit = {},
+        scrollToKey: Any? = null,
         stub: FakeTripRepository.() -> Unit,
     ) {
         val viewModel = TripListViewModel(FakeTripRepository().apply(stub), waitlistMemory())
@@ -373,6 +490,10 @@ class TripListScreenshotTest {
                 }
             }
         }
+        compose.waitForIdle()
+        // A tap on Home before the shots (a filter chip): the list reloads and settles under it.
+        compose.runOnUiThread { viewModel.act() }
+        compose.waitForIdle()
         languages.forEach { shotLanguage ->
             compose.runOnUiThread { language = shotLanguage }
             compose.waitForIdle()
@@ -384,6 +505,11 @@ class TripListScreenshotTest {
                 compose.waitForIdle()
             }
             compose.mainClock.advanceTimeByFrame()
+            scrollToKey?.let {
+                compose.onNode(hasScrollToKeyAction()).performScrollToKey(it)
+                compose.waitForIdle()
+                compose.mainClock.advanceTimeByFrame()
+            }
             compose.captureScreenshot("${prefix}_${shotLanguage.tag}")
         }
     }

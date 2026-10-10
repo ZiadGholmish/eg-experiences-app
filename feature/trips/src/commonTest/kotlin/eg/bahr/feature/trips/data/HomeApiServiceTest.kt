@@ -10,6 +10,7 @@ import eg.bahr.feature.trips.model.HomeSectionsSerializer
 import eg.bahr.feature.trips.model.HomeSeeAllDto
 import eg.bahr.feature.trips.model.SkippedSectionDto
 import eg.bahr.feature.trips.model.TripsSectionDto
+import eg.bahr.feature.trips.presentation.drawableSections
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.request.HttpRequestData
@@ -66,12 +67,13 @@ class HomeApiServiceTest {
         runTest {
             val sections = home().sections
 
-            assertEquals(5, sections.size)
+            assertEquals(6, sections.size)
             assertIs<BannersSectionDto>(sections[0])
             assertIs<TripsSectionDto>(sections[1])
             assertIs<SkippedSectionDto>(sections[2])
             assertIs<CategoriesSectionDto>(sections[3])
-            assertIs<SkippedSectionDto>(sections[4])
+            assertIs<TripsSectionDto>(sections[4])
+            assertIs<SkippedSectionDto>(sections[5])
         }
 
     @Test
@@ -115,9 +117,35 @@ class HomeApiServiceTest {
 
             val unknown = assertIs<SkippedSectionDto>(sections[2])
             assertEquals("stories", unknown.type)
-            val unreadable = assertIs<SkippedSectionDto>(sections[4])
+            val unreadable = assertIs<SkippedSectionDto>(sections[5])
             assertEquals("trips", unreadable.type)
             assertTrue(unreadable.reason.startsWith("unreadable"), unreadable.reason)
+        }
+
+    @Test
+    fun `an unreadable card costs only that card - not its row`() =
+        runTest {
+            val row = assertIs<TripsSectionDto>(home().sections[4])
+
+            assertEquals(listOf("reed-kayak"), row.items.map { it.slug })
+            assertEquals(1, row.droppedItems)
+            // A row read whole says so.
+            assertEquals(0, assertIs<TripsSectionDto>(home().sections[1]).droppedItems)
+        }
+
+    @Test
+    fun `a row whose every card is unreadable is left empty - and dropped as empty`() =
+        runTest {
+            val body =
+                """{"success":true,"data":{"sections":[{"id":"x","type":"trips","layout":"row",
+                "items":[{"title":"No slug","durationLabel":"","price":{"amount":1,"currency":"EGP"}}]}]}}"""
+            val row = assertIs<TripsSectionDto>(home(body).sections.single())
+            assertEquals(emptyList(), row.items)
+            assertEquals(1, row.droppedItems)
+
+            val logged = mutableListOf<String>()
+            assertEquals(emptyList(), drawableSections(listOf(row)) { logged += it })
+            assertEquals(2, logged.size, logged.toString())
         }
 
     @Test

@@ -24,6 +24,7 @@ import androidx.compose.foundation.text.input.InputTransformation
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
+import androidx.compose.foundation.text.input.delete
 import androidx.compose.foundation.text.input.maxLength
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
@@ -111,7 +112,9 @@ internal fun SearchTripsScreen(
     val motion = rememberListMotion(status, switchKey = state.query to state.filter, order = selectedOrder(chips, state::isSelected))
     val appendRetry = rememberThrottled(trips::retry)
 
-    // Seeded from the view model, so a language switch (which re-keys the screen) keeps the text.
+    // Seeded from the view model, so the text comes back after a configuration change or a process
+    // restore. Not across a language switch: that rebuilds the whole AppNavHost (ProvideAppLanguage's
+    // key), back stack and view model included, so search starts empty again.
     val field = rememberTextFieldState(initialText = state.text)
     LaunchedEffect(field) { snapshotFlow { field.text.toString() }.collect(viewModel::onTextChange) }
 
@@ -162,15 +165,21 @@ internal fun SearchTripsScreen(
                 )
                 return@LazyColumn
             }
-            item(key = KEY_COUNT) {
-                ListHeading(
-                    label = null,
-                    totalItems = state.totalItems,
-                    stale = status == PagedListStatus.Refreshing,
-                    modifier = Modifier.padding(horizontal = BahrSpacing.gutter),
-                )
+            // Nothing matches the words at all (no chip to blame): the sentence below says so, and a
+            // "0 trips" line over four 0-count chips would only say it twice (M4-M3 review S1). With a
+            // chip active they stay, so the search can be widened.
+            val nothingMatches = state.filter == null && status == PagedListStatus.Empty
+            if (!nothingMatches) {
+                item(key = KEY_COUNT) {
+                    ListHeading(
+                        label = null,
+                        totalItems = state.totalItems,
+                        stale = status == PagedListStatus.Refreshing,
+                        modifier = Modifier.padding(horizontal = BahrSpacing.gutter),
+                    )
+                }
             }
-            if (chips.isNotEmpty()) {
+            if (chips.isNotEmpty() && !nothingMatches) {
                 item(key = KEY_CHIPS) {
                     FacetFilterChips(chips, isSelected = state::isSelected, onSelect = viewModel::selectFilter)
                 }
@@ -339,12 +348,16 @@ private fun LazyListScope.recentSearches(
 /**
  * Typed or pasted control characters never reach the field (the server refuses them); stripped
  * before the length cap, so a paste is measured without them.
+ *
+ * Each one is deleted where it is, last first so the earlier indices still hold, rather than the
+ * whole text replaced: the buffer moves the cursor with each deletion, so a paste in the middle of
+ * the text leaves the cursor after the pasted part, not at the end (M4-M3 review S2).
  */
 private val StripControlCharacters =
     InputTransformation {
-        val text = asCharSequence().toString()
-        val cleaned = text.withoutControlCharacters()
-        if (cleaned != text) replace(0, length, cleaned)
+        for (at in length - 1 downTo 0) {
+            if (charAt(at).isStrippedControl()) delete(at, at + 1)
+        }
     }
 
 /** For tests: the search field. */

@@ -13,6 +13,7 @@ import eg.bahr.core.designsystem.theme.BahrLocale
 import eg.bahr.core.designsystem.theme.BahrMotion
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.localization.ProvideAppLanguage
+import eg.bahr.core.testing.ANIMATION_SETTLE_MARGIN_MILLIS
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -63,6 +64,21 @@ class HoldCountdownMotionTest {
         assertEquals(listOf("12:09", "12:50", "13:59"), leaving("12:59").sorted())
     }
 
+    /**
+     * The same roll in Arabic (M4-M4 review #7): the Plex Arabic face, an RTL panel, the time still
+     * laid out left to right, so the slots and the digits leaving them are the English ones.
+     */
+    @Test
+    fun `in Arabic 13_00 to 12_59 rolls the same three digits`() {
+        show(secondsLeft = 13 * 60, reducedMotion = false, arabic = true)
+        secondsLeft = 12 * 60 + 59
+        midRoll()
+        assertEquals(listOf("12:09", "12:50", "13:59"), leaving("12:59").sorted())
+
+        settle()
+        assertEquals(emptyList(), leaving("12:59"))
+    }
+
     @Test
     fun `under reduce motion the time changes at once`() {
         show(secondsLeft = 13 * 60, reducedMotion = true)
@@ -77,11 +93,12 @@ class HoldCountdownMotionTest {
     private fun show(
         secondsLeft: Int,
         reducedMotion: Boolean,
+        arabic: Boolean = false,
     ) {
         this.secondsLeft = secondsLeft
         compose.setContent {
-            ProvideAppLanguage(AppLanguage.ENGLISH) {
-                BahrTheme(locale = BahrLocale.English, reducedMotion = reducedMotion) {
+            ProvideAppLanguage(if (arabic) AppLanguage.ARABIC else AppLanguage.ENGLISH) {
+                BahrTheme(locale = if (arabic) BahrLocale.Arabic else BahrLocale.English, reducedMotion = reducedMotion) {
                     HoldCountdown(secondsLeft = this.secondsLeft, label = LABEL, progress = 1f)
                 }
             }
@@ -97,7 +114,7 @@ class HoldCountdownMotionTest {
     }
 
     private fun settle() {
-        compose.mainClock.advanceTimeBy(BahrMotion.Medium.toLong() + SETTLE_MARGIN_MILLIS)
+        compose.mainClock.advanceTimeBy(BahrMotion.Medium.toLong() + ANIMATION_SETTLE_MARGIN_MILLIS)
         compose.waitForIdle()
     }
 
@@ -115,6 +132,5 @@ class HoldCountdownMotionTest {
     private companion object {
         const val LABEL = "Seats held for"
         val TIME = Regex("""\d\d:\d\d""")
-        const val SETTLE_MARGIN_MILLIS = 64L
     }
 }

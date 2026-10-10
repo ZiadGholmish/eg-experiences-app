@@ -270,4 +270,7 @@ internal fun searchable(text: String): String? = text.withoutControlCharacters()
  * VALIDATION_FAILED. Tab and newline are allowed by the contract and kept. The field strips them as
  * they are typed or pasted (see `SearchTripsScreen`); this keeps a stray one off the wire anyway.
  */
-internal fun String.withoutControlCharacters(): String = filterNot { it.isISOControl() && it != '\t' && it != '\n' }
+internal fun String.withoutControlCharacters(): String = filterNot { it.isStrippedControl() }
+
+/** A control character the search drops: any but tab and line feed, which the server folds to spaces. */
+internal fun Char.isStrippedControl(): Boolean = isISOControl() && this != '\t' && this != '\n'

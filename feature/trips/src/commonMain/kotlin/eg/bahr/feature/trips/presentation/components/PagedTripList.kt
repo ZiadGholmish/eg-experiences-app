@@ -286,8 +286,8 @@ internal fun LazyListScope.pagedTripCards(
                 bahrAnimateItem()
                     .then(moving)
                     .testTag(tripRowTag(trip.slug))
-                    // A stale card is not the result: screen readers skip it, and the progress bar's
-                    // "busy" says what is happening (M4-M6 review #3), as the stale count does.
+                    // A stale card is not the result: screen readers skip it, and the refresh slot's
+                    // live region says "busy" (M4-M6 review #3, M4-M4), as the stale count does.
                     .then(if (stale) Modifier.clearAndSetSemantics {} else Modifier)
                     .padding(horizontal = BahrSpacing.gutter),
         ) {

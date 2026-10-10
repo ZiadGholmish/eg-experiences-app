@@ -22,6 +22,7 @@ import eg.bahr.feature.booking.data.FakeActiveHoldStore
 import eg.bahr.feature.booking.data.FakeBookingRepository
 import eg.bahr.feature.booking.navigation.HoldRoute
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.datetime.LocalDate
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -114,6 +115,18 @@ class HoldScreenshotTest {
     @Test
     fun alreadyHeldEnglish() = snapAlreadyHeld(AppLanguage.ENGLISH)
 
+    /** Multi-day (M4-B0b, M4-M1a review #7): the summary names the day it is back. */
+    @Test
+    fun multiDayArabic() = snapMultiDay(AppLanguage.ARABIC)
+
+    @Test
+    fun multiDayEnglish() = snapMultiDay(AppLanguage.ENGLISH)
+
+    private fun snapMultiDay(language: AppLanguage) {
+        show(language, HoldViewModel(hold, answering(language, returnDate = SUNDAY), FakeActiveHoldStore(), clock))
+        capture("hold_multi_day", language)
+    }
+
     /** Continue elsewhere turned back to this live hold (M2-M2 guard, M2-M4 stored-hold guard). */
     private fun snapAlreadyHeld(language: AppLanguage) {
         show(language, HoldViewModel(hold, answering(language), FakeActiveHoldStore(), clock), alreadyHeldNotice = true)
@@ -154,7 +167,10 @@ class HoldScreenshotTest {
     private fun offline() = FakeBookingRepository(heldBooking = { _, _ -> AppResult.Failure(AppError.Network) })
 
     /** The re-read, answered 8 seconds after the hold was placed. */
-    private fun answering(language: AppLanguage): FakeBookingRepository {
+    private fun answering(
+        language: AppLanguage,
+        returnDate: LocalDate? = null,
+    ): FakeBookingRepository {
         val arabic = language == AppLanguage.ARABIC
         val booking =
             BookingFixtures.heldBooking(
@@ -163,6 +179,7 @@ class HoldScreenshotTest {
                 dayLabel = if (arabic) "السبت 10 أكتوبر" else "Sat 10 Oct",
                 city = if (arabic) "القاهرة" else "Cairo",
                 placeName = if (arabic) "عبد المنعم رياض" else "Abdel Moneim Riad",
+                returnDate = returnDate,
             )
         return FakeBookingRepository(heldBooking = { _, _ -> AppResult.Success(booking) })
     }
@@ -202,5 +219,8 @@ class HoldScreenshotTest {
 
     private companion object {
         const val SETTLE_MS = 1_000L
+
+        /** The day after the held Saturday, 10 Oct: back from a one-night trip. */
+        val SUNDAY = LocalDate(2026, 10, 11)
     }
 }

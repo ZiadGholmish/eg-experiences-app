@@ -24,6 +24,8 @@ data class BahrExtendedType(
     val overline: TextStyle,
     /** 17 / 800 — prices, with tabular figures. */
     val price: TextStyle,
+    /** 19 / 800 / -0.02em — the "bahr" wordmark in Home's app bar (HANDOFF Home, M4-M1). */
+    val wordmark: TextStyle,
 )
 
 private const val MAX_FONT_WEIGHT = 900
@@ -95,6 +97,7 @@ internal fun bahrExtendedType(
     display = style(family, 40f, FontWeight.ExtraBold, 1.05f, TRACKING_TIGHT, arabic, bumpWeight = true),
     overline = style(family, 10.5f, FontWeight.SemiBold, 1.3f, TRACKING_OVERLINE, arabic),
     price = style(family, 17f, FontWeight.ExtraBold, 1.1f, arabic = arabic),
+    wordmark = style(family, 19f, FontWeight.ExtraBold, 1.1f, TRACKING_TIGHT, arabic),
 )
 
 /** Use instead of `.uppercase()` so Arabic stays caseless. */
