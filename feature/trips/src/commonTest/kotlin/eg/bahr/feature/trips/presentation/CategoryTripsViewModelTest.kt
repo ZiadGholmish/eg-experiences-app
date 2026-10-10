@@ -12,6 +12,7 @@ import eg.bahr.feature.trips.data.TripFixtures.facets
 import eg.bahr.feature.trips.data.TripFixtures.page
 import eg.bahr.feature.trips.data.TripFixtures.trip
 import eg.bahr.feature.trips.data.TripQuery
+import eg.bahr.feature.trips.data.waitlistMemory
 import eg.bahr.feature.trips.model.FacetDto
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -39,7 +40,7 @@ class CategoryTripsViewModelTest {
     fun `the page lists the category's trips and names itself from its facet`() =
         runViewModelTest {
             val repository = repository()
-            val vm = CategoryTripsViewModel("birds", title = "Birds (from Home)", repository = repository)
+            val vm = CategoryTripsViewModel("birds", title = "Birds (from Home)", repository = repository, waitlists = waitlistMemory())
             assertEquals("Birds (from Home)", vm.uiState.value.fallbackTitle, "the opener's label shows until the facets arrive")
 
             val shown = vm.trips.asSnapshot()
@@ -56,7 +57,7 @@ class CategoryTripsViewModelTest {
     @Test
     fun `only the filter chips are drawn - in the served order - with All selected at first`() =
         runViewModelTest {
-            val vm = CategoryTripsViewModel("birds", null, repository())
+            val vm = CategoryTripsViewModel("birds", null, repository(), waitlistMemory())
             vm.trips.asSnapshot()
 
             val chips = vm.uiState.value.filterChips
@@ -78,7 +79,7 @@ class CategoryTripsViewModelTest {
     fun `a filter chip starts the list over with that filter - tapping it again clears it`() =
         runViewModelTest {
             val repository = repository()
-            val vm = CategoryTripsViewModel("birds", null, repository)
+            val vm = CategoryTripsViewModel("birds", null, repository, waitlistMemory())
             vm.trips.asSnapshot()
 
             vm.selectFilter("weekend")
@@ -102,7 +103,7 @@ class CategoryTripsViewModelTest {
     @Test
     fun `the All chip clears the filter`() =
         runViewModelTest {
-            val vm = CategoryTripsViewModel("birds", null, repository())
+            val vm = CategoryTripsViewModel("birds", null, repository(), waitlistMemory())
             vm.selectFilter("half_day")
 
             vm.selectFilter("all")
@@ -118,7 +119,7 @@ class CategoryTripsViewModelTest {
                 FakeTripRepository(
                     listFiltered = { q -> if (q.category != null) refused else page(listOf(trip(1)), facets = facets()) },
                 )
-            val vm = CategoryTripsViewModel("gone", "Old banner", repository)
+            val vm = CategoryTripsViewModel("gone", "Old banner", repository, waitlistMemory())
 
             vm.trips.asSnapshot(onError = LoadErrorHandler { ErrorRecovery.RETURN_CURRENT_SNAPSHOT })
             val shown = vm.trips.asSnapshot()
@@ -134,7 +135,7 @@ class CategoryTripsViewModelTest {
         runViewModelTest {
             val refused = AppResult.Failure(AppError.Api(ApiErrorCodes.VALIDATION_FAILED, null, 400))
             val repository = FakeTripRepository(listFiltered = { refused })
-            val vm = CategoryTripsViewModel("gone", null, repository)
+            val vm = CategoryTripsViewModel("gone", null, repository, waitlistMemory())
 
             vm.trips.asSnapshot(onError = LoadErrorHandler { ErrorRecovery.RETURN_CURRENT_SNAPSHOT })
             vm.trips.asSnapshot(onError = LoadErrorHandler { ErrorRecovery.RETURN_CURRENT_SNAPSHOT })
@@ -153,7 +154,7 @@ class CategoryTripsViewModelTest {
                         if (refusesFilter) refused else page(listOf(trip(1)), facets = facets(category = q.category))
                     },
                 )
-            val vm = CategoryTripsViewModel("birds", null, repository)
+            val vm = CategoryTripsViewModel("birds", null, repository, waitlistMemory())
             vm.trips.asSnapshot()
 
             vm.selectFilter("weekend")
@@ -172,7 +173,7 @@ class CategoryTripsViewModelTest {
     @Test
     fun `a new filter forgets the old count until it answers`() =
         runViewModelTest {
-            val vm = CategoryTripsViewModel("birds", null, repository())
+            val vm = CategoryTripsViewModel("birds", null, repository(), waitlistMemory())
             vm.trips.asSnapshot()
 
             vm.selectFilter("weekend")
@@ -184,7 +185,7 @@ class CategoryTripsViewModelTest {
     fun `any other failure is the list's error - the category stays`() =
         runViewModelTest {
             val repository = FakeTripRepository(listFiltered = { AppResult.Failure(AppError.Network) })
-            val vm = CategoryTripsViewModel("birds", null, repository)
+            val vm = CategoryTripsViewModel("birds", null, repository, waitlistMemory())
 
             vm.trips.asSnapshot(onError = LoadErrorHandler { ErrorRecovery.RETURN_CURRENT_SNAPSHOT })
 
@@ -195,7 +196,7 @@ class CategoryTripsViewModelTest {
     @Test
     fun `facets stay from the previous query until the new one answers`() =
         runViewModelTest {
-            val vm = CategoryTripsViewModel("birds", null, repository())
+            val vm = CategoryTripsViewModel("birds", null, repository(), waitlistMemory())
             vm.trips.asSnapshot()
             val before = vm.uiState.value.facets
 
@@ -212,7 +213,7 @@ class CategoryTripsViewModelTest {
     fun `the category's trips page on to the end`() =
         runViewModelTest {
             val repository = repository(totalPages = 3)
-            val vm = CategoryTripsViewModel("birds", null, repository)
+            val vm = CategoryTripsViewModel("birds", null, repository, waitlistMemory())
 
             vm.trips.asSnapshot { appendScrollWhile { true } }
 

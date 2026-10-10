@@ -9,6 +9,7 @@ import eg.bahr.core.common.result.AppResult
 import eg.bahr.feature.trips.data.SectionTripsPagingSource
 import eg.bahr.feature.trips.data.TripPagingConfig
 import eg.bahr.feature.trips.data.TripRepository
+import eg.bahr.feature.trips.data.WaitlistMemory
 import eg.bahr.feature.trips.model.TripCardDto
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,6 +25,7 @@ import kotlinx.coroutines.flow.update
 internal data class SectionTripsUiState(
     val title: String?,
     val totalItems: Long? = null,
+    val waitlistTags: WaitlistTags = WaitlistTags.None,
 )
 
 /** Every trip of one Home `trips` section, paged, in the row's order. */
@@ -31,6 +33,7 @@ internal class SectionTripsViewModel(
     sectionId: String,
     title: String?,
     repository: TripRepository,
+    waitlists: WaitlistMemory,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(SectionTripsUiState(title = title))
     val uiState: StateFlow<SectionTripsUiState> = _uiState.asStateFlow()
@@ -43,4 +46,8 @@ internal class SectionTripsViewModel(
         }.flow
             .distinctTrips()
             .cachedIn(viewModelScope)
+
+    init {
+        collectWaitlistTags(waitlists) { tags -> _uiState.update { it.copy(waitlistTags = tags) } }
+    }
 }

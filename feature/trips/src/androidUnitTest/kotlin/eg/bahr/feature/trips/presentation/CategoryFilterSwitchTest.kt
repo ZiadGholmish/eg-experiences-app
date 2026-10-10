@@ -21,6 +21,7 @@ import eg.bahr.feature.trips.data.TripFixtures.facets
 import eg.bahr.feature.trips.data.TripFixtures.page
 import eg.bahr.feature.trips.data.TripFixtures.trip
 import eg.bahr.feature.trips.data.TripQuery
+import eg.bahr.feature.trips.data.waitlistMemory
 import eg.bahr.feature.trips.model.TripPageDto
 import eg.bahr.feature.trips.presentation.components.PagedListStatus
 import eg.bahr.feature.trips.presentation.components.queryStatus
@@ -69,7 +70,7 @@ class CategoryFilterSwitchTest {
                     }
                 },
             )
-        val vm = CategoryTripsViewModel("birds", null, repository)
+        val vm = CategoryTripsViewModel("birds", null, repository, waitlistMemory())
         compose.setContent {
             ProvideAppLanguage(AppLanguage.ENGLISH) {
                 BahrTheme(locale = BahrLocale.English) {
@@ -114,7 +115,7 @@ class CategoryFilterSwitchTest {
     fun `a cached list comes back with its cards on the first frame`() {
         val repository =
             FakeTripRepository(listFiltered = { q -> page(listOf(trip(1, title = ALL_CARD)), facets = facets(category = q.category)) })
-        val vm = CategoryTripsViewModel("birds", null, repository)
+        val vm = CategoryTripsViewModel("birds", null, repository, waitlistMemory())
         var shown by mutableStateOf(true)
         var probing = false
         val firstFrame = mutableListOf<Pair<Int, PagedListStatus>>()

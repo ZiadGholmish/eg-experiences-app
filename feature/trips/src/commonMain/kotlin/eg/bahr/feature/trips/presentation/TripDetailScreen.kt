@@ -260,6 +260,7 @@ private fun Section(
                 waitlistOutcome = state.waitlistOutcome,
                 onSelect = onSelectDeparture,
                 modifier = Modifier.padding(top = BahrSpacing.xxl),
+                joinedIds = state.joinedWaitlists.keys,
             )
     }
 }

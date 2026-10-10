@@ -7,6 +7,7 @@ import eg.bahr.feature.trips.data.FakeTripRepository
 import eg.bahr.feature.trips.data.TripFixtures.detail
 import eg.bahr.feature.trips.data.TripFixtures.saturdays
 import eg.bahr.feature.trips.data.TripFixtures.trip
+import eg.bahr.feature.trips.data.waitlistMemory
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlin.test.Test
@@ -25,7 +26,7 @@ class TripDetailViewModelTest {
     @Test
     fun `nothing is selected at first so the button asks for a date`() =
         runViewModelTest {
-            val vm = TripDetailViewModel("burullus-dawn", loaded())
+            val vm = TripDetailViewModel("burullus-dawn", loaded(), waitlistMemory())
             advanceUntilIdle()
 
             val state = vm.uiState.value
@@ -39,7 +40,7 @@ class TripDetailViewModelTest {
     @Test
     fun `selecting a bookable date continues with that date and tapping it again clears it`() =
         runViewModelTest {
-            val vm = TripDetailViewModel("burullus-dawn", loaded())
+            val vm = TripDetailViewModel("burullus-dawn", loaded(), waitlistMemory())
             advanceUntilIdle()
 
             vm.selectDeparture("dep-2")
@@ -57,7 +58,7 @@ class TripDetailViewModelTest {
     @Test
     fun `a sold-out date can be picked but cannot continue`() =
         runViewModelTest {
-            val vm = TripDetailViewModel("burullus-dawn", loaded())
+            val vm = TripDetailViewModel("burullus-dawn", loaded(), waitlistMemory())
             advanceUntilIdle()
 
             vm.selectDeparture("dep-3")
@@ -76,7 +77,7 @@ class TripDetailViewModelTest {
             val dates = saturdays().take(3)
             val repo =
                 FakeTripRepository(tripBySlug = { AppResult.Success(detail(dates = dates)) }, departuresFor = { AppResult.Success(dates) })
-            val vm = TripDetailViewModel("burullus-dawn", repo)
+            val vm = TripDetailViewModel("burullus-dawn", repo, waitlistMemory())
             advanceUntilIdle()
 
             vm.selectDeparture("dep-3")
@@ -93,7 +94,7 @@ class TripDetailViewModelTest {
         runViewModelTest {
             val dates = saturdays().mapIndexed { i, d -> if (i == 0) d.copy(bookable = false, unavailableReason = "CLOSED") else d }
             val repo = FakeTripRepository(tripBySlug = { AppResult.Success(detail()) }, departuresFor = { AppResult.Success(dates) })
-            val vm = TripDetailViewModel("burullus-dawn", repo)
+            val vm = TripDetailViewModel("burullus-dawn", repo, waitlistMemory())
             advanceUntilIdle()
 
             vm.selectDeparture("dep-1")
@@ -108,7 +109,7 @@ class TripDetailViewModelTest {
             // soldOut is true, but the reason is CANCELLED (D3 precedence): not pickable, no notice.
             val dates = saturdays().mapIndexed { i, d -> if (i == 2) d.copy(unavailableReason = "CANCELLED") else d }
             val repo = FakeTripRepository(tripBySlug = { AppResult.Success(detail()) }, departuresFor = { AppResult.Success(dates) })
-            val vm = TripDetailViewModel("burullus-dawn", repo)
+            val vm = TripDetailViewModel("burullus-dawn", repo, waitlistMemory())
             advanceUntilIdle()
 
             vm.selectDeparture("dep-3")
@@ -127,7 +128,7 @@ class TripDetailViewModelTest {
                     departuresFor = { awaitCancellation() },
                     cards = mapOf("burullus-dawn" to card),
                 )
-            val vm = TripDetailViewModel("burullus-dawn", repo)
+            val vm = TripDetailViewModel("burullus-dawn", repo, waitlistMemory())
             advanceUntilIdle()
 
             val state = vm.uiState.value
@@ -141,7 +142,7 @@ class TripDetailViewModelTest {
         runViewModelTest {
             val repo =
                 FakeTripRepository(tripBySlug = { AppResult.Success(detail()) }, departuresFor = { AppResult.Failure(AppError.Network) })
-            val vm = TripDetailViewModel("burullus-dawn", repo)
+            val vm = TripDetailViewModel("burullus-dawn", repo, waitlistMemory())
             advanceUntilIdle()
 
             assertEquals(4, vm.uiState.value.departures.size)
@@ -158,7 +159,7 @@ class TripDetailViewModelTest {
                     tripBySlug = { if (fail) AppResult.Failure(AppError.Network) else AppResult.Success(detail()) },
                     departuresFor = { AppResult.Success(saturdays()) },
                 )
-            val vm = TripDetailViewModel("burullus-dawn", repo)
+            val vm = TripDetailViewModel("burullus-dawn", repo, waitlistMemory())
             advanceUntilIdle()
             assertEquals(AppError.Network, vm.uiState.value.error)
 
@@ -179,7 +180,7 @@ class TripDetailViewModelTest {
         runViewModelTest {
             var dates = saturdays()
             val repo = FakeTripRepository(tripBySlug = { AppResult.Success(detail()) }, departuresFor = { AppResult.Success(dates) })
-            val vm = TripDetailViewModel("burullus-dawn", repo)
+            val vm = TripDetailViewModel("burullus-dawn", repo, waitlistMemory())
             advanceUntilIdle()
             vm.selectDeparture("dep-1")
 

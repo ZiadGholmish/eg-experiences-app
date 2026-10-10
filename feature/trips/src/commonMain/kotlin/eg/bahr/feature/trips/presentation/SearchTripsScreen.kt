@@ -160,6 +160,7 @@ internal fun SearchTripsScreen(
             listBody(
                 trips = trips,
                 perPersonLabel = perPersonLabel,
+                waitlistTags = state.waitlistTags,
                 emptyMessage = {
                     if (state.filter != null) {
                         stringResource(Res.string.trips_filter_empty)

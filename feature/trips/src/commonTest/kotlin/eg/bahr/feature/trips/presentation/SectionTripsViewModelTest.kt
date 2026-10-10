@@ -5,6 +5,7 @@ import eg.bahr.core.testing.runViewModelTest
 import eg.bahr.feature.trips.data.FakeTripRepository
 import eg.bahr.feature.trips.data.TripFixtures.sectionPage
 import eg.bahr.feature.trips.data.TripFixtures.trip
+import eg.bahr.feature.trips.data.waitlistMemory
 import eg.bahr.feature.trips.model.HomeSeeAllDto
 import eg.bahr.feature.trips.model.TripsSectionDto
 import eg.bahr.feature.trips.navigation.HomeAction
@@ -20,7 +21,7 @@ class SectionTripsViewModelTest {
         runViewModelTest {
             val repository =
                 FakeTripRepository(sectionTrips = { _, p -> sectionPage(listOf(trip(p)), page = p, totalPages = 2, totalItems = 2) })
-            val vm = SectionTripsViewModel("s-1", "Featured trips", repository)
+            val vm = SectionTripsViewModel("s-1", "Featured trips", repository, waitlistMemory())
 
             val shown = vm.trips.asSnapshot { appendScrollWhile { true } }
 
@@ -53,7 +54,7 @@ class SectionTripsViewModelTest {
         runViewModelTest {
             val repository = FakeTripRepository(sectionTrips = { _, _ -> sectionPage(emptyList()) })
 
-            val shown = SectionTripsViewModel("s-1", null, repository).trips.asSnapshot()
+            val shown = SectionTripsViewModel("s-1", null, repository, waitlistMemory()).trips.asSnapshot()
 
             assertEquals(emptyList(), shown)
         }

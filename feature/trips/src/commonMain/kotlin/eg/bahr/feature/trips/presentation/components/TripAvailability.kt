@@ -54,6 +54,7 @@ import eg.bahr.core.localization.generated.resources.trip_sold_out_alternative
 import eg.bahr.core.localization.generated.resources.trip_sold_out_alternative_same_price
 import eg.bahr.core.localization.generated.resources.trip_sold_out_body
 import eg.bahr.core.localization.generated.resources.trip_sold_out_title
+import eg.bahr.core.localization.generated.resources.waitlist_tag
 import eg.bahr.core.network.MoneyDto
 import eg.bahr.feature.trips.model.DepartureDto
 import eg.bahr.feature.trips.model.PolicyDto
@@ -82,6 +83,7 @@ internal fun TripAvailability(
     waitlistOutcome: WaitlistOutcome?,
     onSelect: (String) -> Unit,
     modifier: Modifier = Modifier,
+    joinedIds: Set<String> = emptySet(),
 ) {
     Column(
         modifier =
@@ -120,7 +122,12 @@ internal fun TripAvailability(
                     horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm),
                 ) {
                     items(departures, key = { it.id }) { departure ->
-                        DateCard(departure, selected = departure.id == selected?.id, onSelect = { onSelect(departure.id) })
+                        DateCard(
+                            departure = departure,
+                            selected = departure.id == selected?.id,
+                            joined = departure.id in joinedIds,
+                            onSelect = { onSelect(departure.id) },
+                        )
                     }
                 }
         }
@@ -142,17 +149,24 @@ internal fun TripAvailability(
  *   date off, which is news, not just "full";
  * - booking closed: no fill at all, only an `outlineVariant` hairline and a `lock` icon, so it reads
  *   as past rather than taken.
+ *
+ * A sold-out date the device is on the waiting list of ([joined], M4-M5) keeps the sold-out look but
+ * reads "Waiting list" with a bell (the list cards' tag wording, short enough for one line on the
+ * narrow card), so the user sees they need not join again. Only a sold-out
+ * date can say so (D3: only it has a list).
  */
 @Composable
 private fun DateCard(
     departure: DepartureDto,
     selected: Boolean,
+    joined: Boolean,
     onSelect: () -> Unit,
 ) {
     val c = MaterialTheme.colorScheme
     val x = BahrTheme.colors
     val shape = BahrTheme.shapes.extraLarge
     val availability = departure.availability
+    val waiting = joined && availability == DateAvailability.SoldOut
     val look =
         when (availability) {
             DateAvailability.Open ->
@@ -205,13 +219,17 @@ private fun DateCard(
             horizontalArrangement = Arrangement.spacedBy(BahrSpacing.xs),
         ) {
             Icon(
-                imageVector = look.icon.outlined(),
+                imageVector = if (waiting) BahrIcons.NotificationsActive.outlined() else look.icon.outlined(),
                 contentDescription = null,
                 tint = content,
                 modifier = Modifier.size(BahrSize.iconSmall),
             )
             // Wraps rather than clips: "11 seats left" is wider than the 100dp card in English.
-            Text(text = seatsText(departure), style = MaterialTheme.typography.labelMedium, color = content)
+            Text(
+                text = if (waiting) stringResource(Res.string.waitlist_tag) else seatsText(departure),
+                style = MaterialTheme.typography.labelMedium,
+                color = content,
+            )
         }
     }
 }

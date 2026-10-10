@@ -33,6 +33,7 @@ import eg.bahr.core.localization.localizedMessage
 import eg.bahr.feature.trips.data.appError
 import eg.bahr.feature.trips.model.FacetDto
 import eg.bahr.feature.trips.model.TripCardDto
+import eg.bahr.feature.trips.presentation.WaitlistTags
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -96,13 +97,19 @@ internal val LazyPagingItems<*>.queryStatus: PagedListStatus
 internal fun LazyListScope.pagedTripCards(
     trips: LazyPagingItems<TripCardDto>,
     perPersonLabel: String,
+    waitlistTags: WaitlistTags,
     onTripClick: (slug: String) -> Unit,
 ) {
     items(count = trips.itemCount, key = trips.itemKey { "$KEY_TRIP${it.slug}" }) { index ->
         // Null only for a placeholder, and placeholders are off; nothing to draw then.
         val trip = trips[index] ?: return@items
         Row(modifier = Modifier.padding(horizontal = BahrSpacing.gutter)) {
-            TripCard(trip = trip, perPersonLabel = perPersonLabel, onClick = { onTripClick(trip.slug) })
+            TripCard(
+                trip = trip,
+                perPersonLabel = perPersonLabel,
+                onClick = { onTripClick(trip.slug) },
+                waitlisted = waitlistTags.shows(trip),
+            )
         }
     }
     when (val append = trips.loadState.append) {
@@ -151,6 +158,7 @@ internal fun ListTopBar(
 internal fun LazyListScope.listBody(
     trips: LazyPagingItems<TripCardDto>,
     perPersonLabel: String,
+    waitlistTags: WaitlistTags,
     emptyMessage: @Composable () -> String,
     onTripClick: (slug: String) -> Unit,
 ) {
@@ -176,7 +184,7 @@ internal fun LazyListScope.listBody(
                 )
             }
 
-        PagedListStatus.Loaded -> pagedTripCards(trips, perPersonLabel, onTripClick)
+        PagedListStatus.Loaded -> pagedTripCards(trips, perPersonLabel, waitlistTags, onTripClick)
     }
 }
 

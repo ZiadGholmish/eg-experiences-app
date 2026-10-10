@@ -94,6 +94,7 @@ internal fun CategoryTripsScreen(
             listBody(
                 trips = trips,
                 perPersonLabel = perPersonLabel,
+                waitlistTags = state.waitlistTags,
                 emptyMessage = { stringResource(if (state.filter != null) Res.string.trips_filter_empty else Res.string.trips_empty) },
                 onTripClick = onTripClick,
             )

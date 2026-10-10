@@ -1,7 +1,9 @@
 package eg.bahr.feature.trips.presentation
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -25,6 +27,7 @@ import eg.bahr.core.testing.captureScreenshot
 import eg.bahr.feature.trips.data.FakeTripRepository
 import eg.bahr.feature.trips.data.TripFixtures.page
 import eg.bahr.feature.trips.data.TripFixtures.trip
+import eg.bahr.feature.trips.data.waitlistMemory
 import eg.bahr.feature.trips.model.BadgeDto
 import eg.bahr.feature.trips.model.BannersSectionDto
 import eg.bahr.feature.trips.model.CategoriesSectionDto
@@ -236,6 +239,50 @@ class TripListScreenshotTest {
         }
     }
 
+    /**
+     * M4-M5: the device is on the waiting list of the sold-out date these cards show, so each carries
+     * the "Waiting list" tag beside its "Sold out" pill: a list card, and the compact card of a Home row.
+     */
+    @Test
+    fun waitlistTagCard() {
+        var language by mutableStateOf(AppLanguage.ARABIC)
+        compose.setContent {
+            ProvideAppLanguage(language) {
+                BahrTheme(locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English) {
+                    val arabic = language == AppLanguage.ARABIC
+                    val kayak =
+                        trip(
+                            2,
+                            title = if (arabic) "قنوات قطّاعي البوص بالكياك" else "Reed-cutters' channels, by kayak",
+                            priceEgp = 520,
+                            durationLabel = "05:00 → 19:00",
+                            nextDeparture = NextDepartureDto(SATURDAY, seatsRemaining = 0, capacity = 18, soldOut = true),
+                        )
+                    Column(
+                        modifier = Modifier.background(MaterialTheme.colorScheme.background).padding(BahrSpacing.gutter),
+                        verticalArrangement = Arrangement.spacedBy(BahrSpacing.lg),
+                    ) {
+                        TripCard(trip = kayak, perPersonLabel = perPerson(language), onClick = {}, waitlisted = true)
+                        TripCard(
+                            trip = kayak,
+                            perPersonLabel = perPerson(language),
+                            onClick = {},
+                            modifier = Modifier.fillMaxWidth(COMPACT_CARD_FRACTION),
+                            compact = true,
+                            waitlisted = true,
+                        )
+                    }
+                }
+            }
+        }
+        AppLanguage.entries.forEach { shotLanguage ->
+            compose.runOnUiThread { language = shotLanguage }
+            compose.waitForIdle()
+            compose.mainClock.advanceTimeByFrame()
+            compose.captureScreenshot("trip_card_waitlist_tag_${shotLanguage.tag}")
+        }
+    }
+
     private fun perPerson(language: AppLanguage) = if (language == AppLanguage.ARABIC) "للفرد" else "per person"
 
     private fun desert(arabic: Boolean) =
@@ -314,7 +361,7 @@ class TripListScreenshotTest {
         settle: Boolean = false,
         stub: FakeTripRepository.() -> Unit,
     ) {
-        val viewModel = TripListViewModel(FakeTripRepository().apply(stub))
+        val viewModel = TripListViewModel(FakeTripRepository().apply(stub), waitlistMemory())
         var language by mutableStateOf(languages.first())
         compose.setContent {
             ProvideAppLanguage(language) {
@@ -345,5 +392,8 @@ class TripListScreenshotTest {
         val THURSDAY = LocalDate(2026, 10, 15)
         val FRIDAY = LocalDate(2026, 10, 16)
         const val HOME_QUALIFIERS = "en-w360dp-h1400dp-xhdpi"
+
+        /** About a Home row card's share of the screen (the row's own fraction is internal to HomeSections). */
+        const val COMPACT_CARD_FRACTION = 0.75f
     }
 }

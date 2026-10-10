@@ -88,7 +88,10 @@ import org.jetbrains.compose.resources.stringResource
 internal class WaitlistPanelState(
     /** The open form, or null while only the button shows. */
     val form: WaitlistForm?,
-    /** The phone the date was joined under in this visit, or null when it was not joined. */
+    /**
+     * The phone the date was joined under, or null when it was not joined. Remembered on the device
+     * (M4-M5), so a join from an earlier visit or before a restart counts too.
+     */
     val joinedPhone: String?,
     val maxPartySize: Int,
     val onOpen: () -> Unit = {},

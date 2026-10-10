@@ -9,6 +9,7 @@ import eg.bahr.core.testing.runViewModelTest
 import eg.bahr.feature.trips.data.FakeTripRepository
 import eg.bahr.feature.trips.data.TripFixtures.page
 import eg.bahr.feature.trips.data.TripFixtures.trip
+import eg.bahr.feature.trips.data.waitlistMemory
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -21,7 +22,7 @@ class TripListViewModelTest {
             val trips = listOf(trip(1), trip(2), trip(3))
             val repository = FakeTripRepository(listTrips = { page(trips) })
 
-            val shown = TripListViewModel(repository).trips.asSnapshot()
+            val shown = TripListViewModel(repository, waitlistMemory()).trips.asSnapshot()
 
             assertEquals(trips, shown)
             assertEquals(listOf(0), repository.requestedPages)
@@ -33,7 +34,7 @@ class TripListViewModelTest {
             val repository =
                 FakeTripRepository(listTrips = { p -> page(List(PAGE) { i -> trip(p * PAGE + i) }, page = p, totalPages = 3) })
 
-            val shown = TripListViewModel(repository).trips.asSnapshot { appendScrollWhile { true } }
+            val shown = TripListViewModel(repository, waitlistMemory()).trips.asSnapshot { appendScrollWhile { true } }
 
             assertEquals(3 * PAGE, shown.size)
             assertEquals(listOf(0, 1, 2), repository.requestedPages)
@@ -47,7 +48,7 @@ class TripListViewModelTest {
             val second = page(listOf(trip(2), trip(3)), page = 1, totalPages = 2)
             val repository = FakeTripRepository(listTrips = { p -> if (p == 0) first else second })
 
-            val shown = TripListViewModel(repository).trips.asSnapshot { appendScrollWhile { true } }
+            val shown = TripListViewModel(repository, waitlistMemory()).trips.asSnapshot { appendScrollWhile { true } }
 
             assertEquals(listOf("trip-1", "trip-2", "trip-3"), shown.map { it.slug })
         }
@@ -69,7 +70,7 @@ class TripListViewModelTest {
 
             // RETRY is what the list's footer does (Paging never re-asks for a failed page by itself).
             val shown =
-                TripListViewModel(repository).trips.asSnapshot(onError = LoadErrorHandler { ErrorRecovery.RETRY }) {
+                TripListViewModel(repository, waitlistMemory()).trips.asSnapshot(onError = LoadErrorHandler { ErrorRecovery.RETRY }) {
                     appendScrollWhile { true }
                 }
 
@@ -80,7 +81,7 @@ class TripListViewModelTest {
     @Test
     fun `an empty first page is an empty list - not an error`() =
         runViewModelTest {
-            val shown = TripListViewModel(FakeTripRepository(listTrips = { page(emptyList()) })).trips.asSnapshot()
+            val shown = TripListViewModel(FakeTripRepository(listTrips = { page(emptyList()) }), waitlistMemory()).trips.asSnapshot()
 
             assertTrue(shown.isEmpty())
         }
@@ -91,7 +92,7 @@ class TripListViewModelTest {
             var fail = true
             val repository =
                 FakeTripRepository(listTrips = { if (fail) AppResult.Failure(AppError.Network) else page(listOf(trip(1))) })
-            val vm = TripListViewModel(repository)
+            val vm = TripListViewModel(repository, waitlistMemory())
             vm.trips.asSnapshot(onError = LoadErrorHandler { ErrorRecovery.RETURN_CURRENT_SNAPSHOT })
 
             fail = false

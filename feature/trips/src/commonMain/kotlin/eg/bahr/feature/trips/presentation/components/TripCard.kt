@@ -15,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import coil3.compose.AsyncImage
@@ -27,10 +28,12 @@ import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.trip_nights_badge
+import eg.bahr.core.localization.generated.resources.waitlist_tag
 import eg.bahr.feature.trips.model.NextDepartureDto
 import eg.bahr.feature.trips.model.TripCardDto
 import eg.bahr.feature.trips.model.isMultiDay
 import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * One trip in the list (handoff: "Trip cards"): photo with the trip's badge at the top start, then
@@ -48,6 +51,9 @@ import org.jetbrains.compose.resources.pluralStringResource
  * [compact] is the card in a Home row (M4-M1a): the caller gives it a width, the title always takes
  * two lines so a row's cards line up, and the seats pill goes under the price instead of beside it,
  * where it would crowd the price on a narrow card.
+ *
+ * [waitlisted] (M4-M5) adds a small "Waiting list" tag beside the seats pill: the device is on the
+ * waiting list of the sold-out date this card shows (see `WaitlistTags` for exactly when).
  */
 @Composable
 internal fun TripCard(
@@ -56,6 +62,7 @@ internal fun TripCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     compact: Boolean = false,
+    waitlisted: Boolean = false,
 ) {
     BahrCard(modifier = modifier.fillMaxWidth(), onClick = onClick) {
         Box {
@@ -109,14 +116,39 @@ internal fun TripCard(
                         modifier = Modifier.alignByBaseline(),
                     )
                 }
-                if (!compact) seats?.let { SeatBadge(left = it) }
+                if (!compact) AvailabilityTags(seats, waitlisted)
             }
-            if (compact) seats?.let { SeatBadge(left = it) }
+            if (compact) AvailabilityTags(seats, waitlisted)
         }
     }
 }
 
 private const val TITLE_LINES = 2
+
+/**
+ * The seats pill ("Sold out" on a full date), and after it the waiting-list tag when [waitlisted].
+ * The tag uses the badge's tertiary tone, the sold-out ground, since it only ever sits on a sold-out
+ * date; coral itself is for actions.
+ */
+@Composable
+private fun AvailabilityTags(
+    seats: Int?,
+    waitlisted: Boolean,
+) {
+    if (seats == null && !waitlisted) return
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(BahrSpacing.xs)) {
+        seats?.let { SeatBadge(left = it) }
+        if (waitlisted) {
+            BahrBadge(
+                modifier = Modifier.testTag(WAITLIST_TAG),
+                props = BahrBadge.Props(text = stringResource(Res.string.waitlist_tag), tone = BahrBadge.Tone.Tertiary),
+            )
+        }
+    }
+}
+
+/** For tests: the "Waiting list" tag on a card. */
+internal const val WAITLIST_TAG = "trip_card_waitlist_tag"
 
 /**
  * The card photo, or its LQIP, or the bare ground. The size is reserved by the aspect ratio

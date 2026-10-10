@@ -22,6 +22,7 @@ import eg.bahr.feature.trips.data.TripFixtures.facets
 import eg.bahr.feature.trips.data.TripFixtures.page
 import eg.bahr.feature.trips.data.TripFixtures.sectionPage
 import eg.bahr.feature.trips.data.TripFixtures.trip
+import eg.bahr.feature.trips.data.waitlistMemory
 import eg.bahr.feature.trips.model.BadgeDto
 import eg.bahr.feature.trips.model.HomeDto
 import eg.bahr.feature.trips.model.HomeSeeAllDto
@@ -94,7 +95,7 @@ class TripListsScreenshotTest {
         title: String,
     ) {
         val repository = FakeTripRepository(listFiltered = { awaitCancellation() })
-        val vm = CategoryTripsViewModel("on_the_boat", title, repository)
+        val vm = CategoryTripsViewModel("on_the_boat", title, repository, waitlistMemory())
         snap("category_loading", language) { CategoryTripsScreen("on_the_boat", title, {}, {}, viewModel = vm) }
     }
 
@@ -121,7 +122,7 @@ class TripListsScreenshotTest {
                     }
                 },
             )
-        val vm = CategoryTripsViewModel("gone", null, repository)
+        val vm = CategoryTripsViewModel("gone", null, repository, waitlistMemory())
         snap("category_stale_key", language) { CategoryTripsScreen("gone", null, {}, {}, viewModel = vm) }
     }
 
@@ -141,7 +142,7 @@ class TripListsScreenshotTest {
                     page(trips(arabic), facets = chips, totalItems = total.toLong())
                 },
             )
-        val vm = CategoryTripsViewModel("on_the_boat", null, repository)
+        val vm = CategoryTripsViewModel("on_the_boat", null, repository, waitlistMemory())
         filter?.let(vm::selectFilter)
         snap(prefix, language) { CategoryTripsScreen("on_the_boat", null, {}, {}, viewModel = vm) }
     }
@@ -159,7 +160,7 @@ class TripListsScreenshotTest {
     fun sectionGone() {
         val notFound = AppResult.Failure(AppError.Api("NOT_FOUND", null, 404))
         val repository = FakeTripRepository(sectionTrips = { _, _ -> notFound })
-        val vm = SectionTripsViewModel("s-1", "Featured trips", repository)
+        val vm = SectionTripsViewModel("s-1", "Featured trips", repository, waitlistMemory())
         snap("section_gone", AppLanguage.ARABIC, AppLanguage.ENGLISH) {
             SectionTripsScreen("s-1", "Featured trips", {}, {}, viewModel = vm)
         }
@@ -177,7 +178,7 @@ class TripListsScreenshotTest {
                 ->
                 sectionPage(cards(language == AppLanguage.ARABIC), totalPages = 3, totalItems = 41)
             })
-        val vm = SectionTripsViewModel("s-1", title, repository)
+        val vm = SectionTripsViewModel("s-1", title, repository, waitlistMemory())
         snap(prefix, language) { SectionTripsScreen("s-1", title, {}, {}, viewModel = vm) }
     }
 
@@ -205,7 +206,7 @@ class TripListsScreenshotTest {
                 seeAll = HomeSeeAllDto(type = "section", value = "s-1"),
             )
         val repository = FakeTripRepository(listTrips = { page(cards(arabic)) }, home = { AppResult.Success(HomeDto(listOf(row))) })
-        val vm = TripListViewModel(repository)
+        val vm = TripListViewModel(repository, waitlistMemory())
         snap("home_see_all", language) { TripListScreen(onTripClick = {}, viewModel = vm) }
     }
 

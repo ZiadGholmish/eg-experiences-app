@@ -7,6 +7,7 @@ import eg.bahr.core.testing.runViewModelTest
 import eg.bahr.feature.trips.data.FakeTripRepository
 import eg.bahr.feature.trips.data.TripFixtures.page
 import eg.bahr.feature.trips.data.TripFixtures.trip
+import eg.bahr.feature.trips.data.waitlistMemory
 import eg.bahr.feature.trips.model.BannersSectionDto
 import eg.bahr.feature.trips.model.HomeActionDto
 import eg.bahr.feature.trips.model.HomeBannerDto
@@ -41,7 +42,7 @@ class TripListHomeTest {
     fun `sections show in the server's order - unknown ones dropped`() =
         runViewModelTest {
             val sections = listOf(row, SkippedSectionDto("stories", "unknown type"), banners)
-            val vm = TripListViewModel(FakeTripRepository(home = { AppResult.Success(HomeDto(sections)) }))
+            val vm = TripListViewModel(FakeTripRepository(home = { AppResult.Success(HomeDto(sections)) }), waitlistMemory())
 
             advanceUntilIdle()
 
@@ -62,7 +63,7 @@ class TripListHomeTest {
     fun `a failed home ends the wait and is not shown as an error`() =
         runViewModelTest {
             val repository = FakeTripRepository(listTrips = { page(listOf(trip(1))) }, home = { AppResult.Failure(AppError.Network) })
-            val vm = TripListViewModel(repository)
+            val vm = TripListViewModel(repository, waitlistMemory())
 
             advanceUntilIdle()
 
@@ -78,7 +79,7 @@ class TripListHomeTest {
     fun `a slow home holds the list back only until the wait runs out - then sections insert above it`() =
         runViewModelTest {
             val home = CompletableDeferred<AppResult<HomeDto>>()
-            val vm = TripListViewModel(FakeTripRepository(home = { home.await() }))
+            val vm = TripListViewModel(FakeTripRepository(home = { home.await() }), waitlistMemory())
 
             runCurrent()
             assertTrue(vm.uiState.value.awaitingHome, "Home gets a short wait, so its sections usually land with the list")
@@ -104,7 +105,7 @@ class TripListHomeTest {
     @Test
     fun `a home that never answers does not keep the list behind the spinner`() =
         runViewModelTest {
-            val vm = TripListViewModel(FakeTripRepository(home = { awaitCancellation() }))
+            val vm = TripListViewModel(FakeTripRepository(home = { awaitCancellation() }), waitlistMemory())
 
             advanceTimeBy(HOME_WAIT_MILLIS)
             runCurrent()
@@ -115,7 +116,7 @@ class TripListHomeTest {
     @Test
     fun `a home that answers first ends the wait at once - and cancels the timer`() =
         runViewModelTest {
-            val vm = TripListViewModel(FakeTripRepository(home = { AppResult.Success(HomeDto(listOf(row))) }))
+            val vm = TripListViewModel(FakeTripRepository(home = { AppResult.Success(HomeDto(listOf(row))) }), waitlistMemory())
 
             // If the wait's timer were still pending, running everything would move the virtual clock to it.
             advanceUntilIdle()
@@ -130,7 +131,7 @@ class TripListHomeTest {
         runViewModelTest {
             val answers = ArrayDeque(listOf(CompletableDeferred<AppResult<HomeDto>>(), CompletableDeferred()))
             val pending = answers.toList()
-            val vm = TripListViewModel(FakeTripRepository(home = { answers.removeFirst().await() }))
+            val vm = TripListViewModel(FakeTripRepository(home = { answers.removeFirst().await() }), waitlistMemory())
             runCurrent()
 
             vm.refresh()
@@ -148,7 +149,7 @@ class TripListHomeTest {
         runViewModelTest {
             var homeAnswer: AppResult<HomeDto> = AppResult.Success(HomeDto(listOf(banners)))
             val repository = FakeTripRepository(home = { homeAnswer })
-            val vm = TripListViewModel(repository)
+            val vm = TripListViewModel(repository, waitlistMemory())
             advanceUntilIdle()
 
             homeAnswer = AppResult.Failure(AppError.Timeout)

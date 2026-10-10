@@ -38,6 +38,8 @@ kotlinxCoroutines = "1.10.2"
 
 # DateTime — departures are dates, holds are instants; both cross the wire
 kotlinxDatetime = "0.6.2"
+# java.time on Android 7.x (minSdk 24): kotlinx-datetime's JVM artifact is built on it (M4-M5 review #1).
+desugarJdkLibs = "2.1.5"
 
 # Logging
 kermit = "2.0.8"
@@ -121,6 +123,9 @@ kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serializa
 
 # DateTime
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetime" }
+
+# Core library desugaring (java.time below API 26), added to every Android module by the convention.
+desugar-jdk-libs = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugarJdkLibs" }
 
 # Testing
 junit = { module = "junit:junit", version.ref = "junit" }

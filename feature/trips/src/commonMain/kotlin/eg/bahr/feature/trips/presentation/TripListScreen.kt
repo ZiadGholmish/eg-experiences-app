@@ -162,6 +162,7 @@ internal fun TripListScreen(
                 HomeSection(
                     section = section,
                     perPersonLabel = perPersonLabel,
+                    waitlistTags = state.waitlistTags,
                     onTripClick = onTripClick,
                     onAction = onAction,
                 )
@@ -187,7 +188,7 @@ internal fun TripListScreen(
         }
 
         // Paged (M4-M1b): the next page loads as the end comes near, with a footer while it does.
-        pagedTripCards(trips, perPersonLabel, onTripClick)
+        pagedTripCards(trips, perPersonLabel, state.waitlistTags, onTripClick)
     }
 }
 

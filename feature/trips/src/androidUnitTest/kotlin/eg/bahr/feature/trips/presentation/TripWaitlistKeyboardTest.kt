@@ -28,6 +28,7 @@ import eg.bahr.core.testing.captureScreenshot
 import eg.bahr.feature.trips.data.FakeTripRepository
 import eg.bahr.feature.trips.data.TripFixtures.detail
 import eg.bahr.feature.trips.data.TripFixtures.saturdays
+import eg.bahr.feature.trips.data.waitlistMemory
 import eg.bahr.feature.trips.presentation.components.WAITLIST_PHONE_TAG
 import org.junit.Before
 import org.junit.Rule
@@ -74,7 +75,7 @@ class TripWaitlistKeyboardTest {
                 tripBySlug = { AppResult.Success(detail()) },
                 departuresFor = { AppResult.Success(saturdays()) },
             )
-        val vm = TripDetailViewModel("burullus-dawn", repo)
+        val vm = TripDetailViewModel("burullus-dawn", repo, waitlistMemory())
         compose.setContent {
             ProvideAppLanguage(language) {
                 BahrTheme(locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English) {

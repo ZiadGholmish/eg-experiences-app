@@ -5,7 +5,9 @@ import androidx.lifecycle.viewModelScope
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.network.ApiErrorCodes
+import eg.bahr.feature.trips.data.JoinedWaitlist
 import eg.bahr.feature.trips.data.TripRepository
+import eg.bahr.feature.trips.data.WaitlistMemory
 import eg.bahr.feature.trips.model.DepartureDto
 import eg.bahr.feature.trips.model.TripCardDto
 import eg.bahr.feature.trips.model.TripDetailDto
@@ -13,6 +15,7 @@ import eg.bahr.feature.trips.model.WaitlistRequest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
@@ -33,9 +36,10 @@ internal data class TripDetailUiState(
     /** The waiting-list form under the sold-out notice; null until "Join the waiting list" is tapped. */
     val waitlist: WaitlistForm? = null,
     /**
-     * Dates joined in this visit, by departure id, with the phone they were joined under (said back in
-     * the confirmation). Kept per date so another date never reads as joined; not stored on the device,
-     * since a repeat join is harmless (the server answers the same either way).
+     * This trip's dates the device is on the waiting list of, by departure id, with the phone they were
+     * joined under (said back in the confirmation). Kept per date so another date never reads as
+     * joined. Remembered on the device (M4-M5, `WaitlistMemory`), so it survives leaving the page and
+     * a restart; a join made now shows at once, before the store has written it.
      */
     val joinedWaitlists: Map<String, String> = emptyMap(),
     /** What a refused join turned out to mean, said in the availability band (the notice may be gone). */
@@ -84,7 +88,7 @@ internal data class TripDetailUiState(
     val openWaitlist: WaitlistForm?
         get() = waitlist?.takeIf { it.departureId == selectedDeparture?.takeIf { d -> d.availability == DateAvailability.SoldOut }?.id }
 
-    /** The phone the selected date was joined under, if it was joined in this visit. */
+    /** The phone the selected date was joined under, if the device is on its waiting list. */
     val joinedPhone: String?
         get() = selectedDepartureId?.let { joinedWaitlists[it] }
 
@@ -142,35 +146,82 @@ internal fun DepartureDto.isSelectable(): Boolean =
         DateAvailability.Cancelled, DateAvailability.Closed -> false
     }
 
+/**
+ * [waitlists] is the device's memory of waiting-list joins (M4-M5): read for this trip's dates, kept
+ * in step with what the server's dates say (see [reconcileJoins]), and written on a successful join.
+ */
 internal class TripDetailViewModel(
     private val slug: String,
     private val repository: TripRepository,
+    private val waitlists: WaitlistMemory,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(TripDetailUiState(preview = repository.cachedCard(slug)))
     val uiState: StateFlow<TripDetailUiState> = _uiState.asStateFlow()
 
     init {
+        viewModelScope.launch {
+            waitlists.joins.collect { joins ->
+                val today = waitlists.today()
+                val mine = joins.filter { it.tripSlug == slug && it.date >= today }.associate { it.departureId to it.phone }
+                _uiState.update { it.copy(joinedWaitlists = mine) }
+            }
+        }
         load()
     }
 
     /**
      * Two independent reads, each landing on its own: the trip renders as soon as it arrives, and
-     * the date cards (live seat counts) fill in when theirs does.
+     * the date cards (live seat counts) fill in when theirs does. Once the dates are known, the
+     * stored joins are checked against them, once per load.
      */
     fun load() {
         _uiState.update { it.copy(isLoading = true, error = null, liveDeparturesLoading = true) }
-        viewModelScope.launch {
-            when (val trip = repository.tripBySlug(slug)) {
-                is AppResult.Success ->
-                    _uiState.update { it.copy(isLoading = false, trip = trip.data).keepingSelection() }
-                is AppResult.Failure ->
-                    _uiState.update { it.copy(isLoading = false, error = trip.error) }
+        val tripRead =
+            viewModelScope.launch {
+                when (val trip = repository.tripBySlug(slug)) {
+                    is AppResult.Success ->
+                        _uiState.update { it.copy(isLoading = false, trip = trip.data).keepingSelection() }
+                    is AppResult.Failure ->
+                        _uiState.update { it.copy(isLoading = false, error = trip.error) }
+                }
             }
-        }
         viewModelScope.launch {
             val live = (repository.departuresFor(slug) as? AppResult.Success)?.data
             // A failure is not an error screen: the trip's own `dates` stand in (see `departures`).
             _uiState.update { it.copy(liveDeparturesLoading = false, liveDepartures = live).keepingSelection() }
+            // The live list when it answered, else the trip's own copy once that has: both are every
+            // upcoming date (the contract lists them all from today on). Neither: nothing is known, so
+            // nothing is dropped.
+            val dates = live ?: tripRead.join().let { _uiState.value.trip?.dates }
+            if (dates != null) reconcileJoins(dates)
+        }
+    }
+
+    /**
+     * Keeps the stored joins of this trip in step with a fresh read of its [dates] (M4-M5):
+     * - a date still sold out keeps its join;
+     * - a date bookable again drops it, and the band says "Seats just opened up" for it, once: the
+     *   join is gone, so the next visit says nothing;
+     * - a date cancelled, closed (past its cutoff) or no longer listed drops it silently: there is no
+     *   list left to be on (`joinWaitlist` answers DEPARTURE_NOT_OPEN / NOT_FOUND for it), and both
+     *   reads list every upcoming date, so "not listed" means gone. Silent by product decision
+     *   (Ziad, 2026-10-10): the date card already shows "Cancelled" / "Booking closed".
+     * If two stored dates reopened at once, only the first gets the message (the band shows one
+     * outcome); both joins are dropped.
+     * Only this trip's joins are judged against its dates: another trip's are not in this list. Any
+     * trip's passed dates are dropped too ([WaitlistMemory.forgetPassed]).
+     */
+    private suspend fun reconcileJoins(dates: List<DepartureDto>) {
+        waitlists.forgetPassed()
+        val byId = dates.associateBy { it.id }
+        val mine = waitlists.joins.first().filter { it.tripSlug == slug }
+        val reopened = mine.firstNotNullOfOrNull { join -> byId[join.departureId]?.takeIf { it.availability == DateAvailability.Open } }
+        val dropped = mine.filterNot { byId[it.departureId]?.availability == DateAvailability.SoldOut }
+        waitlists.forget(dropped.mapTo(mutableSetOf(), JoinedWaitlist::departureId))
+        if (reopened != null) {
+            _uiState.update {
+                it.copy(waitlistOutcome = WaitlistOutcome(reopened.id, reopened.date, WaitlistOutcome.Kind.SeatsOpened))
+            }
         }
     }
 
@@ -193,7 +244,12 @@ internal class TripDetailViewModel(
     fun openWaitlist() {
         _uiState.update { state ->
             val full = state.selectedDeparture?.takeIf { it.availability == DateAvailability.SoldOut } ?: return@update state
-            if (state.waitlist?.departureId == full.id) state else state.copy(waitlist = WaitlistForm(full.id))
+            when {
+                // Already on its list: the notice says so instead of offering the form again.
+                full.id in state.joinedWaitlists -> state
+                state.waitlist?.departureId == full.id -> state
+                else -> state.copy(waitlist = WaitlistForm(full.id))
+            }
         }
     }
 
@@ -234,13 +290,15 @@ internal class TripDetailViewModel(
         viewModelScope.launch {
             val result = repository.joinWaitlist(form.departureId, WaitlistRequest(phone = form.phone, partySize = form.partySize))
             when (result) {
-                is AppResult.Success ->
+                is AppResult.Success -> {
                     _uiState.update {
                         it.copy(
                             joinedWaitlists = it.joinedWaitlists + (form.departureId to form.phone),
                             waitlist = it.waitlist?.takeUnless { open -> open.departureId == form.departureId },
                         )
                     }
+                    waitlists.remember(form.departureId, slug, full.date, form.partySize, form.phone)
+                }
                 is AppResult.Failure ->
                     when ((result.error as? AppError.Api)?.code) {
                         ApiErrorCodes.CONFLICT, ApiErrorCodes.DEPARTURE_NOT_OPEN, ApiErrorCodes.NOT_FOUND ->
@@ -288,6 +346,8 @@ internal class TripDetailViewModel(
                 )
             }
         }
+        // The date has seats or is gone: an older join for it (from another visit) means nothing now.
+        if (kind != null) waitlists.forget(setOf(departureId))
     }
 
     /** Applies [change] to the open form, if it is still for [departureId] (the user may have moved on). */

@@ -12,6 +12,7 @@ import eg.bahr.core.network.ApiErrorCodes
 import eg.bahr.feature.trips.data.TripListPagingSource
 import eg.bahr.feature.trips.data.TripPagingConfig
 import eg.bahr.feature.trips.data.TripRepository
+import eg.bahr.feature.trips.data.WaitlistMemory
 import eg.bahr.feature.trips.model.FILTER_ALL
 import eg.bahr.feature.trips.model.FacetDto
 import eg.bahr.feature.trips.model.FacetType
@@ -46,6 +47,7 @@ internal data class CategoryTripsUiState(
     val totalItems: Long? = null,
     val fallbackTitle: String? = null,
     val categoryAccepted: Boolean = false,
+    val waitlistTags: WaitlistTags = WaitlistTags.None,
 ) {
     /** The category's own chip: its label, icon and tone make the header. Matched on type and key. */
     val categoryFacet: FacetDto?
@@ -77,6 +79,7 @@ internal class CategoryTripsViewModel(
     category: String,
     title: String?,
     private val repository: TripRepository,
+    waitlists: WaitlistMemory,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(CategoryTripsUiState(category = category, fallbackTitle = title))
     val uiState: StateFlow<CategoryTripsUiState> = _uiState.asStateFlow()
@@ -98,6 +101,10 @@ internal class CategoryTripsViewModel(
                 // cards or the error with its retry (see `PagedListStatus`).
             }.distinctTrips()
             .cachedIn(viewModelScope)
+
+    init {
+        collectWaitlistTags(waitlists) { tags -> _uiState.update { it.copy(waitlistTags = tags) } }
+    }
 
     /** A filter chip tapped. Tapping the active one (or "all") clears the filter. */
     fun selectFilter(key: String) {

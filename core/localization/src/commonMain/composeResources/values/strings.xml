@@ -104,6 +104,8 @@
     <string name="departure_closed">Booking closed</string>
     <string name="departure_cancelled">Cancelled</string>
     <string name="departure_sold_out">Sold out</string>
+    <!-- M4-M5: a sold-out date this device is on the waiting list of: its date card and its trip card tag. -->
+    <string name="waitlist_tag">Waiting list</string>
 
     <!-- Formats. Day and month names are the date's words only; BahrFormat puts them in order
          (weekday, day, month[, year]), which is the same in both languages. -->

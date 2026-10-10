@@ -14,6 +14,7 @@ import eg.bahr.feature.trips.data.TripFixtures.facets
 import eg.bahr.feature.trips.data.TripFixtures.page
 import eg.bahr.feature.trips.data.TripFixtures.trip
 import eg.bahr.feature.trips.data.TripQuery
+import eg.bahr.feature.trips.data.waitlistMemory
 import eg.bahr.feature.trips.model.FacetDto
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
@@ -45,7 +46,7 @@ class SearchTripsViewModelTest {
     private fun TestScope.searchVm(
         repository: FakeTripRepository = repository(),
         recents: FakeRecentSearchesStore = FakeRecentSearchesStore(),
-    ) = SearchTripsViewModel(repository, recents).also { runCurrent() }
+    ) = SearchTripsViewModel(repository, recents, waitlistMemory()).also { runCurrent() }
 
     @Test
     fun `typing is searched once it rests for the debounce - not before`() =

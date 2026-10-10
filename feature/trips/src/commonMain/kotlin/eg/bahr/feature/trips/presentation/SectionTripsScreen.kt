@@ -64,6 +64,7 @@ internal fun SectionTripsScreen(
             listBody(
                 trips = trips,
                 perPersonLabel = perPersonLabel,
+                waitlistTags = state.waitlistTags,
                 emptyMessage = { stringResource(Res.string.trips_empty) },
                 onTripClick = onTripClick,
             )

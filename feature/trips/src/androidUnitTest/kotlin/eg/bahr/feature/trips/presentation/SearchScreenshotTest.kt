@@ -22,6 +22,7 @@ import eg.bahr.feature.trips.data.FakeTripRepository
 import eg.bahr.feature.trips.data.TripFixtures.facets
 import eg.bahr.feature.trips.data.TripFixtures.page
 import eg.bahr.feature.trips.data.TripFixtures.trip
+import eg.bahr.feature.trips.data.waitlistMemory
 import eg.bahr.feature.trips.model.NextDepartureDto
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.datetime.LocalDate
@@ -70,16 +71,18 @@ class SearchScreenshotTest {
 
     private fun recents(language: AppLanguage) {
         val store = FakeRecentSearchesStore(listOf("فلوكة", "birds", "بلطيم", "kayak"))
-        val vm = SearchTripsViewModel(FakeTripRepository(), store)
+        val vm = SearchTripsViewModel(FakeTripRepository(), store, waitlistMemory())
         snap("search_recents", language, vm)
     }
 
     /** No recent searches yet: the line on what can be searched. */
     @Test
-    fun startArabic() = snap("search_start", AppLanguage.ARABIC, SearchTripsViewModel(FakeTripRepository(), FakeRecentSearchesStore()))
+    fun startArabic() =
+        snap("search_start", AppLanguage.ARABIC, SearchTripsViewModel(FakeTripRepository(), FakeRecentSearchesStore(), waitlistMemory()))
 
     @Test
-    fun startEnglish() = snap("search_start", AppLanguage.ENGLISH, SearchTripsViewModel(FakeTripRepository(), FakeRecentSearchesStore()))
+    fun startEnglish() =
+        snap("search_start", AppLanguage.ENGLISH, SearchTripsViewModel(FakeTripRepository(), FakeRecentSearchesStore(), waitlistMemory()))
 
     /** A search waiting for its first page: the spinner under the field, the text kept. */
     @Test
@@ -92,7 +95,8 @@ class SearchScreenshotTest {
         language: AppLanguage,
         text: String,
     ) {
-        val vm = SearchTripsViewModel(FakeTripRepository(listFiltered = { awaitCancellation() }), FakeRecentSearchesStore())
+        val vm =
+            SearchTripsViewModel(FakeTripRepository(listFiltered = { awaitCancellation() }), FakeRecentSearchesStore(), waitlistMemory())
         vm.searchRecent(text)
         snap("search_loading", language, vm)
     }
@@ -113,7 +117,7 @@ class SearchScreenshotTest {
         val counts = mapOf("all" to 2, "weekend" to 2, "under_400" to 1, "half_day" to 0)
         val chips = facets(arabic = arabic).map { it.copy(count = counts[it.key] ?: it.count) }
         val repository = FakeTripRepository(listFiltered = { page(cards(arabic), facets = chips, totalItems = 2) })
-        val vm = SearchTripsViewModel(repository, FakeRecentSearchesStore())
+        val vm = SearchTripsViewModel(repository, FakeRecentSearchesStore(), waitlistMemory())
         vm.searchRecent(text)
         snap("search_results", language, vm)
     }
@@ -132,7 +136,7 @@ class SearchScreenshotTest {
         val arabic = language == AppLanguage.ARABIC
         val zero = facets(arabic = arabic).map { it.copy(count = 0) }
         val repository = FakeTripRepository(listFiltered = { page(emptyList(), facets = zero, totalItems = 0, totalPages = 0) })
-        val vm = SearchTripsViewModel(repository, FakeRecentSearchesStore())
+        val vm = SearchTripsViewModel(repository, FakeRecentSearchesStore(), waitlistMemory())
         vm.searchRecent(text)
         snap("search_no_results", language, vm)
     }
@@ -149,7 +153,7 @@ class SearchScreenshotTest {
         text: String,
     ) {
         val repository = FakeTripRepository(listFiltered = { AppResult.Failure(AppError.Network) })
-        val vm = SearchTripsViewModel(repository, FakeRecentSearchesStore())
+        val vm = SearchTripsViewModel(repository, FakeRecentSearchesStore(), waitlistMemory())
         vm.searchRecent(text)
         snap("search_error", language, vm)
     }

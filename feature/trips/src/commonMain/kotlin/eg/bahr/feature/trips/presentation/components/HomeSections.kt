@@ -51,6 +51,7 @@ import eg.bahr.feature.trips.model.SeeAllType
 import eg.bahr.feature.trips.model.SkippedSectionDto
 import eg.bahr.feature.trips.model.TripsSectionDto
 import eg.bahr.feature.trips.navigation.HomeAction
+import eg.bahr.feature.trips.presentation.WaitlistTags
 import eg.bahr.feature.trips.presentation.parseAspectRatio
 import eg.bahr.feature.trips.presentation.toHomeAction
 import kotlinx.coroutines.delay
@@ -66,6 +67,7 @@ import org.jetbrains.compose.resources.stringResource
 internal fun HomeSection(
     section: HomeSectionDto,
     perPersonLabel: String,
+    waitlistTags: WaitlistTags,
     onTripClick: (slug: String) -> Unit,
     onAction: (HomeAction) -> Unit,
     modifier: Modifier = Modifier,
@@ -76,7 +78,7 @@ internal fun HomeSection(
 
         is TripsSectionDto ->
             Titled(section.title, modifier, seeAll = section.seeAllAction()?.let { action -> { onAction(action) } }) {
-                TripRow(section, perPersonLabel, onTripClick)
+                TripRow(section, perPersonLabel, waitlistTags, onTripClick)
             }
 
         is CategoriesSectionDto ->
@@ -284,6 +286,7 @@ private fun PagerDots(
 private fun TripRow(
     section: TripsSectionDto,
     perPersonLabel: String,
+    waitlistTags: WaitlistTags,
     onTripClick: (slug: String) -> Unit,
 ) {
     LazyRow(
@@ -298,6 +301,7 @@ private fun TripRow(
                 onClick = { onTripClick(trip.slug) },
                 modifier = Modifier.fillParentMaxWidth(ROW_ITEM_WIDTH_FRACTION),
                 compact = true,
+                waitlisted = waitlistTags.shows(trip),
             )
         }
     }

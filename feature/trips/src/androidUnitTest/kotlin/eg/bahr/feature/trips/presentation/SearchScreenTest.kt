@@ -23,6 +23,7 @@ import eg.bahr.feature.trips.data.FakeTripRepository
 import eg.bahr.feature.trips.data.TripFixtures.page
 import eg.bahr.feature.trips.data.TripFixtures.trip
 import eg.bahr.feature.trips.data.TripQuery
+import eg.bahr.feature.trips.data.waitlistMemory
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -56,7 +57,7 @@ class SearchScreenTest {
     @Test
     fun `a recent search fills the field and shows its results - x goes back to the recents`() {
         val repository = FakeTripRepository(listFiltered = { q -> page(listOf(trip(1, title = "A trip for ${q.q}"))) })
-        val vm = SearchTripsViewModel(repository, FakeRecentSearchesStore(listOf("birds", "kayak")))
+        val vm = SearchTripsViewModel(repository, FakeRecentSearchesStore(listOf("birds", "kayak")), waitlistMemory())
         show(vm)
         compose.onNodeWithTag(SEARCH_FIELD_TAG).assertIsFocused()
 
@@ -78,7 +79,7 @@ class SearchScreenTest {
 
     @Test
     fun `typed or pasted control characters never reach the field`() {
-        val vm = SearchTripsViewModel(FakeTripRepository(), FakeRecentSearchesStore())
+        val vm = SearchTripsViewModel(FakeTripRepository(), FakeRecentSearchesStore(), waitlistMemory())
         show(vm)
 
         compose.onNodeWithTag(SEARCH_FIELD_TAG).performTextInput("bi\u0000rd\u001Bs")
@@ -90,7 +91,7 @@ class SearchScreenTest {
 
     @Test
     fun `coming back to search does not take the focus again`() {
-        val vm = SearchTripsViewModel(FakeTripRepository(), FakeRecentSearchesStore())
+        val vm = SearchTripsViewModel(FakeTripRepository(), FakeRecentSearchesStore(), waitlistMemory())
         var shown by mutableStateOf(true)
         compose.setContent {
             ProvideAppLanguage(AppLanguage.ENGLISH) {

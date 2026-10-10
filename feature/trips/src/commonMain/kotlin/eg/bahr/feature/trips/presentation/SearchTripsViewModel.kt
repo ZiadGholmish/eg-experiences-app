@@ -14,6 +14,7 @@ import eg.bahr.feature.trips.data.TripApiService
 import eg.bahr.feature.trips.data.TripListPagingSource
 import eg.bahr.feature.trips.data.TripPagingConfig
 import eg.bahr.feature.trips.data.TripRepository
+import eg.bahr.feature.trips.data.WaitlistMemory
 import eg.bahr.feature.trips.model.FILTER_ALL
 import eg.bahr.feature.trips.model.FacetDto
 import eg.bahr.feature.trips.model.FacetType
@@ -60,6 +61,7 @@ internal data class SearchTripsUiState(
     val facets: List<FacetDto> = emptyList(),
     val totalItems: Long? = null,
     val recents: List<String> = emptyList(),
+    val waitlistTags: WaitlistTags = WaitlistTags.None,
 ) {
     /** The filter chips, in the served order. The category chips are not drawn on the search page. */
     val filterChips: List<FacetDto>
@@ -97,6 +99,7 @@ private data class SearchQuery(
 internal class SearchTripsViewModel(
     private val repository: TripRepository,
     private val recentSearches: RecentSearchesStore,
+    waitlists: WaitlistMemory,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(SearchTripsUiState())
     val uiState: StateFlow<SearchTripsUiState> = _uiState.asStateFlow()
@@ -133,6 +136,7 @@ internal class SearchTripsViewModel(
                 .catch { log.w(it) { "Recent searches not read" } }
                 .collect { recents -> _uiState.update { it.copy(recents = recents) } }
         }
+        collectWaitlistTags(waitlists) { tags -> _uiState.update { it.copy(waitlistTags = tags) } }
     }
 
     /** The field changed. Longer than the contract allows is refused, never cut (a cut can split a character). */

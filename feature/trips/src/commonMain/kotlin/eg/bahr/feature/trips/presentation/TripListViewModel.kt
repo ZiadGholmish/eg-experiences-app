@@ -11,6 +11,7 @@ import eg.bahr.core.common.result.AppResult
 import eg.bahr.feature.trips.data.TripListPagingSource
 import eg.bahr.feature.trips.data.TripPagingConfig
 import eg.bahr.feature.trips.data.TripRepository
+import eg.bahr.feature.trips.data.WaitlistMemory
 import eg.bahr.feature.trips.model.BannersSectionDto
 import eg.bahr.feature.trips.model.CategoriesSectionDto
 import eg.bahr.feature.trips.model.HomeSectionDto
@@ -37,6 +38,8 @@ import kotlinx.coroutines.launch
 internal data class TripListUiState(
     val awaitingHome: Boolean = true,
     val sections: List<HomeSectionDto> = emptyList(),
+    /** Which cards carry the "Waiting list" tag (M4-M5), in the rows and the list alike. */
+    val waitlistTags: WaitlistTags = WaitlistTags.None,
 )
 
 /**
@@ -53,6 +56,7 @@ internal const val HOME_WAIT_MILLIS = 1_200L
 
 internal class TripListViewModel(
     private val repository: TripRepository,
+    waitlists: WaitlistMemory,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(TripListUiState())
     val uiState: StateFlow<TripListUiState> = _uiState.asStateFlow()
@@ -79,6 +83,12 @@ internal class TripListViewModel(
 
     init {
         loadHome()
+        viewModelScope.launch {
+            // Home opens on every start, so a phone left on a date that has since run is not kept on
+            // the device just because its trip page was never opened again.
+            waitlists.forgetPassed()
+        }
+        collectWaitlistTags(waitlists) { tags -> _uiState.update { it.copy(waitlistTags = tags) } }
     }
 
     /** Retry, from the screen's error view: reads Home again and starts the list over. */

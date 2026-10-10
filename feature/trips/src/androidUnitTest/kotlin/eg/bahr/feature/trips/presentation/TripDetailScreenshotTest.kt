@@ -17,8 +17,12 @@ import eg.bahr.core.localization.ProvideAppLanguage
 import eg.bahr.core.network.ApiErrorCodes
 import eg.bahr.core.testing.captureScreenshot
 import eg.bahr.feature.trips.data.FakeTripRepository
+import eg.bahr.feature.trips.data.FakeWaitlistJoinsStore
 import eg.bahr.feature.trips.data.TripDetailPayloads
 import eg.bahr.feature.trips.data.TripFixtures.trip
+import eg.bahr.feature.trips.data.WaitlistMemory
+import eg.bahr.feature.trips.data.storedJoin
+import eg.bahr.feature.trips.data.waitlistMemory
 import eg.bahr.feature.trips.model.BadgeDto
 import eg.bahr.feature.trips.model.DepartureDto
 import eg.bahr.feature.trips.model.ImageDto
@@ -175,6 +179,26 @@ class TripDetailScreenshotTest {
         }
 
     /**
+     * M4-M5: the device joined this sold-out date's list on an earlier visit (a restart: a new view
+     * model over the stored join). Its date card reads "On the waiting list" and the notice says so with
+     * the phone it was left on, instead of offering Join again.
+     */
+    @Test
+    fun waitlistRememberedArabic() =
+        snap("trip_detail_waitlist_remembered", AppLanguage.ARABIC, select = SOLD_OUT_ID, waitlists = rememberedJoin()) {
+            serve(TripDetailPayloads.arabic, TripDetailPayloads.arabicDepartures)
+        }
+
+    @Test
+    fun waitlistRememberedEnglish() =
+        snap("trip_detail_waitlist_remembered", AppLanguage.ENGLISH, select = SOLD_OUT_ID, waitlists = rememberedJoin()) {
+            serve(TripDetailPayloads.english, TripDetailPayloads.englishDepartures)
+        }
+
+    private fun rememberedJoin() =
+        waitlistMemory(FakeWaitlistJoinsStore(listOf(storedJoin(departureId = SOLD_OUT_ID, tripSlug = SLUG, date = "2026-10-24"))))
+
+    /**
      * `CONFLICT`: seats opened up on the date while it showed as full. The dates are read again (here
      * the re-read answers it bookable), the notice goes and the band says so; the button reads Continue.
      */
@@ -309,9 +333,10 @@ class TripDetailScreenshotTest {
         language: AppLanguage,
         select: String? = null,
         act: (TripDetailViewModel) -> Unit = {},
+        waitlists: WaitlistMemory = waitlistMemory(),
         stub: FakeTripRepository.() -> Unit,
     ) {
-        val viewModel = TripDetailViewModel(SLUG, FakeTripRepository().apply(stub))
+        val viewModel = TripDetailViewModel(SLUG, FakeTripRepository().apply(stub), waitlists)
         compose.setContent {
             ProvideAppLanguage(language) {
                 BahrTheme(locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English) {

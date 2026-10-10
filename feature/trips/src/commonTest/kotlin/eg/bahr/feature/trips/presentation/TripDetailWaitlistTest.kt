@@ -7,6 +7,7 @@ import eg.bahr.core.testing.runViewModelTest
 import eg.bahr.feature.trips.data.FakeTripRepository
 import eg.bahr.feature.trips.data.TripFixtures.detail
 import eg.bahr.feature.trips.data.TripFixtures.saturdays
+import eg.bahr.feature.trips.data.waitlistMemory
 import eg.bahr.feature.trips.model.DepartureDto
 import eg.bahr.feature.trips.model.PolicyDto
 import eg.bahr.feature.trips.model.WaitlistRequest
@@ -36,7 +37,7 @@ class TripDetailWaitlistTest {
     )
 
     private fun TestScope.soldOutPicked(repository: FakeTripRepository): TripDetailViewModel {
-        val vm = TripDetailViewModel("burullus-dawn", repository)
+        val vm = TripDetailViewModel("burullus-dawn", repository, waitlistMemory())
         advanceUntilIdle()
         vm.selectDeparture(SOLD_OUT)
         return vm
@@ -47,7 +48,7 @@ class TripDetailWaitlistTest {
     @Test
     fun `the form opens only under a sold-out date`() =
         runViewModelTest {
-            val vm = TripDetailViewModel("burullus-dawn", repo())
+            val vm = TripDetailViewModel("burullus-dawn", repo(), waitlistMemory())
             advanceUntilIdle()
 
             vm.openWaitlist()
