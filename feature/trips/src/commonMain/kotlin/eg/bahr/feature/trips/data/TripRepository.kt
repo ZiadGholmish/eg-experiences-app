@@ -4,6 +4,7 @@ import eg.bahr.core.common.result.AppResult
 import eg.bahr.feature.trips.model.DepartureDto
 import eg.bahr.feature.trips.model.HomeDto
 import eg.bahr.feature.trips.model.TripCardDto
+import eg.bahr.feature.trips.model.TripCardPageDto
 import eg.bahr.feature.trips.model.TripDetailDto
 import eg.bahr.feature.trips.model.TripPageDto
 import eg.bahr.feature.trips.model.TripsSectionDto
@@ -14,7 +15,18 @@ import eg.bahr.feature.trips.model.WaitlistRequest
  * (the project uses hand-written fakes, no mocking library).
  */
 internal interface TripRepository {
-    suspend fun listTrips(page: Int = 0): AppResult<TripPageDto>
+    /** One page of `GET /trips`, optionally narrowed by a [category] key and a [filter] value (null = none). */
+    suspend fun listTrips(
+        page: Int = 0,
+        category: String? = null,
+        filter: String? = null,
+    ): AppResult<TripPageDto>
+
+    /** One page of a Home `trips` row's whole list (its "See all"). */
+    suspend fun sectionTrips(
+        sectionId: String,
+        page: Int,
+    ): AppResult<TripCardPageDto>
 
     /** Home's server-driven sections (banners, trip rows, categories), in the server's order. */
     suspend fun home(): AppResult<HomeDto>
@@ -38,7 +50,7 @@ internal interface TripRepository {
 }
 
 /**
- * Remembers the cards of the pages (and Home rows) it has loaded, for [cachedCard]; otherwise a pass-through. It is
+ * Remembers the cards of the pages (Home rows, "All trips", category and "See all" lists) it has loaded, for [cachedCard]; otherwise a pass-through. It is
  * the seam where real caching goes: the requirements doc calls for an offline-renderable ticket, and
  * trip detail is the other read worth holding onto between launches.
  *
@@ -49,9 +61,22 @@ internal class DefaultTripRepository(
 ) : TripRepository {
     private val cards = mutableMapOf<String, TripCardDto>()
 
-    override suspend fun listTrips(page: Int): AppResult<TripPageDto> =
-        api.listTrips(page = page).also { result ->
-            if (result is AppResult.Success) result.data.items.forEach { cards[it.slug] = it }
+    override suspend fun listTrips(
+        page: Int,
+        category: String?,
+        filter: String?,
+    ): AppResult<TripPageDto> =
+        api.listTrips(page = page, category = category, filter = filter).also { result ->
+            if (result is AppResult.Success) remember(result.data.items)
+        }
+
+    // A "See all" list's cards are remembered too, so a trip opened from it is text-first as well.
+    override suspend fun sectionTrips(
+        sectionId: String,
+        page: Int,
+    ): AppResult<TripCardPageDto> =
+        api.sectionTrips(sectionId = sectionId, page = page).also { result ->
+            if (result is AppResult.Success) remember(result.data.items)
         }
 
     // A Home row's cards are remembered too, so a trip opened from a row is text-first like one from the list.
@@ -60,7 +85,7 @@ internal class DefaultTripRepository(
             if (result is AppResult.Success) {
                 result.data.sections
                     .filterIsInstance<TripsSectionDto>()
-                    .forEach { row -> row.items.forEach { cards[it.slug] = it } }
+                    .forEach { row -> remember(row.items) }
             }
         }
 
@@ -74,4 +99,6 @@ internal class DefaultTripRepository(
     ): AppResult<Unit> = api.joinWaitlist(departureId, request)
 
     override fun cachedCard(slug: String): TripCardDto? = cards[slug]
+
+    private fun remember(items: List<TripCardDto>) = items.forEach { cards[it.slug] = it }
 }

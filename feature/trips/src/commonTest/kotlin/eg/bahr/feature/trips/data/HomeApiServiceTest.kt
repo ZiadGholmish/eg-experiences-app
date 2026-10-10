@@ -6,6 +6,8 @@ import eg.bahr.core.network.apiHttpClient
 import eg.bahr.feature.trips.model.BannersSectionDto
 import eg.bahr.feature.trips.model.CategoriesSectionDto
 import eg.bahr.feature.trips.model.HomeDto
+import eg.bahr.feature.trips.model.HomeSectionsSerializer
+import eg.bahr.feature.trips.model.HomeSeeAllDto
 import eg.bahr.feature.trips.model.SkippedSectionDto
 import eg.bahr.feature.trips.model.TripsSectionDto
 import io.ktor.client.engine.mock.MockEngine
@@ -16,6 +18,7 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.headersOf
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDate
+import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -128,6 +131,29 @@ class HomeApiServiceTest {
             assertEquals("On the boat", boat.label)
             assertEquals("sailing", boat.icon)
             assertEquals("primary", boat.tone)
+        }
+
+    @Test
+    fun `a trip row carries its whole list's length and where See all leads - older rows carry neither`() =
+        runTest {
+            val rows = home().sections.filterIsInstance<TripsSectionDto>()
+
+            val featured = rows.first { it.title == "Featured trips" }
+            assertEquals(12, featured.totalItems)
+            assertEquals(HomeSeeAllDto(type = "section", value = "0199c3a0-5eed-7000-8000-000000000702"), featured.seeAll)
+
+            // An older server (before M4-B1b) sends neither: no "See all" then.
+            val json = Json { ignoreUnknownKeys = true }
+            val older =
+                HomeSectionsSerializer.decodeSection(
+                    json,
+                    json.parseToJsonElement(
+                        """{"id":"r","type":"trips","layout":"row","items":[{"slug":"a","title":"A","durationLabel":"",
+                        "price":{"amount":1,"currency":"EGP"}}]}""",
+                    ),
+                )
+            assertNull(assertIs<TripsSectionDto>(older).totalItems)
+            assertNull(older.seeAll)
         }
 
     @Test

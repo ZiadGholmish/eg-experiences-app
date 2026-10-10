@@ -5,9 +5,11 @@ import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.network.MoneyDto
 import eg.bahr.feature.trips.model.BadgeDto
 import eg.bahr.feature.trips.model.DepartureDto
+import eg.bahr.feature.trips.model.FacetDto
 import eg.bahr.feature.trips.model.HomeDto
 import eg.bahr.feature.trips.model.NextDepartureDto
 import eg.bahr.feature.trips.model.TripCardDto
+import eg.bahr.feature.trips.model.TripCardPageDto
 import eg.bahr.feature.trips.model.TripDetailDto
 import eg.bahr.feature.trips.model.TripPageDto
 import eg.bahr.feature.trips.model.WaitlistRequest
@@ -22,6 +24,9 @@ import kotlinx.datetime.LocalDate
  */
 internal class FakeTripRepository(
     var listTrips: suspend (page: Int) -> AppResult<TripPageDto> = { unset() },
+    /** The filtered list (category page); defaults to [listTrips], which ignores the query. */
+    var listFiltered: (suspend (query: TripQuery) -> AppResult<TripPageDto>)? = null,
+    var sectionTrips: suspend (sectionId: String, page: Int) -> AppResult<TripCardPageDto> = { _, _ -> unset() },
     var tripBySlug: suspend (slug: String) -> AppResult<TripDetailDto> = { unset() },
     var departuresFor: suspend (slug: String) -> AppResult<List<DepartureDto>> = { unset() },
     var cards: Map<String, TripCardDto> = emptyMap(),
@@ -29,6 +34,8 @@ internal class FakeTripRepository(
     var home: suspend () -> AppResult<HomeDto> = { unset() },
 ) : TripRepository {
     val requestedPages = mutableListOf<Int>()
+    val requestedQueries = mutableListOf<TripQuery>()
+    val sectionRequests = mutableListOf<Pair<String, Int>>()
     var homeReads = 0
         private set
 
@@ -40,9 +47,23 @@ internal class FakeTripRepository(
     val departureReads = mutableListOf<String>()
     val waitlistJoins = mutableListOf<Pair<String, WaitlistRequest>>()
 
-    override suspend fun listTrips(page: Int): AppResult<TripPageDto> {
+    override suspend fun listTrips(
+        page: Int,
+        category: String?,
+        filter: String?,
+    ): AppResult<TripPageDto> {
+        val query = TripQuery(page, category, filter)
         requestedPages += page
-        return listTrips.invoke(page)
+        requestedQueries += query
+        return listFiltered?.invoke(query) ?: listTrips.invoke(page)
+    }
+
+    override suspend fun sectionTrips(
+        sectionId: String,
+        page: Int,
+    ): AppResult<TripCardPageDto> {
+        sectionRequests += sectionId to page
+        return sectionTrips.invoke(sectionId, page)
     }
 
     override suspend fun tripBySlug(slug: String): AppResult<TripDetailDto> = tripBySlug.invoke(slug)
@@ -66,6 +87,13 @@ internal class FakeTripRepository(
         fun unset(): AppResult.Failure = AppResult.Failure(AppError.Unknown("FakeTripRepository: call not stubbed"))
     }
 }
+
+/** One `GET /trips` call as the fake saw it. */
+internal data class TripQuery(
+    val page: Int,
+    val category: String? = null,
+    val filter: String? = null,
+)
 
 /**
  * Test data in the contract's `TripCard` shape. Copy is Arabic because Arabic is what most users
@@ -94,9 +122,58 @@ internal object TripFixtures {
         trips: List<TripCardDto>,
         page: Int = 0,
         totalPages: Int = 1,
+        facets: List<FacetDto> = emptyList(),
+        totalItems: Long = trips.size.toLong(),
     ) = AppResult.Success(
-        TripPageDto(items = trips, page = page, size = trips.size, totalItems = trips.size.toLong(), totalPages = totalPages),
+        TripPageDto(items = trips, page = page, size = trips.size, totalItems = totalItems, totalPages = totalPages, facets = facets),
     )
+
+    fun sectionPage(
+        trips: List<TripCardDto>,
+        page: Int = 0,
+        totalPages: Int = 1,
+        totalItems: Long = trips.size.toLong(),
+    ) = AppResult.Success(
+        TripCardPageDto(items = trips, page = page, size = trips.size, totalItems = totalItems, totalPages = totalPages),
+    )
+
+    /** The served chips (M4-B1): the four filters, then categories, as `listTrips` orders them. */
+    fun facets(
+        category: String? = null,
+        filter: String? = null,
+        arabic: Boolean = false,
+    ): List<FacetDto> {
+        fun t(
+            ar: String,
+            en: String,
+        ) = if (arabic) ar else en
+        val active = filter ?: "all"
+        val filters =
+            listOf(
+                Triple("all", t("كل الرحلات", "All trips"), "apps") to 6,
+                Triple("weekend", t("الويك إند", "Weekend"), "calendar_month") to 4,
+                Triple("under_400", t("أقل من 400", "Under 400"), "sell") to 0,
+                Triple("half_day", t("نص يوم", "Half day"), "schedule") to 1,
+            ).map { (chip, count) ->
+                FacetDto(
+                    type = "filter",
+                    key = chip.first,
+                    label = chip.second,
+                    icon = chip.third,
+                    count = count,
+                    selected =
+                        chip.first == active,
+                )
+            }
+        val categories =
+            listOf(
+                listOf("on_the_boat", t("في القارب", "On the boat"), "sailing", "primary"),
+                listOf("birds", t("طيور", "Birds"), "flutter_dash", "secondary"),
+            ).map { (key, label, icon, tone) ->
+                FacetDto(type = "category", key = key, label = label, icon = icon, tone = tone, count = 3, selected = key == category)
+            }
+        return filters + categories
+    }
 
     /** The seeded dawn trip's four Saturdays: 6, 2, 0 (sold out) and 11 seats left. */
     fun saturdays(): List<DepartureDto> =

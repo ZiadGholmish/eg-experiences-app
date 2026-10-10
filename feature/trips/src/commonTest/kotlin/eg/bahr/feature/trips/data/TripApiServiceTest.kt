@@ -18,7 +18,6 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 
@@ -63,7 +62,7 @@ class TripApiServiceTest {
                 page.items.map { it.slug },
             )
             assertEquals(listOf(450L, 520L, 220L, 380L), page.items.map { it.price.amount })
-            assertFalse(page.hasMore)
+            assertEquals(1, page.totalPages)
 
             val dawn = page.items.first()
             assertEquals("Dawn on Lake Burullus", dawn.title)

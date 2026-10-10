@@ -4,6 +4,7 @@ import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.network.callApi
 import eg.bahr.feature.trips.model.DepartureDto
 import eg.bahr.feature.trips.model.HomeDto
+import eg.bahr.feature.trips.model.TripCardPageDto
 import eg.bahr.feature.trips.model.TripDetailDto
 import eg.bahr.feature.trips.model.TripPageDto
 import eg.bahr.feature.trips.model.WaitlistRequest
@@ -21,12 +22,37 @@ import io.ktor.client.request.setBody
 internal class TripApiService(
     private val client: HttpClient,
 ) {
+    /**
+     * `listTrips`: one page of the catalogue, narrowed by at most one [category] key and one [filter]
+     * value. A null one is left out of the query (the contract's "clear"), never sent empty.
+     */
     suspend fun listTrips(
         page: Int = 0,
         size: Int = PAGE_SIZE,
+        category: String? = null,
+        filter: String? = null,
     ): AppResult<TripPageDto> =
         callApi {
             client.get("trips") {
+                // Ktor's `parameter` skips a null value, so a cleared choice is simply absent.
+                parameter("category", category)
+                parameter("filter", filter)
+                parameter("page", page)
+                parameter("size", size)
+            }
+        }
+
+    /**
+     * `listHomeSectionTrips`: a page of the whole list one Home `trips` row is drawn from (its "See
+     * all"), in the row's order. Carries no title: the row's travels with the navigation.
+     */
+    suspend fun sectionTrips(
+        sectionId: String,
+        page: Int = 0,
+        size: Int = PAGE_SIZE,
+    ): AppResult<TripCardPageDto> =
+        callApi {
+            client.get("home/sections/$sectionId/trips") {
                 parameter("page", page)
                 parameter("size", size)
             }
@@ -69,7 +95,10 @@ internal class TripApiService(
         }
 
     companion object {
-        /** Matches the backend's `@PageableDefault(size = 20)`. */
+        /**
+         * Matches the backend's `@PageableDefault(size = 20)`, inside both list endpoints' 1..50. Every
+         * page of a list is read at this one size, so page numbers line up (see `TripPagingSources`).
+         */
         const val PAGE_SIZE = 20
     }
 }

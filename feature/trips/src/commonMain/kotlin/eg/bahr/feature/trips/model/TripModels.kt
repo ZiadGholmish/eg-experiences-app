@@ -16,7 +16,10 @@ import kotlinx.serialization.Serializable
  * unknown keys, so an old app keeps working, and a non-nullable addition would break it instead.
  */
 
-/** openapi `TripPage`. [facets] is declared by the contract but not served before M4. */
+/**
+ * openapi `TripPage` (`listTrips`). [facets] are the chips above a filtered list (M4-B1): every chip,
+ * zero counts included, in the served order (filters first, then categories).
+ */
 @Serializable
 internal data class TripPageDto(
     val items: List<TripCardDto> = emptyList(),
@@ -25,18 +28,48 @@ internal data class TripPageDto(
     val totalItems: Long = 0,
     val totalPages: Int = 0,
     val facets: List<FacetDto> = emptyList(),
-) {
-    val hasMore: Boolean get() = page + 1 < totalPages
-}
+)
 
-/** openapi `Facet`: one filter chip with its live count. */
+/**
+ * openapi `TripCardPage` (`listHomeSectionTrips`): a page of a Home row's whole list, with no chips.
+ */
+@Serializable
+internal data class TripCardPageDto(
+    val items: List<TripCardDto> = emptyList(),
+    val page: Int = 0,
+    val size: Int = 0,
+    val totalItems: Long = 0,
+    val totalPages: Int = 0,
+)
+
+/**
+ * openapi `Facet`: one chip with its live count. [type] says which query parameter the chip sets
+ * (`filter` or `category`, see [FacetType]); a chip is identified by [type] and [key] together, because
+ * a category may share a key with a filter value. [tone] is on category chips only. A [count] of 0 is
+ * a dimmed chip, never a hidden one. [selected] marks the request's active chip of each type.
+ *
+ * Every field has a default although the contract marks most required: the backend omits nulls, and
+ * one odd chip must not fail the page the trips are on.
+ */
 @Serializable
 internal data class FacetDto(
+    val type: String? = null,
     val key: String? = null,
     val label: String? = null,
     val icon: String? = null,
+    val tone: String? = null,
     val count: Int? = null,
+    val selected: Boolean = false,
 )
+
+/** openapi `Facet.type` values. */
+internal object FacetType {
+    const val FILTER = "filter"
+    const val CATEGORY = "category"
+}
+
+/** The `filter` value that means "no filter" (openapi `listTrips`: clear = omit or `all`). */
+internal const val FILTER_ALL = "all"
 
 /**
  * openapi `TripCard`: one trip in a list. Every text arrives already in the request's

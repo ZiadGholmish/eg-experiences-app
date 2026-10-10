@@ -47,7 +47,11 @@ internal data class BannersSectionDto(
     val items: List<HomeBannerDto>,
 ) : HomeSectionDto
 
-/** `type: trips`: a titled row of trip cards, served in display order (bookable, sold out, no date). */
+/**
+ * `type: trips`: a titled row of trip cards, served in display order (bookable, sold out, no date).
+ * [items] is page 0 of the section's whole list; [totalItems] is that list's length and [seeAll] where
+ * "See all" leads (both since M4-B1b, absent from older servers, so no "See all" then).
+ */
 @Serializable
 internal data class TripsSectionDto(
     val id: String,
@@ -56,7 +60,25 @@ internal data class TripsSectionDto(
     val layout: String,
     val aspectRatio: String? = null,
     val items: List<TripCardDto>,
+    val totalItems: Int? = null,
+    val seeAll: HomeSeeAllDto? = null,
 ) : HomeSectionDto
+
+/**
+ * openapi `HomeSeeAll`. [type] is `category` ([value] a category key: the category page) or `section`
+ * ([value] the section id: `GET /home/sections/{id}/trips`); kept a string so a new type only hides the link.
+ */
+@Serializable
+internal data class HomeSeeAllDto(
+    val type: String,
+    val value: String,
+)
+
+/** openapi `HomeSeeAll.type` values. */
+internal object SeeAllType {
+    const val CATEGORY = "category"
+    const val SECTION = "section"
+}
 
 /** `type: categories`: category chips. */
 @Serializable

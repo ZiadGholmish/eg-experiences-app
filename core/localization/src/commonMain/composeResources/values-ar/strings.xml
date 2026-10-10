@@ -6,6 +6,18 @@
     <string name="trips_title">الرحلات</string>
     <string name="trips_empty">لا توجد رحلات بعد. تابعنا قريبًا.</string>
     <string name="trips_all_title">كل الرحلات</string>
+    <!-- M4-M1b: لينك صف الصفحة الرئيسية لكل رحلاته، وعدد الرحلات فوق قائمة النوع أو "شوف الكل". -->
+    <string name="trips_see_all">شوف الكل</string>
+    <plurals name="trips_count">
+        <item quantity="zero">مفيش رحلات</item>
+        <item quantity="one">رحلة واحدة</item>
+        <item quantity="two">رحلتين</item>
+        <item quantity="few">%1$d رحلات</item>
+        <item quantity="many">%1$d رحلة</item>
+        <item quantity="other">%1$d رحلة</item>
+    </plurals>
+    <!-- M4-M1b: صفحة نوع عليها فلتر مفيش رحلات تطابقه. -->
+    <string name="trips_filter_empty">مفيش رحلات بالفلتر ده. جرّب فلتر تاني.</string>
     <plurals name="trip_nights_badge">
         <item quantity="zero">%1$d ليلة</item>
         <item quantity="one">ليلة واحدة</item>

@@ -8,6 +8,14 @@
     <string name="trips_empty">No trips yet. Check back soon.</string>
     <!-- Home (M4-M1a): the heading over the full list when server-driven sections sit above it. -->
     <string name="trips_all_title">All trips</string>
+    <!-- M4-M1b: a Home row's link to its whole list, and the trip count over a category or "See all" list. -->
+    <string name="trips_see_all">See all</string>
+    <plurals name="trips_count">
+        <item quantity="one">%1$d trip</item>
+        <item quantity="other">%1$d trips</item>
+    </plurals>
+    <!-- M4-M1b: a category page with a filter chip on that nothing matches. -->
+    <string name="trips_filter_empty">No trips match this filter. Try another one.</string>
     <!-- Multi-day trips (M4-B0b): the badge on a card with nights > 0. -->
     <plurals name="trip_nights_badge">
         <item quantity="one">%1$d night</item>

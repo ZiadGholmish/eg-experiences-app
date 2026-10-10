@@ -23,6 +23,10 @@ navigationCompose = "2.9.1"
 # JetBrains' multiplatform build of androidx navigationevent 1.0.1, the version Compose Multiplatform 1.10 resolves to.
 navigationEvent = "1.0.1"
 
+# Paging: the latest stable AndroidX Paging that publishes iosArm64/iosSimulatorArm64 for
+# paging-common, paging-compose and paging-testing (checked on Google Maven, 2026-10-10; M4-M1b).
+paging = "3.5.2"
+
 # Image loading
 coil = "3.3.0"
 
@@ -91,6 +95,11 @@ ktor-client-mock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
 
 # Navigation
 navigation-compose = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
+
+# Paging (AndroidX, multiplatform)
+androidx-paging-common = { module = "androidx.paging:paging-common", version.ref = "paging" }
+androidx-paging-compose = { module = "androidx.paging:paging-compose", version.ref = "paging" }
+androidx-paging-testing = { module = "androidx.paging:paging-testing", version.ref = "paging" }
 
 # Coil
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }

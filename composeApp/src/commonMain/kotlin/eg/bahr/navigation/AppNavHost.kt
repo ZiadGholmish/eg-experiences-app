@@ -28,8 +28,12 @@ import eg.bahr.feature.splash.navigation.SplashRoute
 import eg.bahr.feature.splash.navigation.splashScreen
 import eg.bahr.feature.trips.navigation.HomeAction
 import eg.bahr.feature.trips.navigation.TripListRoute
+import eg.bahr.feature.trips.navigation.categoryTripsScreen
+import eg.bahr.feature.trips.navigation.navigateToCategoryTrips
+import eg.bahr.feature.trips.navigation.navigateToSectionTrips
 import eg.bahr.feature.trips.navigation.navigateToTripDetail
 import eg.bahr.feature.trips.navigation.navigateToTripList
+import eg.bahr.feature.trips.navigation.sectionTripsScreen
 import eg.bahr.feature.trips.navigation.tripDetailScreen
 import eg.bahr.feature.trips.navigation.tripListScreen
 import org.koin.compose.koinInject
@@ -76,13 +80,25 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
             onHomeAction = { action ->
                 when (action) {
                     is HomeAction.OpenTrip -> navController.navigateToTripDetail(action.slug)
-                    // No-op until M4-B1: the list has no category filter to open yet.
-                    is HomeAction.OpenCategory -> Unit
+                    // A category chip, a `category` banner, or a category row's "See all" (M4-M1b).
+                    is HomeAction.OpenCategory -> navController.navigateToCategoryTrips(action.key, action.title)
+                    // Any other row's "See all": that row's whole list.
+                    is HomeAction.OpenSection -> navController.navigateToSectionTrips(action.sectionId, action.title)
                     // No-op: the app has no in-app browser yet (the contract asks for one, not the
                     // system browser, so a banner never sends the user out of the app).
                     is HomeAction.OpenUrl -> Unit
                 }
             },
+        )
+
+        categoryTripsScreen(
+            onBack = { navController.popBackStack() },
+            onTripClick = navController::navigateToTripDetail,
+        )
+
+        sectionTripsScreen(
+            onBack = { navController.popBackStack() },
+            onTripClick = navController::navigateToTripDetail,
         )
 
         tripDetailScreen(

@@ -44,6 +44,8 @@ internal object HomePayloads {
         "type": "trips",
         "title": "Featured trips",
         "layout": "row",
+        "totalItems": 12,
+        "seeAll": { "type": "section", "value": "0199c3a0-5eed-7000-8000-000000000702" },
         "items": [
           {
             "slug": "burullus-dawn",

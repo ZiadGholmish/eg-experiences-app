@@ -3,7 +3,6 @@ package eg.bahr.feature.trips.presentation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
@@ -18,13 +17,10 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.paging.compose.collectAsLazyPagingItems
 import eg.bahr.core.designsystem.components.BahrEmptyView
 import eg.bahr.core.designsystem.components.BahrErrorView
 import eg.bahr.core.designsystem.components.BahrLoadingView
@@ -40,7 +36,9 @@ import eg.bahr.core.localization.localizedMessage
 import eg.bahr.feature.trips.model.key
 import eg.bahr.feature.trips.navigation.HomeAction
 import eg.bahr.feature.trips.presentation.components.HomeSection
-import eg.bahr.feature.trips.presentation.components.TripCard
+import eg.bahr.feature.trips.presentation.components.PagedListStatus
+import eg.bahr.feature.trips.presentation.components.pagedTripCards
+import eg.bahr.feature.trips.presentation.components.status
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -64,25 +62,10 @@ internal fun TripListScreen(
     viewModel: TripListViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val trips = viewModel.trips.collectAsLazyPagingItems()
     val listState = rememberLazyListState()
     val perPersonLabel = stringResource(Res.string.trip_per_person)
-
-    // Paging trigger: fetch the next page once the user is within a screen's
-    // worth of the end, rather than waiting for the very last item.
-    val shouldLoadMore by remember {
-        derivedStateOf {
-            val lastVisible =
-                listState.layoutInfo.visibleItemsInfo
-                    .lastOrNull()
-                    ?.index ?: 0
-            val total = listState.layoutInfo.totalItemsCount
-            total > 0 && lastVisible >= total - LoadMoreThreshold
-        }
-    }
-    LaunchedEffect(listState) {
-        snapshotFlow { shouldLoadMore }
-            .collect { if (it) viewModel.loadMore() }
-    }
+    val listStatus = trips.status
 
     // The app is edge-to-edge. Home is laid out below the status bar and clipped there: content
     // scrolled up stops at the bar instead of drawing under the clock and icons (M4-M1a: a scrolled
@@ -96,8 +79,11 @@ internal fun TripListScreen(
 
     // The full-screen states keep the header above them; the list scrolls it with the trips. A list
     // that came back empty while Home has sections is not "no trips": the sections still show.
+    // One loading state for the list and Home's sections (see HOME_WAIT_MILLIS).
     val sections = state.sections
-    if (state.showsLoading || state.trips.isEmpty() && (state.error != null || sections.isEmpty())) {
+    val showsLoading = listStatus == PagedListStatus.Loading || state.awaitingHome
+    val listFailed = listStatus is PagedListStatus.Failed
+    if (showsLoading || listStatus != PagedListStatus.Loaded && (listFailed || sections.isEmpty())) {
         Column(modifier = stateModifier) {
             // The zero-size anchor puts the gap above the header only when the header draws
             // something: spacedBy adds no space after a last child, and an empty header emits none.
@@ -109,14 +95,15 @@ internal fun TripListScreen(
                 header()
             }
             val fill = Modifier.weight(1f)
-            val error = state.error
             when {
-                state.showsLoading -> BahrLoadingView(fill)
+                showsLoading -> BahrLoadingView(fill)
 
-                error != null -> {
+                listStatus is PagedListStatus.Failed -> {
+                    val error = listStatus.error
                     BahrErrorView(
                         message = error.localizedMessage(),
                         retryLabel = stringResource(Res.string.action_retry),
+                        // Reads Home again too, and starts the list over from its first page.
                         onRetry = if (error.isRetryable) viewModel::refresh else null,
                         modifier = fill,
                     )
@@ -168,7 +155,7 @@ internal fun TripListScreen(
                     modifier = Modifier.padding(horizontal = BahrSpacing.gutter),
                 )
             }
-            if (state.trips.isEmpty()) {
+            if (listStatus == PagedListStatus.Empty) {
                 item(key = KEY_EMPTY) {
                     Text(
                         text = stringResource(Res.string.trips_empty),
@@ -180,23 +167,12 @@ internal fun TripListScreen(
             }
         }
 
-        // Prefixed: a LazyColumn key must be unique across sections, headings and trips.
-        items(state.trips, key = { "$KEY_TRIP${it.slug}" }) { trip ->
-            Row(modifier = Modifier.padding(horizontal = BahrSpacing.gutter)) {
-                TripCard(
-                    trip = trip,
-                    perPersonLabel = perPersonLabel,
-                    onClick = { onTripClick(trip.slug) },
-                )
-            }
-        }
+        // Paged (M4-M1b): the next page loads as the end comes near, with a footer while it does.
+        pagedTripCards(trips, perPersonLabel, onTripClick)
     }
 }
-
-private const val LoadMoreThreshold = 3
 
 private const val KEY_TOP = "top"
 private const val KEY_ALL_TRIPS = "all-trips"
 private const val KEY_EMPTY = "empty"
 private const val KEY_SECTION = "section:"
-private const val KEY_TRIP = "trip:"

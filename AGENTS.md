@@ -101,7 +101,10 @@ SECURITY_JWT_SECRET='local-dev-signing-key-at-least-32-bytes!!' ./gradlew :api:b
   breaks it instead.
 - Repositories return `AppResult<T>`. `callApi` is the only place that catches
   transport failures; `CancellationException` is always rethrown.
-- View models expose one `StateFlow<…UiState>` and no other public state.
+- View models expose one `StateFlow<…UiState>` and no other public state, except that a view model
+  with a paged list also exposes that list as one `Flow<PagingData<T>>`, already
+  `cachedIn(viewModelScope)` (AndroidX Paging; `PagingData` cannot live in a
+  `StateFlow` UI state). The screen collects it with `collectAsLazyPagingItems()`.
 - **Numbers on screen go through `BahrFormat`** (Western digits, EGP, 24 h).
   Never `String.format`, `NumberFormat` or `java.text.*` for user-visible
   numbers. As a backstop, Android's process locale is the app language with

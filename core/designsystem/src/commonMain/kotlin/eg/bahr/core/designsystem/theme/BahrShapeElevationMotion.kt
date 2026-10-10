@@ -199,6 +199,9 @@ object BahrSize {
 
     /** The trip thumbnail on the payment screen's summary card (62px in the handoff). */
     val thumbnail = 62.dp
+
+    /** A category's tinted tile (HANDOFF Home → category row: 58px, `extraLarge` radius); the category page's header. */
+    val categoryTile = 58.dp
 }
 
 internal val LocalBahrShapes = staticCompositionLocalOf { BahrShapes() }

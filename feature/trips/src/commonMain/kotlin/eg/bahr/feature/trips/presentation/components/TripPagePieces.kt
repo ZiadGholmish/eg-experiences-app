@@ -93,6 +93,11 @@ internal fun symbolIcon(name: String?): BahrIcons =
         "beach_access" -> BahrIcons.BeachAccess
         "bedtime" -> BahrIcons.Bedtime
         "place", "location_on" -> BahrIcons.Place
+        // The trip list's filter chips (M4-B1 facets).
+        "apps" -> BahrIcons.Apps
+        "calendar_month" -> BahrIcons.CalendarMonth
+        "sell" -> BahrIcons.Sell
+        "schedule" -> BahrIcons.Schedule
         else -> BahrIcons.Circle
     }
 

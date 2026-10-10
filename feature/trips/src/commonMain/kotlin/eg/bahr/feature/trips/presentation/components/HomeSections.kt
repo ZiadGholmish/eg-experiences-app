@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
@@ -19,6 +20,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -39,16 +41,20 @@ import eg.bahr.core.designsystem.theme.BahrMotion
 import eg.bahr.core.designsystem.theme.BahrSize
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
+import eg.bahr.core.localization.generated.resources.Res
+import eg.bahr.core.localization.generated.resources.trips_see_all
 import eg.bahr.feature.trips.model.BannersSectionDto
 import eg.bahr.feature.trips.model.CategoriesSectionDto
 import eg.bahr.feature.trips.model.HomeBannerDto
 import eg.bahr.feature.trips.model.HomeSectionDto
+import eg.bahr.feature.trips.model.SeeAllType
 import eg.bahr.feature.trips.model.SkippedSectionDto
 import eg.bahr.feature.trips.model.TripsSectionDto
 import eg.bahr.feature.trips.navigation.HomeAction
 import eg.bahr.feature.trips.presentation.parseAspectRatio
 import eg.bahr.feature.trips.presentation.toHomeAction
 import kotlinx.coroutines.delay
+import org.jetbrains.compose.resources.stringResource
 
 /*
  * Home's server-driven sections (PLAN §5c, M4-M1a): one composable per `type`. Rows scroll from the
@@ -69,25 +75,72 @@ internal fun HomeSection(
             Titled(section.title, modifier) { BannerSection(section, onAction) }
 
         is TripsSectionDto ->
-            Titled(section.title, modifier) { TripRow(section, perPersonLabel, onTripClick) }
+            Titled(section.title, modifier, seeAll = section.seeAllAction()?.let { action -> { onAction(action) } }) {
+                TripRow(section, perPersonLabel, onTripClick)
+            }
 
         is CategoriesSectionDto ->
-            Titled(section.title, modifier) { CategoryChips(section) }
+            Titled(section.title, modifier) { CategoryChips(section, onAction) }
 
         // Dropped (and logged) by the view model; nothing to draw.
         is SkippedSectionDto -> Unit
     }
 }
 
+/**
+ * A section under its title. [seeAll], when there is one, is a "See all" link at the end of the
+ * title line (primary, not coral: coral is for the screen's primary action only).
+ */
 @Composable
 private fun Titled(
     title: String?,
     modifier: Modifier,
+    seeAll: (() -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(BahrSpacing.sm)) {
-        title?.takeIf { it.isNotBlank() }?.let { SectionTitle(it, Modifier.padding(horizontal = BahrSpacing.gutter)) }
+        val heading = title?.takeIf { it.isNotBlank() }
+        if (heading != null || seeAll != null) {
+            Row(
+                // The link's own touch padding stands in for most of the end gutter.
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(start = BahrSpacing.gutter, end = if (seeAll != null) BahrSpacing.sm else BahrSpacing.gutter),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(Modifier.weight(1f)) { heading?.let { SectionTitle(it) } }
+                seeAll?.let { SeeAllLink(it) }
+            }
+        }
         content()
+    }
+}
+
+/** "See all", at the 44dp touch minimum. */
+@Composable
+private fun SeeAllLink(onClick: () -> Unit) {
+    TextButton(onClick = onClick, modifier = Modifier.heightIn(min = BahrSpacing.minTouch)) {
+        Text(
+            text = stringResource(Res.string.trips_see_all),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+        )
+    }
+}
+
+/**
+ * Where this row's "See all" leads, or null when there is no more to see: only when the whole list
+ * ([TripsSectionDto.totalItems]) is longer than the row, and the server said where it leads in a way
+ * this build knows. A category row opens the category page; any other row its own list.
+ */
+internal fun TripsSectionDto.seeAllAction(): HomeAction? {
+    val target = seeAll ?: return null
+    if ((totalItems ?: 0) <= items.size || target.value.isBlank()) return null
+    return when (target.type) {
+        SeeAllType.CATEGORY -> HomeAction.OpenCategory(target.value, title)
+        SeeAllType.SECTION -> HomeAction.OpenSection(target.value, title)
+        else -> null
     }
 }
 
@@ -251,12 +304,16 @@ private fun TripRow(
 }
 
 /**
- * `categories`: one chip per category. Tapping does nothing yet: it is meant to filter the list, and
- * filters land with M4-B1 (`GET /trips?category=`). The chip has no tone of its own (`BahrFilterChip`
- * is primary-tinted), so the category's `tone` is not drawn.
+ * `categories`: one chip per category; a tap opens that category's page (M4-M1b), with the chip's
+ * label as its title until the page's facets arrive. The chip has no tone of its own
+ * (`BahrFilterChip` is primary-tinted), so the category's `tone` shows on the category page's header,
+ * not here (the handoff's tinted tiles are M4-M1's).
  */
 @Composable
-private fun CategoryChips(section: CategoriesSectionDto) {
+private fun CategoryChips(
+    section: CategoriesSectionDto,
+    onAction: (HomeAction) -> Unit,
+) {
     LazyRow(
         contentPadding = PaddingValues(horizontal = BahrSpacing.gutter),
         horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm),
@@ -265,8 +322,7 @@ private fun CategoryChips(section: CategoriesSectionDto) {
             BahrFilterChip(
                 label = category.label,
                 selected = false,
-                // No-op until M4-B1 adds the category filter to the list.
-                onClick = {},
+                onClick = { onAction(HomeAction.OpenCategory(category.key, category.label)) },
                 icon = category.icon?.let { symbolIcon(it).filled() },
             )
         }

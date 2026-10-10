@@ -1,7 +1,6 @@
 package eg.bahr.feature.booking.presentation.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -11,22 +10,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import eg.bahr.core.designsystem.icon.BahrIcons
+import eg.bahr.core.designsystem.components.BahrBackButton
 import eg.bahr.core.designsystem.theme.BahrSize
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.localization.generated.resources.Res
-import eg.bahr.core.localization.generated.resources.action_back
 import eg.bahr.core.localization.generated.resources.booking_step_of
 import org.jetbrains.compose.resources.stringResource
 
@@ -53,30 +49,9 @@ internal fun BookingTopBar(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(BahrSpacing.md),
     ) {
-        BackButton(onBack)
+        BahrBackButton(props = BahrBackButton.Props(onClick = onBack))
         Text(text = title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f), maxLines = 1)
         StepIndicator(step)
-    }
-}
-
-/** The handoff draws it at 38px on `primaryContainer`; laid out at the 44dp touch minimum. The arrow mirrors in RTL. */
-@Composable
-private fun BackButton(onClick: () -> Unit) {
-    Box(
-        modifier =
-            Modifier
-                .size(BahrSpacing.minTouch)
-                .clip(BahrTheme.shapes.full)
-                .background(MaterialTheme.colorScheme.primaryContainer)
-                .clickable(role = Role.Button, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = BahrIcons.ArrowBack.outlined(),
-            contentDescription = stringResource(Res.string.action_back),
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(BahrSize.iconMedium),
-        )
     }
 }
 

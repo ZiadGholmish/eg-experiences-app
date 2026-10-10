@@ -13,7 +13,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
-import eg.bahr.core.common.error.AppErrorController
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
@@ -154,7 +153,10 @@ class TripListScreenshotTest {
 
     @Test
     fun errorWithHeader() =
-        snapEach("trip_list_header_error", header = { HeaderStandIn() }) { listTrips = { AppResult.Failure(AppError.Network) } }
+        snapEach("trip_list_header_error", header = { HeaderStandIn() }, settle = true) {
+            listTrips =
+                { AppResult.Failure(AppError.Network) }
+        }
 
     @Composable
     private fun HeaderStandIn() {
@@ -164,7 +166,7 @@ class TripListScreenshotTest {
     }
 
     @Test
-    fun error() = snapEach("trip_list_error") { listTrips = { AppResult.Failure(AppError.Network) } }
+    fun error() = snapEach("trip_list_error", settle = true) { listTrips = { AppResult.Failure(AppError.Network) } }
 
     @Test
     fun empty() = snapEach("trip_list_empty") { listTrips = { page(emptyList()) } }
@@ -208,7 +210,7 @@ class TripListScreenshotTest {
     // Home answered but the list failed: the list's error is the screen, as before.
     @Test
     fun homeError() =
-        snapEach("home_error") {
+        snapEach("home_error", settle = true) {
             listTrips = { AppResult.Failure(AppError.Network) }
             home = { AppResult.Success(home(arabic = false)) }
         }
@@ -309,9 +311,10 @@ class TripListScreenshotTest {
         prefix: String,
         vararg languages: AppLanguage = AppLanguage.entries.toTypedArray(),
         header: @Composable () -> Unit = {},
+        settle: Boolean = false,
         stub: FakeTripRepository.() -> Unit,
     ) {
-        val viewModel = TripListViewModel(FakeTripRepository().apply(stub), AppErrorController())
+        val viewModel = TripListViewModel(FakeTripRepository().apply(stub))
         var language by mutableStateOf(languages.first())
         compose.setContent {
             ProvideAppLanguage(language) {
@@ -325,6 +328,13 @@ class TripListScreenshotTest {
         languages.forEach { shotLanguage ->
             compose.runOnUiThread { language = shotLanguage }
             compose.waitForIdle()
+            // A language switch re-keys the screen, so the list's Paging presenter starts over: cached
+            // cards come back at once, a cached error a pass later. The error shots let it land; the
+            // loading shots must not, or their spinner frame would move.
+            if (settle) {
+                compose.mainClock.advanceTimeByFrame()
+                compose.waitForIdle()
+            }
             compose.mainClock.advanceTimeByFrame()
             compose.captureScreenshot("${prefix}_${shotLanguage.tag}")
         }
