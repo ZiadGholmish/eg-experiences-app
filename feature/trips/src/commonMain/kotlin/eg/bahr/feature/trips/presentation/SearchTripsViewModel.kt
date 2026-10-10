@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
@@ -77,6 +78,12 @@ private data class SearchQuery(
     val filter: String?,
 )
 
+/** One load of a search: [attempt] goes up on Retry, so the same search loads again from page 0. */
+private data class SearchLoad(
+    val query: SearchQuery,
+    val attempt: Int,
+)
+
 /**
  * The text is sent as typed: the server folds Arabic spelling, case and digits, in both languages,
  * and matches word by word (every word somewhere in the trip, any order). Only outer spaces and
@@ -107,16 +114,23 @@ internal class SearchTripsViewModel(
     /** The typed text, debounced into [SearchTripsUiState.query]. */
     private val typed = MutableStateFlow("")
 
+    /** Bumped by [retry]: the failed first page loads again. */
+    private val attempts = MutableStateFlow(0)
+
+    /** A burst of Retry taps is one request (M4-M6). */
+    private val retries = Throttle(viewModelScope)
+
     /**
      * The results of the current search, a page at a time, best match first as the server orders
      * them. No search is an empty list that reads as not loaded yet, so a search that has just
      * started never flashes "no trips match" before its first page.
      */
     val trips: Flow<PagingData<TripCardDto>> =
-        _uiState
-            .map { SearchQuery(it.query, it.filter) }
+        // The query is already normalised (`searchable`: trimmed, control characters out), so
+        // "felucca" and "felucca " are one key here and the second is never sent.
+        combine(_uiState.map { SearchQuery(it.query, it.filter) }, attempts, ::SearchLoad)
             .distinctUntilChanged()
-            .flatMapLatest { query ->
+            .flatMapLatest { (query, _) ->
                 val text = query.text ?: return@flatMapLatest flowOf(PagingData.empty(NOT_SEARCHED))
                 Pager(TripPagingConfig) {
                     TripListPagingSource(repository, filter = query.filter, q = text) { onFirstPage(query, it) }
@@ -178,6 +192,9 @@ internal class SearchTripsViewModel(
             }
         }
     }
+
+    /** Retry, from the first page's error: runs the current search again. Throttled. */
+    fun retry() = retries.attempt { attempts.update { it + 1 } }
 
     /** A filter chip tapped. Tapping the active one (or "all") clears the filter. */
     fun selectFilter(key: String) {

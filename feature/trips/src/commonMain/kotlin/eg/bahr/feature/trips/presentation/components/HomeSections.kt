@@ -41,6 +41,7 @@ import eg.bahr.core.designsystem.theme.BahrMotion
 import eg.bahr.core.designsystem.theme.BahrSize
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
+import eg.bahr.core.designsystem.theme.bahrSharedBounds
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.trips_see_all
 import eg.bahr.feature.trips.model.BannersSectionDto
@@ -76,10 +77,18 @@ internal fun HomeSection(
         is BannersSectionDto ->
             Titled(section.title, modifier) { BannerSection(section, onAction) }
 
-        is TripsSectionDto ->
-            Titled(section.title, modifier, seeAll = section.seeAllAction()?.let { action -> { onAction(action) } }) {
+        is TripsSectionDto -> {
+            val seeAll = section.seeAllAction()
+            Titled(
+                section.title,
+                modifier,
+                seeAll = seeAll?.let { action -> { onAction(action) } },
+                // Only a title that leads somewhere morphs into a page header (M4-M6).
+                titleSharedKey = seeAll?.let { rowTitleSharedKey(section.id) },
+            ) {
                 TripRow(section, perPersonLabel, waitlistTags, onTripClick)
             }
+        }
 
         is CategoriesSectionDto ->
             Titled(section.title, modifier) { CategoryChips(section, onAction) }
@@ -91,13 +100,15 @@ internal fun HomeSection(
 
 /**
  * A section under its title. [seeAll], when there is one, is a "See all" link at the end of the
- * title line (primary, not coral: coral is for the screen's primary action only).
+ * title line (primary, not coral: coral is for the screen's primary action only). [titleSharedKey]
+ * lets the title morph into the opened page's heading (M4-M6).
  */
 @Composable
 private fun Titled(
     title: String?,
     modifier: Modifier,
     seeAll: (() -> Unit)? = null,
+    titleSharedKey: String? = null,
     content: @Composable () -> Unit,
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(BahrSpacing.sm)) {
@@ -111,7 +122,7 @@ private fun Titled(
                         .padding(start = BahrSpacing.gutter, end = if (seeAll != null) BahrSpacing.sm else BahrSpacing.gutter),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(Modifier.weight(1f)) { heading?.let { SectionTitle(it) } }
+                Box(Modifier.weight(1f)) { heading?.let { SectionTitle(it, Modifier.bahrSharedBounds(titleSharedKey)) } }
                 seeAll?.let { SeeAllLink(it) }
             }
         }
@@ -140,8 +151,8 @@ internal fun TripsSectionDto.seeAllAction(): HomeAction? {
     val target = seeAll ?: return null
     if ((totalItems ?: 0) <= items.size || target.value.isBlank()) return null
     return when (target.type) {
-        SeeAllType.CATEGORY -> HomeAction.OpenCategory(target.value, title)
-        SeeAllType.SECTION -> HomeAction.OpenSection(target.value, title)
+        SeeAllType.CATEGORY -> HomeAction.OpenCategory(target.value, title, rowTitleSharedKey(id))
+        SeeAllType.SECTION -> HomeAction.OpenSection(target.value, title, rowTitleSharedKey(id))
         else -> null
     }
 }
@@ -323,15 +334,29 @@ private fun CategoryChips(
         horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm),
     ) {
         items(section.items, key = { it.key }) { category ->
+            val sharedKey = categoryChipSharedKey(section.id, category.key)
             BahrFilterChip(
                 label = category.label,
                 selected = false,
-                onClick = { onAction(HomeAction.OpenCategory(category.key, category.label)) },
+                onClick = { onAction(HomeAction.OpenCategory(category.key, category.label, sharedKey)) },
+                // The chip grows into the category page's header (M4-M6).
+                modifier = Modifier.bahrSharedBounds(sharedKey),
                 icon = category.icon?.let { symbolIcon(it).filled() },
             )
         }
     }
 }
+
+/**
+ * Shared-element keys (M4-M6): one per tappable element on Home, so two elements that open the same
+ * page (a category's chip and a category row's title) never claim the same key.
+ */
+internal fun rowTitleSharedKey(sectionId: String): String = "home-row-title:$sectionId"
+
+internal fun categoryChipSharedKey(
+    sectionId: String,
+    category: String,
+): String = "home-category-chip:$sectionId:$category"
 
 /** The first banner's own shape, when the section has no usable `aspectRatio`. */
 private fun HomeBannerDto.imageRatio(): Float =

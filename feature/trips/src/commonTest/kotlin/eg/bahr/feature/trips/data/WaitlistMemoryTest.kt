@@ -34,4 +34,29 @@ class WaitlistMemoryTest {
             assertEquals(listOf("today"), store.joins.value.map { it.departureId })
             assertEquals(listOf("today"), memory.joins.first().map { it.departureId })
         }
+
+    /**
+     * M4-M5 review S4: a well-formed but impossible date fails to parse with an IllegalArgumentException
+     * on both platforms (the only exception `parsed()` catches), so the entry is left out of [WaitlistMemory.joins]
+     * straight away, before any pruning, and `forgetPassed` removes it from the store.
+     */
+    @Test
+    fun `a stored join with an impossible date is left out of joins and pruned`() =
+        runTest {
+            val store =
+                FakeWaitlistJoinsStore(
+                    listOf(
+                        storedJoin(departureId = "kept", date = "2026-10-24"),
+                        storedJoin(departureId = "impossible", date = "2026-13-40"),
+                    ),
+                )
+            val memory = waitlistMemory(store)
+
+            assertEquals(listOf("kept"), memory.joins.first().map { it.departureId }, "dropped from joins before pruning")
+            assertEquals(listOf("kept", "impossible"), store.joins.value.map { it.departureId }, "still stored until pruned")
+
+            memory.forgetPassed()
+
+            assertEquals(listOf("kept"), store.joins.value.map { it.departureId })
+        }
 }

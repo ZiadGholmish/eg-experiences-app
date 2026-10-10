@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
 
@@ -36,7 +37,11 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" />
                 <data android:scheme="${appLinkLocalScheme}" />
-                <data android:host="${appLinkHost}" />
+                <!-- tools:ignore: lint reads the unmerged placeholder as the host and reports
+                     AppLinkUrlError; the real host is filled per flavor at manifest merge. -->
+                <data
+                    android:host="${appLinkHost}"
+                    tools:ignore="AppLinkUrlError" />
                 <data android:pathPrefix="/t/" />
             </intent-filter>
         </activity>

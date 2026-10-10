@@ -14,6 +14,7 @@ import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.designsystem.theme.BahrLocale
+import eg.bahr.core.designsystem.theme.BahrMotion
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.localization.ProvideAppLanguage
 import eg.bahr.core.testing.captureScreenshot
@@ -141,6 +142,35 @@ class SearchScreenshotTest {
         snap("search_no_results", language, vm)
     }
 
+    /**
+     * M4-M6: a filter chip tapped while the search's results are on screen. They stay, dimmed and not
+     * tappable, with the thin progress bar under the field, until the filtered results answer.
+     */
+    @Test
+    fun refreshingArabic() = refreshing(AppLanguage.ARABIC, "البرلس")
+
+    @Test
+    fun refreshingEnglish() = refreshing(AppLanguage.ENGLISH, "Burullus")
+
+    private fun refreshing(
+        language: AppLanguage,
+        text: String,
+    ) {
+        val arabic = language == AppLanguage.ARABIC
+        val repository =
+            FakeTripRepository(
+                listFiltered = { q ->
+                    if (q.filter != null) awaitCancellation()
+                    page(cards(arabic), facets = facets(arabic = arabic), totalItems = 2)
+                },
+            )
+        val vm = SearchTripsViewModel(repository, FakeRecentSearchesStore(), waitlistMemory())
+        vm.searchRecent(text)
+        shoot("search_refreshing", language, act = { vm.selectFilter("weekend") }) {
+            SearchTripsScreen(onBack = {}, onTripClick = {}, viewModel = vm)
+        }
+    }
+
     /** The search failed (no connection): the error with its retry, the text still in the field. */
     @Test
     fun errorArabic() = error(AppLanguage.ARABIC, "فلوكة")
@@ -182,9 +212,14 @@ class SearchScreenshotTest {
         vm: SearchTripsViewModel,
     ) = shoot(prefix, language) { SearchTripsScreen(onBack = {}, onTripClick = {}, viewModel = vm) }
 
+    /**
+     * [act], when given, runs once the screen has settled (a tap's effect on the view model), and the
+     * clock then runs through the longest animation so the shot is the state it settles in.
+     */
     private fun shoot(
         prefix: String,
         language: AppLanguage,
+        act: (() -> Unit)? = null,
         content: @Composable () -> Unit,
     ) {
         var current by mutableStateOf(language)
@@ -202,7 +237,31 @@ class SearchScreenshotTest {
             compose.mainClock.advanceTimeByFrame()
             compose.waitForIdle()
         }
+        // M4-M6: cards fade and slide in; run the clock through the longest animation so the shot is
+        // the state the screen settles in, not a frame of the fade.
+        settleAnimations()
+        act?.let {
+            compose.runOnIdle(it)
+            settleAnimations()
+        }
         compose.captureScreenshot("${prefix}_${language.tag}")
+    }
+
+    /**
+     * With the clock paused, state written by an effect (the paging presenter's) is drawn only on a
+     * later frame: frames first, the longest animation, then frames again for what that started.
+     */
+    private fun settleAnimations() {
+        repeat(SETTLE_FRAMES) {
+            compose.mainClock.advanceTimeByFrame()
+            compose.waitForIdle()
+        }
+        compose.mainClock.advanceTimeBy(BahrMotion.Long.toLong())
+        compose.waitForIdle()
+        repeat(SETTLE_FRAMES) {
+            compose.mainClock.advanceTimeByFrame()
+            compose.waitForIdle()
+        }
     }
 
     private companion object {

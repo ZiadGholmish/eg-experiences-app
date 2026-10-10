@@ -2,6 +2,7 @@ package eg.bahr.feature.trips.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.InvalidatingPagingSourceFactory
 import androidx.paging.Pager
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
@@ -38,14 +39,26 @@ internal class SectionTripsViewModel(
     private val _uiState = MutableStateFlow(SectionTripsUiState(title = title))
     val uiState: StateFlow<SectionTripsUiState> = _uiState.asStateFlow()
 
-    val trips: Flow<PagingData<TripCardDto>> =
-        Pager(TripPagingConfig) {
+    /** Lets [retry] load the list again from page 0: each invalidation makes a fresh source. */
+    private val sources =
+        InvalidatingPagingSourceFactory {
             SectionTripsPagingSource(repository, sectionId) { result ->
                 if (result is AppResult.Success) _uiState.update { it.copy(totalItems = result.data.totalItems) }
             }
-        }.flow
+        }
+
+    /** A burst of Retry taps is one request (M4-M6). */
+    private val retries = Throttle(viewModelScope)
+
+    val trips: Flow<PagingData<TripCardDto>> =
+        // A lambda, not the factory itself: common metadata does not see the factory as a function type.
+        Pager(TripPagingConfig, pagingSourceFactory = { sources() })
+            .flow
             .distinctTrips()
             .cachedIn(viewModelScope)
+
+    /** Retry, from the first page's error: loads the list again. Throttled. */
+    fun retry() = retries.attempt { sources.invalidate() }
 
     init {
         collectWaitlistTags(waitlists) { tags -> _uiState.update { it.copy(waitlistTags = tags) } }

@@ -1,7 +1,13 @@
 package eg.bahr.core.designsystem.components
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -45,6 +51,7 @@ import eg.bahr.core.designsystem.theme.BahrMotion
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.designsystem.theme.bahrShadow
+import eg.bahr.core.designsystem.theme.bahrTween
 import eg.bahr.core.designsystem.theme.overlineCase
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.a11y_busy
@@ -173,7 +180,13 @@ fun BahrPrimaryButton(
     }
 }
 
-/** Filter chip: unselected = surfaceContainer, selected = primary with teal shadow. Count is optional. */
+/**
+ * Filter chip: unselected = surfaceContainer, selected = primary with teal shadow. Count is optional.
+ *
+ * M4-M6: selecting or leaving a chip animates its fill, label, icon and count pill rather than
+ * flipping them, and a new count crossfades in while the chip eases to its new width, so a row of
+ * chips does not jump when their counts change. Instant under reduce motion (`bahrTween`).
+ */
 @Composable
 fun BahrFilterChip(
     label: String,
@@ -187,18 +200,35 @@ fun BahrFilterChip(
     val x = BahrTheme.colors
     val disabled = count == 0 && !selected
     val shape = BahrTheme.shapes.full
-    val bg =
+    val bg by animateColorAsState(
         when {
             selected -> c.primary
             disabled -> x.surfaceLowest
             else -> c.surfaceContainer
-        }
-    val fg =
+        },
+        bahrTween(BahrMotion.Short),
+    )
+    val fg by animateColorAsState(
         when {
             selected -> c.onPrimary
             disabled -> x.onSurfaceDisabled
             else -> x.onSurfaceSecondary
-        }
+        },
+        bahrTween(BahrMotion.Short),
+    )
+    val iconTint by animateColorAsState(
+        when {
+            selected -> x.primaryBright
+            disabled -> x.onSurfaceDisabled
+            else -> c.primary
+        },
+        bahrTween(BahrMotion.Short),
+    )
+    val countColor by animateColorAsState(if (selected) c.onPrimary else c.onSurfaceVariant, bahrTween(BahrMotion.Short))
+    val countPill by animateColorAsState(
+        if (selected) c.onPrimary.copy(alpha = CHIP_COUNT_ALPHA) else x.track,
+        bahrTween(BahrMotion.Short),
+    )
     Row(
         modifier
             .heightIn(min = BahrSpacing.minTouch)
@@ -206,35 +236,28 @@ fun BahrFilterChip(
             .clip(shape)
             .background(bg)
             .clickable(enabled = !disabled, role = Role.Checkbox, onClick = onClick)
+            .animateContentSize(bahrTween(BahrMotion.Short))
             .padding(horizontal = BahrSpacing.md),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(CHIP_GAP.dp),
     ) {
         if (icon != null) {
-            Icon(
-                icon,
-                null,
-                Modifier.size(CHIP_ICON.dp),
-                tint =
-                    when {
-                        selected -> x.primaryBright
-                        disabled -> x.onSurfaceDisabled
-                        else -> c.primary
-                    },
-            )
+            Icon(icon, null, Modifier.size(CHIP_ICON.dp), tint = iconTint)
         }
         Text(label, style = MaterialTheme.typography.labelLarge, color = fg, maxLines = 1)
         if (count != null) {
-            Text(
-                count.toString(),
-                style = MaterialTheme.typography.labelMedium,
-                color = if (selected) c.onPrimary else c.onSurfaceVariant,
+            val fade = bahrTween<Float>(BahrMotion.Short)
+            AnimatedContent(
+                targetState = count,
+                transitionSpec = { fadeIn(fade) togetherWith fadeOut(fade) using SizeTransform(clip = false) },
                 modifier =
                     Modifier
                         .clip(shape)
-                        .background(if (selected) c.onPrimary.copy(alpha = CHIP_COUNT_ALPHA) else x.track)
+                        .background(countPill)
                         .padding(horizontal = CHIP_COUNT_PADDING_H.dp, vertical = CHIP_COUNT_PADDING_V.dp),
-            )
+            ) { shown ->
+                Text(shown.toString(), style = MaterialTheme.typography.labelMedium, color = countColor)
+            }
         }
     }
 }

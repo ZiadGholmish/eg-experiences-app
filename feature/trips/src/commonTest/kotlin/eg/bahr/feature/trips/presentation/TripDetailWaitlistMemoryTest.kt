@@ -47,16 +47,11 @@ class TripDetailWaitlistMemoryTest {
         clock: FixedClock = FixedClock(),
     ): TripDetailViewModel = TripDetailViewModel(slug, repository, WaitlistMemory(store, clock)).also { advanceUntilIdle() }
 
-    private fun soldOut(id: String) =
-        saturdays().map {
-            if (it.id !=
-                id
-            ) {
-                it
-            } else {
-                it.copy(seatsRemaining = 0, soldOut = true, bookable = false, unavailableReason = "SOLD_OUT")
-            }
-        }
+    private fun soldOut(id: String) = saturdays().map { if (it.id == id) it.asSoldOut() else it }
+
+    private fun DepartureDto.asSoldOut() = copy(seatsRemaining = 0, soldOut = true, bookable = false, unavailableReason = "SOLD_OUT")
+
+    private fun DepartureDto.asBookable() = copy(seatsRemaining = 3, soldOut = false, bookable = true, unavailableReason = null)
 
     @Test
     fun `a join is remembered - after a restart the date reads joined with its phone and the form is not offered`() =
@@ -280,15 +275,7 @@ class TripDetailWaitlistMemoryTest {
             repository.departuresFor =
                 {
                     AppResult.Success(
-                        saturdays().map {
-                            if (it.id !=
-                                "dep-3"
-                            ) {
-                                it
-                            } else {
-                                it.copy(seatsRemaining = 3, soldOut = false, bookable = true, unavailableReason = null)
-                            }
-                        },
+                        saturdays().map { if (it.id == "dep-3") it.asBookable() else it },
                     )
                 }
 

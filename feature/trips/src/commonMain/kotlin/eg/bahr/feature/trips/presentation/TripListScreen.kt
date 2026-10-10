@@ -84,6 +84,7 @@ internal fun TripListScreen(
     val listState = rememberLazyListState()
     val perPersonLabel = stringResource(Res.string.trip_per_person)
     val listStatus = trips.status
+    val appendRetry = rememberThrottled(trips::retry)
 
     // The app is edge-to-edge. Home is laid out below the status bar and clipped there: content
     // scrolled up stops at the bar instead of drawing under the clock and icons (M4-M1a: a scrolled
@@ -188,7 +189,7 @@ internal fun TripListScreen(
         }
 
         // Paged (M4-M1b): the next page loads as the end comes near, with a footer while it does.
-        pagedTripCards(trips, perPersonLabel, state.waitlistTags, onTripClick)
+        pagedTripCards(trips, perPersonLabel, state.waitlistTags, onTripClick, onAppendRetry = appendRetry)
     }
 }
 

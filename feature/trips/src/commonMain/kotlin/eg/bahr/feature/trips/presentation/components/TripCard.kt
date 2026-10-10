@@ -54,6 +54,9 @@ import org.jetbrains.compose.resources.stringResource
  *
  * [waitlisted] (M4-M5) adds a small "Waiting list" tag beside the seats pill: the device is on the
  * waiting list of the sold-out date this card shows (see `WaitlistTags` for exactly when).
+ *
+ * Not [enabled] (M4-M6): the card belongs to a list being replaced (a filter switch, a new search)
+ * and is drawn dimmed by its caller; it cannot be opened, and is not announced as a button.
  */
 @Composable
 internal fun TripCard(
@@ -63,8 +66,9 @@ internal fun TripCard(
     modifier: Modifier = Modifier,
     compact: Boolean = false,
     waitlisted: Boolean = false,
+    enabled: Boolean = true,
 ) {
-    BahrCard(modifier = modifier.fillMaxWidth(), onClick = onClick) {
+    BahrCard(modifier = modifier.fillMaxWidth(), onClick = if (enabled) onClick else null) {
         Box {
             CoverImage(trip)
             trip.badge?.label?.let { label ->

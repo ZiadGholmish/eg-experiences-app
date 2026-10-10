@@ -91,11 +91,15 @@ internal class TripListViewModel(
         collectWaitlistTags(waitlists) { tags -> _uiState.update { it.copy(waitlistTags = tags) } }
     }
 
-    /** Retry, from the screen's error view: reads Home again and starts the list over. */
-    fun refresh() {
-        listSources.invalidate()
-        loadHome()
-    }
+    /** A burst of Retry taps is one reload (M4-M6). */
+    private val retries = Throttle(viewModelScope)
+
+    /** Retry, from the screen's error view: reads Home again and starts the list over. Throttled. */
+    fun refresh() =
+        retries.attempt {
+            listSources.invalidate()
+            loadHome()
+        }
 
     private fun loadHome() {
         homeRead?.cancel()

@@ -73,7 +73,12 @@ import eg.bahr.core.localization.generated.resources.trips_filter_empty
 import eg.bahr.feature.trips.data.TripApiService
 import eg.bahr.feature.trips.presentation.components.FacetFilterChips
 import eg.bahr.feature.trips.presentation.components.ListHeading
+import eg.bahr.feature.trips.presentation.components.PagedListStatus
+import eg.bahr.feature.trips.presentation.components.RefreshBar
 import eg.bahr.feature.trips.presentation.components.listBody
+import eg.bahr.feature.trips.presentation.components.rememberListMotion
+import eg.bahr.feature.trips.presentation.components.rememberQueryStatus
+import eg.bahr.feature.trips.presentation.components.selectedOrder
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -84,6 +89,9 @@ import org.koin.compose.viewmodel.koinViewModel
  *
  * The field's text lives here, in a [TextFieldState] (typing stays in step with the keyboard, Arabic
  * composition included); every change goes to the view model, which debounces it into a search.
+ *
+ * M4-M6: a new search or chip keeps the current results on screen, dimmed and not tappable, with a
+ * thin progress bar under the field, until the new results come in (or the error replaces them).
  */
 @Composable
 internal fun SearchTripsScreen(
@@ -98,6 +106,10 @@ internal fun SearchTripsScreen(
     val perPersonLabel = stringResource(Res.string.trip_per_person)
     val keyboard = LocalSoftwareKeyboardController.current
     val bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + BahrSpacing.xl
+    val status = trips.rememberQueryStatus()
+    val chips = state.filterChips
+    val motion = rememberListMotion(status, switchKey = state.query to state.filter, order = selectedOrder(chips, state::isSelected))
+    val appendRetry = rememberThrottled(trips::retry)
 
     // Seeded from the view model, so a language switch (which re-keys the screen) keeps the text.
     val field = rememberTextFieldState(initialText = state.text)
@@ -129,6 +141,8 @@ internal fun SearchTripsScreen(
                 focus.requestFocus()
             },
         )
+        // Under the field, where the eye is while typing; the list scrolls under it.
+        RefreshBar(visible = state.query != null && status == PagedListStatus.Refreshing)
         LazyColumn(
             state = listState,
             modifier = Modifier.weight(1f),
@@ -149,9 +163,13 @@ internal fun SearchTripsScreen(
                 return@LazyColumn
             }
             item(key = KEY_COUNT) {
-                ListHeading(label = null, totalItems = state.totalItems, modifier = Modifier.padding(horizontal = BahrSpacing.gutter))
+                ListHeading(
+                    label = null,
+                    totalItems = state.totalItems,
+                    stale = status == PagedListStatus.Refreshing,
+                    modifier = Modifier.padding(horizontal = BahrSpacing.gutter),
+                )
             }
-            val chips = state.filterChips
             if (chips.isNotEmpty()) {
                 item(key = KEY_CHIPS) {
                     FacetFilterChips(chips, isSelected = state::isSelected, onSelect = viewModel::selectFilter)
@@ -159,6 +177,10 @@ internal fun SearchTripsScreen(
             }
             listBody(
                 trips = trips,
+                status = status,
+                motion = motion,
+                onRetry = viewModel::retry,
+                onAppendRetry = appendRetry,
                 perPersonLabel = perPersonLabel,
                 waitlistTags = state.waitlistTags,
                 emptyMessage = {

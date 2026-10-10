@@ -27,11 +27,15 @@ internal val LocalBahrLocale = staticCompositionLocalOf { BahrLocale.Arabic }
  *
  * [locale] defaults to Arabic because Arabic is the product's default; the app root must still
  * pass the stored language, or English users get RTL and the Arabic face.
+ *
+ * [reducedMotion] is the platform's reduce-motion setting by default (M4-M6); tests pass it to pin
+ * either way. Read it through `BahrTheme.reducedMotion`, or animate through `bahrTween`.
  */
 @Composable
 fun BahrTheme(
     locale: BahrLocale = BahrLocale.Arabic,
     theme: BahrThemeName = BahrThemeName.LakeBurullus,
+    reducedMotion: Boolean = systemReducesMotion(),
     content: @Composable () -> Unit,
 ) {
     val colors = bahrColorTheme(theme)
@@ -43,6 +47,7 @@ fun BahrTheme(
         LocalBahrColors provides colors.extended,
         LocalBahrType provides bahrExtendedType(family, locale.isArabic),
         LocalBahrShapes provides shapes,
+        LocalBahrReducedMotion provides reducedMotion,
     ) {
         MaterialTheme(
             colorScheme = colors.scheme,

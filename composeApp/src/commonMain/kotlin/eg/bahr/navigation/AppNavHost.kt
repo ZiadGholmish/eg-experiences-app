@@ -4,12 +4,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import eg.bahr.core.designsystem.theme.BahrSharedTransitions
+import eg.bahr.core.designsystem.theme.BahrTheme
+import eg.bahr.core.designsystem.theme.reducedMotion
 import eg.bahr.deeplink.AppDeepLinkInbox
 import eg.bahr.deeplink.DeepLinkDestinations
 import eg.bahr.deeplink.DeepLinkInbox
@@ -65,70 +69,81 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
         if (pastSplash) inbox.dispatch(parser, destinations)
     }
 
-    NavHost(navController = navController, startDestination = SplashRoute) {
-        splashScreen(
-            onReady = {
-                navController.navigateToTripList {
-                    // Splash must not be reachable with the back button.
-                    popUpTo<SplashRoute> { inclusive = true }
-                }
-            },
-        )
+    // Read by the screen transitions when they start, so a reduce-motion change applies at once (M4-M6).
+    val reduced by rememberUpdatedState(BahrTheme.reducedMotion)
+    val reducedMotion = remember { { reduced } }
 
-        tripListScreen(
-            onTripClick = navController::navigateToTripDetail,
-            // A live seat hold (survives a restart) sits at the top of Home; tap → the held seats.
-            header = { ContinueBookingSlot(onOpen = { navController.navigateToHold(it) }) },
-            onHomeAction = { action ->
-                when (action) {
-                    is HomeAction.OpenTrip -> navController.navigateToTripDetail(action.slug)
-                    // A category chip, a `category` banner, or a category row's "See all" (M4-M1b).
-                    is HomeAction.OpenCategory -> navController.navigateToCategoryTrips(action.key, action.title)
-                    // Any other row's "See all": that row's whole list.
-                    is HomeAction.OpenSection -> navController.navigateToSectionTrips(action.sectionId, action.title)
-                    // No-op: the app has no in-app browser yet (the contract asks for one, not the
-                    // system browser, so a banner never sends the user out of the app).
-                    is HomeAction.OpenUrl -> Unit
-                }
-            },
-            onSearch = { navController.navigateToSearchTrips() },
-        )
+    // Shared elements (M4-M6): a Home chip or row title morphs into the page it opens.
+    BahrSharedTransitions {
+        NavHost(navController = navController, startDestination = SplashRoute) {
+            splashScreen(
+                onReady = {
+                    navController.navigateToTripList {
+                        // Splash must not be reachable with the back button.
+                        popUpTo<SplashRoute> { inclusive = true }
+                    }
+                },
+            )
 
-        searchTripsScreen(
-            onBack = { navController.popBackStack() },
-            onTripClick = navController::navigateToTripDetail,
-        )
+            tripListScreen(
+                onTripClick = navController::navigateToTripDetail,
+                // A live seat hold (survives a restart) sits at the top of Home; tap → the held seats.
+                header = { ContinueBookingSlot(onOpen = { navController.navigateToHold(it) }) },
+                onHomeAction = { action ->
+                    when (action) {
+                        is HomeAction.OpenTrip -> navController.navigateToTripDetail(action.slug)
+                        // A category chip, a `category` banner, or a category row's "See all" (M4-M1b).
+                        is HomeAction.OpenCategory -> navController.navigateToCategoryTrips(action.key, action.title, action.sharedKey)
+                        // Any other row's "See all": that row's whole list.
+                        is HomeAction.OpenSection -> navController.navigateToSectionTrips(action.sectionId, action.title, action.sharedKey)
+                        // No-op: the app has no in-app browser yet (the contract asks for one, not the
+                        // system browser, so a banner never sends the user out of the app).
+                        is HomeAction.OpenUrl -> Unit
+                    }
+                },
+                onSearch = { navController.navigateToSearchTrips() },
+                reducedMotion = reducedMotion,
+            )
 
-        categoryTripsScreen(
-            onBack = { navController.popBackStack() },
-            onTripClick = navController::navigateToTripDetail,
-        )
+            searchTripsScreen(
+                onBack = { navController.popBackStack() },
+                onTripClick = navController::navigateToTripDetail,
+                reducedMotion = reducedMotion,
+            )
 
-        sectionTripsScreen(
-            onBack = { navController.popBackStack() },
-            onTripClick = navController::navigateToTripDetail,
-        )
+            categoryTripsScreen(
+                onBack = { navController.popBackStack() },
+                onTripClick = navController::navigateToTripDetail,
+                reducedMotion = reducedMotion,
+            )
 
-        tripDetailScreen(
-            onBack = { navController.popBackStack() },
-            onContinue = navController::navigateToBooking,
-        )
+            sectionTripsScreen(
+                onBack = { navController.popBackStack() },
+                onTripClick = navController::navigateToTripDetail,
+                reducedMotion = reducedMotion,
+            )
 
-        bookingScreen(
-            onBack = { navController.popBackStack() },
-            onHeld = navController::navigateToHold,
-        )
+            tripDetailScreen(
+                onBack = { navController.popBackStack() },
+                onContinue = navController::navigateToBooking,
+            )
 
-        // Released or run out: back to date + party under it, which re-reads its dates.
-        holdScreen(onEnded = navController::returnToDateSelection)
+            bookingScreen(
+                onBack = { navController.popBackStack() },
+                onHeld = navController::navigateToHold,
+            )
 
-        bookingConfirmedScreen(
-            onDone = {
-                navController.navigateToTripList {
-                    popUpTo<TripListRoute> { inclusive = true }
-                }
-            },
-        )
+            // Released or run out: back to date + party under it, which re-reads its dates.
+            holdScreen(onEnded = navController::returnToDateSelection)
+
+            bookingConfirmedScreen(
+                onDone = {
+                    navController.navigateToTripList {
+                        popUpTo<TripListRoute> { inclusive = true }
+                    }
+                },
+            )
+        }
     }
 }
 

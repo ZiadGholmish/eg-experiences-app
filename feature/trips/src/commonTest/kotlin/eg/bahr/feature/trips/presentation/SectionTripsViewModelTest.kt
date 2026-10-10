@@ -9,6 +9,7 @@ import eg.bahr.feature.trips.data.waitlistMemory
 import eg.bahr.feature.trips.model.HomeSeeAllDto
 import eg.bahr.feature.trips.model.TripsSectionDto
 import eg.bahr.feature.trips.navigation.HomeAction
+import eg.bahr.feature.trips.presentation.components.rowTitleSharedKey
 import eg.bahr.feature.trips.presentation.components.seeAllAction
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -36,7 +37,7 @@ class SectionTripsViewModelTest {
         val row = row(totalItems = 2, seeAll = HomeSeeAllDto("section", "s-1"))
 
         assertNull(row.seeAllAction(), "two of two: nothing more to see")
-        assertEquals(HomeAction.OpenSection("s-1", "Featured"), row.copy(totalItems = 3).seeAllAction())
+        assertEquals(HomeAction.OpenSection("s-1", "Featured", rowTitleSharedKey(row.id)), row.copy(totalItems = 3).seeAllAction())
         assertNull(row.copy(totalItems = null).seeAllAction(), "an older server sends no total")
         assertNull(row.copy(totalItems = 3, seeAll = null).seeAllAction(), "nor a target")
     }
@@ -45,7 +46,7 @@ class SectionTripsViewModelTest {
     fun `a category row's see all opens the category page - an unknown target type shows no link`() {
         val row = row(totalItems = 9, seeAll = HomeSeeAllDto("category", "birds"))
 
-        assertEquals(HomeAction.OpenCategory("birds", "Featured"), row.seeAllAction())
+        assertEquals(HomeAction.OpenCategory("birds", "Featured", rowTitleSharedKey(row.id)), row.seeAllAction())
         assertNull(row.copy(seeAll = HomeSeeAllDto("map", "x")).seeAllAction())
     }
 

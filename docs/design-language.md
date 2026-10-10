@@ -37,7 +37,9 @@ wins.
 | `shape.*` | `BahrTheme.shapes.*` (M3 `Shapes` gets extraSmall–extraLarge) | `theme/BahrShapeElevationMotion.kt` |
 | `elevation.*` | `Modifier.bahrShadow(BahrElevation.X, shape, BahrTheme.colors)` | `theme/BahrShapeElevationMotion.kt` |
 | `spacing` (4dp base, 18dp gutter) | `BahrSpacing.xs…xxl`, `BahrSpacing.gutter` | `theme/BahrShapeElevationMotion.kt` |
-| `motion` | `BahrMotion` (+ `Shimmer*`, `EaseInOut` for the handoff's loading shimmer) | `theme/BahrShapeElevationMotion.kt` |
+| `motion` | `BahrMotion` (+ `Shimmer*`, `EaseInOut` for the handoff's loading shimmer; `ScreenSlideFraction`, `ListSlideFraction`, M4-M6), animated through `bahrTween` / `bahrTweenOrNull` | `theme/BahrShapeElevationMotion.kt`, `theme/BahrReducedMotion.kt` |
+| *(not in tokens.json)* reduce motion | `BahrTheme.reducedMotion` (platform setting, M4-M6); screen transitions `bahrForwardEnter/…`, header morphs `bahrSharedBounds` | `theme/BahrReducedMotion.kt`, `theme/BahrScreenTransitions.kt`, `theme/BahrSharedElements.kt` |
+| *(not in tokens.json)* see-through states | `BahrAlpha.stale` (a list's old cards while the new ones load, M4-M6) | `theme/BahrShapeElevationMotion.kt` |
 | *(not in tokens.json)* component sizes from the handoff's px | `BahrSize.*`, `BahrBorder.*`, `BahrSpacing.minTouch` | `theme/BahrShapeElevationMotion.kt` |
 | `[data-theme=dusk / highcontrast]` | `BahrTheme(theme = BahrThemeName.Dusk / HighContrast)` | `theme/BahrColors.kt` |
 | `meta.currency`, `meta.timeFormat` | `BahrFormat` (EGP, 24h, Western digits) | `format/BahrFormat.kt` |
@@ -45,7 +47,8 @@ wins.
 **Code-only sizes.** `BahrSize` holds fixed sizes the handoff draws with but tokens.json does not
 name: the icon sizes (`iconSmall/Medium/Large`, M1-M1a review #9) and component dimensions from the
 trip page (`marker`, `avatar`, `avatarSmall`, `timeColumn`, `connector`, `dateCard`, `skeletonLine`) and
-the date + party screen (`radio`, `stepSegmentWidth/Height`, `stepperValue`, M2-M1).
+the date + party screen (`radio`, `stepSegmentWidth/Height`, `stepperValue`, M2-M1), and the thin
+`progressBar` over a refreshing list (M4-M6).
 They exist so `feature/*` holds no `.dp` (ModuleGraphTest). They are not design tokens: changing one
 changes a component, not the theme, and none has a Dusk/HighContrast variant. If design adds a size
 to tokens.json, move it to the token's own group and port it from there.
@@ -53,6 +56,16 @@ to tokens.json, move it to the token's own group and port it from there.
 `BahrTheme(locale = …)` is set once at the app root from the stored language. It
 picks the font, applies the Arabic type rules (one weight heavier at display
 sizes, looser leading, no tracking, no uppercase) and sets the layout direction.
+
+**Reduce motion (M4-M6).** `BahrTheme` reads the platform setting (Android: "Remove animations", the
+animator duration scale at 0; iOS: Reduce Motion) and hands it down as `BahrTheme.reducedMotion`.
+Animate through `bahrTween` (a `snap()` when reduced) or `bahrTweenOrNull` (null = no animation, for
+`animateItem`) rather than a bare `tween`, or branch on the flag yourself, so every animation is
+instant with the setting on. (The trip page's scroll-in and the skeleton shimmer predate this and
+still use `tween` directly.) Screen
+transitions take it as a value (navigation builds them outside composition) and return `None`;
+`bahrSharedBounds` does nothing. Android Compose also scales durations by the animator scale on its
+own; iOS Compose does not, which is why the flag exists.
 
 The typography also sets Material's `bodySmall` (not a token): text fields animate their label between
 `bodyLarge` and `bodySmall`, and Material's default `bodySmall` has its letter-spacing in sp where ours

@@ -15,19 +15,25 @@ sealed interface HomeAction {
      * `category`: the category page for [key] (the `category` filter of `GET /trips`). [title] is the
      * label the opener already shows (a chip's, a row's), drawn until the page's own facets arrive;
      * null from a banner, which only knows the key.
+     *
+     * [sharedKey] names the element tapped (a chip, a row's title) so it can morph into the page's
+     * header during the screen transition (M4-M6); null when nothing morphs (a banner).
      */
     data class OpenCategory(
         val key: String,
         val title: String? = null,
+        val sharedKey: String? = null,
     ) : HomeAction
 
     /**
      * A trip row's "See all" for a row that is not one category: every trip of section [sectionId]
      * (`GET /home/sections/{id}/trips`). [title] is the row's, which that endpoint does not return.
+     * [sharedKey]: the row title that morphs into the page's heading (M4-M6).
      */
     data class OpenSection(
         val sectionId: String,
         val title: String? = null,
+        val sharedKey: String? = null,
     ) : HomeAction
 
     /** `url`: an https link, for an in-app browser. Anything not https never gets here. */

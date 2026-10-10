@@ -180,7 +180,7 @@ class TripDetailScreenshotTest {
 
     /**
      * M4-M5: the device joined this sold-out date's list on an earlier visit (a restart: a new view
-     * model over the stored join). Its date card reads "On the waiting list" and the notice says so with
+     * model over the stored join). Its date card reads "Waiting list" and the notice says so with
      * the phone it was left on, instead of offering Join again.
      */
     @Test

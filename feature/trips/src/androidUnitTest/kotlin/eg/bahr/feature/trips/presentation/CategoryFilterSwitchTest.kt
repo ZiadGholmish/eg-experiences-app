@@ -4,9 +4,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasProgressBarRangeInfo
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.paging.compose.collectAsLazyPagingItems
@@ -24,7 +30,9 @@ import eg.bahr.feature.trips.data.TripQuery
 import eg.bahr.feature.trips.data.waitlistMemory
 import eg.bahr.feature.trips.model.TripPageDto
 import eg.bahr.feature.trips.presentation.components.PagedListStatus
+import eg.bahr.feature.trips.presentation.components.REFRESH_BAR_TAG
 import eg.bahr.feature.trips.presentation.components.queryStatus
+import eg.bahr.feature.trips.presentation.components.tripRowTag
 import kotlinx.coroutines.CompletableDeferred
 import org.junit.After
 import org.junit.Before
@@ -37,8 +45,10 @@ import java.util.Locale
 import kotlin.test.assertEquals
 
 /**
- * M4-M1b review #1: a filter switch on the category page goes through loading to the new cards or
- * to the error with its retry, and never leaves the previous filter's cards under the new chip.
+ * A filter switch on the category page (M4-M1b review #1, M4-M6): the previous filter's cards stay on
+ * screen while the new filter loads, dimmed, not tappable and under the thin progress bar; then the
+ * new cards replace them, or the error with its retry does. The old cards never pass for the new
+ * result.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "en-w360dp-h800dp-xhdpi")
@@ -57,41 +67,53 @@ class CategoryFilterSwitchTest {
     fun restoreLocale() = Locale.setDefault(deviceLocale)
 
     @Test
-    fun `a failed switch shows the error with retry - not the old filter's cards - and retry loads it`() {
+    fun `old cards stay dimmed under the progress bar while a switch loads - then the new cards replace them`() {
+        val weekend = CompletableDeferred<AppResult<TripPageDto>>()
+        val vm = categoryVm { weekend.await() }
+        show(vm)
+        compose.onNodeWithText(ALL_CARD).assertIsDisplayed().assertHasClickAction()
+        compose.onNodeWithTag(REFRESH_BAR_TAG).assertDoesNotExist()
+
+        compose.onNodeWithText("Weekend").performClick()
+        compose.waitForIdle()
+        // Loading: the old card is still on screen, but stale: it cannot be opened, screen readers do not
+        // read it as the result (M4-M6 review #3), and the bar says why.
+        assertStale(ALL_SLUG)
+        compose.onNodeWithTag(REFRESH_BAR_TAG).assertIsDisplayed()
+        compose.onNodeWithText(RETRY).assertDoesNotExist()
+
+        compose.runOnIdle { weekend.complete(page(listOf(trip(2, title = WEEKEND_CARD)), facets = facets(filter = "weekend"))) }
+        compose.waitForIdle()
+        compose.onNodeWithText(WEEKEND_CARD).assertIsDisplayed().assertHasClickAction()
+        compose.onNodeWithText(ALL_CARD).assertDoesNotExist()
+        compose.onNodeWithTag(REFRESH_BAR_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun `a failed switch replaces the old cards with the error - its retry shows the spinner - then the new cards`() {
         val weekend = ArrayDeque(listOf(CompletableDeferred<AppResult<TripPageDto>>(), CompletableDeferred()))
         val answers = weekend.toList()
-        val repository =
-            FakeTripRepository(
-                listFiltered = { q ->
-                    if (q.filter == null) {
-                        page(listOf(trip(1, title = ALL_CARD)), facets = facets(category = q.category))
-                    } else {
-                        weekend.removeFirst().await()
-                    }
-                },
-            )
-        val vm = CategoryTripsViewModel("birds", null, repository, waitlistMemory())
-        compose.setContent {
-            ProvideAppLanguage(AppLanguage.ENGLISH) {
-                BahrTheme(locale = BahrLocale.English) {
-                    CategoryTripsScreen("birds", null, {}, {}, viewModel = vm)
-                }
-            }
-        }
+        val vm = categoryVm { weekend.removeFirst().await() }
+        show(vm)
         compose.onNodeWithText(ALL_CARD).assertIsDisplayed()
 
         compose.onNodeWithText("Weekend").performClick()
         compose.waitForIdle()
-        // Still loading: the old filter's card is gone at once, and the spinner says why (M4-M1b review S2).
-        compose.onNodeWithText(ALL_CARD).assertDoesNotExist()
-        compose.onNode(hasProgressBarRangeInfo(ProgressBarRangeInfo.Indeterminate)).assertExists()
+        assertStale(ALL_SLUG)
 
         compose.runOnIdle { answers[0].complete(AppResult.Failure(AppError.Network)) }
         compose.waitForIdle()
         compose.onNodeWithText(ALL_CARD).assertDoesNotExist()
+        compose.onNodeWithTag(REFRESH_BAR_TAG).assertDoesNotExist()
         compose.onNodeWithText(RETRY).assertIsDisplayed()
 
         compose.onNodeWithText(RETRY).performClick()
+        compose.waitForIdle()
+        // After an error, its retry is a plain load: the cards from before the error do not come back.
+        compose.onNodeWithText(ALL_CARD).assertDoesNotExist()
+        compose.onNode(hasProgressBarRangeInfo(ProgressBarRangeInfo.Indeterminate)).assertExists()
+        compose.onNodeWithTag(REFRESH_BAR_TAG).assertDoesNotExist()
+
         compose.runOnIdle { answers[1].complete(page(listOf(trip(2, title = WEEKEND_CARD)), facets = facets(filter = "weekend"))) }
         compose.waitForIdle()
         compose.onNodeWithText(WEEKEND_CARD).assertIsDisplayed()
@@ -100,6 +122,42 @@ class CategoryFilterSwitchTest {
             repository.requestedQueries,
             "retry re-runs the failed query, nothing else",
         )
+    }
+
+    private lateinit var repository: FakeTripRepository
+
+    /** [slug]'s card is drawn (found by its row's tag) but not tappable and not exposed to accessibility. */
+    private fun assertStale(slug: String) {
+        compose
+            .onNodeWithTag(tripRowTag(slug))
+            .assertIsDisplayed()
+            .assertHasNoClickAction()
+            .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Text))
+            .assert(SemanticsMatcher("has no children for accessibility") { it.children.isEmpty() })
+        // The merged tree is what TalkBack and VoiceOver walk. (The unmerged tree still lists the
+        // cleared texts as raw layout nodes; that is a test view, not an accessibility one.)
+        compose.onNodeWithText(ALL_CARD).assertDoesNotExist()
+    }
+
+    /** The category page over a fake whose unfiltered list is [ALL_CARD] and whose filtered list is [filtered]. */
+    private fun categoryVm(filtered: suspend () -> AppResult<TripPageDto>): CategoryTripsViewModel {
+        repository =
+            FakeTripRepository(
+                listFiltered = { q ->
+                    if (q.filter == null) page(listOf(trip(1, title = ALL_CARD)), facets = facets(category = q.category)) else filtered()
+                },
+            )
+        return CategoryTripsViewModel("birds", null, repository, waitlistMemory())
+    }
+
+    private fun show(vm: CategoryTripsViewModel) {
+        compose.setContent {
+            ProvideAppLanguage(AppLanguage.ENGLISH) {
+                BahrTheme(locale = BahrLocale.English) {
+                    CategoryTripsScreen("birds", null, {}, {}, viewModel = vm)
+                }
+            }
+        }
     }
 
     /**
@@ -124,7 +182,7 @@ class CategoryFilterSwitchTest {
                 BahrTheme(locale = BahrLocale.English) {
                     if (shown) {
                         val probe = vm.trips.collectAsLazyPagingItems()
-                        if (probing && firstFrame.isEmpty()) firstFrame += probe.itemCount to probe.queryStatus
+                        if (probing && firstFrame.isEmpty()) firstFrame += probe.itemCount to probe.queryStatus(afterFailure = false)
                         CategoryTripsScreen("birds", null, {}, {}, viewModel = vm)
                     }
                 }
@@ -151,6 +209,9 @@ class CategoryFilterSwitchTest {
 
     private companion object {
         const val ALL_CARD = "Every birds trip"
+
+        /** [ALL_CARD]'s slug (`TripFixtures.trip(1)`). */
+        const val ALL_SLUG = "trip-1"
         const val WEEKEND_CARD = "A weekend birds trip"
         const val RETRY = "Try again"
     }

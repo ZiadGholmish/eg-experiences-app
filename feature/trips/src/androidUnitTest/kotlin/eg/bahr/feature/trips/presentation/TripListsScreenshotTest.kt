@@ -14,6 +14,7 @@ import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.designsystem.theme.BahrLocale
+import eg.bahr.core.designsystem.theme.BahrMotion
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.localization.ProvideAppLanguage
 import eg.bahr.core.testing.captureScreenshot
@@ -28,7 +29,9 @@ import eg.bahr.feature.trips.model.HomeDto
 import eg.bahr.feature.trips.model.HomeSeeAllDto
 import eg.bahr.feature.trips.model.NextDepartureDto
 import eg.bahr.feature.trips.model.TripCardDto
+import eg.bahr.feature.trips.model.TripPageDto
 import eg.bahr.feature.trips.model.TripsSectionDto
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.datetime.LocalDate
 import org.junit.After
@@ -97,6 +100,55 @@ class TripListsScreenshotTest {
         val repository = FakeTripRepository(listFiltered = { awaitCancellation() })
         val vm = CategoryTripsViewModel("on_the_boat", title, repository, waitlistMemory())
         snap("category_loading", language) { CategoryTripsScreen("on_the_boat", title, {}, {}, viewModel = vm) }
+    }
+
+    /**
+     * M4-M6: a filter chip tapped while the previous filter's cards are on screen. The new chip is
+     * selected at once; the old cards stay, dimmed and not tappable, under the thin progress bar, and
+     * the count keeps its line, dimmed, until the new first page answers.
+     */
+    @Test
+    fun categoryRefreshingArabic() = categoryRefreshing(AppLanguage.ARABIC)
+
+    @Test
+    fun categoryRefreshingEnglish() = categoryRefreshing(AppLanguage.ENGLISH)
+
+    private fun categoryRefreshing(language: AppLanguage) {
+        val arabic = language == AppLanguage.ARABIC
+        val weekend = CompletableDeferred<AppResult<TripPageDto>>()
+        val repository =
+            FakeTripRepository(
+                listFiltered = { q ->
+                    if (q.filter != null) weekend.await() else page(cards(arabic), facets = facets(category = q.category, arabic = arabic))
+                },
+            )
+        val vm = CategoryTripsViewModel("on_the_boat", null, repository, waitlistMemory())
+        snap("category_refreshing", language, act = { vm.selectFilter("weekend") }) {
+            CategoryTripsScreen("on_the_boat", null, {}, {}, viewModel = vm)
+        }
+
+        // The answer lands: the new cards replace the dimmed ones and come to rest fully opaque, with
+        // the new count; the bar is gone (M4-M6). Catches a slide left half-way.
+        compose.runOnIdle {
+            weekend.complete(
+                page(
+                    cards(arabic).take(1),
+                    facets = facets(category = "on_the_boat", filter = "weekend", arabic = arabic),
+                    totalItems = WEEKEND_TRIPS,
+                ),
+            )
+        }
+        // Half-way through the slide: Weekend is after All, so the cards come in from the end side
+        // (the right in English, the left in Arabic), shifted that way and fading in.
+        repeat(SETTLE_FRAMES) {
+            compose.mainClock.advanceTimeByFrame()
+            compose.waitForIdle()
+        }
+        compose.mainClock.advanceTimeBy(BahrMotion.Medium / 2L)
+        compose.waitForIdle()
+        compose.captureScreenshot("category_switching_${language.tag}")
+        settleAnimations()
+        compose.captureScreenshot("category_switched_${language.tag}")
     }
 
     /** A stale key (VALIDATION_FAILED): the page falls back to every trip, titled "All trips". */
@@ -229,10 +281,15 @@ class TripListsScreenshotTest {
             ),
         )
 
-    /** One screen, shot in each of [languages] in turn (the view model and its answers stay). */
+    /**
+     * One screen, shot in each of [languages] in turn (the view model and its answers stay). [act],
+     * when given, runs once the first screen has settled (a tap's effect on the view model), and the
+     * clock then runs through the longest animation so the shot is the state it settles in.
+     */
     private fun snap(
         prefix: String,
         vararg languages: AppLanguage,
+        act: (() -> Unit)? = null,
         content: @Composable () -> Unit,
     ) {
         var language by mutableStateOf(languages.first())
@@ -252,12 +309,39 @@ class TripListsScreenshotTest {
                 compose.mainClock.advanceTimeByFrame()
                 compose.waitForIdle()
             }
+            // M4-M6: cards fade and slide in; run the clock through the longest animation so the shot is
+            // the state the screen settles in, not a frame of the fade.
+            settleAnimations()
+            act?.let {
+                compose.runOnIdle(it)
+                settleAnimations()
+            }
             compose.captureScreenshot("${prefix}_${shotLanguage.tag}")
+        }
+    }
+
+    /**
+     * With the clock paused, state written by an effect (the paging presenter's) is drawn only on a
+     * later frame: frames first, the longest animation, then frames again for what that started.
+     */
+    private fun settleAnimations() {
+        repeat(SETTLE_FRAMES) {
+            compose.mainClock.advanceTimeByFrame()
+            compose.waitForIdle()
+        }
+        compose.mainClock.advanceTimeBy(BahrMotion.Long.toLong())
+        compose.waitForIdle()
+        repeat(SETTLE_FRAMES) {
+            compose.mainClock.advanceTimeByFrame()
+            compose.waitForIdle()
         }
     }
 
     private companion object {
         const val SETTLE_FRAMES = 2
+
+        /** The Weekend chip's count in [facets]. */
+        const val WEEKEND_TRIPS = 4L
         val FRIDAY = LocalDate(2026, 10, 16)
         val SATURDAY = LocalDate(2026, 10, 17)
     }

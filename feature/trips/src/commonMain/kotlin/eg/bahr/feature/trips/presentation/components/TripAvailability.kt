@@ -151,8 +151,9 @@ internal fun TripAvailability(
  *   as past rather than taken.
  *
  * A sold-out date the device is on the waiting list of ([joined], M4-M5) keeps the sold-out look but
- * reads "Waiting list" with a bell (the list cards' tag wording, short enough for one line on the
- * narrow card), so the user sees they need not join again. Only a sold-out
+ * reads "Waiting list" with a bell (the list cards' tag wording: one line in Arabic, two in English
+ * on the narrow card, the same height as its "N seats left" neighbours), so the user sees they need
+ * not join again. Only a sold-out
  * date can say so (D3: only it has a list).
  */
 @Composable

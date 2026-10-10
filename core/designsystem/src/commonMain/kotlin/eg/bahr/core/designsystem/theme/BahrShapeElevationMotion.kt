@@ -129,10 +129,34 @@ object BahrMotion {
      */
     const val CarouselAdvance = 4600L
 
+    /**
+     * How far a screen opened from Home (a category, "See all", search) slides in, as a share of its
+     * width, while it fades in (M4-M6). A partial slide reads as "forward" without the whole page
+     * sweeping across.
+     */
+    const val ScreenSlideFraction = .25f
+
+    /**
+     * How far a list's new cards slide in after a filter-chip switch, as a share of the card's width,
+     * from the side of the chip that was tapped (M4-M6).
+     */
+    const val ListSlideFraction = .12f
+
     /** CSS `ease-in-out` (`cubic-bezier(.42,0,.58,1)`): the shimmer's easing in the handoff. */
     val EaseInOut = CubicBezierEasing(.42f, 0f, .58f, 1f)
     val Standard = CubicBezierEasing(.2f, 0f, 0f, 1f)
     val Emphasized = CubicBezierEasing(.05f, .7f, .1f, 1f)
+}
+
+/* ---------- Alpha ----------
+ * Code-only, not tokens: how see-through a state is drawn.
+ */
+object BahrAlpha {
+    /**
+     * Content still on screen while the list that will replace it loads (M4-M6): a filter chip or a
+     * new search keeps the previous cards, dimmed to this and not tappable, under a progress bar.
+     */
+    const val stale = .4f
 }
 
 /* ---------- Borders ----------
@@ -199,6 +223,9 @@ object BahrSize {
 
     /** The trip thumbnail on the payment screen's summary card (62px in the handoff). */
     val thumbnail = 62.dp
+
+    /** The thin progress bar over a list that is refreshing with its old cards still on screen (M4-M6). */
+    val progressBar = 3.dp
 
     /** A category's tinted tile (HANDOFF Home → category row: 58px, `extraLarge` radius); the category page's header. */
     val categoryTile = 58.dp

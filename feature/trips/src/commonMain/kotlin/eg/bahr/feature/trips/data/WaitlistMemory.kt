@@ -45,6 +45,8 @@ internal class WaitlistMemory(
         store.joins
             .map { stored -> stored.mapNotNull { it.parsed() } }
             .catch {
+                // Exceptions only, as in [safely]: an `Error` is a build defect, not a storage failure, and must surface.
+                if (it !is Exception) throw it
                 log.w(it) { "Waiting-list joins not read" }
                 emit(emptyList())
             }

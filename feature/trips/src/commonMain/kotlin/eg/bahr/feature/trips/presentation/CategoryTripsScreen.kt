@@ -1,5 +1,10 @@
 package eg.bahr.feature.trips.presentation
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,6 +30,8 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import eg.bahr.core.designsystem.theme.BahrSize
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
+import eg.bahr.core.designsystem.theme.bahrSharedBounds
+import eg.bahr.core.designsystem.theme.bahrTween
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.trip_per_person
 import eg.bahr.core.localization.generated.resources.trips_all_title
@@ -34,8 +41,13 @@ import eg.bahr.feature.trips.model.FacetDto
 import eg.bahr.feature.trips.presentation.components.FacetFilterChips
 import eg.bahr.feature.trips.presentation.components.ListHeading
 import eg.bahr.feature.trips.presentation.components.ListTopBar
+import eg.bahr.feature.trips.presentation.components.PagedListStatus
+import eg.bahr.feature.trips.presentation.components.RefreshBarBelow
 import eg.bahr.feature.trips.presentation.components.colors
 import eg.bahr.feature.trips.presentation.components.listBody
+import eg.bahr.feature.trips.presentation.components.rememberListMotion
+import eg.bahr.feature.trips.presentation.components.rememberQueryStatus
+import eg.bahr.feature.trips.presentation.components.selectedOrder
 import eg.bahr.feature.trips.presentation.components.symbolIcon
 import eg.bahr.feature.trips.presentation.components.toneTint
 import org.jetbrains.compose.resources.stringResource
@@ -49,6 +61,11 @@ import org.koin.core.parameter.parametersOf
  *
  * [title] is the opener's label for the category, shown until the facets name it. If the server
  * turns the category down (a stale key) the page becomes "All trips" rather than an error.
+ *
+ * M4-M6: a chip switch keeps the cards on screen, dimmed, under a thin progress bar until the new
+ * ones slide in from the tapped chip's side; the header crossfades when the category changes (the
+ * facets name it, or the fallback to "All trips"). [sharedKey] is the Home element (a chip, a row's
+ * title) that morphs into the header on the way in.
  */
 @Composable
 internal fun CategoryTripsScreen(
@@ -57,6 +74,7 @@ internal fun CategoryTripsScreen(
     onBack: () -> Unit,
     onTripClick: (slug: String) -> Unit,
     modifier: Modifier = Modifier,
+    sharedKey: String? = null,
     viewModel: CategoryTripsViewModel = koinViewModel(key = "category:$category") { parametersOf(category, title) },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -64,6 +82,11 @@ internal fun CategoryTripsScreen(
     val listState = rememberLazyListState()
     val perPersonLabel = stringResource(Res.string.trip_per_person)
     val bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + BahrSpacing.xl
+    val status = trips.rememberQueryStatus()
+    val chips = state.filterChips
+    val motion =
+        rememberListMotion(status, switchKey = state.category to state.filter, order = selectedOrder(chips, state::isSelected))
+    val appendRetry = rememberThrottled(trips::retry)
 
     Column(modifier = modifier.fillMaxSize()) {
         ListTopBar(onBack = onBack)
@@ -71,31 +94,41 @@ internal fun CategoryTripsScreen(
             state = listState,
             modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(bottom = bottom),
-            verticalArrangement = Arrangement.spacedBy(BahrSpacing.lg),
+            verticalArrangement = Arrangement.spacedBy(LIST_GAP),
         ) {
+            val refreshing = status == PagedListStatus.Refreshing
             item(key = KEY_HEADER) {
-                CategoryHeader(
-                    facet = state.categoryFacet,
-                    label =
-                        when {
-                            state.category == null -> stringResource(Res.string.trips_all_title)
-                            else -> state.categoryFacet?.label ?: state.fallbackTitle
-                        },
-                    totalItems = state.totalItems,
-                    modifier = Modifier.padding(horizontal = BahrSpacing.gutter),
-                )
+                // The bar goes under the chips; with none yet, under the header.
+                RefreshBarBelow(visible = refreshing && chips.isEmpty(), gap = LIST_GAP) {
+                    CategoryHeader(
+                        facet = state.categoryFacet,
+                        label =
+                            when {
+                                state.category == null -> stringResource(Res.string.trips_all_title)
+                                else -> state.categoryFacet?.label ?: state.fallbackTitle
+                            },
+                        totalItems = state.totalItems,
+                        stale = status == PagedListStatus.Refreshing,
+                        modifier = Modifier.padding(horizontal = BahrSpacing.gutter).bahrSharedBounds(sharedKey),
+                    )
+                }
             }
-            val chips = state.filterChips
             if (chips.isNotEmpty()) {
                 item(key = KEY_CHIPS) {
-                    FacetFilterChips(chips, isSelected = state::isSelected, onSelect = viewModel::selectFilter)
+                    RefreshBarBelow(visible = refreshing, gap = LIST_GAP) {
+                        FacetFilterChips(chips, isSelected = state::isSelected, onSelect = viewModel::selectFilter)
+                    }
                 }
             }
             listBody(
                 trips = trips,
+                status = status,
+                motion = motion,
                 perPersonLabel = perPersonLabel,
                 waitlistTags = state.waitlistTags,
                 emptyMessage = { stringResource(if (state.filter != null) Res.string.trips_filter_empty else Res.string.trips_empty) },
+                onRetry = viewModel::retry,
+                onAppendRetry = appendRetry,
                 onTripClick = onTripClick,
             )
         }
@@ -105,16 +138,44 @@ internal fun CategoryTripsScreen(
 /**
  * The category's tile (its icon on its tone's tint, the handoff's category tile), its label and the
  * trip count. The tile waits for the facets; the label can come from the opener before them.
+ *
+ * When the category changes (its facet arrives, or the page falls back to "All trips"), the tile and
+ * label crossfade into the new ones (M4-M6); the count crossfades on its own in [ListHeading].
  */
 @Composable
 private fun CategoryHeader(
     facet: FacetDto?,
     label: String?,
     totalItems: Long?,
+    stale: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    Row(
+    val fade = bahrTween<Float>()
+    AnimatedContent(
+        targetState = CategoryTitle(facet, label),
+        // The count changes on its own: only a new tile or label crossfades the header.
+        contentKey = { it.facet?.key to it.label },
+        transitionSpec = { fadeIn(fade) togetherWith fadeOut(fade) using SizeTransform(clip = false) },
         modifier = modifier,
+    ) { title ->
+        CategoryTitleRow(title.facet, title.label, totalItems, stale)
+    }
+}
+
+/** What the header names: the category's facet (its tile) and label. */
+private data class CategoryTitle(
+    val facet: FacetDto?,
+    val label: String?,
+)
+
+@Composable
+private fun CategoryTitleRow(
+    facet: FacetDto?,
+    label: String?,
+    totalItems: Long?,
+    stale: Boolean,
+) {
+    Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(BahrSpacing.md),
     ) {
@@ -136,9 +197,12 @@ private fun CategoryHeader(
                 )
             }
         }
-        ListHeading(label = label, totalItems = totalItems)
+        ListHeading(label = label, totalItems = totalItems, stale = stale)
     }
 }
+
+/** The gap between the page's items; the refresh bar is drawn in the middle of the one under the chips. */
+private val LIST_GAP = BahrSpacing.lg
 
 private const val KEY_HEADER = "header"
 private const val KEY_CHIPS = "chips"

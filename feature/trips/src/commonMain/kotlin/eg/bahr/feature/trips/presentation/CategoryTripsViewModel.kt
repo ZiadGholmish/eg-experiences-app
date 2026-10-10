@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
@@ -67,6 +68,12 @@ private data class CategoryQuery(
     val filter: String?,
 )
 
+/** One load of a query: [attempt] goes up on Retry, so the same query loads again from page 0. */
+private data class CategoryLoad(
+    val query: CategoryQuery,
+    val attempt: Int,
+)
+
 /**
  * A stale or unknown key (a banner or link authored before a category was removed) is answered with
  * 400 VALIDATION_FAILED, which does not say which key it refused (and the message is never parsed).
@@ -84,27 +91,37 @@ internal class CategoryTripsViewModel(
     private val _uiState = MutableStateFlow(CategoryTripsUiState(category = category, fallbackTitle = title))
     val uiState: StateFlow<CategoryTripsUiState> = _uiState.asStateFlow()
 
+    /** Bumped by [retry]: the failed first page loads again. */
+    private val attempts = MutableStateFlow(0)
+
+    /** A burst of Retry taps is one request (M4-M6). */
+    private val retries = Throttle(viewModelScope)
+
     /**
      * The trips of the current query, a page at a time. A new query (a chip tap, the fallback) starts
-     * a new Pager, so the list starts over at page 0.
+     * a new Pager, so the list starts over at page 0. The same query twice is not asked again
+     * (`distinctUntilChanged`); taps faster than the answers collapse to the last one, whose Pager
+     * replaces (and cancels) the one before (`flatMapLatest`).
      */
     val trips: Flow<PagingData<TripCardDto>> =
-        _uiState
-            .map { CategoryQuery(it.category, it.filter) }
+        combine(_uiState.map { CategoryQuery(it.category, it.filter) }, attempts, ::CategoryLoad)
             .distinctUntilChanged()
-            .flatMapLatest { query ->
+            .flatMapLatest { (query, _) ->
                 Pager(TripPagingConfig) {
                     TripListPagingSource(repository, query.category, query.filter) { onFirstPage(query, it) }
                 }.flow
                 // Paging's presenter keeps the previous query's cards until the new first page arrives;
-                // the screen reads the refresh state first, so a switch shows loading, then the new
-                // cards or the error with its retry (see `PagedListStatus`).
+                // the screen shows them dimmed under a progress bar until then, and then the new cards
+                // or the error with its retry (see `PagedListStatus`).
             }.distinctTrips()
             .cachedIn(viewModelScope)
 
     init {
         collectWaitlistTags(waitlists) { tags -> _uiState.update { it.copy(waitlistTags = tags) } }
     }
+
+    /** Retry, from the first page's error: loads the current query again. Throttled. */
+    fun retry() = retries.attempt { attempts.update { it + 1 } }
 
     /** A filter chip tapped. Tapping the active one (or "all") clears the filter. */
     fun selectFilter(key: String) {
