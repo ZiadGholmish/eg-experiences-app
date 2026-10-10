@@ -11,6 +11,10 @@ import eg.bahr.feature.booking.presentation.ContinueBookingCard
  * The booking feature owns the card because it owns the booking (`GET /bookings/{ref}`) and the
  * countdown; the host screen only gives it a place, and `:composeApp` joins the two, so neither
  * feature depends on the other. [onOpen] gets the hold to open; wire it to [navigateToHold].
+ *
+ * The card comes in and goes out with an animation (M4-M4: fade + grow/shrink, so what is below
+ * moves smoothly) when a hold appears or ends. [modifier] is put on the card *inside* that
+ * animation: give the space above the card here (padding), and it grows and shrinks with the card.
  */
 @Composable
 fun ContinueBookingSlot(

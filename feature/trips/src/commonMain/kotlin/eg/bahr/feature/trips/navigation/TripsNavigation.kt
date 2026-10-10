@@ -1,6 +1,7 @@
 package eg.bahr.feature.trips.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hasRoute
@@ -26,7 +27,9 @@ import eg.bahr.feature.trips.presentation.TripListScreen
  *
  * Home. [header] is drawn under the list's title (and at the top of its loading, error and empty
  * views); the app fills it from another feature (M2-M4: booking's "Continue your booking" card)
- * without this feature knowing what it is. It must draw nothing when it has nothing to show.
+ * without this feature knowing what it is. It is handed `gap`, the space above it, as a modifier to
+ * put on its content inside its own enter/exit animation, so the space comes and goes with it
+ * (M4-M4). It must draw nothing when it has nothing to show, gap included.
  *
  * [onHomeAction] is where a Home banner, a category chip or a row's "See all" goes (M4-M1a, M4-M1b):
  * the app decides what a trip, a category, a section list or a link opens. A trip card in a Home row
@@ -39,7 +42,7 @@ import eg.bahr.feature.trips.presentation.TripListScreen
  */
 fun NavGraphBuilder.tripListScreen(
     onTripClick: (slug: String) -> Unit,
-    header: @Composable () -> Unit = {},
+    header: @Composable (gap: Modifier) -> Unit = {},
     onHomeAction: (HomeAction) -> Unit = {},
     onSearch: () -> Unit = {},
     reducedMotion: () -> Boolean = { false },

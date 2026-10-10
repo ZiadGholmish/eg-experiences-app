@@ -1,5 +1,10 @@
 package eg.bahr.feature.booking.presentation
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,6 +22,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.IntSize
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import eg.bahr.core.designsystem.components.BahrCard
@@ -24,6 +30,7 @@ import eg.bahr.core.designsystem.components.HoldCountdown
 import eg.bahr.core.designsystem.format.BahrFormat
 import eg.bahr.core.designsystem.icon.BahrIcons
 import eg.bahr.core.designsystem.theme.BahrSpacing
+import eg.bahr.core.designsystem.theme.bahrTween
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.booking_continue_title
 import eg.bahr.core.localization.generated.resources.booking_dates_overnight
@@ -41,8 +48,8 @@ import org.koin.compose.viewmodel.koinViewModel
  * Home's "Continue your booking" card (PLAN M2-M4): the live hold's countdown, trip, date and party;
  * tapping it opens the held seats ([onOpen]).
  *
- * Draws nothing at all, not even an empty box, while there is no live hold: it sits in the trip
- * list's header, whose spacing would otherwise show a gap.
+ * Draws nothing while there is no live hold (an empty, zero-size box): it sits in the trip list's
+ * header, which gives it its gap above as [modifier] so no gap shows without it.
  *
  * The view model lives as long as the screen that hosts the card (Home's back-stack entry), and each
  * time that screen starts the hold is read again from the server; scrolling the card out of view and
@@ -62,7 +69,39 @@ internal fun ContinueBookingCard(
     LaunchedEffect(viewModel, lifecycle) { viewModel.attach(lifecycle) }
 
     // The route is built at the tap, with the server's clock as of the tap.
-    ContinueBookingCard(state = state, onOpen = { viewModel.routeForTap()?.let(onOpen) }, modifier = modifier)
+    AnimatedContinueBookingCard(state = state, onOpen = { viewModel.routeForTap()?.let(onOpen) }, modifier = modifier)
+}
+
+/**
+ * The card coming and going (M4-M4): when a hold appears it fades in while its space opens, and when
+ * it ends (ran out, released, paid, or found gone when Home starts) it fades out while its space
+ * closes, so what is below moves up smoothly rather than jumping. While it shows, a new tick only
+ * redraws it ([contentKey] is "shown or not"), and the leaving card is drawn from the last state that
+ * showed it: the view model has already cleared it by then.
+ *
+ * [modifier] goes on the card itself, inside the animation, so space the host puts above the card
+ * opens and closes with it. Instant under reduce motion ([bahrTween]).
+ */
+@Composable
+private fun AnimatedContinueBookingCard(
+    state: ContinueBookingUiState,
+    onOpen: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val fade = bahrTween<Float>()
+    val size = bahrTween<IntSize>()
+    AnimatedContent(
+        targetState = state.takeIf { it.isVisible },
+        contentKey = { it != null },
+        transitionSpec = {
+            // Clipped, so the leaving card is cut at the closing edge rather than drawn over what is
+            // below it.
+            fadeIn(fade) togetherWith fadeOut(fade) using SizeTransform(clip = true) { _, _ -> size }
+        },
+        contentAlignment = Alignment.TopStart,
+    ) { shown ->
+        if (shown != null) ContinueBookingCard(state = shown, onOpen = onOpen, modifier = modifier)
+    }
 }
 
 /** Stateless, for screenshots. */

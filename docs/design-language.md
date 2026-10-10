@@ -37,7 +37,7 @@ wins.
 | `shape.*` | `BahrTheme.shapes.*` (M3 `Shapes` gets extraSmall–extraLarge) | `theme/BahrShapeElevationMotion.kt` |
 | `elevation.*` | `Modifier.bahrShadow(BahrElevation.X, shape, BahrTheme.colors)` | `theme/BahrShapeElevationMotion.kt` |
 | `spacing` (4dp base, 18dp gutter) | `BahrSpacing.xs…xxl`, `BahrSpacing.gutter` | `theme/BahrShapeElevationMotion.kt` |
-| `motion` | `BahrMotion` (+ `Shimmer*`, `EaseInOut` for the handoff's loading shimmer; `ScreenSlideFraction`, `ListSlideFraction`, M4-M6), animated through `bahrTween` / `bahrTweenOrNull` | `theme/BahrShapeElevationMotion.kt`, `theme/BahrReducedMotion.kt` |
+| `motion` | `BahrMotion` (+ `Shimmer*`, `EaseInOut` for the handoff's loading shimmer; `ScreenSlideFraction`, `ListSlideFraction`, M4-M6; `CountdownPulse`, `CountdownPulseScale`, the hold countdown's last minute, M4-M4), animated through `bahrTween` / `bahrTweenOrNull` | `theme/BahrShapeElevationMotion.kt`, `theme/BahrReducedMotion.kt` |
 | *(not in tokens.json)* reduce motion | `BahrTheme.reducedMotion` (platform setting, M4-M6); screen transitions `bahrForwardEnter/…`, header morphs `bahrSharedBounds` | `theme/BahrReducedMotion.kt`, `theme/BahrScreenTransitions.kt`, `theme/BahrSharedElements.kt` |
 | *(not in tokens.json)* see-through states | `BahrAlpha.stale` (a list's old cards while the new ones load, M4-M6) | `theme/BahrShapeElevationMotion.kt` |
 | *(not in tokens.json)* component sizes from the handoff's px | `BahrSize.*`, `BahrBorder.*`, `BahrSpacing.minTouch` | `theme/BahrShapeElevationMotion.kt` |
@@ -65,7 +65,8 @@ instant with the setting on. (The trip page's scroll-in and the skeleton shimmer
 still use `tween` directly.) Screen
 transitions take it as a value (navigation builds them outside composition) and return `None`;
 `bahrSharedBounds` does nothing. Android Compose also scales durations by the animator scale on its
-own; iOS Compose does not, which is why the flag exists.
+own; iOS Compose does not, which is why the flag exists. A looping animation (`rememberInfiniteTransition`,
+e.g. the countdown's last-minute pulse) ignores `bahrTween`: do not start it at all when the flag is on.
 
 The typography also sets Material's `bodySmall` (not a token): text fields animate their label between
 `bodyLarge` and `bodySmall`, and Material's default `bodySmall` has its letter-spacing in sp where ours

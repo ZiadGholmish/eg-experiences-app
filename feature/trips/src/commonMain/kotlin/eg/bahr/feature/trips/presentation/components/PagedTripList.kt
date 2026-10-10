@@ -43,9 +43,11 @@ import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
@@ -342,22 +344,36 @@ internal fun ListTopBar(
 /**
  * The thin progress bar of a refreshing list (M4-M6): drawn while [visible], in a slot that keeps its
  * height either way, so the cards under it do not move when it comes and goes.
+ *
+ * Screen readers (M4-M6 review #8): the stale cards are hidden from them, so without a word a refresh
+ * would be silent. The slot is a polite live region that says "busy" while the bar shows: it is
+ * always there, and its description changing is what gets announced (a live region that only just
+ * appeared may not be), once per refresh, after whatever is being read.
  */
 @Composable
 internal fun RefreshBar(
     visible: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    Box(modifier = modifier.fillMaxWidth().height(BahrSize.progressBar)) {
+    val busy = stringResource(Res.string.a11y_busy)
+    Box(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .height(BahrSize.progressBar)
+                .testTag(REFRESH_SLOT_TAG)
+                .semantics {
+                    liveRegion = LiveRegionMode.Polite
+                    if (visible) contentDescription = busy
+                },
+    ) {
         AnimatedVisibility(visible = visible, enter = fadeIn(bahrTween()), exit = fadeOut(bahrTween())) {
-            val busy = stringResource(Res.string.a11y_busy)
             LinearProgressIndicator(
                 modifier =
                     Modifier
                         .fillMaxWidth()
                         .height(BahrSize.progressBar)
-                        .testTag(REFRESH_BAR_TAG)
-                        .semantics { contentDescription = busy },
+                        .testTag(REFRESH_BAR_TAG),
                 color = MaterialTheme.colorScheme.primary,
                 trackColor = BahrTheme.colors.track,
             )
@@ -536,6 +552,9 @@ internal fun tripRowTag(slug: String): String = "trip_row:$slug"
 
 /** For tests: the thin progress bar of a refreshing list. */
 internal const val REFRESH_BAR_TAG = "refresh_bar"
+
+/** For tests: the refresh bar's slot, the live region that says "busy" (drawn whether or not the bar shows). */
+internal const val REFRESH_SLOT_TAG = "refresh_slot"
 
 /** Prefixed: a LazyColumn key must be unique across headings, chips, states and trips. */
 internal const val KEY_TRIP = "trip:"

@@ -4,10 +4,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -62,9 +62,11 @@ import org.koin.compose.viewmodel.koinViewModel
 /**
  * Home: the trips on sale. [header] is drawn under the title in the list, and at the top of the
  * loading, error and empty views (which have no title), so it is never hidden behind a failed list;
- * another feature fills it
- * through `tripListScreen(header = …)` (M2-M4: "Continue your booking"). It must draw nothing when
- * it has nothing to show, or the list's spacing leaves a gap.
+ * another feature fills it through `tripListScreen(header = …)` (M2-M4: "Continue your booking").
+ * It is handed the gap that separates it from what is above, as a modifier for its content: drawn
+ * inside the slot's own enter/exit animation, the gap grows and shrinks with it (M4-M4), where a gap
+ * the list kept would make everything below jump at the end of an exit. With nothing to show it
+ * must draw nothing at all, gap included.
  *
  * Under the header come Home's server-driven sections (M4-M1a), in the server's order, then the
  * full list under an "All trips" heading. With no sections the screen is the plain list it was.
@@ -74,7 +76,7 @@ import org.koin.compose.viewmodel.koinViewModel
 internal fun TripListScreen(
     onTripClick: (slug: String) -> Unit,
     modifier: Modifier = Modifier,
-    header: @Composable () -> Unit = {},
+    header: @Composable (gap: Modifier) -> Unit = {},
     onAction: (HomeAction) -> Unit = {},
     onSearch: () -> Unit = {},
     viewModel: TripListViewModel = koinViewModel(),
@@ -104,14 +106,9 @@ internal fun TripListScreen(
     val listFailed = listStatus is PagedListStatus.Failed
     if (showsLoading || listStatus != PagedListStatus.Loaded && (listFailed || sections.isEmpty())) {
         Column(modifier = stateModifier) {
-            // The zero-size anchor puts the gap above the header only when the header draws
-            // something: spacedBy adds no space after a last child, and an empty header emits none.
-            Column(
-                modifier = Modifier.padding(horizontal = BahrSpacing.gutter),
-                verticalArrangement = Arrangement.spacedBy(BahrSpacing.xl),
-            ) {
-                Spacer(Modifier)
-                header()
+            // The gap above the header is the header's, so it comes and goes with it.
+            Box(modifier = Modifier.padding(horizontal = BahrSpacing.gutter)) {
+                header(Modifier.padding(top = BahrSpacing.xl))
             }
             val fill = Modifier.weight(1f)
             when {
@@ -142,16 +139,17 @@ internal fun TripListScreen(
         verticalArrangement = Arrangement.spacedBy(BahrSpacing.lg),
     ) {
         item(key = KEY_TOP) {
-            Column(
-                modifier = Modifier.padding(horizontal = BahrSpacing.gutter),
-                verticalArrangement = Arrangement.spacedBy(BahrSpacing.lg),
-            ) {
-                Text(
-                    text = stringResource(Res.string.trips_title),
-                    style = MaterialTheme.typography.headlineMedium,
-                )
-                SearchEntry(onClick = onSearch)
-                header()
+            Column(modifier = Modifier.padding(horizontal = BahrSpacing.gutter)) {
+                Column(verticalArrangement = Arrangement.spacedBy(BahrSpacing.lg)) {
+                    Text(
+                        text = stringResource(Res.string.trips_title),
+                        style = MaterialTheme.typography.headlineMedium,
+                    )
+                    SearchEntry(onClick = onSearch)
+                }
+                // The header grows and shrinks inside this item (M4-M4), and the items below follow
+                // it frame by frame; its gap is given to it so that shrinks too.
+                header(Modifier.padding(top = BahrSpacing.lg))
             }
         }
 

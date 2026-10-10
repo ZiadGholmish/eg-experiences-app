@@ -134,7 +134,7 @@ class TripListScreenshotTest {
     // full-screen states. The goldens without a header above are the "slot draws nothing" case.
     @Test
     fun loadedWithHeaderArabic() =
-        snapEach("trip_list_header_loaded", AppLanguage.ARABIC, header = { HeaderStandIn() }) {
+        snapEach("trip_list_header_loaded", AppLanguage.ARABIC, header = { HeaderStandIn(it) }) {
             listTrips = {
                 loadedPage(
                     dawn = "الفجر على بحيرة البرلس" to "الأكثر حجزًا",
@@ -145,7 +145,7 @@ class TripListScreenshotTest {
 
     @Test
     fun loadedWithHeaderEnglish() =
-        snapEach("trip_list_header_loaded", AppLanguage.ENGLISH, header = { HeaderStandIn() }) {
+        snapEach("trip_list_header_loaded", AppLanguage.ENGLISH, header = { HeaderStandIn(it) }) {
             listTrips = {
                 loadedPage(
                     dawn = "Dawn on Lake Burullus" to "Most booked",
@@ -156,14 +156,14 @@ class TripListScreenshotTest {
 
     @Test
     fun errorWithHeader() =
-        snapEach("trip_list_header_error", header = { HeaderStandIn() }, settle = true) {
+        snapEach("trip_list_header_error", header = { HeaderStandIn(it) }, settle = true) {
             listTrips =
                 { AppResult.Failure(AppError.Network) }
         }
 
     @Composable
-    private fun HeaderStandIn() {
-        BahrCard(modifier = Modifier.fillMaxWidth()) {
+    private fun HeaderStandIn(gap: Modifier) {
+        BahrCard(modifier = gap.fillMaxWidth()) {
             Text("Header slot", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(BahrSpacing.lg))
         }
     }
@@ -357,7 +357,7 @@ class TripListScreenshotTest {
     private fun snapEach(
         prefix: String,
         vararg languages: AppLanguage = AppLanguage.entries.toTypedArray(),
-        header: @Composable () -> Unit = {},
+        header: @Composable (gap: Modifier) -> Unit = {},
         settle: Boolean = false,
         stub: FakeTripRepository.() -> Unit,
     ) {

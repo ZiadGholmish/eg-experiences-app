@@ -142,6 +142,15 @@ object BahrMotion {
      */
     const val ListSlideFraction = .12f
 
+    /**
+     * The hold countdown's last-minute pulse (M4-M4): one swell of the timer's circle, out and back
+     * over twice this. Slow enough to read as "gentle", not as an alarm.
+     */
+    const val CountdownPulse = 900
+
+    /** How far the timer's circle swells at the top of a pulse (1 = no swell). */
+    const val CountdownPulseScale = 1.08f
+
     /** CSS `ease-in-out` (`cubic-bezier(.42,0,.58,1)`): the shimmer's easing in the handoff. */
     val EaseInOut = CubicBezierEasing(.42f, 0f, .58f, 1f)
     val Standard = CubicBezierEasing(.2f, 0f, 0f, 1f)

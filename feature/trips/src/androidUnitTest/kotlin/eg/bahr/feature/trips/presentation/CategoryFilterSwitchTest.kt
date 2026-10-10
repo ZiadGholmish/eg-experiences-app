@@ -3,18 +3,25 @@ package eg.bahr.feature.trips.presentation
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHasClickAction
-import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.click
+import androidx.compose.ui.test.filter
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasProgressBarRangeInfo
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
 import androidx.paging.compose.collectAsLazyPagingItems
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.common.result.AppError
@@ -31,6 +38,7 @@ import eg.bahr.feature.trips.data.waitlistMemory
 import eg.bahr.feature.trips.model.TripPageDto
 import eg.bahr.feature.trips.presentation.components.PagedListStatus
 import eg.bahr.feature.trips.presentation.components.REFRESH_BAR_TAG
+import eg.bahr.feature.trips.presentation.components.REFRESH_SLOT_TAG
 import eg.bahr.feature.trips.presentation.components.queryStatus
 import eg.bahr.feature.trips.presentation.components.tripRowTag
 import kotlinx.coroutines.CompletableDeferred
@@ -87,6 +95,8 @@ class CategoryFilterSwitchTest {
         compose.onNodeWithText(WEEKEND_CARD).assertIsDisplayed().assertHasClickAction()
         compose.onNodeWithText(ALL_CARD).assertDoesNotExist()
         compose.onNodeWithTag(REFRESH_BAR_TAG).assertDoesNotExist()
+        assertOpens(WEEKEND_SLUG)
+        assertEquals(listOf(WEEKEND_SLUG), opened)
     }
 
     @Test
@@ -126,17 +136,50 @@ class CategoryFilterSwitchTest {
 
     private lateinit var repository: FakeTripRepository
 
-    /** [slug]'s card is drawn (found by its row's tag) but not tappable and not exposed to accessibility. */
+    /** The trips the screen was asked to open, in order. */
+    private val opened = mutableListOf<String>()
+
+    /**
+     * [slug]'s card is drawn (found by its row's tag) but not tappable and not exposed to accessibility.
+     *
+     * "Not tappable" is a real touch on the card, not a semantics check (M4-M6 review #10): the row's
+     * semantics are cleared, so a "no click action" assertion would pass whether the card reacts or not.
+     */
     private fun assertStale(slug: String) {
         compose
             .onNodeWithTag(tripRowTag(slug))
             .assertIsDisplayed()
-            .assertHasNoClickAction()
             .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.Text))
             .assert(SemanticsMatcher("has no children for accessibility") { it.children.isEmpty() })
         // The merged tree is what TalkBack and VoiceOver walk. (The unmerged tree still lists the
         // cleared texts as raw layout nodes; that is a test view, not an accessibility one.)
         compose.onNodeWithText(ALL_CARD).assertDoesNotExist()
+
+        val before = opened.toList()
+        compose.onNodeWithTag(tripRowTag(slug)).performTouchInput { click() }
+        compose.waitForIdle()
+        assertEquals(before, opened, "a stale card does not open its trip")
+        // The screen reader hears that the list is busy (M4-M6 review #8): one slot (the page has one
+        // under the header too, for when there are no chips) says so, politely.
+        compose
+            .onAllNodesWithTag(REFRESH_SLOT_TAG)
+            .filter(hasContentDescription(BUSY))
+            .assertCountEquals(1)
+            .onFirst()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite))
+    }
+
+    /** The same touch on a current card opens its trip: the control for [assertStale]'s touch. */
+    private fun assertOpens(slug: String) {
+        val before = opened.size
+        compose.onNodeWithTag(tripRowTag(slug)).performTouchInput { click() }
+        compose.waitForIdle()
+        assertEquals(before + 1, opened.size, "a current card opens its trip")
+        // Idle again: nothing busy to say.
+        compose
+            .onAllNodesWithTag(REFRESH_SLOT_TAG)
+            .filter(SemanticsMatcher.keyIsDefined(SemanticsProperties.ContentDescription))
+            .assertCountEquals(0)
     }
 
     /** The category page over a fake whose unfiltered list is [ALL_CARD] and whose filtered list is [filtered]. */
@@ -154,7 +197,7 @@ class CategoryFilterSwitchTest {
         compose.setContent {
             ProvideAppLanguage(AppLanguage.ENGLISH) {
                 BahrTheme(locale = BahrLocale.English) {
-                    CategoryTripsScreen("birds", null, {}, {}, viewModel = vm)
+                    CategoryTripsScreen("birds", null, onBack = {}, onTripClick = { opened += it }, viewModel = vm)
                 }
             }
         }
@@ -213,6 +256,12 @@ class CategoryFilterSwitchTest {
         /** [ALL_CARD]'s slug (`TripFixtures.trip(1)`). */
         const val ALL_SLUG = "trip-1"
         const val WEEKEND_CARD = "A weekend birds trip"
+
+        /** [WEEKEND_CARD]'s slug (`TripFixtures.trip(2)`). */
+        const val WEEKEND_SLUG = "trip-2"
         const val RETRY = "Try again"
+
+        /** `a11y_busy` in English. */
+        const val BUSY = "Loading"
     }
 }

@@ -12,6 +12,7 @@ import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.datastore.StoredHold
 import eg.bahr.core.designsystem.theme.BahrLocale
+import eg.bahr.core.designsystem.theme.BahrMotion
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.localization.ProvideAppLanguage
@@ -38,7 +39,7 @@ import kotlin.time.Instant
 
 /**
  * Home's "Continue your booking" card × {ar, en} × {loaded (10 minutes left), urgent (under a
- * minute, the time in the error colour)}, through the real view model with a fake repository, store
+ * minute, the time in the error colour), the last minute's pulse at its height}, through the real view model with a fake repository, store
  * and clock, laid out as on Home (gutter padding). The loading state draws nothing: asserted, not
  * captured.
  *
@@ -84,11 +85,23 @@ class ContinueBookingScreenshotTest {
     @Test
     fun loadedEnglish() = snap("continue_booking_loaded", AppLanguage.ENGLISH, sinceHold = 5.minutes)
 
+    // The last minute's pulse (M4-M4) loops, so it has no frame to call "at rest": the urgent goldens
+    // are the still panel, as reduce motion draws it (and as the pulse starts).
     @Test
-    fun urgentArabic() = snap("continue_booking_urgent", AppLanguage.ARABIC, sinceHold = 14.minutes + 18.seconds)
+    fun urgentArabic() = snap("continue_booking_urgent", AppLanguage.ARABIC, sinceHold = LAST_MINUTE, reducedMotion = true)
 
     @Test
-    fun urgentEnglish() = snap("continue_booking_urgent", AppLanguage.ENGLISH, sinceHold = 14.minutes + 18.seconds)
+    fun urgentEnglish() = snap("continue_booking_urgent", AppLanguage.ENGLISH, sinceHold = LAST_MINUTE, reducedMotion = true)
+
+    // ...and the pulse at its height: the timer's circle swollen and warmed to the error colour, its
+    // icon and the text unchanged.
+    @Test
+    fun pulseArabic() =
+        snap("continue_booking_pulse", AppLanguage.ARABIC, sinceHold = LAST_MINUTE, settleMillis = BahrMotion.CountdownPulse.toLong())
+
+    @Test
+    fun pulseEnglish() =
+        snap("continue_booking_pulse", AppLanguage.ENGLISH, sinceHold = LAST_MINUTE, settleMillis = BahrMotion.CountdownPulse.toLong())
 
     @Test
     fun drawsNothingUntilTheServerAnswers() {
@@ -108,6 +121,8 @@ class ContinueBookingScreenshotTest {
         language: AppLanguage,
         sinceHold: Duration,
         returnDate: LocalDate? = null,
+        reducedMotion: Boolean = false,
+        settleMillis: Long = BahrMotion.Medium.toLong() + SETTLE_MARGIN_MILLIS,
     ) {
         val arabic = language == AppLanguage.ARABIC
         val booking =
@@ -118,7 +133,7 @@ class ContinueBookingScreenshotTest {
                 dayLabel = if (arabic) "السبت 10 أكتوبر" else "Sat 10 Oct",
                 returnDate = returnDate,
             )
-        show(language, FakeBookingRepository(heldBooking = { _, _ -> AppResult.Success(booking) }))
+        show(language, FakeBookingRepository(heldBooking = { _, _ -> AppResult.Success(booking) }), reducedMotion, settleMillis)
         compose.onNodeWithTag(CONTINUE_BOOKING_TAG).assertExists()
         compose.captureScreenshot("${prefix}_${language.tag}")
     }
@@ -126,11 +141,16 @@ class ContinueBookingScreenshotTest {
     private fun show(
         language: AppLanguage,
         repository: FakeBookingRepository,
+        reducedMotion: Boolean = false,
+        settleMillis: Long = BahrMotion.Medium.toLong() + SETTLE_MARGIN_MILLIS,
     ) {
         val viewModel = ContinueBookingViewModel(FakeActiveHoldStore(stored), repository, clock)
         compose.setContent {
             ProvideAppLanguage(language) {
-                BahrTheme(locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English) {
+                BahrTheme(
+                    locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English,
+                    reducedMotion = reducedMotion,
+                ) {
                     Column(
                         Modifier
                             .fillMaxSize()
@@ -145,9 +165,18 @@ class ContinueBookingScreenshotTest {
         compose.waitForIdle()
         compose.mainClock.advanceTimeByFrame()
         compose.waitForIdle()
+        // The card fades in as the answer lands (M4-M4); the goldens are the card at rest.
+        compose.mainClock.advanceTimeBy(settleMillis)
+        compose.waitForIdle()
     }
 
     private companion object {
         val SUNDAY = LocalDate(2026, 10, 11)
+
+        /** 42 seconds left: under 2 minutes (the time in the error colour) and in the last minute (the pulse). */
+        val LAST_MINUTE = 14.minutes + 18.seconds
+
+        /** A few frames past the enter animation's end. */
+        const val SETTLE_MARGIN_MILLIS = 64L
     }
 }

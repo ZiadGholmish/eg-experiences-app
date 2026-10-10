@@ -88,7 +88,7 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
             tripListScreen(
                 onTripClick = navController::navigateToTripDetail,
                 // A live seat hold (survives a restart) sits at the top of Home; tap → the held seats.
-                header = { ContinueBookingSlot(onOpen = { navController.navigateToHold(it) }) },
+                header = { gap -> ContinueBookingSlot(onOpen = { navController.navigateToHold(it) }, modifier = gap) },
                 onHomeAction = { action ->
                     when (action) {
                         is HomeAction.OpenTrip -> navController.navigateToTripDetail(action.slug)
