@@ -259,7 +259,7 @@ class TripListsScreenshotTest {
             )
         val repository = FakeTripRepository(listTrips = { page(cards(arabic)) }, home = { AppResult.Success(HomeDto(listOf(row))) })
         val vm = TripListViewModel(repository, waitlistMemory())
-        snap("home_see_all", language) { TripListScreen(onTripClick = {}, viewModel = vm) }
+        snap("home_see_all", language) { TripListScreen(onTripClick = {}, onMap = {}, viewModel = vm) }
     }
 
     // ---------- Fixtures and plumbing ----------

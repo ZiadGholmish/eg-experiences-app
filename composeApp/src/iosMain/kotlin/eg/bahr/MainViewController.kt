@@ -5,6 +5,8 @@ import eg.bahr.core.datastore.APP_PREFERENCES_FILE
 import eg.bahr.deeplink.AppDeepLinkInbox
 import eg.bahr.di.AppLinkConfig
 import eg.bahr.di.initKoin
+import eg.bahr.feature.map.di.TripMapNativeViews
+import org.koin.dsl.module
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSURL
@@ -19,19 +21,26 @@ import platform.UIKit.UIViewController
  *
  * [appLinkHost] is the Universal Links host (`APP_LINK_HOST` in the xcconfig, the same value as the
  * Associated Domains entitlement). Universal Links are https only, so http is never accepted here.
+ *
+ * [mapViews] is the Swift bridge to the Google Maps SDK for iOS (M4-M2), or null when the build has
+ * no Maps key: the map screen then draws its pins on a plain ground. Naming the feature's interface
+ * here is what puts it in the framework header for Swift, without exporting the feature module.
  */
 @Suppress("FunctionName", "unused")
 fun MainViewController(
     baseUrl: String,
     isDebug: Boolean,
     appLinkHost: String,
+    mapViews: TripMapNativeViews?,
 ): UIViewController {
     initKoin(
         baseUrl = baseUrl,
         isDebug = isDebug,
         appLinks = AppLinkConfig(host = appLinkHost, allowsHttp = false),
         preferencesPath = { documentsPath(APP_PREFERENCES_FILE) },
-    )
+    ) {
+        mapViews?.let { views -> modules(module { single<TripMapNativeViews> { views } }) }
+    }
     return ComposeUIViewController { App() }
 }
 

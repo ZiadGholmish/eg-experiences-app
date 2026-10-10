@@ -1,0 +1,12 @@
+// Either set MAPS_API_KEY_IOS in local.properties and run `./gradlew :composeApp:writeIosMapsKey`
+// (the Xcode build runs it too), which writes `Maps.private.xcconfig` from it; or copy this file to
+// `Maps.private.xcconfig` (gitignored) and paste the key below. With no key in local.properties the
+// task leaves a hand-copied file alone. Never commit the real file.
+//
+// The key is restricted to this app's bundle ids in the Google Cloud console (eg.bahr.app,
+// eg.bahr.app.local, eg.bahr.app.dev). Note: xcodebuild prints the build environment in its log, so
+// a build with a real key has it in that log; CI builds keep the key empty (the map then shows its
+// pins on a plain ground). An iOS key also ships inside the app's Info.plist: the bundle-id
+// restriction is the real protection.
+
+MAPS_API_KEY_IOS =

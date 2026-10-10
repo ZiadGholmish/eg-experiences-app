@@ -46,6 +46,7 @@ include(":core:testing")
 include(":feature:splash")
 include(":feature:trips")
 include(":feature:booking")
+include(":feature:map")
 
 // JVM, test-only: ModuleGraphTest (Konsist) enforces the bahr-modularization rules.
 include(":architecture-tests")

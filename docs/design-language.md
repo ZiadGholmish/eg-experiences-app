@@ -47,8 +47,9 @@ wins.
 **Code-only sizes.** `BahrSize` holds fixed sizes the handoff draws with but tokens.json does not
 name: the icon sizes (`iconSmall/Medium/Large`, M1-M1a review #9) and component dimensions from the
 trip page (`marker`, `avatar`, `avatarSmall`, `timeColumn`, `connector`, `dateCard`, `skeletonLine`) and
-the date + party screen (`radio`, `stepSegmentWidth/Height`, `stepperValue`, M2-M1), and the thin
-`progressBar` over a refreshing list (M4-M6).
+the date + party screen (`radio`, `stepSegmentWidth/Height`, `stepperValue`, M2-M1), the thin
+`progressBar` over a refreshing list (M4-M6), and the map's pins and drive line from map.html
+(`pinStem`, `pinDot`, `routeLine`, `routeDash`, `routeGap`, `legendDot`, M4-M2).
 They exist so `feature/*` holds no `.dp` (ModuleGraphTest). They are not design tokens: changing one
 changes a component, not the theme, and none has a Dusk/HighContrast variant. If design adds a size
 to tokens.json, move it to the token's own group and port it from there.
@@ -81,6 +82,9 @@ From the handoff (`../docs/design/compose-reference/components/BahrComponents.kt
 Kept from the provisional set and rebuilt on Bahr tokens, because the handoff has
 no equivalent: `BahrBadge` (tone-driven status pill) and `BahrLoadingView` /
 `BahrErrorView` / `BahrEmptyView`.
+
+Added since: `BahrBackButton` (M4-M1b) and `BahrPillButton` (M4-M2: the app bar's icon + label pill on
+`primaryContainer`, Home's "Map" and the map's "List").
 
 New components use `interface X { @Immutable data class Props(…) }` +
 `@Composable fun X(modifier, props)`, and enter the design system only once a

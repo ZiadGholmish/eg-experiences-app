@@ -367,7 +367,8 @@ class TripListScreenshotTest {
             ProvideAppLanguage(language) {
                 BahrTheme(locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English) {
                     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-                        TripListScreen(onTripClick = {}, header = header, viewModel = viewModel)
+                        // onMap: the app always passes it, so Home's goldens show the "Map" pill (M4-M2).
+                        TripListScreen(onTripClick = {}, header = header, onMap = {}, viewModel = viewModel)
                     }
                 }
             }

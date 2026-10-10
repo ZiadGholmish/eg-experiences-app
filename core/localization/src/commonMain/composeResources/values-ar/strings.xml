@@ -224,6 +224,23 @@
     <string name="booking_leave_failed">مقدرناش نسيب المقاعد. هتتفك لوحدها لما الوقت يخلص.</string>
     <string name="booking_leave_anyway">امشي برضه</string>
 
+    <!-- الخريطة (M4-M2). -->
+    <string name="map_open">خريطة</string>
+    <string name="map_title">الرحلات على الخريطة</string>
+    <string name="map_list">قائمة</string>
+    <string name="map_all_trips">كل الرحلات</string>
+    <string name="map_show_drive_from">الطريق من %1$s</string>
+    <string name="map_show_drive">طريق الأتوبيس</string>
+    <string name="map_legend_departure">مكان قيام الأتوبيس</string>
+    <string name="map_departure_label">%1$s — %2$s</string>
+    <string name="map_card_bus_time">الأتوبيس بيقوم الساعة %1$s</string>
+    <string name="map_view_trip">شوف الرحلة</string>
+    <string name="map_card_close">اقفل</string>
+    <string name="map_note_pins">العلامات مكان الرحلة نفسها.</string>
+    <string name="map_note_drive">العلامات مكان الرحلة نفسها. الأتوبيس دايمًا بيقوم من %1$s — دوس على «%2$s» في الخريطة تشوف المسافة.</string>
+    <string name="map_note_pick">دوس على سعر أي رحلة تشوف طريقها من %1$s.</string>
+    <string name="map_empty">مفيش رحلات على الخريطة لسه. ارجع تاني قريب.</string>
+
     <string name="error_network">لا يوجد اتصال. تحقق من الإنترنت وحاول مرة أخرى.</string>
     <string name="error_timeout">استغرق الأمر وقتًا طويلًا. حاول مرة أخرى.</string>
     <string name="error_generic">حدث خطأ ما. حاول مرة أخرى.</string>

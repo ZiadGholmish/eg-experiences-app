@@ -12,6 +12,7 @@ import eg.bahr.core.network.LanguageTagProvider
 import eg.bahr.core.network.di.networkModule
 import eg.bahr.deeplink.DeepLinkParser
 import eg.bahr.feature.booking.di.bookingModule
+import eg.bahr.feature.map.di.mapModule
 import eg.bahr.feature.trips.di.tripsModule
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -78,5 +79,6 @@ fun initKoin(
             dataStoreModule,
             tripsModule,
             bookingModule,
+            mapModule,
         )
     }

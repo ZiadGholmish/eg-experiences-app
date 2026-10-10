@@ -198,6 +198,29 @@
     <string name="booking_leave_failed">We couldn’t release your seats. They are freed on their own when the timer ends.</string>
     <string name="booking_leave_anyway">Leave anyway</string>
 
+    <!-- Map (M4-M2, handoff screen 2; the prototype's mapBtn, listBtn, mapTitle, mapNote). Home's way in,
+         the screen's title and its way back to the list, the two toggles over the map (the prototype's
+         first one is "Lake Burullus"; the pins now span Egypt, so it reads "All trips"), the legend's
+         own entry for the dark bus marker, the card a tapped pin opens, and the note under the map.
+         %1$s in map_show_drive_from / map_note_drive / map_note_pick is the city the buses leave
+         (Cairo); %2$s in map_note_drive is the toggle's own label. -->
+    <string name="map_open">Map</string>
+    <string name="map_title">Where the trips are</string>
+    <string name="map_list">List</string>
+    <string name="map_all_trips">All trips</string>
+    <string name="map_show_drive_from">Show the drive from %1$s</string>
+    <string name="map_show_drive">Show the drive</string>
+    <string name="map_legend_departure">Bus departure</string>
+    <!-- The departure marker: the place, then the bus time when every trip leaving from it agrees. -->
+    <string name="map_departure_label">%1$s — %2$s</string>
+    <string name="map_card_bus_time">Bus leaves at %1$s</string>
+    <string name="map_view_trip">View trip</string>
+    <string name="map_card_close">Close</string>
+    <string name="map_note_pins">Pins are the trip itself.</string>
+    <string name="map_note_drive">Pins are the trip itself. The bus always leaves %1$s — tap “%2$s” on the map to see how far it goes.</string>
+    <string name="map_note_pick">Tap a trip’s price to draw its drive from %1$s.</string>
+    <string name="map_empty">No trips on the map yet. Check back soon.</string>
+
     <!-- Errors -->
     <string name="error_network">No connection. Check your internet and try again.</string>
     <string name="error_timeout">That took too long. Try again.</string>

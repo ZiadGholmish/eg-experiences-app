@@ -27,6 +27,8 @@ iosApp/*.xcodeproj/xcuserdata/
 iosApp/*.xcodeproj/project.xcworkspace/xcuserdata/
 # Per-developer BASE_URL override for running on a physical iPhone
 iosApp/Configuration/Local.private.xcconfig
+# The iOS Maps API key, written from local.properties by `./gradlew :composeApp:writeIosMapsKey` (M4-M2)
+iosApp/Configuration/Maps.private.xcconfig
 
 # Secrets — never commit any of these
 google-services.json

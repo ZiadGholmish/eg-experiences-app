@@ -28,6 +28,9 @@ import eg.bahr.feature.booking.navigation.holdScreen
 import eg.bahr.feature.booking.navigation.navigateToBooking
 import eg.bahr.feature.booking.navigation.navigateToHold
 import eg.bahr.feature.booking.navigation.returnToDateSelection
+import eg.bahr.feature.map.navigation.isTripMap
+import eg.bahr.feature.map.navigation.navigateToTripMap
+import eg.bahr.feature.map.navigation.tripMapScreen
 import eg.bahr.feature.splash.navigation.SplashRoute
 import eg.bahr.feature.splash.navigation.splashScreen
 import eg.bahr.feature.trips.navigation.HomeAction
@@ -102,6 +105,15 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
                     }
                 },
                 onSearch = { navController.navigateToSearchTrips() },
+                // The map (M4-M2) is another feature: Home's pill opens it, and Home slides aside for it.
+                onMap = { navController.navigateToTripMap() },
+                opensFromHome = { it.isTripMap() },
+                reducedMotion = reducedMotion,
+            )
+
+            tripMapScreen(
+                onBack = { navController.popBackStack() },
+                onTripClick = navController::navigateToTripDetail,
                 reducedMotion = reducedMotion,
             )
 

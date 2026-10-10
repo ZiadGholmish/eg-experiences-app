@@ -36,6 +36,7 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import eg.bahr.core.designsystem.components.BahrEmptyView
 import eg.bahr.core.designsystem.components.BahrErrorView
 import eg.bahr.core.designsystem.components.BahrLoadingView
+import eg.bahr.core.designsystem.components.BahrPillButton
 import eg.bahr.core.designsystem.icon.BahrIcons
 import eg.bahr.core.designsystem.theme.BahrBorder
 import eg.bahr.core.designsystem.theme.BahrSize
@@ -43,6 +44,7 @@ import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.action_retry
+import eg.bahr.core.localization.generated.resources.map_open
 import eg.bahr.core.localization.generated.resources.search_hint
 import eg.bahr.core.localization.generated.resources.trip_per_person
 import eg.bahr.core.localization.generated.resources.trips_all_title
@@ -79,6 +81,7 @@ internal fun TripListScreen(
     header: @Composable (gap: Modifier) -> Unit = {},
     onAction: (HomeAction) -> Unit = {},
     onSearch: () -> Unit = {},
+    onMap: (() -> Unit)? = null,
     viewModel: TripListViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -106,6 +109,14 @@ internal fun TripListScreen(
     val listFailed = listStatus is PagedListStatus.Failed
     if (showsLoading || listStatus != PagedListStatus.Loaded && (listFailed || sections.isEmpty())) {
         Column(modifier = stateModifier) {
+            // The map stays one tap away while the list loads or fails (M4-M2 review #10): the pill
+            // alone, at the end where the loaded list's title row has it; these states have no title.
+            onMap?.let {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(start = BahrSpacing.gutter, top = BahrSpacing.xl, end = BahrSpacing.gutter),
+                    horizontalArrangement = Arrangement.End,
+                ) { MapPill(onClick = it) }
+            }
             // The gap above the header is the header's, so it comes and goes with it.
             Box(modifier = Modifier.padding(horizontal = BahrSpacing.gutter)) {
                 header(Modifier.padding(top = BahrSpacing.xl))
@@ -141,10 +152,15 @@ internal fun TripListScreen(
         item(key = KEY_TOP) {
             Column(modifier = Modifier.padding(horizontal = BahrSpacing.gutter)) {
                 Column(verticalArrangement = Arrangement.spacedBy(BahrSpacing.lg)) {
-                    Text(
-                        text = stringResource(Res.string.trips_title),
-                        style = MaterialTheme.typography.headlineMedium,
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = stringResource(Res.string.trips_title),
+                            style = MaterialTheme.typography.headlineMedium,
+                            modifier = Modifier.weight(1f),
+                        )
+                        // HANDOFF Home app bar: the "Map" pill at the end of the title row (M4-M2).
+                        onMap?.let { MapPill(onClick = it) }
+                    }
                     SearchEntry(onClick = onSearch)
                 }
                 // The header grows and shrinks inside this item (M4-M4), and the items below follow
@@ -189,6 +205,12 @@ internal fun TripListScreen(
         // Paged (M4-M1b): the next page loads as the end comes near, with a footer while it does.
         pagedTripCards(trips, perPersonLabel, state.waitlistTags, onTripClick, onAppendRetry = appendRetry)
     }
+}
+
+/** Home's way into the map (M4-M2, HANDOFF Home app bar: `map` + "Map" on primary-container). */
+@Composable
+private fun MapPill(onClick: () -> Unit) {
+    BahrPillButton(props = BahrPillButton.Props(text = stringResource(Res.string.map_open), icon = BahrIcons.Map, onClick = onClick))
 }
 
 /**

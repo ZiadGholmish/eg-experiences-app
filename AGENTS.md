@@ -92,7 +92,11 @@ SECURITY_JWT_SECRET='local-dev-signing-key-at-least-32-bytes!!' ./gradlew :api:b
 - Inside a feature: `model/` (wire DTOs), `data/` (api service + repository),
   `presentation/` (screen + view model, `components/` for parts), `navigation/`
   (type-safe routes, `NavGraphBuilder.xScreen(callbacks)`,
-  `NavController.navigateToX()`), `di/` (one Koin module).
+  `NavController.navigateToX()`), `di/` (one Koin module; plus, in a feature's `iosMain`, any
+  interface Swift implements for it and the plain value types it passes, e.g. feature:map's
+  `TripMapNativeViews` for the Google Maps SDK. Those must be public for Swift, and `:composeApp`'s
+  `MainViewController` names them in its signature, which puts them in the framework header without
+  exporting the feature (no `api` edge). M4-M2).
   **Everything outside `navigation/` and `di/` is `internal`**: `:composeApp`
   wires destinations with `xScreen(...)` and never imports a screen.
 - DTOs are `@Serializable` data classes, field-for-field with the schemas in

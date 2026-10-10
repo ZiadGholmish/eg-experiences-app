@@ -17,3 +17,12 @@ LOCAL_BASE_URL=http://10.0.2.2:8084/api/v1/
 # only). `localhost` matches the api's default SITE_PUBLIC_BASE_URL, so its "Open in app" link opens
 # this app. To check App Links verification, set it to an https tunnel's host — README → Deep links.
 LOCAL_APP_LINK_HOST=localhost
+
+# Google Maps (M4-M2): one key per platform, each restricted in the Google Cloud console (Android:
+# package eg.bahr.app[.local|.dev] + the signing SHA-1; iOS: bundle id eg.bahr.app[.local|.dev]).
+# Never commit them. Android reads MAPS_API_KEY_ANDROID into the manifest at build time; for iOS run
+# `./gradlew :composeApp:writeIosMapsKey` once (the Xcode build also runs it), which writes
+# MAPS_API_KEY_IOS into the gitignored iosApp/Configuration/Maps.private.xcconfig. Without a key the
+# app still builds and the map screen shows its pins on a plain ground.
+MAPS_API_KEY_ANDROID=
+MAPS_API_KEY_IOS=

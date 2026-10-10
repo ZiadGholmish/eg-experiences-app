@@ -20,7 +20,10 @@ struct ComposeView: UIViewControllerRepresentable {
         let isDebug = false
         #endif
 
-        return MainViewControllerKt.MainViewController(baseUrl: baseUrl, isDebug: isDebug, appLinkHost: appLinkHost)
+        // The Google Maps bridge (M4-M2), or nil without a Maps key: the map then draws a plain ground.
+        return MainViewControllerKt.MainViewController(
+            baseUrl: baseUrl, isDebug: isDebug, appLinkHost: appLinkHost, mapViews: GoogleMapsSetup.bridge()
+        )
     }
 
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}

@@ -39,20 +39,30 @@ import eg.bahr.feature.trips.presentation.TripListScreen
  * from it, and comes back the same way on Back; other destinations keep the NavHost's transition.
  * [reducedMotion] is read when a transition starts (the platform setting can change while the app
  * runs); with it on the screens change at once.
+ *
+ * [onMap] (M4-M2) puts the "Map" pill beside the title; the app opens another feature's screen with
+ * it. [opensFromHome] names such other features' pages, so Home steps aside for them with the same
+ * transition as for its own (this feature cannot name their routes).
  */
 fun NavGraphBuilder.tripListScreen(
     onTripClick: (slug: String) -> Unit,
     header: @Composable (gap: Modifier) -> Unit = {},
     onHomeAction: (HomeAction) -> Unit = {},
     onSearch: () -> Unit = {},
+    onMap: (() -> Unit)? = null,
+    opensFromHome: (NavBackStackEntry) -> Boolean = { false },
     reducedMotion: () -> Boolean = { false },
 ) {
     composable<TripListRoute>(
-        exitTransition = { if (targetState.opensFromHome()) bahrForwardExit(reducedMotion()) else null },
-        popEnterTransition = { if (initialState.opensFromHome()) bahrBackEnter(reducedMotion()) else null },
+        exitTransition = {
+            if (targetState.opensFromHome() || opensFromHome(targetState)) bahrForwardExit(reducedMotion()) else null
+        },
+        popEnterTransition = {
+            if (initialState.opensFromHome() || opensFromHome(initialState)) bahrBackEnter(reducedMotion()) else null
+        },
     ) {
         ProvideBahrNavScope(this) {
-            TripListScreen(onTripClick = onTripClick, header = header, onAction = onHomeAction, onSearch = onSearch)
+            TripListScreen(onTripClick = onTripClick, header = header, onAction = onHomeAction, onSearch = onSearch, onMap = onMap)
         }
     }
 }

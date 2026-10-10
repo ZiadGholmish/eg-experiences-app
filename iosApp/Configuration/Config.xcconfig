@@ -9,3 +9,10 @@ PRODUCT_BUNDLE_IDENTIFIER = eg.bahr.app
 
 CURRENT_PROJECT_VERSION = 1
 MARKETING_VERSION = 1.0
+
+// Google Maps for iOS (M4-M2). Empty by default, so a checkout without a key still builds (the map
+// then shows its pins on a plain ground). The real key lives in the gitignored Maps.private.xcconfig,
+// written from local.properties (MAPS_API_KEY_IOS) by `./gradlew :composeApp:writeIosMapsKey`; see
+// Maps.private.xcconfig.example. The `?` makes the include optional.
+MAPS_API_KEY_IOS =
+#include? "Maps.private.xcconfig"

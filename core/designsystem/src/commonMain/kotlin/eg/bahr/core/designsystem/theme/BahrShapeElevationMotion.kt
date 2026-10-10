@@ -238,6 +238,21 @@ object BahrSize {
 
     /** A category's tinted tile (HANDOFF Home → category row: 58px, `extraLarge` radius); the category page's header. */
     val categoryTile = 58.dp
+
+    /**
+     * A map pin (M4-M2, map.html `.pin`): the stem under the price pill (2x10px, [connector] wide)
+     * and the dot at its foot (8px, ringed by [BahrBorder.selected] in the surface colour).
+     */
+    val pinStem = 10.dp
+    val pinDot = 8.dp
+
+    /** The map's dashed drive line (map.html: `weight:2, dashArray:'6 7'`). */
+    val routeLine = 2.dp
+    val routeDash = 6.dp
+    val routeGap = 7.dp
+
+    /** A legend entry's colour dot (map.html `.legend span`: 9px). */
+    val legendDot = 9.dp
 }
 
 internal val LocalBahrShapes = staticCompositionLocalOf { BahrShapes() }

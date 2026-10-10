@@ -12,6 +12,13 @@
 	<key>APP_LINK_HOST</key>
 	<string>$(APP_LINK_HOST)</string>
 
+	<!-- Google Maps for iOS (M4-M2): MAPS_API_KEY_IOS from the gitignored
+	     Configuration/Maps.private.xcconfig (written from local.properties by
+	     ./gradlew :composeApp:writeIosMapsKey). Empty without one; the map then
+	     draws its pins on a plain ground. Restrict the key to this bundle id. -->
+	<key>MAPS_API_KEY</key>
+	<string>$(MAPS_API_KEY_IOS)</string>
+
 	<!-- Arabic is the default locale, and RTL the default layout direction.
 	     LocalAppLocale.ios.kt overrides AppleLanguages to switch language;
 	     NSBundle only resolves a language that is listed here. -->

@@ -13,6 +13,13 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.AppCompat.Light.NoActionBar">
 
+        <!-- Google Maps (M4-M2): filled at build time from MAPS_API_KEY_ANDROID in the gitignored
+             local.properties (composeApp/build.gradle.kts); never written here. Empty in a build
+             without one, and the map screen then draws its pins on a plain ground. -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="${mapsApiKey}" />
+
         <activity
             android:name=".MainActivity"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|layoutDirection|uiMode"
