@@ -133,6 +133,7 @@ internal object BookingFixtures {
         dayLabel: String = "السبت 10 أكتوبر",
         city: String = "القاهرة",
         placeName: String = "موقف عبد المنعم رياض",
+        returnDate: LocalDate? = null,
     ) = HeldBookingDto(
         ref = "BRL-7K4M2X9P",
         status = status,
@@ -143,6 +144,7 @@ internal object BookingFixtures {
         dayLabel = dayLabel,
         departure = BookingDeparturePlaceDto(placeName = placeName, city = city, timeLocal = "05:00", arriveBy = "04:45"),
         returnTime = "22:00",
+        returnDate = returnDate,
         partySize = 2,
         total = MoneyDto(amount = 900, currencyCode = "EGP"),
     )

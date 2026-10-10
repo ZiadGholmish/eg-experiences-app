@@ -33,6 +33,7 @@ import eg.bahr.core.localization.generated.resources.trip_fact_bus
 import eg.bahr.core.localization.generated.resources.trip_fact_bus_be_there
 import eg.bahr.core.localization.generated.resources.trip_fact_day
 import eg.bahr.core.localization.generated.resources.trip_fact_distance
+import eg.bahr.core.localization.generated.resources.trip_fact_duration
 import eg.bahr.core.localization.generated.resources.trip_fact_place
 import eg.bahr.core.localization.generated.resources.trip_fact_price
 import eg.bahr.core.localization.generated.resources.trip_fact_price_note
@@ -41,6 +42,7 @@ import eg.bahr.core.localization.generated.resources.trip_whats_included
 import eg.bahr.core.network.MoneyDto
 import eg.bahr.feature.trips.model.RatingDto
 import eg.bahr.feature.trips.model.TripDetailDto
+import eg.bahr.feature.trips.model.isMultiDay
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -150,14 +152,18 @@ internal fun TripFacts(
             )
             if (trip.durationLabel.isNotBlank()) {
                 val hours = trip.durationMinutes?.takeIf { it > 0 && it % MINUTES_PER_HOUR == 0 }?.div(MINUTES_PER_HOUR)
+                val multiDay = trip.isMultiDay
                 add(
                     Fact(
                         Tint.Gold,
                         BahrIcons.Schedule,
-                        stringResource(Res.string.trip_fact_day),
-                        // Times stay LTR inside Arabic (mobile rule 2), as on the trip card.
-                        BahrFormat.ltr(trip.durationLabel),
-                        hours?.let { pluralStringResource(Res.plurals.trip_hours_door_to_door, it, it) },
+                        stringResource(if (multiDay) Res.string.trip_fact_duration else Res.string.trip_fact_day),
+                        // Times stay LTR inside Arabic (mobile rule 2), as on the trip card. A multi-day
+                        // label (`يومان · ليلة واحدة`) is words, and an LTR isolate would swap its halves.
+                        if (multiDay) trip.durationLabel else BahrFormat.ltr(trip.durationLabel),
+                        // The server's "Back Fri 22:00" says more than an hour count on an overnight trip.
+                        trip.returnLabel?.takeIf { it.isNotBlank() }
+                            ?: hours?.let { pluralStringResource(Res.plurals.trip_hours_door_to_door, it, it) },
                     ),
                 )
             }

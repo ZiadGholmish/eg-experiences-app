@@ -5,6 +5,18 @@
 
     <string name="trips_title">الرحلات</string>
     <string name="trips_empty">لا توجد رحلات بعد. تابعنا قريبًا.</string>
+    <string name="trips_all_title">كل الرحلات</string>
+    <plurals name="trip_nights_badge">
+        <item quantity="zero">%1$d ليلة</item>
+        <item quantity="one">ليلة واحدة</item>
+        <item quantity="two">ليلتين</item>
+        <item quantity="few">%1$d ليالي</item>
+        <item quantity="many">%1$d ليلة</item>
+        <item quantity="other">%1$d ليلة</item>
+    </plurals>
+    <string name="trip_fact_duration">مدة الرحلة</string>
+    <string name="departure_back_on">الرجوع %1$s</string>
+    <string name="booking_dates_overnight">من %1$s لحد %2$s</string>
     <string name="trip_per_person">للفرد</string>
     <string name="trip_duration_hours">%1$s ساعات</string>
     <string name="trip_whats_included">الرحلة تشمل</string>

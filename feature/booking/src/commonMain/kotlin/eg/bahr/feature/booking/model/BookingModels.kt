@@ -18,12 +18,16 @@ import kotlinx.serialization.Serializable
 /**
  * openapi `TripDetail`, only the fields this screen shows: the heading, the per-person price and the
  * party limit. The other fields of the shape are ignored on decode.
+ *
+ * [nights] (M4-B0b, absent = 0): on a multi-day trip [durationLabel] is words (`2 days · 1 night`),
+ * not a time range, so it is not forced left to right.
  */
 @Serializable
 internal data class BookingTripDto(
     val slug: String,
     val title: String,
     val durationLabel: String? = null,
+    val nights: Int = 0,
     val price: MoneyDto,
     val dates: List<BookingDepartureDto> = emptyList(),
     val policy: BookingPolicyDto? = null,
@@ -38,7 +42,8 @@ internal data class BookingPolicyDto(
 
 /**
  * openapi `Departure` (`GET /trips/{slug}/departures`). [id] is a UUID string. [departTime] and
- * [returnTime] are "HH:mm" Cairo time. [seatsRemaining] is a display hint only: the hold is the
+ * [returnTime] are "HH:mm" Cairo time; [returnTime] is on [returnDate], a later day on a multi-day
+ * trip (M4-B0b; absent from older servers). [seatsRemaining] is a display hint only: the hold is the
  * authoritative check and can still answer `NO_SEATS_AVAILABLE`.
  *
  * [unavailableReason] (`SOLD_OUT`, `CANCELLED`, `CLOSED`, absent when bookable) is a string, not an
@@ -51,6 +56,7 @@ internal data class BookingDepartureDto(
     val dayLabel: String? = null,
     val departTime: String? = null,
     val returnTime: String? = null,
+    val returnDate: LocalDate? = null,
     val seatsRemaining: Int,
     val capacity: Int,
     val soldOut: Boolean,
@@ -151,6 +157,7 @@ internal data class HeldBookingDto(
     val dayLabel: String? = null,
     val departure: BookingDeparturePlaceDto? = null,
     val returnTime: String? = null,
+    val returnDate: LocalDate? = null,
     val partySize: Int,
     val total: MoneyDto,
     val paid: MoneyDto? = null,
@@ -185,3 +192,12 @@ internal data class BookingDeparturePlaceDto(
     val arriveBy: String? = null,
     val whereToStand: String? = null,
 )
+
+/** The day this date is back when that is later than the day it leaves (a multi-day trip), else null. */
+internal val BookingDepartureDto.laterReturnDate: LocalDate? get() = returnDate?.takeIf { it > date }
+
+/**
+ * The same for a booking. `Booking` carries no `nights`, so a multi-day booking is one whose
+ * [HeldBookingDto.returnDate] is after its [HeldBookingDto.date].
+ */
+internal val HeldBookingDto.laterReturnDate: LocalDate? get() = returnDate?.takeIf { it > date }

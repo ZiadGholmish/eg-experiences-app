@@ -159,9 +159,10 @@ private fun Heading(trip: BookingTripDto) {
                 Res.string.booking_price_per_person,
                 BahrFormat.money(trip.price.amount, trip.price.currencyCode, BahrTheme.locale.isArabic),
             )
-        val duration = trip.durationLabel?.takeIf { it.isNotBlank() }
+        // A day trip's "05:00 → 22:00" stays left to right in Arabic; a multi-day label is words.
+        val duration = trip.durationLabel?.takeIf { it.isNotBlank() }?.let { if (trip.nights > 0) it else BahrFormat.ltr(it) }
         Text(
-            text = if (duration != null) stringResource(Res.string.format_pair, price, BahrFormat.ltr(duration)) else price,
+            text = if (duration != null) stringResource(Res.string.format_pair, price, duration) else price,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

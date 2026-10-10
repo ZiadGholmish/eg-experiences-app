@@ -44,7 +44,11 @@ internal data class FacetDto(
  *
  * [categories] are category *keys* (`on_the_boat`), not labels; the labels come with Home (M4).
  * [durationLabel] is `05:00 → 22:00`, or a bare duration (`17h`) when the times are unknown, and
- * may be empty.
+ * may be empty. On a multi-day trip ([nights] > 0, M4-B0b) it is words (`2 days · 1 night` /
+ * `يومان · ليلة واحدة`), so it must not be forced left to right; see [isMultiDay].
+ *
+ * [nights] is non-null with the contract's default 0 rather than nullable: the contract says to treat
+ * an absent value as 0 (a day trip), so an older server's payload still decodes to the right thing.
  */
 @Serializable
 internal data class TripCardDto(
@@ -53,6 +57,7 @@ internal data class TripCardDto(
     val subtitle: String? = null,
     val durationLabel: String,
     val durationMinutes: Int? = null,
+    val nights: Int = 0,
     val price: MoneyDto,
     val categories: List<String> = emptyList(),
     val heroImage: ImageDto? = null,
@@ -91,11 +96,12 @@ internal data class ImageVariantDto(
 
 /**
  * The trip's next open date. [seatsRemaining] is a display hint, stale the moment it is read;
- * the seat hold is the authoritative check.
+ * the seat hold is the authoritative check. [returnDate] is [date] plus the trip's nights (M4-B0b).
  */
 @Serializable
 internal data class NextDepartureDto(
     val date: LocalDate? = null,
+    val returnDate: LocalDate? = null,
     val seatsRemaining: Int? = null,
     val capacity: Int? = null,
     val soldOut: Boolean? = null,
@@ -127,7 +133,8 @@ internal data class LocationDto(
 /**
  * openapi `TripDetail`: the [TripCardDto] fields (the contract's `allOf` merges them flat) plus the
  * trip page. [shareUrl] is served since M1-B5 and not used yet (no share button); [dates] are the same `Departure`
- * shape as the departures endpoint.
+ * shape as the departures endpoint. [returnLabel] (M4-B0b) is the facts grid's "Back Fri 22:00" note on a
+ * multi-day trip; absent on a day trip.
  */
 @Serializable
 internal data class TripDetailDto(
@@ -136,6 +143,7 @@ internal data class TripDetailDto(
     val subtitle: String? = null,
     val durationLabel: String,
     val durationMinutes: Int? = null,
+    val nights: Int = 0,
     val price: MoneyDto,
     val categories: List<String> = emptyList(),
     val heroImage: ImageDto? = null,
@@ -145,6 +153,7 @@ internal data class TripDetailDto(
     val rating: RatingDto? = null,
     val location: LocationDto? = null,
     val deck: String? = null,
+    val returnLabel: String? = null,
     val departure: DeparturePointDto? = null,
     val destination: DestinationDto? = null,
     val included: List<String> = emptyList(),
@@ -259,7 +268,8 @@ internal data class OpenGraphDto(
 
 /**
  * openapi `Departure`: one date and the seat inventory of record. [id] is a UUID string. [departTime]
- * and [returnTime] are "HH:mm" Cairo time. [dayLabel] is the server's localised "Sat 10 Oct"; the
+ * and [returnTime] are "HH:mm" Cairo time; [returnTime] falls on [returnDate], which is [date] on a
+ * day trip and later on a multi-day one (M4-B0b; absent from older servers). [dayLabel] is the server's localised "Sat 10 Oct"; the
  * date card formats [date] itself because it shows the day and the date on two lines.
  *
  * [seatsRemaining] is a display hint only. It is read at list time and can be stale by the time
@@ -278,6 +288,7 @@ internal data class DepartureDto(
     val dayLabel: String? = null,
     val departTime: String? = null,
     val returnTime: String? = null,
+    val returnDate: LocalDate? = null,
     val seatsRemaining: Int,
     val capacity: Int,
     val soldOut: Boolean,
@@ -299,3 +310,11 @@ internal data class WaitlistRequest(
     val partySize: Int,
     val locale: String? = null,
 )
+
+/** True for a trip that stays away overnight: its duration label is words, not a time range. */
+internal val TripCardDto.isMultiDay: Boolean get() = nights > 0
+
+internal val TripDetailDto.isMultiDay: Boolean get() = nights > 0
+
+/** The day this date is back, when that is a later day than it leaves (a multi-day trip); else null. */
+internal val DepartureDto.laterReturnDate: LocalDate? get() = returnDate?.takeIf { it > date }

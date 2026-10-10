@@ -5,6 +5,7 @@ import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.network.MoneyDto
 import eg.bahr.feature.trips.model.BadgeDto
 import eg.bahr.feature.trips.model.DepartureDto
+import eg.bahr.feature.trips.model.HomeDto
 import eg.bahr.feature.trips.model.NextDepartureDto
 import eg.bahr.feature.trips.model.TripCardDto
 import eg.bahr.feature.trips.model.TripDetailDto
@@ -25,8 +26,17 @@ internal class FakeTripRepository(
     var departuresFor: suspend (slug: String) -> AppResult<List<DepartureDto>> = { unset() },
     var cards: Map<String, TripCardDto> = emptyMap(),
     var joinWaitlist: suspend (departureId: String, request: WaitlistRequest) -> AppResult<Unit> = { _, _ -> unset() },
+    var home: suspend () -> AppResult<HomeDto> = { unset() },
 ) : TripRepository {
     val requestedPages = mutableListOf<Int>()
+    var homeReads = 0
+        private set
+
+    override suspend fun home(): AppResult<HomeDto> {
+        homeReads++
+        return home.invoke()
+    }
+
     val departureReads = mutableListOf<String>()
     val waitlistJoins = mutableListOf<Pair<String, WaitlistRequest>>()
 
@@ -69,10 +79,12 @@ internal object TripFixtures {
         durationLabel: String = "05:00 → 22:00",
         badge: BadgeDto? = null,
         nextDeparture: NextDepartureDto? = null,
+        nights: Int = 0,
     ) = TripCardDto(
         slug = "trip-$n",
         title = title,
         durationLabel = durationLabel,
+        nights = nights,
         price = MoneyDto(amount = priceEgp, currencyCode = "EGP"),
         badge = badge,
         nextDeparture = nextDeparture,

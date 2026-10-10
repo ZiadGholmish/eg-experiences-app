@@ -17,13 +17,17 @@ import eg.bahr.feature.trips.presentation.TripListScreen
  * Home. [header] is drawn under the list's title (and at the top of its loading, error and empty
  * views); the app fills it from another feature (M2-M4: booking's "Continue your booking" card)
  * without this feature knowing what it is. It must draw nothing when it has nothing to show.
+ *
+ * [onHomeAction] is where a Home banner tap goes (M4-M1a): the app decides what a trip, a category
+ * or a link opens. A trip card in a Home row goes to [onTripClick].
  */
 fun NavGraphBuilder.tripListScreen(
     onTripClick: (slug: String) -> Unit,
     header: @Composable () -> Unit = {},
+    onHomeAction: (HomeAction) -> Unit = {},
 ) {
     composable<TripListRoute> {
-        TripListScreen(onTripClick = onTripClick, header = header)
+        TripListScreen(onTripClick = onTripClick, header = header, onAction = onHomeAction)
     }
 }
 

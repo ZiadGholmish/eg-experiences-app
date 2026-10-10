@@ -27,7 +27,16 @@ import eg.bahr.feature.trips.data.FakeTripRepository
 import eg.bahr.feature.trips.data.TripFixtures.page
 import eg.bahr.feature.trips.data.TripFixtures.trip
 import eg.bahr.feature.trips.model.BadgeDto
+import eg.bahr.feature.trips.model.BannersSectionDto
+import eg.bahr.feature.trips.model.CategoriesSectionDto
+import eg.bahr.feature.trips.model.HomeActionDto
+import eg.bahr.feature.trips.model.HomeBannerDto
+import eg.bahr.feature.trips.model.HomeCategoryDto
+import eg.bahr.feature.trips.model.HomeDto
+import eg.bahr.feature.trips.model.ImageDto
 import eg.bahr.feature.trips.model.NextDepartureDto
+import eg.bahr.feature.trips.model.TripsSectionDto
+import eg.bahr.feature.trips.presentation.components.TripCard
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.datetime.LocalDate
 import org.junit.After
@@ -160,6 +169,142 @@ class TripListScreenshotTest {
     @Test
     fun empty() = snapEach("trip_list_empty") { listTrips = { page(emptyList()) } }
 
+    // ---------- Home's server-driven sections (M4-M1a) ----------
+    // A tall screen, so the banner carousel, a trip row, the category chips and the start of "All
+    // trips" are all in one shot. The images are left to the ground (no network in a test).
+
+    @Test
+    @Config(qualifiers = HOME_QUALIFIERS)
+    fun homeLoadedArabic() =
+        snapEach("home_loaded", AppLanguage.ARABIC) {
+            listTrips =
+                { loadedPage(dawn = "الفجر على بحيرة البرلس" to "الأكثر حجزًا", kayak = "قنوات قطّاعي البوص بالكياك" to "موسم الفلامنجو") }
+            home = { AppResult.Success(home(arabic = true)) }
+        }
+
+    @Test
+    @Config(qualifiers = HOME_QUALIFIERS)
+    fun homeLoadedEnglish() =
+        snapEach("home_loaded", AppLanguage.ENGLISH) {
+            listTrips =
+                {
+                    loadedPage(
+                        dawn = "Dawn on Lake Burullus" to "Most booked",
+                        kayak =
+                            "Reed-cutters' channels, by kayak" to "Flamingo season",
+                    )
+                }
+            home = { AppResult.Success(home(arabic = false)) }
+        }
+
+    // The list is in, Home is not: still the one loading state, so the list does not jump later.
+    @Test
+    fun homeLoading() =
+        snapEach("home_loading") {
+            listTrips = { loadedPage(dawn = "Dawn on Lake Burullus" to "Most booked", kayak = "Kayak" to "Flamingo season") }
+            home = { awaitCancellation() }
+        }
+
+    // Home answered but the list failed: the list's error is the screen, as before.
+    @Test
+    fun homeError() =
+        snapEach("home_error") {
+            listTrips = { AppResult.Failure(AppError.Network) }
+            home = { AppResult.Success(home(arabic = false)) }
+        }
+
+    /** One multi-day card (M4-B0b): words for the duration, the nights badge, sold out. */
+    @Test
+    fun multiDayCard() {
+        var language by mutableStateOf(AppLanguage.ARABIC)
+        compose.setContent {
+            ProvideAppLanguage(language) {
+                BahrTheme(locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English) {
+                    Box(Modifier.background(MaterialTheme.colorScheme.background).padding(BahrSpacing.gutter)) {
+                        TripCard(trip = desert(language == AppLanguage.ARABIC), perPersonLabel = perPerson(language), onClick = {})
+                    }
+                }
+            }
+        }
+        AppLanguage.entries.forEach { shotLanguage ->
+            compose.runOnUiThread { language = shotLanguage }
+            compose.waitForIdle()
+            compose.mainClock.advanceTimeByFrame()
+            compose.captureScreenshot("trip_card_multi_day_${shotLanguage.tag}")
+        }
+    }
+
+    private fun perPerson(language: AppLanguage) = if (language == AppLanguage.ARABIC) "للفرد" else "per person"
+
+    private fun desert(arabic: Boolean) =
+        trip(
+            9,
+            title = if (arabic) "الصحرا البيضا، بمبيت" else "The White Desert, overnight",
+            priceEgp = 2400,
+            durationLabel = if (arabic) "يومان · ليلة واحدة" else "2 days · 1 night",
+            nights = 1,
+            badge = BadgeDto(label = if (arabic) "مبيت" else "Overnight", tone = "quaternary"),
+            nextDeparture =
+                NextDepartureDto(THURSDAY, returnDate = FRIDAY, seatsRemaining = 0, capacity = 14, soldOut = true),
+        )
+
+    /** The seeded Home: hero carousel (3 banners), the featured row, the category chips. */
+    private fun home(arabic: Boolean): HomeDto {
+        fun t(
+            ar: String,
+            en: String,
+        ) = if (arabic) ar else en
+        val image = ImageDto(url = "https://cdn.invalid/banner.png", width = 900, height = 560)
+        return HomeDto(
+            listOf(
+                BannersSectionDto(
+                    id = "hero",
+                    type = "banners",
+                    layout = "carousel",
+                    aspectRatio = "45:28",
+                    items =
+                        listOf(
+                            HomeBannerDto(
+                                "b1",
+                                t("الفجر على بحيرة البرلس", "Dawn on Lake Burullus"),
+                                image,
+                                HomeActionDto("trip", "trip-1"),
+                            ),
+                            HomeBannerDto("b2", t("موسم الفلامنجو", "Flamingo season"), image, HomeActionDto("category", "birds")),
+                            HomeBannerDto("b3", null, image, HomeActionDto("none")),
+                        ),
+                ),
+                TripsSectionDto(
+                    id = "featured",
+                    type = "trips",
+                    title = t("مختارات", "Featured trips"),
+                    layout = "row",
+                    items =
+                        listOf(
+                            trip(
+                                1,
+                                title = t("الفجر على بحيرة البرلس", "Dawn on Lake Burullus"),
+                                nextDeparture = NextDepartureDto(SATURDAY, seatsRemaining = 6, capacity = 18, soldOut = false),
+                            ),
+                            desert(arabic),
+                        ),
+                ),
+                CategoriesSectionDto(
+                    id = "kinds",
+                    type = "categories",
+                    title = t("تصفح حسب النوع", "Browse by kind"),
+                    layout = "row",
+                    items =
+                        listOf(
+                            HomeCategoryDto("on_the_boat", t("على المركب", "On the boat"), "sailing", "primary"),
+                            HomeCategoryDto("birds", t("طيور", "Birds"), "flutter_dash", "secondary"),
+                            HomeCategoryDto("night_trips", t("رحلات بالليل", "Night trips"), "bedtime", "quaternary"),
+                        ),
+                ),
+            ),
+        )
+    }
+
     private fun snapEach(
         prefix: String,
         vararg languages: AppLanguage = AppLanguage.entries.toTypedArray(),
@@ -187,5 +332,8 @@ class TripListScreenshotTest {
 
     private companion object {
         val SATURDAY = LocalDate(2026, 10, 10)
+        val THURSDAY = LocalDate(2026, 10, 15)
+        val FRIDAY = LocalDate(2026, 10, 16)
+        const val HOME_QUALIFIERS = "en-w360dp-h1400dp-xhdpi"
     }
 }

@@ -20,6 +20,7 @@ import eg.bahr.feature.booking.data.BookingFixtures
 import eg.bahr.feature.booking.data.FakeActiveHoldStore
 import eg.bahr.feature.booking.data.FakeBookingRepository
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.datetime.LocalDate
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -95,10 +96,18 @@ class ContinueBookingScreenshotTest {
         compose.onNodeWithTag(CONTINUE_BOOKING_TAG).assertDoesNotExist()
     }
 
+    // A multi-day hold (M4-B0b) names the day it is back: "from Sat 10 Oct to Sun 11 Oct".
+    @Test
+    fun multiDayArabic() = snap("continue_booking_multi_day", AppLanguage.ARABIC, sinceHold = 5.minutes, returnDate = SUNDAY)
+
+    @Test
+    fun multiDayEnglish() = snap("continue_booking_multi_day", AppLanguage.ENGLISH, sinceHold = 5.minutes, returnDate = SUNDAY)
+
     private fun snap(
         prefix: String,
         language: AppLanguage,
         sinceHold: Duration,
+        returnDate: LocalDate? = null,
     ) {
         val arabic = language == AppLanguage.ARABIC
         val booking =
@@ -107,6 +116,7 @@ class ContinueBookingScreenshotTest {
                 serverNow = (placedAt + sinceHold).toString(),
                 title = if (arabic) "الفجر على بحيرة البرلس" else "Dawn on Lake Burullus",
                 dayLabel = if (arabic) "السبت 10 أكتوبر" else "Sat 10 Oct",
+                returnDate = returnDate,
             )
         show(language, FakeBookingRepository(heldBooking = { _, _ -> AppResult.Success(booking) }))
         compose.onNodeWithTag(CONTINUE_BOOKING_TAG).assertExists()
@@ -135,5 +145,9 @@ class ContinueBookingScreenshotTest {
         compose.waitForIdle()
         compose.mainClock.advanceTimeByFrame()
         compose.waitForIdle()
+    }
+
+    private companion object {
+        val SUNDAY = LocalDate(2026, 10, 11)
     }
 }

@@ -89,9 +89,12 @@ internal fun TripHero(
     }
 }
 
-/** LQIP first, then the photo over it; the ground is already painted, so nothing shifts. */
+/**
+ * LQIP first, then the photo over it; the ground is already painted, so nothing shifts. Also Home's
+ * banners.
+ */
 @Composable
-private fun Photo(image: ImageDto) {
+internal fun Photo(image: ImageDto) {
     Box(Modifier.fillMaxSize()) {
         image.lqip?.let {
             AsyncImage(model = it, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())

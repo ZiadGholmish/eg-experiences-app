@@ -3,6 +3,7 @@ package eg.bahr.feature.trips.data
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.network.callApi
 import eg.bahr.feature.trips.model.DepartureDto
+import eg.bahr.feature.trips.model.HomeDto
 import eg.bahr.feature.trips.model.TripDetailDto
 import eg.bahr.feature.trips.model.TripPageDto
 import eg.bahr.feature.trips.model.WaitlistRequest
@@ -29,6 +30,15 @@ internal class TripApiService(
                 parameter("page", page)
                 parameter("size", size)
             }
+        }
+
+    /**
+     * `getHome`: the server-driven sections above the list (PLAN §5c), localised by the client's
+     * `Accept-Language`. `GET /trips` still serves the full list under them.
+     */
+    suspend fun home(): AppResult<HomeDto> =
+        callApi {
+            client.get("home")
         }
 
     /** Slugs are what appear in shared links, so this is the busiest read. */

@@ -25,8 +25,12 @@ import eg.bahr.core.designsystem.components.SeatBadge
 import eg.bahr.core.designsystem.format.BahrFormat
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
+import eg.bahr.core.localization.generated.resources.Res
+import eg.bahr.core.localization.generated.resources.trip_nights_badge
 import eg.bahr.feature.trips.model.NextDepartureDto
 import eg.bahr.feature.trips.model.TripCardDto
+import eg.bahr.feature.trips.model.isMultiDay
+import org.jetbrains.compose.resources.pluralStringResource
 
 /**
  * One trip in the list (handoff: "Trip cards"): photo with the trip's badge at the top start, then
@@ -38,6 +42,12 @@ import eg.bahr.feature.trips.model.TripCardDto
  *
  * Laid out with `start`/`end` throughout, never `left`/`right`: Arabic is the default locale, so
  * this card is mirrored for most users.
+ *
+ * A multi-day trip (M4-B0b) also carries a "1 night" badge at the photo's top end.
+ *
+ * [compact] is the card in a Home row (M4-M1a): the caller gives it a width, the title always takes
+ * two lines so a row's cards line up, and the seats pill goes under the price instead of beside it,
+ * where it would crowd the price on a narrow card.
  */
 @Composable
 internal fun TripCard(
@@ -45,6 +55,7 @@ internal fun TripCard(
     perPersonLabel: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    compact: Boolean = false,
 ) {
     BahrCard(modifier = modifier.fillMaxWidth(), onClick = onClick) {
         Box {
@@ -53,6 +64,16 @@ internal fun TripCard(
                 BahrBadge(
                     modifier = Modifier.align(Alignment.TopStart).padding(BahrSpacing.md),
                     props = BahrBadge.Props(text = label, tone = badgeTone(trip.badge.tone)),
+                )
+            }
+            if (trip.isMultiDay) {
+                BahrBadge(
+                    modifier = Modifier.align(Alignment.TopEnd).padding(BahrSpacing.md),
+                    props =
+                        BahrBadge.Props(
+                            text = pluralStringResource(Res.plurals.trip_nights_badge, trip.nights, trip.nights),
+                            tone = BahrBadge.Tone.Secondary,
+                        ),
                 )
             }
         }
@@ -64,10 +85,12 @@ internal fun TripCard(
             Text(
                 text = trip.title,
                 style = MaterialTheme.typography.titleMedium,
-                maxLines = 2,
+                maxLines = TITLE_LINES,
+                minLines = if (compact) TITLE_LINES else 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            ScheduleRow(durationLabel = trip.durationLabel, next = trip.nextDeparture)
+            ScheduleRow(durationLabel = trip.durationLabel, timeRange = !trip.isMultiDay, next = trip.nextDeparture)
+            val seats = trip.nextDeparture?.seatsLeft()
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Row(
                     modifier = Modifier.weight(1f),
@@ -86,11 +109,14 @@ internal fun TripCard(
                         modifier = Modifier.alignByBaseline(),
                     )
                 }
-                trip.nextDeparture?.seatsLeft()?.let { SeatBadge(left = it) }
+                if (!compact) seats?.let { SeatBadge(left = it) }
             }
+            if (compact) seats?.let { SeatBadge(left = it) }
         }
     }
 }
+
+private const val TITLE_LINES = 2
 
 /**
  * The card photo, or its LQIP, or the bare ground. The size is reserved by the aspect ratio
@@ -121,10 +147,14 @@ private fun CoverImage(trip: TripCardDto) {
     }
 }
 
-/** The day's times at the start, the next date at the end. Either may be missing. */
+/**
+ * The day's times at the start, the next date at the end. Either may be missing. [timeRange] is false
+ * on a multi-day trip, whose label is words (`2 days · 1 night`), not a time range.
+ */
 @Composable
 private fun ScheduleRow(
     durationLabel: String,
+    timeRange: Boolean,
     next: NextDepartureDto?,
 ) {
     val date = next?.date
@@ -137,8 +167,9 @@ private fun ScheduleRow(
         Text(
             text = durationLabel,
             // "05:00 → 22:00" comes from the server in both languages. In an RTL line the bidi
-            // algorithm would draw it as "22:00 → 05:00"; times stay LTR inside RTL.
-            style = style.copy(textDirection = TextDirection.Ltr),
+            // algorithm would draw it as "22:00 → 05:00"; times stay LTR inside RTL. A multi-day
+            // label is words in the reader's language, so it keeps the line's own direction.
+            style = if (timeRange) style.copy(textDirection = TextDirection.Ltr) else style,
             color = color,
             maxLines = 1,
         )

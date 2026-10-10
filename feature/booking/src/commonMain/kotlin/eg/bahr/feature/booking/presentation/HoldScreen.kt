@@ -40,6 +40,7 @@ import eg.bahr.core.designsystem.theme.BahrSize
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.localization.generated.resources.Res
+import eg.bahr.core.localization.generated.resources.booking_dates_overnight
 import eg.bahr.core.localization.generated.resources.booking_departs_at
 import eg.bahr.core.localization.generated.resources.booking_departs_from
 import eg.bahr.core.localization.generated.resources.booking_hold_already_held
@@ -62,6 +63,7 @@ import eg.bahr.core.localization.generated.resources.booking_summary_party
 import eg.bahr.core.localization.generated.resources.booking_total
 import eg.bahr.core.localization.generated.resources.format_pair
 import eg.bahr.feature.booking.model.HeldBookingDto
+import eg.bahr.feature.booking.model.laterReturnDate
 import eg.bahr.feature.booking.navigation.HoldRoute
 import eg.bahr.feature.booking.presentation.components.BookingThumbnail
 import eg.bahr.feature.booking.presentation.components.BookingTopBar
@@ -198,7 +200,12 @@ private fun TripSummary(booking: HeldBookingDto?) {
                 } else {
                     booking.trip?.title?.let { Text(text = it, style = MaterialTheme.typography.titleMedium) }
                     val party = pluralStringResource(Res.plurals.booking_party_count, booking.partySize, booking.partySize)
-                    val date = booking.dayLabel ?: BahrFormat.date(booking.date)
+                    val leaves = booking.dayLabel ?: BahrFormat.date(booking.date)
+                    // A multi-day booking (M4-B0b) says the day it is back too.
+                    val date =
+                        booking.laterReturnDate?.let {
+                            stringResource(Res.string.booking_dates_overnight, leaves, BahrFormat.date(it))
+                        } ?: leaves
                     SecondaryLine(stringResource(Res.string.format_pair, date, party))
                     departsLine(booking)?.let { SecondaryLine(it) }
                 }

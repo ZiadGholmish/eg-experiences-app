@@ -35,6 +35,7 @@ import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.designsystem.theme.bahrShadow
 import eg.bahr.core.localization.generated.resources.Res
+import eg.bahr.core.localization.generated.resources.departure_back_on
 import eg.bahr.core.localization.generated.resources.departure_cancelled
 import eg.bahr.core.localization.generated.resources.departure_closed
 import eg.bahr.core.localization.generated.resources.departure_seats_left
@@ -56,6 +57,7 @@ import eg.bahr.core.localization.generated.resources.trip_sold_out_title
 import eg.bahr.core.network.MoneyDto
 import eg.bahr.feature.trips.model.DepartureDto
 import eg.bahr.feature.trips.model.PolicyDto
+import eg.bahr.feature.trips.model.laterReturnDate
 import eg.bahr.feature.trips.presentation.DateAvailability
 import eg.bahr.feature.trips.presentation.TripCta
 import eg.bahr.feature.trips.presentation.WaitlistOutcome
@@ -129,7 +131,8 @@ internal fun TripAvailability(
 }
 
 /**
- * One date: weekday, day and month, and the seats left or why it cannot be booked. Selected = primary
+ * One date: weekday, day and month (and the day it is back, on a multi-day trip), and the seats left
+ * or why it cannot be booked. Selected = primary
  * fill with `elevation.raised`. A date that cannot be booked is drawn by its reason (D3), so the three
  * never look alike:
  * - sold out: muted `surfaceContainer` with a `block` icon; it can be picked (it shows the sold-out
@@ -188,6 +191,14 @@ private fun DateCard(
         val content = look.content
         Text(text = BahrFormat.weekday(departure.date), style = MaterialTheme.typography.labelMedium, color = content)
         Text(text = BahrFormat.dayMonth(departure.date), style = MaterialTheme.typography.titleMedium, color = content, maxLines = 1)
+        // A multi-day trip (M4-B0b) is back on a later day; a day trip's card is unchanged.
+        departure.laterReturnDate?.let { back ->
+            Text(
+                text = stringResource(Res.string.departure_back_on, BahrFormat.dayMonth(back)),
+                style = MaterialTheme.typography.labelMedium,
+                color = content,
+            )
+        }
         Row(
             modifier = Modifier.padding(top = BahrSpacing.xs),
             verticalAlignment = Alignment.CenterVertically,

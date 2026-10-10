@@ -6,6 +6,19 @@
     <!-- Trips -->
     <string name="trips_title">Trips</string>
     <string name="trips_empty">No trips yet. Check back soon.</string>
+    <!-- Home (M4-M1a): the heading over the full list when server-driven sections sit above it. -->
+    <string name="trips_all_title">All trips</string>
+    <!-- Multi-day trips (M4-B0b): the badge on a card with nights > 0. -->
+    <plurals name="trip_nights_badge">
+        <item quantity="one">%1$d night</item>
+        <item quantity="other">%1$d nights</item>
+    </plurals>
+    <!-- The facts grid's duration cell on a multi-day trip ("One day" is for day trips). -->
+    <string name="trip_fact_duration">Trip length</string>
+    <!-- Under a date card's day when the trip is back on a later day. -->
+    <string name="departure_back_on">Back %1$s</string>
+    <!-- A multi-day booking's dates: leaves, then the day it is back. -->
+    <string name="booking_dates_overnight">%1$s to %2$s</string>
     <string name="trip_per_person">per person</string>
     <string name="trip_duration_hours">%1$s hrs</string>
     <string name="trip_whats_included">What’s included</string>

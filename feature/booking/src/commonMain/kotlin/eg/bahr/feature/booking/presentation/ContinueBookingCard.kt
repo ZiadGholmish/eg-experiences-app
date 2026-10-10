@@ -26,9 +26,11 @@ import eg.bahr.core.designsystem.icon.BahrIcons
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.booking_continue_title
+import eg.bahr.core.localization.generated.resources.booking_dates_overnight
 import eg.bahr.core.localization.generated.resources.booking_hold_label
 import eg.bahr.core.localization.generated.resources.booking_party_count
 import eg.bahr.core.localization.generated.resources.format_pair
+import eg.bahr.feature.booking.model.laterReturnDate
 import eg.bahr.feature.booking.navigation.HoldRoute
 import eg.bahr.feature.booking.presentation.components.BookingThumbnail
 import org.jetbrains.compose.resources.pluralStringResource
@@ -90,7 +92,12 @@ internal fun ContinueBookingCard(
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(BahrSpacing.xs)) {
                     booking.trip?.title?.let { Text(text = it, style = MaterialTheme.typography.titleMedium) }
                     val party = pluralStringResource(Res.plurals.booking_party_count, booking.partySize, booking.partySize)
-                    val date = booking.dayLabel ?: BahrFormat.date(booking.date)
+                    val leaves = booking.dayLabel ?: BahrFormat.date(booking.date)
+                    // A multi-day hold (M4-B0b) names the day it is back, worded as on the hold screen.
+                    val date =
+                        booking.laterReturnDate?.let {
+                            stringResource(Res.string.booking_dates_overnight, leaves, BahrFormat.date(it))
+                        } ?: leaves
                     Text(
                         text = stringResource(Res.string.format_pair, date, party),
                         style = MaterialTheme.typography.bodyMedium,

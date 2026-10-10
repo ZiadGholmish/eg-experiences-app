@@ -123,6 +123,12 @@ object BahrMotion {
     const val ShimmerAlphaLow = .5f
     const val ShimmerAlphaHigh = .9f
 
+    /**
+     * How long a carousel slide stays before the next one (HANDOFF: "Home slider idle 4600ms"; the
+     * contract's `HomeSection.layout: carousel` says the same).
+     */
+    const val CarouselAdvance = 4600L
+
     /** CSS `ease-in-out` (`cubic-bezier(.42,0,.58,1)`): the shimmer's easing in the handoff. */
     val EaseInOut = CubicBezierEasing(.42f, 0f, .58f, 1f)
     val Standard = CubicBezierEasing(.2f, 0f, 0f, 1f)
@@ -186,6 +192,10 @@ object BahrSize {
 
     /** The party stepper's count, wide enough that 1 → 6 does not move the buttons. */
     val stepperValue = 30.dp
+
+    /** A carousel's dot indicator (HANDOFF Home): inactive 7x7px, the active one stretched to 22px. */
+    val pagerDot = 7.dp
+    val pagerDotActive = 22.dp
 
     /** The trip thumbnail on the payment screen's summary card (62px in the handoff). */
     val thumbnail = 62.dp

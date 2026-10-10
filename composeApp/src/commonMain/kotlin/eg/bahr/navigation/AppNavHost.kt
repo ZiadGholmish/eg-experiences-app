@@ -26,6 +26,7 @@ import eg.bahr.feature.booking.navigation.navigateToHold
 import eg.bahr.feature.booking.navigation.returnToDateSelection
 import eg.bahr.feature.splash.navigation.SplashRoute
 import eg.bahr.feature.splash.navigation.splashScreen
+import eg.bahr.feature.trips.navigation.HomeAction
 import eg.bahr.feature.trips.navigation.TripListRoute
 import eg.bahr.feature.trips.navigation.navigateToTripDetail
 import eg.bahr.feature.trips.navigation.navigateToTripList
@@ -72,6 +73,16 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
             onTripClick = navController::navigateToTripDetail,
             // A live seat hold (survives a restart) sits at the top of Home; tap → the held seats.
             header = { ContinueBookingSlot(onOpen = { navController.navigateToHold(it) }) },
+            onHomeAction = { action ->
+                when (action) {
+                    is HomeAction.OpenTrip -> navController.navigateToTripDetail(action.slug)
+                    // No-op until M4-B1: the list has no category filter to open yet.
+                    is HomeAction.OpenCategory -> Unit
+                    // No-op: the app has no in-app browser yet (the contract asks for one, not the
+                    // system browser, so a banner never sends the user out of the app).
+                    is HomeAction.OpenUrl -> Unit
+                }
+            },
         )
 
         tripDetailScreen(

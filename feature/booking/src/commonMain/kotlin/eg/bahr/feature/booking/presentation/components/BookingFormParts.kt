@@ -73,13 +73,16 @@ import eg.bahr.core.localization.generated.resources.booking_seats_left_cap
 import eg.bahr.core.localization.generated.resources.booking_summary_party
 import eg.bahr.core.localization.generated.resources.booking_summary_price
 import eg.bahr.core.localization.generated.resources.booking_summary_total_note
+import eg.bahr.core.localization.generated.resources.departure_back_on
 import eg.bahr.core.localization.generated.resources.departure_cancelled
 import eg.bahr.core.localization.generated.resources.departure_closed
 import eg.bahr.core.localization.generated.resources.departure_sold_out
 import eg.bahr.core.localization.generated.resources.departures_pick_a_date
+import eg.bahr.core.localization.generated.resources.format_pair
 import eg.bahr.core.localization.generated.resources.trip_dates_empty
 import eg.bahr.core.network.MoneyDto
 import eg.bahr.feature.booking.model.BookingDepartureDto
+import eg.bahr.feature.booking.model.laterReturnDate
 import eg.bahr.feature.booking.presentation.DateAvailability
 import eg.bahr.feature.booking.presentation.availability
 import kotlinx.datetime.LocalTime
@@ -162,7 +165,11 @@ private fun DateRow(
                 textDecoration = if (availability == DateAvailability.Cancelled) TextDecoration.LineThrough else null,
                 maxLines = 1,
             )
-            timesOf(departure)?.let {
+            // A multi-day trip (M4-B0b) adds the day it is back, so "05:00 → 22:00" is not read as one day.
+            val back = departure.laterReturnDate?.let { stringResource(Res.string.departure_back_on, BahrFormat.date(it)) }
+            val times = timesOf(departure)
+            val meta = if (times != null && back != null) stringResource(Res.string.format_pair, times, back) else times ?: back
+            meta?.let {
                 Text(text = it, style = MaterialTheme.typography.labelMedium, color = if (open) c.onSurfaceVariant else content)
             }
         }
