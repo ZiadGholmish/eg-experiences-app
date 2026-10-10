@@ -24,19 +24,25 @@ internal class TripApiService(
 ) {
     /**
      * `listTrips`: one page of the catalogue, narrowed by at most one [category] key and one [filter]
-     * value. A null one is left out of the query (the contract's "clear"), never sent empty.
+     * value, and by the search text [q] (M4-M3). A null one is left out of the query (the contract's
+     * "clear"), never sent empty.
+     *
+     * [q] goes as the user typed it (Ktor URL-encodes it): the server folds Arabic spelling, case and
+     * digits itself, and does so for both languages whatever `Accept-Language` is.
      */
     suspend fun listTrips(
         page: Int = 0,
         size: Int = PAGE_SIZE,
         category: String? = null,
         filter: String? = null,
+        q: String? = null,
     ): AppResult<TripPageDto> =
         callApi {
             client.get("trips") {
                 // Ktor's `parameter` skips a null value, so a cleared choice is simply absent.
                 parameter("category", category)
                 parameter("filter", filter)
+                parameter("q", q)
                 parameter("page", page)
                 parameter("size", size)
             }
@@ -100,5 +106,11 @@ internal class TripApiService(
          * page of a list is read at this one size, so page numbers line up (see `TripPagingSources`).
          */
         const val PAGE_SIZE = 20
+
+        /**
+         * `listTrips`' `q` `maxLength`, in UTF-16 units (`String.length`): a longer one is answered 400
+         * VALIDATION_FAILED, so the search field never lets the text grow past it.
+         */
+        const val MAX_QUERY_LENGTH = 80
     }
 }

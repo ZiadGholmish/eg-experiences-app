@@ -34,8 +34,8 @@ CURL=(curl -sfL --max-time 30 --retry 3 --retry-all-errors --retry-delay 2)
 ICONS=(
   add apps arrow_back arrow_forward backpack beach_access bedtime block calendar_month campaign
   chat check circle close credit_card directions_bus event event_busy event_seat event_upcoming
-  favorite flutter_dash format_list_bulleted groups home info ios_share local_cafe location_on lock
-  map more_vert notifications_active palette payments person pin_drop remove restaurant sailing
+  favorite flutter_dash format_list_bulleted groups history home info ios_share local_cafe location_on lock
+  map more_vert notifications_active palette payments person pin_drop remove restaurant sailing search
   schedule sell smartphone star storefront sunny timer verified visibility waves
 )
 

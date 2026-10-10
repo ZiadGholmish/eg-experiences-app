@@ -3,6 +3,8 @@ package eg.bahr.core.datastore.di
 import eg.bahr.core.datastore.ActiveHoldStore
 import eg.bahr.core.datastore.AppSettingsStore
 import eg.bahr.core.datastore.PreferencesActiveHoldStore
+import eg.bahr.core.datastore.PreferencesRecentSearchesStore
+import eg.bahr.core.datastore.RecentSearchesStore
 import org.koin.dsl.module
 
 /**
@@ -13,4 +15,5 @@ val dataStoreModule =
     module {
         single { AppSettingsStore(get()) }
         single<ActiveHoldStore> { PreferencesActiveHoldStore(get()) }
+        single<RecentSearchesStore> { PreferencesRecentSearchesStore(get()) }
     }

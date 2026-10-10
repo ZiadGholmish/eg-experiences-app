@@ -30,9 +30,11 @@ import eg.bahr.feature.trips.navigation.HomeAction
 import eg.bahr.feature.trips.navigation.TripListRoute
 import eg.bahr.feature.trips.navigation.categoryTripsScreen
 import eg.bahr.feature.trips.navigation.navigateToCategoryTrips
+import eg.bahr.feature.trips.navigation.navigateToSearchTrips
 import eg.bahr.feature.trips.navigation.navigateToSectionTrips
 import eg.bahr.feature.trips.navigation.navigateToTripDetail
 import eg.bahr.feature.trips.navigation.navigateToTripList
+import eg.bahr.feature.trips.navigation.searchTripsScreen
 import eg.bahr.feature.trips.navigation.sectionTripsScreen
 import eg.bahr.feature.trips.navigation.tripDetailScreen
 import eg.bahr.feature.trips.navigation.tripListScreen
@@ -89,6 +91,12 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
                     is HomeAction.OpenUrl -> Unit
                 }
             },
+            onSearch = { navController.navigateToSearchTrips() },
+        )
+
+        searchTripsScreen(
+            onBack = { navController.popBackStack() },
+            onTripClick = navController::navigateToTripDetail,
         )
 
         categoryTripsScreen(

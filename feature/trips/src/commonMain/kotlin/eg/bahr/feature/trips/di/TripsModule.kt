@@ -4,6 +4,7 @@ import eg.bahr.feature.trips.data.DefaultTripRepository
 import eg.bahr.feature.trips.data.TripApiService
 import eg.bahr.feature.trips.data.TripRepository
 import eg.bahr.feature.trips.presentation.CategoryTripsViewModel
+import eg.bahr.feature.trips.presentation.SearchTripsViewModel
 import eg.bahr.feature.trips.presentation.SectionTripsViewModel
 import eg.bahr.feature.trips.presentation.TripDetailViewModel
 import eg.bahr.feature.trips.presentation.TripListViewModel
@@ -18,4 +19,6 @@ val tripsModule =
         viewModel { (slug: String) -> TripDetailViewModel(slug, get()) }
         viewModel { (category: String, title: String?) -> CategoryTripsViewModel(category, title, get()) }
         viewModel { (sectionId: String, title: String?) -> SectionTripsViewModel(sectionId, title, get()) }
+        // Recent searches come from core:datastore's module, which the app starts alongside this one.
+        viewModel { SearchTripsViewModel(get(), get()) }
     }

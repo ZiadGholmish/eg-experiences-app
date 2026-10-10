@@ -2,6 +2,7 @@ package eg.bahr.feature.trips.presentation.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,6 +22,7 @@ import androidx.paging.compose.itemKey
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.designsystem.components.BahrBackButton
 import eg.bahr.core.designsystem.components.BahrErrorView
+import eg.bahr.core.designsystem.components.BahrFilterChip
 import eg.bahr.core.designsystem.components.BahrLoadingView
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.localization.generated.resources.Res
@@ -29,13 +31,14 @@ import eg.bahr.core.localization.generated.resources.trips_count
 import eg.bahr.core.localization.isRetryable
 import eg.bahr.core.localization.localizedMessage
 import eg.bahr.feature.trips.data.appError
+import eg.bahr.feature.trips.model.FacetDto
 import eg.bahr.feature.trips.model.TripCardDto
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
 /*
- * The parts every paged trip list shares (M4-M1b): Home's "All trips", the category page and a row's
- * "See all". Paging's load states drive the same loading / error / retry / empty UI the list had
+ * The parts every paged trip list shares (M4-M1b): Home's "All trips", the category page, a row's
+ * "See all" and search (M4-M3). Paging's load states drive the same loading / error / retry / empty UI the list had
  * before it was paged.
  */
 
@@ -194,6 +197,35 @@ internal fun ListHeading(
                 text = pluralStringResource(Res.plurals.trips_count, count, count),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+/**
+ * A list's filter chips (`type == filter` facets) with their live counts, on the category page and
+ * in search. They wrap onto a second line rather than scroll (the handoff's Home chips); a zero-count
+ * chip is dimmed and cannot be tapped, unless it is the active one.
+ */
+@Composable
+internal fun FacetFilterChips(
+    chips: List<FacetDto>,
+    isSelected: (FacetDto) -> Boolean,
+    onSelect: (key: String) -> Unit,
+) {
+    FlowRow(
+        modifier = Modifier.padding(horizontal = BahrSpacing.gutter),
+        horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm),
+        verticalArrangement = Arrangement.spacedBy(BahrSpacing.sm),
+    ) {
+        chips.forEach { chip ->
+            val key = chip.key ?: return@forEach
+            BahrFilterChip(
+                label = chip.label.orEmpty(),
+                selected = isSelected(chip),
+                onClick = { onSelect(key) },
+                icon = chip.icon?.let { symbolIcon(it).filled() },
+                count = chip.count,
             )
         }
     }

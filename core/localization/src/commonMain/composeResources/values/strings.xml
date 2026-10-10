@@ -16,6 +16,16 @@
     </plurals>
     <!-- M4-M1b: a category page with a filter chip on that nothing matches. -->
     <string name="trips_filter_empty">No trips match this filter. Try another one.</string>
+    <!-- Search (M4-M3): Home's search entry and the field's placeholder (the prototype's searchPh, minus
+         "dates": the server does not search dates), the field's clear button, recent searches, the
+         hint before anything is typed, and a search nothing matches (%1$s is the text as typed; the
+         server matches word by word, every word somewhere in the trip). -->
+    <string name="search_hint">Search trips, places, hosts</string>
+    <string name="search_clear">Clear search</string>
+    <string name="search_recent_title">Recent searches</string>
+    <string name="search_recent_clear">Clear all</string>
+    <string name="search_start">Type at least two letters: a trip, a place, a kind of trip or a host. Arabic or English both work.</string>
+    <string name="search_no_results">No trip matches all of “%1$s”. Try fewer or different words.</string>
     <!-- Multi-day trips (M4-B0b): the badge on a card with nights > 0. -->
     <plurals name="trip_nights_badge">
         <item quantity="one">%1$d night</item>

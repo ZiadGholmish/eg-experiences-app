@@ -149,13 +149,8 @@ class CategoryTripsViewModelTest {
             val repository =
                 FakeTripRepository(
                     listFiltered = { q ->
-                        if (q.filter !=
-                            null
-                        ) {
-                            refused
-                        } else {
-                            page(listOf(trip(1)), facets = facets(category = q.category))
-                        }
+                        val refusesFilter = q.filter != null
+                        if (refusesFilter) refused else page(listOf(trip(1)), facets = facets(category = q.category))
                     },
                 )
             val vm = CategoryTripsViewModel("birds", null, repository)

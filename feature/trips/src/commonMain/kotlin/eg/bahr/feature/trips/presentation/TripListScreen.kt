@@ -1,32 +1,49 @@
 package eg.bahr.feature.trips.presentation
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
 import eg.bahr.core.designsystem.components.BahrEmptyView
 import eg.bahr.core.designsystem.components.BahrErrorView
 import eg.bahr.core.designsystem.components.BahrLoadingView
+import eg.bahr.core.designsystem.icon.BahrIcons
+import eg.bahr.core.designsystem.theme.BahrBorder
+import eg.bahr.core.designsystem.theme.BahrSize
 import eg.bahr.core.designsystem.theme.BahrSpacing
+import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.action_retry
+import eg.bahr.core.localization.generated.resources.search_hint
 import eg.bahr.core.localization.generated.resources.trip_per_person
 import eg.bahr.core.localization.generated.resources.trips_all_title
 import eg.bahr.core.localization.generated.resources.trips_empty
@@ -59,6 +76,7 @@ internal fun TripListScreen(
     modifier: Modifier = Modifier,
     header: @Composable () -> Unit = {},
     onAction: (HomeAction) -> Unit = {},
+    onSearch: () -> Unit = {},
     viewModel: TripListViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -131,6 +149,7 @@ internal fun TripListScreen(
                     text = stringResource(Res.string.trips_title),
                     style = MaterialTheme.typography.headlineMedium,
                 )
+                SearchEntry(onClick = onSearch)
                 header()
             }
         }
@@ -169,6 +188,43 @@ internal fun TripListScreen(
 
         // Paged (M4-M1b): the next page loads as the end comes near, with a footer while it does.
         pagedTripCards(trips, perPersonLabel, onTripClick)
+    }
+}
+
+/**
+ * Home's way into search (M4-M3): looks like a search field, opens the search screen, where the real
+ * field takes the keyboard. A button rather than a field here, so Home never brings the keyboard up.
+ * Not coral: coral is for the primary action, and search is a way around, not the goal.
+ */
+@Composable
+private fun SearchEntry(onClick: () -> Unit) {
+    val shape = BahrTheme.shapes.full
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = BahrSpacing.minTouch)
+                .clip(shape)
+                .background(BahrTheme.colors.surfaceLowest)
+                .border(BahrBorder.hairline, MaterialTheme.colorScheme.outlineVariant, shape)
+                .clickable(role = Role.Button, onClick = onClick)
+                .padding(horizontal = BahrSpacing.lg, vertical = BahrSpacing.md),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(BahrSpacing.md),
+    ) {
+        Icon(
+            BahrIcons.Search.outlined(),
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(BahrSize.iconLarge),
+        )
+        Text(
+            text = stringResource(Res.string.search_hint),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 

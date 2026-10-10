@@ -15,11 +15,15 @@ import eg.bahr.feature.trips.model.WaitlistRequest
  * (the project uses hand-written fakes, no mocking library).
  */
 internal interface TripRepository {
-    /** One page of `GET /trips`, optionally narrowed by a [category] key and a [filter] value (null = none). */
+    /**
+     * One page of `GET /trips`, optionally narrowed by a [category] key, a [filter] value and the search
+     * text [q] (null = none).
+     */
     suspend fun listTrips(
         page: Int = 0,
         category: String? = null,
         filter: String? = null,
+        q: String? = null,
     ): AppResult<TripPageDto>
 
     /** One page of a Home `trips` row's whole list (its "See all"). */
@@ -65,8 +69,9 @@ internal class DefaultTripRepository(
         page: Int,
         category: String?,
         filter: String?,
+        q: String?,
     ): AppResult<TripPageDto> =
-        api.listTrips(page = page, category = category, filter = filter).also { result ->
+        api.listTrips(page = page, category = category, filter = filter, q = q).also { result ->
             if (result is AppResult.Success) remember(result.data.items)
         }
 

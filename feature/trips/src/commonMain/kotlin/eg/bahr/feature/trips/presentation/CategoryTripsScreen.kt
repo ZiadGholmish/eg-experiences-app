@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -23,7 +22,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
-import eg.bahr.core.designsystem.components.BahrFilterChip
 import eg.bahr.core.designsystem.theme.BahrSize
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
@@ -33,6 +31,7 @@ import eg.bahr.core.localization.generated.resources.trips_all_title
 import eg.bahr.core.localization.generated.resources.trips_empty
 import eg.bahr.core.localization.generated.resources.trips_filter_empty
 import eg.bahr.feature.trips.model.FacetDto
+import eg.bahr.feature.trips.presentation.components.FacetFilterChips
 import eg.bahr.feature.trips.presentation.components.ListHeading
 import eg.bahr.feature.trips.presentation.components.ListTopBar
 import eg.bahr.feature.trips.presentation.components.colors
@@ -89,7 +88,7 @@ internal fun CategoryTripsScreen(
             val chips = state.filterChips
             if (chips.isNotEmpty()) {
                 item(key = KEY_CHIPS) {
-                    FilterChips(chips, isSelected = state::isSelected, onSelect = viewModel::selectFilter)
+                    FacetFilterChips(chips, isSelected = state::isSelected, onSelect = viewModel::selectFilter)
                 }
             }
             listBody(
@@ -137,34 +136,6 @@ private fun CategoryHeader(
             }
         }
         ListHeading(label = label, totalItems = totalItems)
-    }
-}
-
-/**
- * The filter chips with their live counts. They wrap onto a second line rather than scroll (the
- * handoff's Home chips); a zero-count chip is dimmed and cannot be tapped, unless it is the active one.
- */
-@Composable
-private fun FilterChips(
-    chips: List<FacetDto>,
-    isSelected: (FacetDto) -> Boolean,
-    onSelect: (key: String) -> Unit,
-) {
-    FlowRow(
-        modifier = Modifier.padding(horizontal = BahrSpacing.gutter),
-        horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm),
-        verticalArrangement = Arrangement.spacedBy(BahrSpacing.sm),
-    ) {
-        chips.forEach { chip ->
-            val key = chip.key ?: return@forEach
-            BahrFilterChip(
-                label = chip.label.orEmpty(),
-                selected = isSelected(chip),
-                onClick = { onSelect(key) },
-                icon = chip.icon?.let { symbolIcon(it).filled() },
-                count = chip.count,
-            )
-        }
     }
 }
 

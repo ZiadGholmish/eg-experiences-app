@@ -33,3 +33,7 @@ data class SectionTripsRoute(
     val sectionId: String,
     val title: String? = null,
 )
+
+/** Search (M4-M3), opened from Home's search entry. */
+@Serializable
+data object SearchTripsRoute

@@ -42,6 +42,7 @@ import eg.bahr.core.designsystem.generated.resources.ic_flutter_dash
 import eg.bahr.core.designsystem.generated.resources.ic_format_list_bulleted
 import eg.bahr.core.designsystem.generated.resources.ic_groups
 import eg.bahr.core.designsystem.generated.resources.ic_groups_filled
+import eg.bahr.core.designsystem.generated.resources.ic_history
 import eg.bahr.core.designsystem.generated.resources.ic_home
 import eg.bahr.core.designsystem.generated.resources.ic_home_filled
 import eg.bahr.core.designsystem.generated.resources.ic_info
@@ -72,6 +73,7 @@ import eg.bahr.core.designsystem.generated.resources.ic_sailing
 import eg.bahr.core.designsystem.generated.resources.ic_sailing_filled
 import eg.bahr.core.designsystem.generated.resources.ic_schedule
 import eg.bahr.core.designsystem.generated.resources.ic_schedule_filled
+import eg.bahr.core.designsystem.generated.resources.ic_search
 import eg.bahr.core.designsystem.generated.resources.ic_sell
 import eg.bahr.core.designsystem.generated.resources.ic_sell_filled
 import eg.bahr.core.designsystem.generated.resources.ic_smartphone
@@ -138,6 +140,7 @@ enum class BahrIcons(
     FlutterDash(Res.drawable.ic_flutter_dash, Res.drawable.ic_flutter_dash),
     FormatListBulleted(Res.drawable.ic_format_list_bulleted, Res.drawable.ic_format_list_bulleted),
     Groups(Res.drawable.ic_groups, Res.drawable.ic_groups_filled),
+    History(Res.drawable.ic_history, Res.drawable.ic_history),
     Home(Res.drawable.ic_home, Res.drawable.ic_home_filled),
     Info(Res.drawable.ic_info, Res.drawable.ic_info_filled),
     IosShare(Res.drawable.ic_ios_share, Res.drawable.ic_ios_share),
@@ -157,6 +160,7 @@ enum class BahrIcons(
     Restaurant(Res.drawable.ic_restaurant, Res.drawable.ic_restaurant),
     Sailing(Res.drawable.ic_sailing, Res.drawable.ic_sailing_filled),
     Schedule(Res.drawable.ic_schedule, Res.drawable.ic_schedule_filled),
+    Search(Res.drawable.ic_search, Res.drawable.ic_search),
     Sell(Res.drawable.ic_sell, Res.drawable.ic_sell_filled),
     Smartphone(Res.drawable.ic_smartphone, Res.drawable.ic_smartphone_filled),
     Star(Res.drawable.ic_star, Res.drawable.ic_star_filled),

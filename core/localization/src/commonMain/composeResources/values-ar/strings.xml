@@ -18,6 +18,14 @@
     </plurals>
     <!-- M4-M1b: صفحة نوع عليها فلتر مفيش رحلات تطابقه. -->
     <string name="trips_filter_empty">مفيش رحلات بالفلتر ده. جرّب فلتر تاني.</string>
+    <!-- M4-M3: البحث. زرار البحث في الرئيسية ونص الخانة الفاضية، زرار المسح، آخر عمليات البحث،
+         التلميح قبل الكتابة، وبحث ملقاش حاجة (%1$s هو النص زي ما اتكتب). -->
+    <string name="search_hint">ابحث عن رحلة أو مكان أو مضيف</string>
+    <string name="search_clear">امسح البحث</string>
+    <string name="search_recent_title">آخر حاجات دوّرت عليها</string>
+    <string name="search_recent_clear">امسح الكل</string>
+    <string name="search_start">اكتب حرفين على الأقل: اسم رحلة أو مكان أو نوع رحلة أو مضيف. بالعربي أو بالإنجليزي، الاتنين ينفعوا.</string>
+    <string name="search_no_results">مفيش رحلة فيها كل كلمات «%1$s». جرّب كلمات أقل أو غيرها.</string>
     <plurals name="trip_nights_badge">
         <item quantity="zero">%1$d ليلة</item>
         <item quantity="one">ليلة واحدة</item>

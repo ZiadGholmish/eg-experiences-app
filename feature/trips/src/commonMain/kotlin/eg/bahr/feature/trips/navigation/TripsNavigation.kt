@@ -7,6 +7,7 @@ import androidx.navigation.NavOptionsBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import eg.bahr.feature.trips.presentation.CategoryTripsScreen
+import eg.bahr.feature.trips.presentation.SearchTripsScreen
 import eg.bahr.feature.trips.presentation.SectionTripsScreen
 import eg.bahr.feature.trips.presentation.TripDetailScreen
 import eg.bahr.feature.trips.presentation.TripListScreen
@@ -22,15 +23,16 @@ import eg.bahr.feature.trips.presentation.TripListScreen
  *
  * [onHomeAction] is where a Home banner, a category chip or a row's "See all" goes (M4-M1a, M4-M1b):
  * the app decides what a trip, a category, a section list or a link opens. A trip card in a Home row
- * goes to [onTripClick].
+ * goes to [onTripClick]. [onSearch] is the search entry under the title (M4-M3).
  */
 fun NavGraphBuilder.tripListScreen(
     onTripClick: (slug: String) -> Unit,
     header: @Composable () -> Unit = {},
     onHomeAction: (HomeAction) -> Unit = {},
+    onSearch: () -> Unit = {},
 ) {
     composable<TripListRoute> {
-        TripListScreen(onTripClick = onTripClick, header = header, onAction = onHomeAction)
+        TripListScreen(onTripClick = onTripClick, header = header, onAction = onHomeAction, onSearch = onSearch)
     }
 }
 
@@ -71,6 +73,21 @@ fun NavGraphBuilder.sectionTripsScreen(
         SectionTripsScreen(sectionId = route.sectionId, title = route.title, onBack = onBack, onTripClick = onTripClick)
     }
 }
+
+/**
+ * Search (M4-M3). Back is [onBack]; the search and its results are kept while a trip opened from
+ * them is on top (the view model lives with this back-stack entry).
+ */
+fun NavGraphBuilder.searchTripsScreen(
+    onBack: () -> Unit,
+    onTripClick: (slug: String) -> Unit,
+) {
+    composable<SearchTripsRoute> {
+        SearchTripsScreen(onBack = onBack, onTripClick = onTripClick)
+    }
+}
+
+fun NavController.navigateToSearchTrips(builder: NavOptionsBuilder.() -> Unit = {}) = navigate(SearchTripsRoute, builder)
 
 fun NavController.navigateToCategoryTrips(
     category: String,

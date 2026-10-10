@@ -24,7 +24,7 @@ import kotlinx.datetime.LocalDate
  */
 internal class FakeTripRepository(
     var listTrips: suspend (page: Int) -> AppResult<TripPageDto> = { unset() },
-    /** The filtered list (category page); defaults to [listTrips], which ignores the query. */
+    /** The narrowed list (category page, search); defaults to [listTrips], which ignores the query. */
     var listFiltered: (suspend (query: TripQuery) -> AppResult<TripPageDto>)? = null,
     var sectionTrips: suspend (sectionId: String, page: Int) -> AppResult<TripCardPageDto> = { _, _ -> unset() },
     var tripBySlug: suspend (slug: String) -> AppResult<TripDetailDto> = { unset() },
@@ -51,8 +51,9 @@ internal class FakeTripRepository(
         page: Int,
         category: String?,
         filter: String?,
+        q: String?,
     ): AppResult<TripPageDto> {
-        val query = TripQuery(page, category, filter)
+        val query = TripQuery(page, category, filter, q)
         requestedPages += page
         requestedQueries += query
         return listFiltered?.invoke(query) ?: listTrips.invoke(page)
@@ -93,6 +94,7 @@ internal data class TripQuery(
     val page: Int,
     val category: String? = null,
     val filter: String? = null,
+    val q: String? = null,
 )
 
 /**
