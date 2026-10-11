@@ -106,8 +106,9 @@ class ModuleGraphTest {
 
     @Test
     fun `composeApp holds no screen, only the app root and the NavHost`() {
+        // Production code only: a test's stand-in composable (M4-M8's AppTabsTest) is not a screen.
         val composables =
-            appFiles.flatMap { file ->
+            appFiles.filter { it.isMain }.flatMap { file ->
                 file
                     .functions(includeNested = true, includeLocal = true)
                     .filter { it.hasAnnotationWithName("Composable") }
@@ -201,7 +202,8 @@ class ModuleGraphTest {
                 CORE_TESTING to setOf(":core:common", ":core:datastore"),
             )
 
-        val allowedAppComposables = setOf("App", "AppNavHost")
+        // AppTabs: the Android tab host (Scaffold + bottom bar around the selected tab's NavHost, M4-M8). Wiring, not a screen.
+        val allowedAppComposables = setOf("App", "AppNavHost", "AppTabs")
 
         /** The skill's "Inside a feature" layout. */
         val featureLayers = listOf("model", "data", "presentation", "navigation", "di")

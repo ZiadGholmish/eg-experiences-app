@@ -101,7 +101,9 @@ flavors: `Debug` builds against `Local.xcconfig`, `Release` against
 `ContentView` hands it to the shared entry point:
 
 ```swift
-MainViewControllerKt.MainViewController(baseUrl: "…", isDebug: true, appLinkHost: "…")
+MainViewControllerKt.startApp(baseUrl: "…", isDebug: true, appLinkHost: "…", mapViews: …, tabBar: …, selectedTab: …)
+// then one Compose root per tab of the SwiftUI TabView (M4-M8):
+MainViewControllerKt.TabViewController(tab: AppTab.home)
 ```
 
 > The simulator reaches a local backend at **`localhost:8084`**, not

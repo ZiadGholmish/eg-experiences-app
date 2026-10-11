@@ -206,11 +206,12 @@ class SearchScreenshotTest {
             ),
         )
 
+    /** As the app ships it since M4-M8: the Search tab's root (no Back), focused as from Home's entry. */
     private fun snap(
         prefix: String,
         language: AppLanguage,
         vm: SearchTripsViewModel,
-    ) = shoot(prefix, language) { SearchTripsScreen(onBack = {}, onTripClick = {}, viewModel = vm) }
+    ) = shoot(prefix, language) { SearchTripsScreen(onBack = null, onTripClick = {}, viewModel = vm) }
 
     /**
      * [act], when given, runs once the screen has settled (a tap's effect on the view model), and the

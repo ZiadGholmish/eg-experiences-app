@@ -2,6 +2,7 @@ package eg.bahr.core.designsystem.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -9,6 +10,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import eg.bahr.core.designsystem.theme.BahrExtendedColors
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
 
@@ -49,11 +51,19 @@ fun BahrBadge(
     )
 }
 
+/**
+ * The tone's container and content colours, in the current theme. The content colour is the dark
+ * "on container" role, so it reads at ≥ 3:1 on a light surface too (the bottom bar's tab tones, M4-M8).
+ */
 @Composable
-private fun BahrBadge.Tone.colors(): Pair<Color, Color> {
-    val c = MaterialTheme.colorScheme
-    val x = BahrTheme.colors
-    return when (this) {
+fun BahrBadge.Tone.colors(): Pair<Color, Color> = colorsIn(MaterialTheme.colorScheme, BahrTheme.colors)
+
+/** [colors] for a given theme, outside composition, so a test can check every theme's pairs. */
+internal fun BahrBadge.Tone.colorsIn(
+    c: ColorScheme,
+    x: BahrExtendedColors,
+): Pair<Color, Color> =
+    when (this) {
         BahrBadge.Tone.Primary -> c.primaryContainer to c.onPrimaryContainer
         BahrBadge.Tone.Secondary -> c.secondaryContainer to c.onSecondaryContainer
         // tertiaryContainer is the hold / sold-out ground (tokens.json), not the action colour.
@@ -61,4 +71,3 @@ private fun BahrBadge.Tone.colors(): Pair<Color, Color> {
         BahrBadge.Tone.Quaternary -> x.quaternaryContainer to x.onQuaternaryContainer
         BahrBadge.Tone.Success -> x.successContainer to x.onSuccessContainer
     }
-}

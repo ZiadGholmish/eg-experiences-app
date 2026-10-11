@@ -158,7 +158,8 @@ class TripMapScreenshotTest {
         vm: TripMapViewModel,
         act: (() -> Unit)? = null,
     ) {
-        setContent(language) { TripMapScreen(onBack = {}, onTripClick = {}, viewModel = vm, map = stubMap) }
+        // As the app ships it since M4-M8: the Map tab's root, with no Back.
+        setContent(language) { TripMapScreen(onBack = null, onTripClick = {}, viewModel = vm, map = stubMap) }
         settle()
         act?.let {
             compose.runOnIdle(it)

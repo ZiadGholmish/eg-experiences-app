@@ -15,7 +15,11 @@ import eg.bahr.deeplink.DeepLinkParser
 import eg.bahr.feature.booking.di.bookingModule
 import eg.bahr.feature.home.di.homeModule
 import eg.bahr.feature.map.di.mapModule
+import eg.bahr.feature.settings.di.settingsModule
 import eg.bahr.feature.trips.di.tripsModule
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.koin.core.KoinApplication
@@ -49,6 +53,16 @@ fun appModule(
 
     // One per app: view models report transient errors here, App's BahrErrorHost shows them.
     single { AppErrorController() }
+
+    // The language every Compose root draws in (M4-M8): one value for Android's root and iOS's four.
+    single {
+        val settings: AppSettingsStore = get()
+        AppLanguageState(
+            stored = settings.language,
+            store = settings::setLanguage,
+            scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
+        )
+    }
 
     /**
      * Reads the stored language on each request rather than caching it, so a
@@ -87,6 +101,7 @@ fun appModules(
         tripsModule,
         bookingModule,
         mapModule,
+        settingsModule,
     )
 
 fun initKoin(

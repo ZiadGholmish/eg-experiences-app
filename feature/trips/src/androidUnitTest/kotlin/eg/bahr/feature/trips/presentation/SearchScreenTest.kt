@@ -31,6 +31,8 @@ import eg.bahr.feature.trips.data.TripFixtures.page
 import eg.bahr.feature.trips.data.TripFixtures.trip
 import eg.bahr.feature.trips.data.TripQuery
 import eg.bahr.feature.trips.data.waitlistMemory
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.receiveAsFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -151,6 +153,33 @@ class SearchScreenTest {
         compose.waitForIdle()
 
         compose.onNodeWithTag(SEARCH_FIELD_TAG).assertIsNotFocused()
+    }
+
+    @Test
+    fun `as the Search tab it waits for Home's entry to take the focus - with no Back`() {
+        val vm = SearchTripsViewModel(FakeTripRepository(), FakeRecentSearchesStore(), waitlistMemory())
+        val requests = Channel<Unit>(Channel.CONFLATED)
+        compose.setContent {
+            ProvideAppLanguage(AppLanguage.ENGLISH) {
+                BahrTheme(locale = BahrLocale.English) {
+                    SearchTripsScreen(
+                        onBack = null,
+                        onTripClick = {},
+                        focusOnEntry = false,
+                        focusRequests = requests.receiveAsFlow(),
+                        viewModel = vm,
+                    )
+                }
+            }
+        }
+        compose.waitForIdle()
+        compose.onNodeWithTag(SEARCH_FIELD_TAG).assertIsNotFocused()
+        compose.onNodeWithContentDescription("Back").assertDoesNotExist()
+
+        requests.trySend(Unit)
+        compose.waitForIdle()
+
+        compose.onNodeWithTag(SEARCH_FIELD_TAG).assertIsFocused()
     }
 
     private fun show(vm: SearchTripsViewModel) {

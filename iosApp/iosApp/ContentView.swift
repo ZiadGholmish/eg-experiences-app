@@ -1,13 +1,12 @@
-import SwiftUI
-import UIKit
 import ComposeApp
+import SwiftUI
 
-/// Hosts the shared Compose UI.
+/// Starts the shared app once, before the first tab's Compose root is created.
 ///
-/// Koin is started inside `MainViewController` rather than here, so this target
-/// needs no knowledge of the shared module's wiring — see MainViewController.kt.
-struct ComposeView: UIViewControllerRepresentable {
-    func makeUIViewController(context: Context) -> UIViewController {
+/// Koin is started inside `startApp` rather than here, so this target needs no knowledge of the
+/// shared module's wiring — see MainViewController.kt.
+enum SharedApp {
+    static func start(tabs: TabBarModel) {
         // BASE_URL comes from the active xcconfig via Info.plist, the same way
         // composeApp's BuildConfig.BASE_URL comes from the product flavor.
         let baseUrl = Bundle.main.object(forInfoDictionaryKey: "BASE_URL") as? String ?? ""
@@ -21,29 +20,62 @@ struct ComposeView: UIViewControllerRepresentable {
         #endif
 
         // The Google Maps bridge (M4-M2), or nil without a Maps key: the map then draws a plain ground.
-        return MainViewControllerKt.MainViewController(
-            baseUrl: baseUrl, isDebug: isDebug, appLinkHost: appLinkHost, mapViews: GoogleMapsSetup.bridge()
+        MainViewControllerKt.startApp(
+            baseUrl: baseUrl,
+            isDebug: isDebug,
+            appLinkHost: appLinkHost,
+            mapViews: GoogleMapsSetup.bridge(),
+            tabBar: tabs,
+            selectedTab: tabs.selected.kotlin
         )
     }
-
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
 }
 
+/// The app's tabs (M4-M8): a native `TabView` (Liquid Glass on iOS 26), one Compose root per tab.
+///
+/// The bar's labels and direction follow the app language, which the shared code sends with the labels
+/// already translated (core:localization), so no string is kept here. A switch in Settings re-sends
+/// them and the bar flips at once. Each tab's content decides its own direction in Compose, so it is
+/// kept out of SwiftUI's mirroring.
 struct ContentView: View {
+    @ObservedObject private var tabs = TabBarModel.shared
+
     var body: some View {
-        // Compose draws its own insets, and the layout direction is decided by
-        // the shared code from the stored language — not by SwiftUI.
-        ComposeView()
-            .ignoresSafeArea()
-            // Universal Links (https://<APP_LINK_HOST>/t/{slug}). SwiftUI may deliver one through either
-            // callback; the shared code parses it and opens the trip, so both just hand the URL over.
-            .onOpenURL { url in
+        TabView(selection: tabs.selection) {
+            ForEach(BahrTab.allCases, id: \.self) { tab in
+                TabRoot(tab: tab)
+                    // Full screen, under the glass bar: Compose draws its own insets, and the bar's height
+                    // reaches it as part of the bottom safe area.
+                    .ignoresSafeArea()
+                    .environment(\.layoutDirection, .leftToRight)
+                    // Outlined and muted, filled in the tab's colour only when selected (see TabBarModel.icon).
+                    .tabItem {
+                        Label { Text(tabs.title(tab)) } icon: { tabs.icon(tab) }
+                            .environment(\.symbolVariants, .none)
+                    }
+                    .tag(tab)
+                    // Shown on a tab's root only: hidden on the trip page, booking, hold, confirmation.
+                    .toolbar(tabs.isBarHidden(tab) ? .hidden : .visible, for: .tabBar)
+            }
+        }
+        // The selected tab's own colour (Home teal, Search gold, Map green, Settings magenta), from the
+        // shared theme. The others are muted with the theme's onSurfaceVariant, also from the shared code:
+        // the labels through TabBarModel.mute, the icons drawn in that colour (TabBarModel.icon).
+        .tint(tabs.selectedTint)
+        .modifier(MinimizesOnScroll())
+        .environment(\.layoutDirection, tabs.rightToLeft ? .rightToLeft : .leftToRight)
+        .environment(\.locale, Locale(identifier: tabs.languageTag))
+        // Universal Links (https://<APP_LINK_HOST>/t/{slug}). SwiftUI may deliver one through either
+        // callback; the shared code parses it and opens the trip in the Home tab, so both hand it over.
+        .onOpenURL { url in
+            tabs.showHomeForLink()
+            MainViewControllerKt.onDeepLink(url: url.absoluteString)
+        }
+        .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
+            if let url = activity.webpageURL {
+                tabs.showHomeForLink()
                 MainViewControllerKt.onDeepLink(url: url.absoluteString)
             }
-            .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
-                if let url = activity.webpageURL {
-                    MainViewControllerKt.onDeepLink(url: url.absoluteString)
-                }
-            }
+        }
     }
 }

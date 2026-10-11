@@ -230,6 +230,23 @@
     <string name="map_note_pick">Tap a trip’s price to draw its drive from %1$s.</string>
     <string name="map_empty">No trips on the map yet. Check back soon.</string>
 
+    <!-- The bottom bar (M4-M8): one label per tab. The iOS tab bar reads the same strings (handed to Swift by
+         the shared code), so these are the only copies. -->
+    <string name="tab_home">Home</string>
+    <string name="tab_search">Search</string>
+    <string name="tab_map">Map</string>
+    <string name="tab_settings">Settings</string>
+
+    <!-- Settings (M4-M8). The language names are each written in their own language (the prototype's
+         langBtn), so a reader finds theirs whatever the app is showing. -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_language_arabic">العربية</string>
+    <string name="settings_language_english">English</string>
+    <string name="settings_about_line">Bahr books trips around Egypt with real seats and real departure times. Trip pages and prices come in the language you pick here.</string>
+    <!-- The version as the build names it (e.g. 0.1), kept left to right inside Arabic. -->
+    <string name="settings_version">Version %1$s</string>
+
     <!-- Errors -->
     <string name="error_network">No connection. Check your internet and try again.</string>
     <string name="error_timeout">That took too long. Try again.</string>

@@ -79,12 +79,16 @@ internal typealias MapContent = @Composable (
  *
  * Loading, error and empty take the map panel's place; the bar and note stay. A tapped pin opens its
  * card; the card opens the trip ([onTripClick]); the map itself closes it.
+ *
+ * M4-M8: the map is the Map tab's root, with nothing to go back to: [onBack] null draws no Back, and
+ * "List" goes to [onList] (the app switches to the Home tab).
  */
 @Composable
 internal fun TripMapScreen(
-    onBack: () -> Unit,
+    onBack: (() -> Unit)?,
     onTripClick: (slug: String) -> Unit,
     modifier: Modifier = Modifier,
+    onList: () -> Unit = { onBack?.invoke() },
     viewModel: TripMapViewModel = koinViewModel(),
     map: MapContent = { scene, onPin, onMap, padding, mod -> TripMap(scene, onPin, onMap, padding, mod) },
 ) {
@@ -98,7 +102,7 @@ internal fun TripMapScreen(
                 .background(MaterialTheme.colorScheme.background)
                 .windowInsetsPadding(WindowInsets.statusBars),
     ) {
-        MapTopBar(onBack = onBack)
+        MapTopBar(onBack = onBack, onList = onList)
         val panelShape = BahrTheme.shapes.hero
         Box(
             modifier =
@@ -160,13 +164,23 @@ private fun MapPanel(
 }
 
 @Composable
-private fun MapTopBar(onBack: () -> Unit) {
+private fun MapTopBar(
+    onBack: (() -> Unit)?,
+    onList: () -> Unit,
+) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = BahrSpacing.lg, vertical = BahrSpacing.md),
+        // With no Back (the tab root), the title starts at the page's gutter.
+        modifier =
+            Modifier.fillMaxWidth().padding(
+                start = if (onBack != null) BahrSpacing.lg else BahrSpacing.gutter,
+                end = BahrSpacing.lg,
+                top = BahrSpacing.md,
+                bottom = BahrSpacing.md,
+            ),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(BahrSpacing.md),
     ) {
-        BahrBackButton(props = BahrBackButton.Props(onClick = onBack))
+        onBack?.let { BahrBackButton(props = BahrBackButton.Props(onClick = it)) }
         Text(
             text = stringResource(Res.string.map_title),
             style = MaterialTheme.typography.titleMedium,
@@ -174,9 +188,9 @@ private fun MapTopBar(onBack: () -> Unit) {
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f).semantics { heading() },
         )
-        // The prototype's "List": the map is reached from Home's list, so this goes back to it.
+        // The prototype's "List": back to Home's list (since M4-M8, the Home tab).
         BahrPillButton(
-            props = BahrPillButton.Props(text = stringResource(Res.string.map_list), icon = BahrIcons.FormatListBulleted, onClick = onBack),
+            props = BahrPillButton.Props(text = stringResource(Res.string.map_list), icon = BahrIcons.FormatListBulleted, onClick = onList),
         )
     }
 }

@@ -71,6 +71,7 @@ import eg.bahr.core.designsystem.icon.BahrIcons
 import eg.bahr.core.designsystem.theme.BahrSize
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
+import eg.bahr.core.designsystem.theme.reducedMotion
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.search_clear
 import eg.bahr.core.localization.generated.resources.search_hint
@@ -81,6 +82,8 @@ import eg.bahr.core.localization.generated.resources.search_start
 import eg.bahr.core.localization.generated.resources.trip_per_person
 import eg.bahr.core.localization.generated.resources.trips_filter_empty
 import eg.bahr.feature.trips.data.TripApiService
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -94,12 +97,20 @@ import org.koin.compose.viewmodel.koinViewModel
  *
  * M4-M6: a new search or chip keeps the current results on screen, dimmed and not tappable, with a
  * thin progress bar under the field, until the new results come in (or the error replaces them).
+ *
+ * M4-M8: search is the Search tab's root, where there is nothing to go back to: [onBack] null draws
+ * no Back. As a tab it does not take the focus on the way in ([focusOnEntry] false; switching tabs
+ * must not throw the keyboard up); it takes it on each [focusRequests] signal instead (Home's search
+ * entry). [scrollToTop] (a re-tap of the selected tab) scrolls the results back to the top.
  */
 @Composable
 internal fun SearchTripsScreen(
-    onBack: () -> Unit,
+    onBack: (() -> Unit)?,
     onTripClick: (slug: String) -> Unit,
     modifier: Modifier = Modifier,
+    focusOnEntry: Boolean = true,
+    focusRequests: Flow<Unit> = emptyFlow(),
+    scrollToTop: Flow<Unit> = emptyFlow(),
     viewModel: SearchTripsViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -123,11 +134,21 @@ internal fun SearchTripsScreen(
     // Only on the way in: coming back from a trip page must not pop the keyboard over the results.
     var focusedOnEntry by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(Unit) {
-        if (!focusedOnEntry) {
+        if (focusOnEntry && !focusedOnEntry) {
             focus.requestFocus()
             keyboard?.show()
             focusedOnEntry = true
         }
+    }
+    LaunchedEffect(focusRequests) {
+        focusRequests.collect {
+            focus.requestFocus()
+            keyboard?.show()
+        }
+    }
+    val reduced = BahrTheme.reducedMotion
+    LaunchedEffect(scrollToTop, reduced) {
+        scrollToTop.collect { if (reduced) listState.scrollToItem(0) else listState.animateScrollToItem(0) }
     }
 
     // imePadding: the list ends above the keyboard, so the last result can be scrolled into view.
@@ -210,7 +231,7 @@ internal fun SearchTripsScreen(
 }
 
 /**
- * Back, then the field: a search icon, the placeholder, × once there is text. The field holds at
+ * Back (none on the tab root), then the field: a search icon, the placeholder, × once there is text. The field holds at
  * most [TripApiService.MAX_QUERY_LENGTH] characters, the contract's limit, and no control characters; text is drawn in its own
  * direction, so Arabic typed into the English app reads right to left. Carries the status-bar inset
  * (edge-to-edge; each screen handles its own top inset).
@@ -219,7 +240,7 @@ internal fun SearchTripsScreen(
 private fun SearchBar(
     field: TextFieldState,
     focus: FocusRequester,
-    onBack: () -> Unit,
+    onBack: (() -> Unit)?,
     onSearch: () -> Unit,
     onClear: () -> Unit,
 ) {
@@ -228,11 +249,17 @@ private fun SearchBar(
             Modifier
                 .fillMaxWidth()
                 .windowInsetsPadding(WindowInsets.statusBars)
-                .padding(start = BahrSpacing.lg, end = BahrSpacing.gutter, top = BahrSpacing.md, bottom = BahrSpacing.sm),
+                // With no Back (the tab root), the field starts at the page's gutter like Home's entry.
+                .padding(
+                    start = if (onBack != null) BahrSpacing.lg else BahrSpacing.gutter,
+                    end = BahrSpacing.gutter,
+                    top = BahrSpacing.md,
+                    bottom = BahrSpacing.sm,
+                ),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(BahrSpacing.md),
     ) {
-        BahrBackButton(props = BahrBackButton.Props(onClick = onBack))
+        onBack?.let { BahrBackButton(props = BahrBackButton.Props(onClick = it)) }
         OutlinedTextField(
             state = field,
             modifier = Modifier.weight(1f).focusRequester(focus).testTag(SEARCH_FIELD_TAG),

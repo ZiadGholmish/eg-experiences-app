@@ -25,6 +25,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -54,6 +55,7 @@ import eg.bahr.core.designsystem.theme.BahrBorder
 import eg.bahr.core.designsystem.theme.BahrSize
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
+import eg.bahr.core.designsystem.theme.reducedMotion
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.action_retry
 import eg.bahr.core.localization.generated.resources.home_wordmark
@@ -68,6 +70,8 @@ import eg.bahr.core.localization.localizedMessage
 import eg.bahr.feature.home.model.key
 import eg.bahr.feature.home.navigation.HomeAction
 import eg.bahr.feature.home.presentation.components.HomeSection
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -98,11 +102,17 @@ internal fun TripListScreen(
     onAction: (HomeAction) -> Unit = {},
     onSearch: () -> Unit = {},
     onMap: (() -> Unit)? = null,
+    scrollToTop: Flow<Unit> = emptyFlow(),
     viewModel: TripListViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val trips = viewModel.trips.collectAsLazyPagingItems()
     val listState = rememberLazyListState()
+    // A re-tap of the selected Home tab (M4-M8). At once when the system asks for less motion.
+    val reduced = BahrTheme.reducedMotion
+    LaunchedEffect(scrollToTop, reduced) {
+        scrollToTop.collect { if (reduced) listState.scrollToItem(0) else listState.animateScrollToItem(0) }
+    }
     val perPersonLabel = stringResource(Res.string.trip_per_person)
     val status = trips.rememberQueryStatus()
     val chips = state.filterChips

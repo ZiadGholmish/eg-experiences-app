@@ -8,7 +8,8 @@ DISPLAY_NAME = Bahr
 PRODUCT_BUNDLE_IDENTIFIER = eg.bahr.app
 
 CURRENT_PROJECT_VERSION = 1
-MARKETING_VERSION = 1.0
+// The same version name as Android's versionName (user decision 2026-10-11).
+MARKETING_VERSION = 0.1
 
 // Google Maps for iOS (M4-M2). Empty by default, so a checkout without a key still builds (the map
 // then shows its pins on a plain ground). The real key lives in the gitignored Maps.private.xcconfig,

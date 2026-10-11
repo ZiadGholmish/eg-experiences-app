@@ -15,6 +15,8 @@ import eg.bahr.feature.trips.presentation.CategoryTripsScreen
 import eg.bahr.feature.trips.presentation.SearchTripsScreen
 import eg.bahr.feature.trips.presentation.SectionTripsScreen
 import eg.bahr.feature.trips.presentation.TripDetailScreen
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 
 /*
  * The trips feature's public surface: destinations for the app's NavHost, and how to reach them.
@@ -84,15 +86,28 @@ fun NavGraphBuilder.sectionTripsScreen(
 /**
  * Search (M4-M3). Back is [onBack]; the search and its results are kept while a trip opened from
  * them is on top (the view model lives with this back-stack entry).
+ *
+ * M4-M8: the Search tab's root. [onBack] null: no Back. [focusOnEntry] false: the field takes the
+ * focus on [focusRequests] (Home's search entry) rather than whenever the tab shows. [scrollToTop]: a
+ * re-tap of the selected tab.
  */
 fun NavGraphBuilder.searchTripsScreen(
-    onBack: () -> Unit,
+    onBack: (() -> Unit)?,
     onTripClick: (slug: String) -> Unit,
     isHome: (NavBackStackEntry) -> Boolean,
     reducedMotion: () -> Boolean = { false },
+    focusOnEntry: Boolean = true,
+    focusRequests: Flow<Unit> = emptyFlow(),
+    scrollToTop: Flow<Unit> = emptyFlow(),
 ) {
     openedFromHome<SearchTripsRoute>(isHome, reducedMotion) {
-        SearchTripsScreen(onBack = onBack, onTripClick = onTripClick)
+        SearchTripsScreen(
+            onBack = onBack,
+            onTripClick = onTripClick,
+            focusOnEntry = focusOnEntry,
+            focusRequests = focusRequests,
+            scrollToTop = scrollToTop,
+        )
     }
 }
 

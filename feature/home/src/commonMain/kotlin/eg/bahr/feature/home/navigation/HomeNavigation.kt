@@ -12,6 +12,8 @@ import eg.bahr.core.designsystem.theme.ProvideBahrNavScope
 import eg.bahr.core.designsystem.theme.bahrBackEnter
 import eg.bahr.core.designsystem.theme.bahrForwardExit
 import eg.bahr.feature.home.presentation.TripListScreen
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 
 /**
  * The home feature's public surface: Home's destination for the app's NavHost, and how to reach it.
@@ -36,6 +38,9 @@ import eg.bahr.feature.home.presentation.TripListScreen
  * [opensFromHome] names them (feature:trips' category page, "See all" and search, feature:map's map).
  * [reducedMotion] is read when a transition starts (the platform setting can change while the app
  * runs); with it on the screens change at once.
+ *
+ * M4-M8: Home is the Home tab's root; [onSearch] and [onMap] switch to the Search and Map tabs (the
+ * app decides). [scrollToTop] fires on a re-tap of the selected Home tab.
  */
 fun NavGraphBuilder.tripListScreen(
     onTripClick: (slug: String) -> Unit,
@@ -45,13 +50,21 @@ fun NavGraphBuilder.tripListScreen(
     onSearch: () -> Unit = {},
     onMap: (() -> Unit)? = null,
     reducedMotion: () -> Boolean = { false },
+    scrollToTop: Flow<Unit> = emptyFlow(),
 ) {
     composable<TripListRoute>(
         exitTransition = { if (opensFromHome(targetState)) bahrForwardExit(reducedMotion()) else null },
         popEnterTransition = { if (opensFromHome(initialState)) bahrBackEnter(reducedMotion()) else null },
     ) {
         ProvideBahrNavScope(this) {
-            TripListScreen(onTripClick = onTripClick, header = header, onAction = onHomeAction, onSearch = onSearch, onMap = onMap)
+            TripListScreen(
+                onTripClick = onTripClick,
+                header = header,
+                onAction = onHomeAction,
+                onSearch = onSearch,
+                onMap = onMap,
+                scrollToTop = scrollToTop,
+            )
         }
     }
 }

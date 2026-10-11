@@ -57,6 +57,7 @@ kotlin {
             implementation(projects.feature.trips)
             implementation(projects.feature.booking)
             implementation(projects.feature.map)
+            implementation(projects.feature.settings)
 
             implementation(projects.core.common)
             implementation(projects.core.network)
@@ -76,21 +77,49 @@ kotlin {
             implementation(libs.koin.compose)
             implementation(libs.koin.compose.viewmodel)
             implementation(libs.navigation.compose)
+            // Back on a non-Home tab root goes to Home (M4-M8, user decision 2026-10-11).
+            implementation(libs.navigationevent.compose)
             implementation(libs.coil.compose)
             implementation(libs.coil.network.ktor)
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.kotlinx.coroutines.core)
+            // A failed language write from a deep link's `?lang=` is logged, not shown (M4-M8).
+            implementation(libs.kermit)
         }
         commonTest.dependencies {
             // AppKoinGraphTest starts the full module list with core:testing's graph helper (M4-M7).
             implementation(projects.core.testing)
         }
+        // The tab host's Compose tests on Robolectric (M4-M8): back stacks and scroll kept per tab, the
+        // bar on tab roots only. No screenshots here: the app module cannot run Roborazzi (the bar's
+        // goldens are core:designsystem's).
+        androidUnitTest.dependencies {
+            implementation(libs.junit)
+            implementation(libs.robolectric)
+            implementation(libs.androidx.compose.ui.test.junit4)
+        }
+    }
+}
+
+dependencies {
+    // Registers the ComponentActivity that createComposeRule() launches under Robolectric.
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
+}
+
+androidComponents {
+    // As in bahr.kmp.screenshots: the Compose tests need ui-test-manifest's debug-only activity, so the
+    // release unit-test variants (which would run the same common tests again) are off.
+    beforeVariants(selector().withBuildType("release")) { variant ->
+        (variant as com.android.build.api.variant.HasUnitTestBuilder).enableUnitTest = false
     }
 }
 
 android {
     // Keeps BuildConfig in `eg.bahr`, where the entry points import it from.
     namespace = "eg.bahr"
+
+    // Robolectric needs the merged assets: compose-resources ships strings and drawables as assets.
+    testOptions.unitTests.isIncludeAndroidResources = true
 
     defaultConfig {
         applicationId = "eg.bahr.app"

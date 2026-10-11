@@ -14,7 +14,7 @@ class MainActivity : AppCompatActivity() {
         // A recreated activity (savedInstanceState != null) gets its original intent again; that link
         // was already opened and the restored back stack shows it.
         if (savedInstanceState == null) offerDeepLink(intent)
-        setContent { App() }
+        setContent { App(appVersion = BuildConfig.VERSION_NAME) }
     }
 
     /** A link opened while the app is running (launchMode singleTask). */

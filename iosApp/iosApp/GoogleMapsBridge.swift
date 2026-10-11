@@ -20,7 +20,7 @@ enum GoogleMapsSetup {
         return GMSServices.provideAPIKey(key)
     }()
 
-    /// The bridge for `MainViewController`, or nil without a key.
+    /// The bridge for `startApp`, or nil without a key.
     static func bridge() -> MapTripMapNativeViews? { ready ? GoogleMapsBridge() : nil }
 }
 

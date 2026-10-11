@@ -76,6 +76,8 @@ import eg.bahr.core.designsystem.generated.resources.ic_schedule_filled
 import eg.bahr.core.designsystem.generated.resources.ic_search
 import eg.bahr.core.designsystem.generated.resources.ic_sell
 import eg.bahr.core.designsystem.generated.resources.ic_sell_filled
+import eg.bahr.core.designsystem.generated.resources.ic_settings
+import eg.bahr.core.designsystem.generated.resources.ic_settings_filled
 import eg.bahr.core.designsystem.generated.resources.ic_smartphone
 import eg.bahr.core.designsystem.generated.resources.ic_smartphone_filled
 import eg.bahr.core.designsystem.generated.resources.ic_star
@@ -86,6 +88,7 @@ import eg.bahr.core.designsystem.generated.resources.ic_sunny
 import eg.bahr.core.designsystem.generated.resources.ic_sunny_filled
 import eg.bahr.core.designsystem.generated.resources.ic_timer
 import eg.bahr.core.designsystem.generated.resources.ic_timer_filled
+import eg.bahr.core.designsystem.generated.resources.ic_translate
 import eg.bahr.core.designsystem.generated.resources.ic_verified
 import eg.bahr.core.designsystem.generated.resources.ic_verified_filled
 import eg.bahr.core.designsystem.generated.resources.ic_visibility
@@ -162,11 +165,17 @@ enum class BahrIcons(
     Schedule(Res.drawable.ic_schedule, Res.drawable.ic_schedule_filled),
     Search(Res.drawable.ic_search, Res.drawable.ic_search),
     Sell(Res.drawable.ic_sell, Res.drawable.ic_sell_filled),
+
+    /** The Settings tab (M4-M8). */
+    Settings(Res.drawable.ic_settings, Res.drawable.ic_settings_filled),
     Smartphone(Res.drawable.ic_smartphone, Res.drawable.ic_smartphone_filled),
     Star(Res.drawable.ic_star, Res.drawable.ic_star_filled),
     Storefront(Res.drawable.ic_storefront, Res.drawable.ic_storefront_filled),
     Sunny(Res.drawable.ic_sunny, Res.drawable.ic_sunny_filled),
     Timer(Res.drawable.ic_timer, Res.drawable.ic_timer_filled),
+
+    /** Settings' language row (M4-M8). */
+    Translate(Res.drawable.ic_translate, Res.drawable.ic_translate),
     Verified(Res.drawable.ic_verified, Res.drawable.ic_verified_filled),
     Visibility(Res.drawable.ic_visibility, Res.drawable.ic_visibility_filled),
     Waves(Res.drawable.ic_waves, Res.drawable.ic_waves),

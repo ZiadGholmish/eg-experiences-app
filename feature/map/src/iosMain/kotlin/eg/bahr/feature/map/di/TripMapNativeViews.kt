@@ -9,11 +9,11 @@ import platform.UIKit.UIView
  * (`iosApp/iosApp/GoogleMapsBridge.swift`), where the SDK lives (Swift Package Manager): Kotlin has
  * no bindings for it, and none are needed, because the bridge only takes plain values. Every marker
  * arrives as a finished picture and every colour as a `UIColor`, all drawn and chosen in Kotlin from
- * the theme, so Swift makes no design decision. The app hands an instance to `MainViewController`,
+ * the theme, so Swift makes no design decision. The app hands an instance to `startApp`,
  * which registers it with Koin; with none (no API key), the map draws its plain fallback.
  *
  * Public, and in `di/`, because Swift implements it: the app's framework header names it through
- * `MainViewController`'s signature, without the feature module being exported.
+ * `startApp`'s signature (composeApp's MainViewController.kt), without the feature module being exported.
  */
 interface TripMapNativeViews {
     /** A new map view, styled with [styleJson] (a Google JSON style); taps go to [events]. */

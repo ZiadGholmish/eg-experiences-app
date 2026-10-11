@@ -258,4 +258,20 @@
     <!-- Screen-reader state of a button whose action is in flight. -->
     <string name="a11y_busy">جاري التحميل</string>
     <string name="action_retry">حاول مرة أخرى</string>
+    <!-- The bottom bar (M4-M8): one label per tab. The iOS tab bar reads the same strings (handed to Swift by
+         the shared code), so these are the only copies. -->
+    <string name="tab_home">الرئيسية</string>
+    <string name="tab_search">بحث</string>
+    <string name="tab_map">خريطة</string>
+    <string name="tab_settings">الإعدادات</string>
+
+    <!-- Settings (M4-M8). The language names are each written in their own language (the prototype's
+         langBtn), so a reader finds theirs whatever the app is showing. -->
+    <string name="settings_title">الإعدادات</string>
+    <string name="settings_language">اللغة</string>
+    <string name="settings_language_arabic">العربية</string>
+    <string name="settings_language_english">English</string>
+    <string name="settings_about_line">بحر بيحجزلك رحلات في كل مصر، بكراسي حقيقية ومواعيد قيام حقيقية. صفحات الرحلات والأسعار بتظهر باللغة اللي تختارها هنا.</string>
+    <!-- The version as the build names it (e.g. 0.1), kept left to right inside Arabic. -->
+    <string name="settings_version">الإصدار %1$s</string>
 </resources>

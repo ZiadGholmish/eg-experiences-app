@@ -50,6 +50,8 @@ include(":feature:home")
 include(":feature:trips")
 include(":feature:booking")
 include(":feature:map")
+// The Settings tab (M4-M8, user decision 2026-10-11).
+include(":feature:settings")
 
 // JVM, test-only: ModuleGraphTest (Konsist) enforces the bahr-modularization rules.
 include(":architecture-tests")

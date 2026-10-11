@@ -7,8 +7,9 @@ internal sealed interface DeepLink {
     /**
      * A trip's share link, `https://<host>/t/{slug}`.
      *
-     * [language] is the link's `?lang=`, the language it was shared in. It is carried, not applied: the
-     * reader's stored language decides what the app shows, the sharer's does not.
+     * [language] is the link's `?lang=`, the language it was shared in. Since M4-M8 it is applied: the
+     * app switches to it (and stays in it, like a pick in Settings) before opening the trip, so the trip
+     * reads as the page that was shared. No `lang`, or anything but `ar`/`en`, leaves the language alone.
      */
     data class Trip(
         val slug: String,

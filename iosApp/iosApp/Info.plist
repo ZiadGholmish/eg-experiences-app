@@ -53,6 +53,11 @@
 	<key>CFBundleDisplayName</key>
 	<string>$(DISPLAY_NAME)</string>
 
+	<!-- Every Bahr theme is light (LakeBurullus, Dusk, HighContrast), and the tab colours the shared
+	     code sends are dark tones meant for a light bar: the app stays light in system dark mode. -->
+	<key>UIUserInterfaceStyle</key>
+	<string>Light</string>
+
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 </dict>

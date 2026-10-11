@@ -26,7 +26,9 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import eg.bahr.core.common.locale.AppLanguage
+import eg.bahr.core.designsystem.components.BahrBadge
 import eg.bahr.core.designsystem.components.BahrCard
+import eg.bahr.core.designsystem.components.BahrNavigationBar
 import eg.bahr.core.designsystem.components.BahrPrimaryButton
 import eg.bahr.core.designsystem.components.HoldCountdown
 import eg.bahr.core.designsystem.components.SeatBadge
@@ -44,6 +46,10 @@ import eg.bahr.core.localization.ProvideAppLanguage
 import eg.bahr.core.localization.generated.resources.booking_confirm
 import eg.bahr.core.localization.generated.resources.booking_hold_label
 import eg.bahr.core.localization.generated.resources.error_no_seats_available
+import eg.bahr.core.localization.generated.resources.tab_home
+import eg.bahr.core.localization.generated.resources.tab_map
+import eg.bahr.core.localization.generated.resources.tab_search
+import eg.bahr.core.localization.generated.resources.tab_settings
 import eg.bahr.core.testing.captureScreenshot
 import org.jetbrains.compose.resources.stringResource
 import org.junit.After
@@ -130,6 +136,36 @@ class DesignSystemScreenshotTest {
                         )
                     }
                 }
+            }
+        }
+
+    /**
+     * The Android bottom bar (M4-M8): each tab selected in turn, in its own tone (filled icon and label
+     * on the tone's pill), the others outlined and muted. In Arabic the tabs run from the right (Home first at the right edge) without the list
+     * being reversed. Edge to edge, the bar pads itself for the gesture area, which Robolectric reports
+     * as none.
+     */
+    @Test
+    fun navigationBar() =
+        snapEach(perLanguage("navigation_bar")) {
+            val tabs =
+                listOf(
+                    Triple(BahrIcons.Home, stringResource(L10n.string.tab_home), BahrBadge.Tone.Primary),
+                    Triple(BahrIcons.Search, stringResource(L10n.string.tab_search), BahrBadge.Tone.Secondary),
+                    Triple(BahrIcons.Map, stringResource(L10n.string.tab_map), BahrBadge.Tone.Success),
+                    Triple(BahrIcons.Settings, stringResource(L10n.string.tab_settings), BahrBadge.Tone.Quaternary),
+                )
+            // Each tab selected in turn: its own tone on its own pill, the others muted.
+            tabs.indices.forEach { selected ->
+                BahrNavigationBar(
+                    props =
+                        BahrNavigationBar.Props(
+                            items =
+                                tabs.mapIndexed { index, (icon, label, tone) ->
+                                    BahrNavigationBar.Item(label, icon, index == selected, tone = tone)
+                                },
+                        ),
+                )
             }
         }
 
