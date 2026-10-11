@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -20,6 +21,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -44,24 +46,34 @@ import eg.bahr.core.catalog.presentation.components.CategoryTile
 import eg.bahr.core.catalog.presentation.components.Photo
 import eg.bahr.core.catalog.presentation.components.SectionTitle
 import eg.bahr.core.catalog.presentation.components.TripCard
+import eg.bahr.core.catalog.presentation.components.badgeTone
+import eg.bahr.core.catalog.presentation.components.knownSymbolIcon
+import eg.bahr.core.designsystem.components.BahrBadge
 import eg.bahr.core.designsystem.components.ImageGround
+import eg.bahr.core.designsystem.format.BahrFormat
+import eg.bahr.core.designsystem.icon.BahrIcons
+import eg.bahr.core.designsystem.theme.BahrAlpha
 import eg.bahr.core.designsystem.theme.BahrMotion
 import eg.bahr.core.designsystem.theme.BahrSize
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.designsystem.theme.bahrSharedBounds
 import eg.bahr.core.localization.generated.resources.Res
+import eg.bahr.core.localization.generated.resources.home_banner_price_from
 import eg.bahr.core.localization.generated.resources.home_slide_of
 import eg.bahr.core.localization.generated.resources.trips_see_all
 import eg.bahr.feature.home.model.BannersSectionDto
 import eg.bahr.feature.home.model.CategoriesSectionDto
 import eg.bahr.feature.home.model.HomeBannerDto
+import eg.bahr.feature.home.model.HomeNoteDto
 import eg.bahr.feature.home.model.HomeSectionDto
+import eg.bahr.feature.home.model.NoteSectionDto
 import eg.bahr.feature.home.model.SeeAllType
 import eg.bahr.feature.home.model.SkippedSectionDto
 import eg.bahr.feature.home.model.TripsSectionDto
 import eg.bahr.feature.home.navigation.HomeAction
 import eg.bahr.feature.home.presentation.parseAspectRatio
+import eg.bahr.feature.home.presentation.showsForward
 import eg.bahr.feature.home.presentation.toHomeAction
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -101,6 +113,12 @@ internal fun HomeSection(
 
         is CategoriesSectionDto ->
             Titled(section.title, modifier) { CategoryTiles(section, onAction) }
+
+        // Where the server put it (M4-M7): its body replaced the footer copy the app used to carry.
+        is NoteSectionDto ->
+            section.items.firstOrNull()?.let { note ->
+                Titled(section.title, modifier) { NotePanel(note, Modifier.padding(horizontal = BahrSpacing.gutter)) }
+            }
 
         // Dropped (and logged) by the view model; nothing to draw.
         is SkippedSectionDto -> Unit
@@ -250,6 +268,12 @@ private fun BannerCarousel(
 /**
  * One banner: the image at [ratio], LQIP first, with its title over a bottom scrim when it has one.
  * Tappable only when its action leads somewhere ([toHomeAction]); `none` is not a button.
+ *
+ * A hero slide (M4-B4 fields, HANDOFF Home → hero slider) adds its tinted badge at the top start and,
+ * under the title, a white "from" price pill, the meta line and the coral forward circle at the end.
+ * Each is drawn only when the server sent it; a slide without any is the plain picture with its
+ * title. The forward circle is drawn only on a slide that is a button: it does what a tap on the
+ * slide does, so it is part of the slide's one target rather than a second, smaller one.
  */
 @Composable
 private fun Banner(
@@ -260,6 +284,9 @@ private fun Banner(
 ) {
     val action = banner.action.toHomeAction()
     val title = banner.title?.takeIf { it.isNotBlank() }
+    val meta = banner.meta?.takeIf { it.isNotBlank() }
+    val forward = banner.showsForward()
+    val footer = banner.price != null || meta != null || forward
     Box(
         modifier =
             modifier
@@ -268,17 +295,121 @@ private fun Banner(
                 .clip(BahrTheme.shapes.hero)
                 .then(if (action != null) Modifier.clickable(role = Role.Button) { onAction(action) } else Modifier),
     ) {
-        ImageGround(modifier = Modifier.matchParentSize(), scrimBottom = title != null) { Photo(banner.image) }
-        title?.let {
-            Text(
-                text = it,
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onPrimary,
-                maxLines = BANNER_TITLE_LINES,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.align(Alignment.BottomStart).padding(BahrSpacing.lg),
+        ImageGround(modifier = Modifier.matchParentSize(), scrimBottom = title != null || footer) { Photo(banner.image) }
+        banner.badge?.label?.takeIf { it.isNotBlank() }?.let { label ->
+            BahrBadge(
+                modifier = Modifier.align(Alignment.TopStart).padding(BahrSpacing.md),
+                props = BahrBadge.Props(text = label, tone = badgeTone(banner.badge.tone)),
             )
         }
+        Column(
+            modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(BahrSpacing.lg),
+            verticalArrangement = Arrangement.spacedBy(BahrSpacing.md),
+        ) {
+            title?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    maxLines = BANNER_TITLE_LINES,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            if (footer) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm)) {
+                    banner.price?.let { PricePill(BahrFormat.money(it.amount, it.currencyCode, BahrTheme.locale.isArabic)) }
+                    if (meta != null) {
+                        Text(
+                            text = meta,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = BahrAlpha.onImageSecondary),
+                            maxLines = BANNER_META_LINES,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                        )
+                    } else {
+                        // Keeps the forward circle at the end edge.
+                        Spacer(Modifier.weight(1f))
+                    }
+                    if (forward) ForwardCircle()
+                }
+            }
+        }
+    }
+}
+
+/** The hero slide's white price pill: "From 450 EGP" (the server's "from" price, formatted only). */
+@Composable
+private fun PricePill(money: String) {
+    Text(
+        text = stringResource(Res.string.home_banner_price_from, money),
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.onSurface,
+        maxLines = BANNER_PRICE_LINES,
+        modifier =
+            Modifier
+                .clip(BahrTheme.shapes.full)
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(horizontal = BahrSpacing.md, vertical = BahrSpacing.xs),
+    )
+}
+
+/**
+ * The hero slide's coral forward circle. Decorative: the whole slide is the button, and the arrow
+ * mirrors itself in RTL (BahrIcons.ArrowForward is auto-mirrored).
+ */
+@Composable
+private fun ForwardCircle() {
+    Box(
+        modifier =
+            Modifier
+                .size(BahrSize.heroForward)
+                .clip(BahrTheme.shapes.full)
+                .background(MaterialTheme.colorScheme.tertiary),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            BahrIcons.ArrowForward.outlined(),
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onTertiary,
+            modifier = Modifier.size(BahrSize.iconMedium),
+        )
+    }
+}
+
+/**
+ * `note` (M4-M7, HANDOFF Home footer note): a primary-container panel with the server's text, after
+ * the note's icon when this build has it. An unknown or absent icon is left out and the text takes
+ * the full width: a stand-in dot would read as a bullet.
+ */
+@Composable
+private fun NotePanel(
+    note: HomeNoteDto,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clip(BahrTheme.shapes.extraLarge)
+                .background(MaterialTheme.colorScheme.primaryContainer)
+                .padding(horizontal = BahrSpacing.gutter, vertical = BahrSpacing.lg),
+        horizontalArrangement = Arrangement.spacedBy(BahrSpacing.md),
+        verticalAlignment = Alignment.Top,
+    ) {
+        knownSymbolIcon(note.icon)?.let { icon ->
+            Icon(
+                icon.filled(),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(BahrSize.iconLarge),
+            )
+        }
+        Text(
+            text = note.body,
+            style = MaterialTheme.typography.bodyMedium,
+            color = BahrTheme.colors.onSurfaceSecondary,
+        )
     }
 }
 
@@ -406,6 +537,10 @@ private const val LAYOUT_ROW = "row"
 /** A row shows one item and a peek of the next, so it reads as scrollable. */
 private const val ROW_ITEM_WIDTH_FRACTION = .72f
 private const val BANNER_TITLE_LINES = 2
+
+/** A hero slide's meta line and price pill stay on one line each, so the forward circle keeps its place. */
+private const val BANNER_META_LINES = 1
+private const val BANNER_PRICE_LINES = 1
 
 /** The handoff shoots hero slides at 16:10. */
 private const val FALLBACK_BANNER_RATIO = 16f / 10f

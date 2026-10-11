@@ -8,9 +8,12 @@ import eg.bahr.core.datastore.RecentSearchesStore
 import eg.bahr.core.datastore.WaitlistJoinsStore
 import eg.bahr.core.network.ApiConfig
 import eg.bahr.core.network.apiHttpClient
-import eg.bahr.core.testing.runViewModelTest
+import eg.bahr.core.testing.EMPTY_TRIP_PAGE_JSON
+import eg.bahr.core.testing.FakeWaitlistJoinsStore
+import eg.bahr.core.testing.TEST_BASE_URL
+import eg.bahr.core.testing.jsonMockEngine
+import eg.bahr.core.testing.runKoinGraphTest
 import eg.bahr.feature.trips.data.FakeRecentSearchesStore
-import eg.bahr.feature.trips.data.FakeWaitlistJoinsStore
 import eg.bahr.feature.trips.data.TripFixtures.trip
 import eg.bahr.feature.trips.data.TripRepository
 import eg.bahr.feature.trips.presentation.CategoryTripsViewModel
@@ -18,15 +21,8 @@ import eg.bahr.feature.trips.presentation.SearchTripsViewModel
 import eg.bahr.feature.trips.presentation.SectionTripsViewModel
 import eg.bahr.feature.trips.presentation.TripDetailViewModel
 import io.ktor.client.HttpClient
-import io.ktor.client.engine.mock.MockEngine
-import io.ktor.client.engine.mock.respond
-import io.ktor.http.ContentType
-import io.ktor.http.HttpHeaders
-import io.ktor.http.headersOf
 import org.koin.core.Koin
-import org.koin.core.KoinApplication
 import org.koin.core.parameter.parametersOf
-import org.koin.dsl.koinApplication
 import org.koin.dsl.module
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -40,39 +36,22 @@ import kotlin.test.assertSame
  * at app start or on navigation.
  */
 class TripsKoinGraphTest {
-    /**
-     * Runs [test] on a fresh graph and closes it after. Closing matters: Koin keeps a `single`'s
-     * instance in the module's definition, and the modules are shared `val`s, so an unclosed graph
-     * would hand its card cache to the next test's graph.
-     */
+    /** The graph on a fresh Koin application, closed after (core:testing's [runKoinGraphTest]). */
     private fun withGraph(test: suspend (Koin) -> Unit) =
-        runViewModelTest {
-            val app = graph()
-            try {
-                test(app.koin)
-            } finally {
-                app.close()
-            }
-        }
-
-    private fun graph(): KoinApplication =
-        koinApplication {
-            modules(
+        runKoinGraphTest(
+            listOf(
                 catalogModule,
                 tripsModule,
                 module {
                     single<HttpClient> {
-                        val engine =
-                            MockEngine {
-                                respond(EMPTY_PAGE, headers = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()))
-                            }
-                        apiHttpClient(engine, ApiConfig(BASE_URL, isDebug = false)) { "en" }
+                        apiHttpClient(jsonMockEngine { EMPTY_TRIP_PAGE_JSON }, ApiConfig(TEST_BASE_URL, isDebug = false)) { "en" }
                     }
                     single<WaitlistJoinsStore> { FakeWaitlistJoinsStore() }
                     single<RecentSearchesStore> { FakeRecentSearchesStore() }
                 },
-            )
-        }
+            ),
+            test,
+        )
 
     @Test
     fun `every trips binding resolves - and the shared catalog singles are single`() =
@@ -99,9 +78,4 @@ class TripsKoinGraphTest {
 
             assertEquals(card, repository.cachedCard(card.slug))
         }
-
-    private companion object {
-        const val BASE_URL = "http://10.0.2.2:8084/api/v1/"
-        const val EMPTY_PAGE = """{"success":true,"data":{"items":[],"page":0,"size":20,"totalItems":0,"totalPages":0}}"""
-    }
 }

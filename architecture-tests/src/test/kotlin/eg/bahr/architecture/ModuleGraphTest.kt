@@ -196,8 +196,9 @@ class ModuleGraphTest {
                 ":core:designsystem" to setOf(":core:localization"),
                 // What Home, the trip lists and the map share (M4-M1c, user decision 2026-10-10). No screens.
                 ":core:catalog" to setOf(":core:common", ":core:network", ":core:datastore", ":core:localization", ":core:designsystem"),
-                // Test-only module: its main code is consumed by other modules' test source sets.
-                CORE_TESTING to setOf(":core:common"),
+                // Test-only module: its main code is consumed by other modules' test source sets. Its
+                // datastore edge carries the shared waiting-list fakes (M4-M7, user-approved test-only edge).
+                CORE_TESTING to setOf(":core:common", ":core:datastore"),
             )
 
         val allowedAppComposables = setOf("App", "AppNavHost")

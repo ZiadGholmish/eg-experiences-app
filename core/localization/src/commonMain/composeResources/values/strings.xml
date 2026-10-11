@@ -32,9 +32,9 @@
     <!-- Home's banner carousel (M4-M1): what a screen reader says for one of the dots under it, each
          of which jumps to its slide. %1$d is the slide's number, %2$d how many there are. -->
     <string name="home_slide_of">Slide %1$d of %2$d</string>
-    <!-- Home's footer note (M4-M1). The handoff's "every trip leaves Abdel Moneim Riad at 05:00"
-         stopped being true once trips left at different times, so it names no stop or time. -->
-    <string name="home_footer_note">Every trip leaves by bus. Where it leaves from, and when, is on each trip’s page.</string>
+    <!-- A hero slide's white price pill (M4-M7): the server's "from" price, the cheapest of what the
+         slide leads to. %1$s is the formatted amount with its currency, e.g. "450 EGP". -->
+    <string name="home_banner_price_from">From %1$s</string>
     <!-- Multi-day trips (M4-B0b): the badge on a card with nights > 0. -->
     <plurals name="trip_nights_badge">
         <item quantity="one">%1$d night</item>

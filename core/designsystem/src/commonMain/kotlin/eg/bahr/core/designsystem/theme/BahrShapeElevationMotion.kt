@@ -166,6 +166,12 @@ object BahrAlpha {
      * new search keeps the previous cards, dimmed to this and not tappable, under a progress bar.
      */
     const val stale = .4f
+
+    /**
+     * Secondary text in the on-primary colour over a photo's bottom scrim, below a brighter title: a hero
+     * slide's meta line (HANDOFF Home: `rgba(255,255,255,.88)`, M4-M7).
+     */
+    const val onImageSecondary = .88f
 }
 
 /* ---------- Borders ----------
@@ -241,6 +247,9 @@ object BahrSize {
 
     /** The logo tile in Home's app bar (HANDOFF Home: 34px, `small` radius, the `sailing` icon on primary). */
     val logoTile = 34.dp
+
+    /** A hero slide's coral forward circle (HANDOFF Home: 34px; drawn, not a separate touch target, M4-M7). */
+    val heroForward = 34.dp
 
     /**
      * A map pin (M4-M2, map.html `.pin`): the stem under the price pill (2x10px, [connector] wide)

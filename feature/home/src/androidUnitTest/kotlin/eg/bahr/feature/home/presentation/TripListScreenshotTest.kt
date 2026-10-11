@@ -14,6 +14,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasScrollToKeyAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.performScrollToKey
@@ -22,6 +24,7 @@ import eg.bahr.core.catalog.model.FacetDto
 import eg.bahr.core.catalog.model.HomeCategoryDto
 import eg.bahr.core.catalog.model.ImageDto
 import eg.bahr.core.catalog.model.NextDepartureDto
+import eg.bahr.core.catalog.presentation.WaitlistTags
 import eg.bahr.core.catalog.presentation.components.TripCard
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.common.result.AppError
@@ -31,6 +34,7 @@ import eg.bahr.core.designsystem.theme.BahrLocale
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.localization.ProvideAppLanguage
+import eg.bahr.core.network.MoneyDto
 import eg.bahr.core.testing.captureScreenshot
 import eg.bahr.feature.home.data.FakeTripRepository
 import eg.bahr.feature.home.data.TripFixtures.facets
@@ -42,7 +46,10 @@ import eg.bahr.feature.home.model.CategoriesSectionDto
 import eg.bahr.feature.home.model.HomeActionDto
 import eg.bahr.feature.home.model.HomeBannerDto
 import eg.bahr.feature.home.model.HomeDto
+import eg.bahr.feature.home.model.HomeNoteDto
+import eg.bahr.feature.home.model.NoteSectionDto
 import eg.bahr.feature.home.model.TripsSectionDto
+import eg.bahr.feature.home.presentation.components.HomeSection
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.datetime.LocalDate
 import org.junit.After
@@ -215,9 +222,9 @@ class TripListScreenshotTest {
             home = { AppResult.Success(home(arabic = false)) }
         }
 
-    // ---------- Home's filter chips and footer (M4-M1) ----------
+    // ---------- Home's filter chips (M4-M1) ----------
 
-    /** "Weekend" tapped: its trips under the chips, the chip selected, the count and the footer note. */
+    /** "Weekend" tapped: its trips under the chips, the chip selected and the count. */
     @Test
     @Config(qualifiers = HOME_QUALIFIERS)
     fun homeFilteredArabic() = homeFiltered(AppLanguage.ARABIC)
@@ -304,34 +311,175 @@ class TripListScreenshotTest {
             home = { AppResult.Success(home(arabic = false)) }
         }
 
-    /** The last page is in: the footer note under the last card (HANDOFF Home footer, M4-M1). */
+    /**
+     * The seeded Home's trailing `note` (M4-M7), scrolled to: the footer under the last card, as in the
+     * handoff (user decision 2026-10-11), drawn once the list's last page is in.
+     */
     @Test
-    fun homeFooterArabic() =
-        snapEach("home_footer", AppLanguage.ARABIC, scrollToKey = HOME_FOOTER_KEY) {
-            listTrips =
-                {
-                    loadedPage(
-                        dawn = "الفجر على بحيرة البرلس" to "الأكثر حجزًا",
-                        kayak = "قنوات قطّاعي البوص بالكياك" to "موسم الفلامنجو",
-                        facets = facets(arabic = true),
-                    )
-                }
-            home = { AppResult.Success(HomeDto()) }
-        }
+    fun homeNoteArabic() = homeNote(AppLanguage.ARABIC)
 
     @Test
-    fun homeFooterEnglish() =
-        snapEach("home_footer", AppLanguage.ENGLISH, scrollToKey = HOME_FOOTER_KEY) {
+    fun homeNoteEnglish() = homeNote(AppLanguage.ENGLISH)
+
+    private fun homeNote(language: AppLanguage) {
+        val arabic = language == AppLanguage.ARABIC
+        snapEach("home_note", language, scrollToKey = homeSectionKey(NOTE_ID)) {
             listTrips =
                 {
                     loadedPage(
-                        dawn = "Dawn on Lake Burullus" to "Most booked",
-                        kayak = "Reed-cutters' channels, by kayak" to "Flamingo season",
-                        facets = facets(),
+                        dawn =
+                            (if (arabic) "الفجر على بحيرة البرلس" else "Dawn on Lake Burullus") to
+                                (if (arabic) "الأكثر حجزًا" else "Most booked"),
+                        kayak =
+                            (if (arabic) "قنوات قطّاعي البوص بالكياك" else "Reed-cutters' channels, by kayak") to
+                                (if (arabic) "موسم الفلامنجو" else "Flamingo season"),
+                        facets = facets(arabic = arabic),
                     )
                 }
-            home = { AppResult.Success(HomeDto()) }
+            home = { AppResult.Success(home(arabic)) }
         }
+    }
+
+    /**
+     * A note between sections (M4-M7) stays where the server put it, here between the featured row and
+     * the categories; only the notes that end Home go under the list.
+     */
+    @Test
+    @Config(qualifiers = HOME_QUALIFIERS)
+    fun homeNoteMidListArabic() = homeNoteMidList(AppLanguage.ARABIC)
+
+    @Test
+    @Config(qualifiers = HOME_QUALIFIERS)
+    fun homeNoteMidListEnglish() = homeNoteMidList(AppLanguage.ENGLISH)
+
+    private fun homeNoteMidList(language: AppLanguage) {
+        val arabic = language == AppLanguage.ARABIC
+        snapEach("home_note_mid_list", language) {
+            listTrips = {
+                loadedPage(
+                    dawn = if (arabic) "الفجر على بحيرة البرلس" to "الأكثر حجزًا" else "Dawn on Lake Burullus" to "Most booked",
+                    kayak =
+                        if (arabic) {
+                            "قنوات قطّاعي البوص بالكياك" to "موسم الفلامنجو"
+                        } else {
+                            "Reed-cutters' channels, by kayak" to
+                                "Flamingo season"
+                        },
+                    facets = facets(arabic = arabic),
+                )
+            }
+            home = {
+                val seeded = home(arabic).sections
+                // The trailing note moved up between the row and the categories.
+                AppResult.Success(HomeDto(listOf(seeded[0], seeded[1], seeded[3], seeded[2])))
+            }
+        }
+    }
+
+    /**
+     * Hero slides and notes on their own (M4-M7): a slide with every hero field (badge, "from" price,
+     * meta, the coral forward circle), one with none (an older server's: the plain picture and title),
+     * one whose `url` action is not a button yet, so no forward circle although asked for; then a titled
+     * note whose icon this build lacks (no icon, text full width).
+     */
+    @Test
+    @Config(qualifiers = HOME_QUALIFIERS)
+    fun heroSlidesAndNote() {
+        var language by mutableStateOf(AppLanguage.ARABIC)
+        compose.setContent {
+            ProvideAppLanguage(language) {
+                BahrTheme(locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English) {
+                    val arabic = language == AppLanguage.ARABIC
+                    val image = ImageDto(url = "https://cdn.invalid/banner.png", width = 900, height = 560)
+
+                    fun slides(vararg banner: HomeBannerDto) =
+                        BannersSectionDto(
+                            id = "hero-${banner.first().id}",
+                            type = "banners",
+                            layout = "carousel",
+                            aspectRatio = "45:28",
+                            items = banner.toList(),
+                        )
+                    val sections =
+                        listOf(
+                            slides(heroSlide(arabic, image)),
+                            slides(
+                                HomeBannerDto(
+                                    "plain",
+                                    if (arabic) "موسم الفلامنجو" else "Flamingo season",
+                                    image,
+                                    HomeActionDto("category", "birds"),
+                                ),
+                            ),
+                            slides(
+                                HomeBannerDto(
+                                    "url",
+                                    if (arabic) "الأتوبيس والمرشد والغدا، كله شامل" else "Bus, guide and lunch, all in",
+                                    image,
+                                    HomeActionDto("url", "https://bahr.eg/about"),
+                                    badge = BadgeDto(if (arabic) "من القاهرة" else "From Cairo", "success"),
+                                    price = MoneyDto(220, "EGP"),
+                                    meta = if (arabic) "موقف عبد المنعم رياض · كل الرحلات" else "Abdel Moneim Riad · every trip",
+                                    showForward = true,
+                                ),
+                            ),
+                            NoteSectionDto(
+                                id = "titled-note",
+                                type = "note",
+                                title = if (arabic) "قبل ما تحجز" else "Before you book",
+                                items =
+                                    listOf(
+                                        HomeNoteDto(
+                                            if (arabic) "الأسعار بالجنيه المصري." else "Prices are in Egyptian pounds.",
+                                            "a_symbol_this_build_lacks",
+                                        ),
+                                    ),
+                            ),
+                        )
+                    Column(
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .background(
+                                    MaterialTheme.colorScheme.background,
+                                ).padding(vertical = BahrSpacing.lg),
+                        verticalArrangement = Arrangement.spacedBy(BahrSpacing.lg),
+                    ) {
+                        sections.forEach { section ->
+                            HomeSection(
+                                section,
+                                perPersonLabel = perPerson(language),
+                                waitlistTags = WaitlistTags.None,
+                                onTripClick = {},
+                                onAction = {},
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        AppLanguage.entries.forEach { shotLanguage ->
+            compose.runOnUiThread { language = shotLanguage }
+            compose.waitForIdle()
+            compose.mainClock.advanceTimeByFrame()
+            compose.captureScreenshot("home_hero_slides_note_${shotLanguage.tag}")
+        }
+    }
+
+    /** The seed's first slide: every hero field (M4-B4). */
+    private fun heroSlide(
+        arabic: Boolean,
+        image: ImageDto,
+    ) = HomeBannerDto(
+        "b1",
+        if (arabic) "الفجر على بحيرة البرلس" else "Dawn on Lake Burullus",
+        image,
+        HomeActionDto("trip", "trip-1"),
+        badge = BadgeDto(if (arabic) "الأكثر حجزًا" else "Most booked", "secondary"),
+        price = MoneyDto(450, "EGP"),
+        meta = if (arabic) "بحيرة البرلس · يوم واحد" else "Lake Burullus · one day",
+        showForward = true,
+    )
 
     /** One multi-day card (M4-B0b): words for the duration, the nights badge, sold out. */
     @Test
@@ -412,7 +560,10 @@ class TripListScreenshotTest {
                 NextDepartureDto(THURSDAY, returnDate = FRIDAY, seatsRemaining = 0, capacity = 14, soldOut = true),
         )
 
-    /** The seeded Home: hero carousel (3 banners), the featured row, the category chips. */
+    /**
+     * The seeded Home: hero carousel (3 banners, the first with every hero field, M4-B4), the featured
+     * row, the category chips, and the trailing note (M4-M7).
+     */
     private fun home(arabic: Boolean): HomeDto {
         fun t(
             ar: String,
@@ -428,12 +579,7 @@ class TripListScreenshotTest {
                     aspectRatio = "45:28",
                     items =
                         listOf(
-                            HomeBannerDto(
-                                "b1",
-                                t("الفجر على بحيرة البرلس", "Dawn on Lake Burullus"),
-                                image,
-                                HomeActionDto("trip", "trip-1"),
-                            ),
+                            heroSlide(arabic, image),
                             HomeBannerDto("b2", t("موسم الفلامنجو", "Flamingo season"), image, HomeActionDto("category", "birds")),
                             HomeBannerDto("b3", null, image, HomeActionDto("none")),
                         ),
@@ -463,6 +609,21 @@ class TripListScreenshotTest {
                             HomeCategoryDto("on_the_boat", t("على المركب", "On the boat"), "sailing", "primary"),
                             HomeCategoryDto("birds", t("طيور", "Birds"), "flutter_dash", "secondary"),
                             HomeCategoryDto("night_trips", t("رحلات بالليل", "Night trips"), "bedtime", "quaternary"),
+                        ),
+                ),
+                NoteSectionDto(
+                    id = NOTE_ID,
+                    type = "note",
+                    layout = "row",
+                    items =
+                        listOf(
+                            HomeNoteDto(
+                                t(
+                                    "كل الرحلات بتتحرك من موقف عبد المنعم رياض في القاهرة، وميعاد الأتوبيس مكتوب في صفحة كل رحلة.",
+                                    "Every trip leaves from Abdel Moneim Riad in Cairo; each trip's page has its bus time.",
+                                ),
+                                "directions_bus",
+                            ),
                         ),
                 ),
             ),
@@ -506,7 +667,10 @@ class TripListScreenshotTest {
             }
             compose.mainClock.advanceTimeByFrame()
             scrollToKey?.let {
-                compose.onNode(hasScrollToKeyAction()).performScrollToKey(it)
+                // The page's own list: Home's rows scroll by key too, sideways.
+                compose
+                    .onNode(hasScrollToKeyAction() and SemanticsMatcher.keyIsDefined(SemanticsProperties.VerticalScrollAxisRange))
+                    .performScrollToKey(it)
                 compose.waitForIdle()
                 compose.mainClock.advanceTimeByFrame()
             }
@@ -519,6 +683,7 @@ class TripListScreenshotTest {
         val THURSDAY = LocalDate(2026, 10, 15)
         val FRIDAY = LocalDate(2026, 10, 16)
         const val HOME_QUALIFIERS = "en-w360dp-h1400dp-xhdpi"
+        const val NOTE_ID = "note"
 
         /** About a Home row card's share of the screen (the row's own fraction is internal to HomeSections). */
         const val COMPACT_CARD_FRACTION = 0.75f

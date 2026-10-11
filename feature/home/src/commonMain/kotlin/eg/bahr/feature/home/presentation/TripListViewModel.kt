@@ -24,6 +24,7 @@ import eg.bahr.feature.home.data.HomeRepository
 import eg.bahr.feature.home.model.BannersSectionDto
 import eg.bahr.feature.home.model.CategoriesSectionDto
 import eg.bahr.feature.home.model.HomeSectionDto
+import eg.bahr.feature.home.model.NoteSectionDto
 import eg.bahr.feature.home.model.SkippedSectionDto
 import eg.bahr.feature.home.model.TripsSectionDto
 import eg.bahr.feature.home.model.key
@@ -42,7 +43,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * Home: the server-driven [sections] (M4-M1a: banners, trip rows, categories, in the server's order,
+ * Home: the server-driven [sections] (M4-M1a: banners, trip rows, categories; M4-M7: notes; in the server's order,
  * only the ones this build draws) above the full list of trips, which is paged
  * ([TripListViewModel.trips], M4-M1b) and so carries its own loading and error states.
  *
@@ -245,6 +246,7 @@ internal fun drawableSections(
                 is BannersSectionDto -> section.droppedItems
                 is TripsSectionDto -> section.droppedItems
                 is CategoriesSectionDto -> section.droppedItems
+                is NoteSectionDto -> section.droppedItems
                 is SkippedSectionDto -> 0
             }
         if (dropped > 0) log("Dropped $dropped unreadable item(s) from Home section ${section.key}")
@@ -253,6 +255,7 @@ internal fun drawableSections(
                 is BannersSectionDto -> section.items.isEmpty()
                 is TripsSectionDto -> section.items.isEmpty()
                 is CategoriesSectionDto -> section.items.isEmpty()
+                is NoteSectionDto -> section.items.isEmpty()
                 is SkippedSectionDto -> {
                     log("Dropped a Home section of type ${section.type}: ${section.reason}")
                     return@filter false

@@ -8,20 +8,16 @@ import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.datastore.WaitlistJoinsStore
 import eg.bahr.core.network.ApiConfig
 import eg.bahr.core.network.apiHttpClient
-import eg.bahr.core.testing.runViewModelTest
-import eg.bahr.feature.home.data.FakeWaitlistJoinsStore
+import eg.bahr.core.testing.EMPTY_TRIP_PAGE_JSON
+import eg.bahr.core.testing.FakeWaitlistJoinsStore
+import eg.bahr.core.testing.TEST_BASE_URL
+import eg.bahr.core.testing.jsonMockEngine
+import eg.bahr.core.testing.runKoinGraphTest
 import eg.bahr.feature.home.data.HomePayloads
 import eg.bahr.feature.home.data.HomeRepository
 import eg.bahr.feature.home.presentation.TripListViewModel
 import io.ktor.client.HttpClient
-import io.ktor.client.engine.mock.MockEngine
-import io.ktor.client.engine.mock.respond
-import io.ktor.http.ContentType
-import io.ktor.http.HttpHeaders
-import io.ktor.http.headersOf
 import org.koin.core.Koin
-import org.koin.core.KoinApplication
-import org.koin.dsl.koinApplication
 import org.koin.dsl.module
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -35,39 +31,25 @@ import kotlin.test.assertSame
  * waiting-list store). A missing or duplicated binding fails here instead of at app start.
  */
 class HomeKoinGraphTest {
-    /**
-     * Runs [test] on a fresh graph and closes it after. Closing matters: Koin keeps a `single`'s
-     * instance in the module's definition, and the modules are shared `val`s, so an unclosed graph
-     * would hand its card cache to the next test's graph.
-     */
+    /** The graph on a fresh Koin application, closed after (core:testing's [runKoinGraphTest]). */
     private fun withGraph(test: suspend (Koin) -> Unit) =
-        runViewModelTest {
-            val app = graph()
-            try {
-                test(app.koin)
-            } finally {
-                app.close()
-            }
-        }
-
-    private fun graph(): KoinApplication =
-        koinApplication {
-            modules(
+        runKoinGraphTest(
+            listOf(
                 catalogModule,
                 homeModule,
                 module {
                     single<HttpClient> {
                         val engine =
-                            MockEngine { request ->
-                                val body = if (request.url.encodedPath.endsWith("/home")) HomePayloads.ENGLISH else EMPTY_PAGE
-                                respond(body, headers = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()))
+                            jsonMockEngine { request ->
+                                if (request.url.encodedPath.endsWith("/home")) HomePayloads.ENGLISH else EMPTY_TRIP_PAGE_JSON
                             }
-                        apiHttpClient(engine, ApiConfig(BASE_URL, isDebug = false)) { "en" }
+                        apiHttpClient(engine, ApiConfig(TEST_BASE_URL, isDebug = false)) { "en" }
                     }
                     single<WaitlistJoinsStore> { FakeWaitlistJoinsStore() }
                 },
-            )
-        }
+            ),
+            test,
+        )
 
     @Test
     fun `every Home binding resolves - and the shared catalog singles are single`() =
@@ -91,8 +73,6 @@ class HomeKoinGraphTest {
         }
 
     private companion object {
-        const val BASE_URL = "http://10.0.2.2:8084/api/v1/"
         const val ROW_CARD = "white-desert-overnight"
-        const val EMPTY_PAGE = """{"success":true,"data":{"items":[],"page":0,"size":20,"totalItems":0,"totalPages":0}}"""
     }
 }

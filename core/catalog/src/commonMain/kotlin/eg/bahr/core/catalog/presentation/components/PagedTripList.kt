@@ -414,7 +414,9 @@ fun LazyListScope.listBody(
 }
 
 /**
- * A list's title and, once the first page is in, how many trips it holds.
+ * A list's title and, once the first page is in, how many trips it holds: under the title, or with
+ * [countAtEnd] at the end of the title's line (HANDOFF Home: "All trips" with its result count at the
+ * end, M4-M7; Home only, so the trip lists' headers and their M4-M6 morphs stay as they are).
  *
  * The count does not jump (M4-M6): a new count crossfades in, and while a new query loads the
  * previous count keeps its line, dimmed when [stale] (the old cards are still on screen) and hidden
@@ -426,39 +428,59 @@ fun ListHeading(
     totalItems: Long?,
     modifier: Modifier = Modifier,
     stale: Boolean = false,
+    countAtEnd: Boolean = false,
 ) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(BahrSpacing.xs)) {
+    val title: @Composable (Modifier) -> Unit = { titleModifier ->
         label?.takeIf { it.isNotBlank() }?.let {
-            Text(text = it, style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
+            Text(text = it, style = MaterialTheme.typography.titleLarge, modifier = titleModifier.semantics { heading() })
         }
-        // The last count shown, recorded after the frame commits (a discarded composition records nothing).
-        var last by remember { mutableStateOf(totalItems) }
-        SideEffect { if (totalItems != null) last = totalItems }
-        val shown = totalItems ?: last ?: return@Column
-        val alpha by animateFloatAsState(
-            when {
-                totalItems != null -> 1f
-                stale -> BahrAlpha.stale
-                else -> 0f
-            },
-            bahrTween(BahrMotion.Short),
+    }
+    if (countAtEnd) {
+        Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.weight(1f)) { title(Modifier) }
+            TripCount(totalItems, stale)
+        }
+    } else {
+        Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(BahrSpacing.xs)) {
+            title(Modifier)
+            TripCount(totalItems, stale)
+        }
+    }
+}
+
+/** [ListHeading]'s count: the last one shown stays (dimmed when [stale]) while a new query loads. */
+@Composable
+private fun TripCount(
+    totalItems: Long?,
+    stale: Boolean,
+) {
+    // The last count shown, recorded after the frame commits (a discarded composition records nothing).
+    var last by remember { mutableStateOf(totalItems) }
+    SideEffect { if (totalItems != null) last = totalItems }
+    val shown = totalItems ?: last ?: return
+    val alpha by animateFloatAsState(
+        when {
+            totalItems != null -> 1f
+            stale -> BahrAlpha.stale
+            else -> 0f
+        },
+        bahrTween(BahrMotion.Short),
+    )
+    val fade = bahrTween<Float>(BahrMotion.Short)
+    AnimatedContent(
+        targetState = shown.toInt(),
+        transitionSpec = { fadeIn(fade) togetherWith fadeOut(fade) using SizeTransform(clip = false) },
+        modifier =
+            Modifier
+                .graphicsLayer { this.alpha = alpha }
+                // A count that is not the current query's is not read out.
+                .then(if (totalItems == null) Modifier.clearAndSetSemantics {} else Modifier),
+    ) { count ->
+        Text(
+            text = pluralStringResource(Res.plurals.trips_count, count, count),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        val fade = bahrTween<Float>(BahrMotion.Short)
-        AnimatedContent(
-            targetState = shown.toInt(),
-            transitionSpec = { fadeIn(fade) togetherWith fadeOut(fade) using SizeTransform(clip = false) },
-            modifier =
-                Modifier
-                    .graphicsLayer { this.alpha = alpha }
-                    // A count that is not the current query's is not read out.
-                    .then(if (totalItems == null) Modifier.clearAndSetSemantics {} else Modifier),
-        ) { count ->
-            Text(
-                text = pluralStringResource(Res.plurals.trips_count, count, count),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
     }
 }
 

@@ -1,13 +1,17 @@
-package eg.bahr.feature.trips.data
+package eg.bahr.core.catalog.data
 
-import eg.bahr.core.catalog.data.WaitlistMemory
+import eg.bahr.core.testing.FakeWaitlistJoinsStore
+import eg.bahr.core.testing.FixedClock
+import eg.bahr.core.testing.storedJoin
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.time.Clock
 import kotlin.time.Instant
 
+/** [WaitlistMemory] over core:testing's fake store (moved here from feature:trips, M4-M7 / M4-M1c review #6). */
 class WaitlistMemoryTest {
     @Test
     fun `today is the Cairo date - already Saturday there while it is still Friday in UTC`() {
@@ -61,3 +65,9 @@ class WaitlistMemoryTest {
             assertEquals(listOf("kept"), store.joins.value.map { it.departureId })
         }
 }
+
+/** The memory over [store] (empty by default) at [clock] (fixed by default). */
+internal fun waitlistMemory(
+    store: FakeWaitlistJoinsStore = FakeWaitlistJoinsStore(),
+    clock: Clock = FixedClock(),
+) = WaitlistMemory(store, clock)

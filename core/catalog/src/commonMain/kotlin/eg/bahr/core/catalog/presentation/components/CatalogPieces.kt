@@ -70,7 +70,14 @@ fun toneTint(tone: String?): Tint =
  * A Material Symbols name from the server (`directions_bus`) as one of the design's icons. A name
  * this build does not have is a plain dot rather than a missing glyph.
  */
-fun symbolIcon(name: String?): BahrIcons =
+fun symbolIcon(name: String?): BahrIcons = knownSymbolIcon(name) ?: BahrIcons.Circle
+
+/**
+ * A Material Symbols name from the server as one of the design's icons, or null for a name this build
+ * does not have (or none). For a place where a stand-in dot would read as a bullet, such as Home's note
+ * panel (M4-M7): there an unknown icon is left out.
+ */
+fun knownSymbolIcon(name: String?): BahrIcons? =
     when (name) {
         "directions_bus" -> BahrIcons.DirectionsBus
         "local_cafe" -> BahrIcons.LocalCafe
@@ -89,7 +96,7 @@ fun symbolIcon(name: String?): BahrIcons =
         "calendar_month" -> BahrIcons.CalendarMonth
         "sell" -> BahrIcons.Sell
         "schedule" -> BahrIcons.Schedule
-        else -> BahrIcons.Circle
+        else -> null
     }
 
 /**

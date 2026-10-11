@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.koin.core.KoinApplication
 import org.koin.core.context.startKoin
+import org.koin.core.module.Module
 import org.koin.dsl.KoinAppDeclaration
 import org.koin.dsl.module
 
@@ -66,6 +67,28 @@ fun appModule(
     }
 }
 
+/**
+ * Every Koin module the app starts, in order. One list for [initKoin] and for the test that starts it
+ * whole (M4-M7), so a type two modules both bind is caught before it reaches a device.
+ */
+fun appModules(
+    baseUrl: String,
+    isDebug: Boolean,
+    appLinks: AppLinkConfig,
+    preferencesPath: () -> String,
+): List<Module> =
+    listOf(
+        appModule(baseUrl, isDebug, appLinks, preferencesPath),
+        networkModule,
+        dataStoreModule,
+        // Shared by Home and the trip lists (M4-M1c): one card cache, one waiting-list memory.
+        catalogModule,
+        homeModule,
+        tripsModule,
+        bookingModule,
+        mapModule,
+    )
+
 fun initKoin(
     baseUrl: String,
     isDebug: Boolean,
@@ -75,15 +98,5 @@ fun initKoin(
 ): KoinApplication =
     startKoin {
         appDeclaration()
-        modules(
-            appModule(baseUrl, isDebug, appLinks, preferencesPath),
-            networkModule,
-            dataStoreModule,
-            // Shared by Home and the trip lists (M4-M1c): one card cache, one waiting-list memory.
-            catalogModule,
-            homeModule,
-            tripsModule,
-            bookingModule,
-            mapModule,
-        )
+        modules(appModules(baseUrl, isDebug, appLinks, preferencesPath))
     }

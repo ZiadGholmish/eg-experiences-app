@@ -40,7 +40,7 @@ wins.
 | `spacing` (4dp base, 18dp gutter) | `BahrSpacing.xs…xxl`, `BahrSpacing.gutter` | `theme/BahrShapeElevationMotion.kt` |
 | `motion` | `BahrMotion` (+ `Shimmer*`, `EaseInOut` for the handoff's loading shimmer; `ScreenSlideFraction`, `ListSlideFraction`, M4-M6; `CountdownPulse`, `CountdownPulseScale`, the hold countdown's last minute, M4-M4), animated through `bahrTween` / `bahrTweenOrNull` | `theme/BahrShapeElevationMotion.kt`, `theme/BahrReducedMotion.kt` |
 | *(not in tokens.json)* reduce motion | `BahrTheme.reducedMotion` (platform setting, M4-M6); screen transitions `bahrForwardEnter/…`, header morphs `bahrSharedBounds` | `theme/BahrReducedMotion.kt`, `theme/BahrScreenTransitions.kt`, `theme/BahrSharedElements.kt` |
-| *(not in tokens.json)* see-through states | `BahrAlpha.stale` (a list's old cards while the new ones load, M4-M6) | `theme/BahrShapeElevationMotion.kt` |
+| *(not in tokens.json)* see-through states | `BahrAlpha.stale` (a list's old cards while the new ones load, M4-M6), `BahrAlpha.onImageSecondary` (a hero slide's meta line over the scrim, M4-M7) | `theme/BahrShapeElevationMotion.kt` |
 | *(not in tokens.json)* component sizes from the handoff's px | `BahrSize.*`, `BahrBorder.*`, `BahrSpacing.minTouch` | `theme/BahrShapeElevationMotion.kt` |
 | `[data-theme=dusk / highcontrast]` | `BahrTheme(theme = BahrThemeName.Dusk / HighContrast)` | `theme/BahrColors.kt` |
 | `meta.currency`, `meta.timeFormat` | `BahrFormat` (EGP, 24h, Western digits) | `format/BahrFormat.kt` |
@@ -50,7 +50,8 @@ name: the icon sizes (`iconSmall/Medium/Large`, M1-M1a review #9) and component 
 trip page (`marker`, `avatar`, `avatarSmall`, `timeColumn`, `connector`, `dateCard`, `skeletonLine`) and
 the date + party screen (`radio`, `stepSegmentWidth/Height`, `stepperValue`, M2-M1), the thin
 `progressBar` over a refreshing list (M4-M6), and the map's pins and drive line from map.html
-(`pinStem`, `pinDot`, `routeLine`, `routeDash`, `routeGap`, `legendDot`, M4-M2).
+(`pinStem`, `pinDot`, `routeLine`, `routeDash`, `routeGap`, `legendDot`, M4-M2), and Home's
+`logoTile` and hero-slide `heroForward` circle (M4-M1, M4-M7).
 They exist so `feature/*` holds no `.dp` (ModuleGraphTest). They are not design tokens: changing one
 changes a component, not the theme, and none has a Dusk/HighContrast variant. If design adds a size
 to tokens.json, move it to the token's own group and port it from there.

@@ -30,8 +30,8 @@
     <string name="home_wordmark">bahr</string>
     <!-- M4-M1: اللي بيقوله قارئ الشاشة لكل نقطة تحت الصور المتحركة؛ كل نقطة بتنقل لصورتها. -->
     <string name="home_slide_of">صورة %1$d من %2$d</string>
-    <!-- M4-M1: ملاحظة آخر الصفحة الرئيسية، من غير مكان أو ميعاد ثابت. -->
-    <string name="home_footer_note">كل الرحلات بتقوم بالأتوبيس. مكان القيام والميعاد مكتوبين في صفحة كل رحلة.</string>
+    <!-- M4-M7: السعر في الكبسولة البيضا على صورة الرئيسية؛ أرخص سعر للي الصورة بتودّي له. %1$s المبلغ بالعملة. -->
+    <string name="home_banner_price_from">من %1$s</string>
     <plurals name="trip_nights_badge">
         <item quantity="zero">%1$d ليلة</item>
         <item quantity="one">ليلة واحدة</item>

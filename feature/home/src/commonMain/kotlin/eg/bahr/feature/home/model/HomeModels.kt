@@ -1,8 +1,10 @@
 package eg.bahr.feature.home.model
 
+import eg.bahr.core.catalog.model.BadgeDto
 import eg.bahr.core.catalog.model.HomeCategoryDto
 import eg.bahr.core.catalog.model.ImageDto
 import eg.bahr.core.catalog.model.TripCardDto
+import eg.bahr.core.network.MoneyDto
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
@@ -21,7 +23,7 @@ import kotlinx.serialization.json.jsonPrimitive
 
 /*
  * Wire shapes for `GET /api/v1/home` (`getHome`), field for field with `../docs/api/openapi.yaml`:
- * `Home`, `HomeSection`, `HomeBanner`, `HomeAction` (PLAN §5c). Trip rows reuse core:catalog's
+ * `Home`, `HomeSection`, `HomeBanner`, `HomeAction`, `HomeNote` (PLAN §5c). Trip rows reuse core:catalog's
  * [TripCardDto], category tiles its [HomeCategoryDto] (shared with the map's legend, M4-M1c).
  *
  * `HomeSection.items` is a `oneOf` with no discriminator of its own: the item shape follows the
@@ -107,6 +109,38 @@ internal data class CategoriesSectionDto(
 ) : HomeSectionDto
 
 /**
+ * `type: note` (since M4-B4): a panel of text the server states, such as where the buses leave, under
+ * the section's optional [title]. The contract sends exactly one item; [layout] is ignored. Only the
+ * first item is drawn should a server ever send more.
+ */
+@Serializable
+internal data class NoteSectionDto(
+    val id: String,
+    val type: String,
+    val title: String? = null,
+    val layout: String? = null,
+    val aspectRatio: String? = null,
+    val items: List<HomeNoteDto>,
+    /** How many of the served items did not decode and were left out (see [HomeSectionsSerializer]); logged. */
+    @Transient
+    val droppedItems: Int = 0,
+) : HomeSectionDto
+
+/**
+ * openapi `HomeNote`. [body] is localised and never empty; a blank one fails the item's decode, so the
+ * section is dropped as empty rather than drawn as an empty panel. [icon] is a Material Symbols name.
+ */
+@Serializable
+internal data class HomeNoteDto(
+    val body: String,
+    val icon: String? = null,
+) {
+    init {
+        require(body.isNotBlank()) { "a note's body is never empty" }
+    }
+}
+
+/**
  * A section this build does not draw: a `type` it does not know (the contract adds types additively),
  * or a known type whose payload did not decode. Either way the rest of Home still shows; the view
  * model drops these and logs [type] and [reason].
@@ -123,16 +157,25 @@ internal val HomeSectionDto.key: String
             is BannersSectionDto -> id
             is TripsSectionDto -> id
             is CategoriesSectionDto -> id
+            is NoteSectionDto -> id
             is SkippedSectionDto -> "skipped:$type"
         }
 
-/** openapi `HomeBanner`. [title] is absent on an image-only banner. */
+/**
+ * openapi `HomeBanner`. [title] is absent on an image-only banner. [badge], [price] (a "from" price),
+ * [meta] and [showForward] are the hero-slide extras (M4-B4), each optional on its own and absent from
+ * older servers: a slide without them is drawn as before, a picture with its title.
+ */
 @Serializable
 internal data class HomeBannerDto(
     val id: String,
     val title: String? = null,
     val image: ImageDto,
     val action: HomeActionDto,
+    val badge: BadgeDto? = null,
+    val price: MoneyDto? = null,
+    val meta: String? = null,
+    val showForward: Boolean = false,
 )
 
 /**
@@ -150,6 +193,7 @@ internal object HomeSectionType {
     const val BANNERS = "banners"
     const val TRIPS = "trips"
     const val CATEGORIES = "categories"
+    const val NOTE = "note"
 }
 
 /**
@@ -199,6 +243,11 @@ internal object HomeSectionsSerializer : KSerializer<List<HomeSectionDto>> {
 
                 HomeSectionType.CATEGORIES ->
                     decodeKeepingItems(json, element, CategoriesSectionDto.serializer(), HomeCategoryDto.serializer()) {
+                        copy(droppedItems = it)
+                    }
+
+                HomeSectionType.NOTE ->
+                    decodeKeepingItems(json, element, NoteSectionDto.serializer(), HomeNoteDto.serializer()) {
                         copy(droppedItems = it)
                     }
 

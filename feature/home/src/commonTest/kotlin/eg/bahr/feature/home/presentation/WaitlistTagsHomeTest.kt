@@ -3,13 +3,13 @@ package eg.bahr.feature.home.presentation
 import eg.bahr.core.catalog.data.WaitlistMemory
 import eg.bahr.core.catalog.model.NextDepartureDto
 import eg.bahr.core.common.result.AppResult
+import eg.bahr.core.testing.FakeWaitlistJoinsStore
+import eg.bahr.core.testing.FixedClock
 import eg.bahr.core.testing.runViewModelTest
+import eg.bahr.core.testing.storedJoin
 import eg.bahr.feature.home.data.FakeTripRepository
-import eg.bahr.feature.home.data.FakeWaitlistJoinsStore
-import eg.bahr.feature.home.data.FixedClock
 import eg.bahr.feature.home.data.TripFixtures.page
 import eg.bahr.feature.home.data.TripFixtures.trip
-import eg.bahr.feature.home.data.storedJoin
 import eg.bahr.feature.home.model.HomeDto
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.datetime.LocalDate

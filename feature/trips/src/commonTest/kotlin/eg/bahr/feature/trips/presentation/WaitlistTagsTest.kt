@@ -1,61 +1,30 @@
 package eg.bahr.feature.trips.presentation
 
-import eg.bahr.core.catalog.data.JoinedWaitlist
 import eg.bahr.core.catalog.data.WaitlistMemory
 import eg.bahr.core.catalog.model.NextDepartureDto
-import eg.bahr.core.catalog.presentation.WaitlistTags
+import eg.bahr.core.testing.FakeWaitlistJoinsStore
+import eg.bahr.core.testing.FixedClock
 import eg.bahr.core.testing.runViewModelTest
+import eg.bahr.core.testing.storedJoin
 import eg.bahr.feature.trips.data.FakeRecentSearchesStore
 import eg.bahr.feature.trips.data.FakeTripRepository
-import eg.bahr.feature.trips.data.FakeWaitlistJoinsStore
-import eg.bahr.feature.trips.data.FixedClock
 import eg.bahr.feature.trips.data.TripFixtures.page
 import eg.bahr.feature.trips.data.TripFixtures.sectionPage
 import eg.bahr.feature.trips.data.TripFixtures.trip
-import eg.bahr.feature.trips.data.storedJoin
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.datetime.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-/** The "Waiting list" tag on list cards (M4-M5): when a card shows it, and that every list reads it. */
+/**
+ * The "Waiting list" tag on list cards (M4-M5): every trip list reads the stored joins. When a card
+ * shows the tag is core:catalog's `WaitlistTagsTest` (moved there, M4-M7).
+ */
 class WaitlistTagsTest {
     private val saturday = LocalDate.parse("2026-10-24")
 
-    private fun joined(
-        slug: String = "trip-1",
-        date: LocalDate = saturday,
-    ) = WaitlistTags.of(listOf(JoinedWaitlist("dep-3", slug, date, partySize = 2, phone = "+201001234567")))
-
-    private fun card(
-        date: LocalDate? = saturday,
-        soldOut: Boolean? = true,
-    ) = trip(1, nextDeparture = NextDepartureDto(date = date, seatsRemaining = 0, capacity = 18, soldOut = soldOut))
-
-    @Test
-    fun `a sold-out next departure the device joined is tagged`() {
-        assertTrue(joined().shows(card()))
-    }
-
-    @Test
-    fun `not tagged when the next departure has seats - or no sold-out flag`() {
-        assertFalse(joined().shows(card(soldOut = false)))
-        assertFalse(joined().shows(card(soldOut = null)))
-    }
-
-    @Test
-    fun `not tagged for a join on another date or another trip`() {
-        assertFalse(joined(date = LocalDate.parse("2026-10-31")).shows(card()))
-        assertFalse(joined(slug = "trip-2").shows(card()))
-    }
-
-    @Test
-    fun `not tagged without a next departure or its date`() {
-        assertFalse(joined().shows(trip(1)))
-        assertFalse(joined().shows(card(date = null)))
-        assertFalse(WaitlistTags.None.shows(card()))
-    }
+    private fun card() = trip(1, nextDeparture = NextDepartureDto(date = saturday, seatsRemaining = 0, capacity = 18, soldOut = true))
 
     @Test
     fun `every list reads the stored joins`() =

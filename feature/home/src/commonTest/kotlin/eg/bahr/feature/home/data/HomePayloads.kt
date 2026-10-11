@@ -104,4 +104,78 @@ internal object HomePayloads {
   }
 }
 """
+
+    /**
+     * The M4-B4 additions in the contract's shape, as the seed serves them in Arabic (`seed-home.sql`):
+     * a hero slide with every hero field, one with none (an older server's), one whose `url` action this
+     * build does not open yet but which asks for the forward button, the trailing `note` with its
+     * `directions_bus` icon, a titled note with an icon this build does not have, a note whose
+     * blank body is unreadable, and a note with no `icon` key.
+     */
+    const val HERO_AND_NOTES = """
+{
+  "success": true,
+  "data": {
+    "sections": [
+      {
+        "id": "0199c3a0-5eed-7000-8000-000000000701",
+        "type": "banners",
+        "layout": "carousel",
+        "aspectRatio": "45:28",
+        "items": [
+          {
+            "id": "0199c3a0-5eed-7000-8000-000000000801",
+            "title": "الفجر على بحيرة البرلس",
+            "image": { "url": "https://cdn.bahr.eg/seed/joy-boats.png", "width": 900, "height": 560 },
+            "action": { "type": "trip", "value": "burullus-dawn" },
+            "badge": { "label": "الأكثر حجزًا", "tone": "secondary" },
+            "price": { "amount": 450, "currency": "EGP" },
+            "meta": "بحيرة البرلس · يوم واحد",
+            "showForward": true
+          },
+          {
+            "id": "0199c3a0-5eed-7000-8000-000000000802",
+            "title": "موسم الفلامنجو",
+            "image": { "url": "https://cdn.bahr.eg/seed/joy-birds.png", "width": 900, "height": 560 },
+            "action": { "type": "category", "value": "birds" }
+          },
+          {
+            "id": "0199c3a0-5eed-7000-8000-000000000804",
+            "image": { "url": "https://cdn.bahr.eg/seed/joy-market.png", "width": 900, "height": 560 },
+            "action": { "type": "url", "value": "https://bahr.eg/about" },
+            "showForward": true
+          }
+        ]
+      },
+      {
+        "id": "0199c3a0-5eed-7000-8000-000000000706",
+        "type": "note",
+        "layout": "row",
+        "items": [
+          { "body": "كل الرحلات بتتحرك من موقف عبد المنعم رياض في القاهرة، وميعاد الأتوبيس مكتوب في صفحة كل رحلة.", "icon": "directions_bus" }
+        ]
+      },
+      {
+        "id": "0199c3a0-5eed-7000-8000-000000000707",
+        "type": "note",
+        "title": "قبل ما تحجز",
+        "layout": "row",
+        "items": [ { "body": "الأسعار بالجنيه المصري.", "icon": "a_symbol_this_build_lacks" } ]
+      },
+      {
+        "id": "0199c3a0-5eed-7000-8000-000000000708",
+        "type": "note",
+        "layout": "row",
+        "items": [ { "body": "  " } ]
+      },
+      {
+        "id": "0199c3a0-5eed-7000-8000-000000000709",
+        "type": "note",
+        "layout": "row",
+        "items": [ { "body": "Bring a hat." } ]
+      }
+    ]
+  }
+}
+"""
 }

@@ -19,12 +19,12 @@ import eg.bahr.core.designsystem.theme.BahrLocale
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.localization.ProvideAppLanguage
 import eg.bahr.core.network.ApiErrorCodes
+import eg.bahr.core.testing.FakeWaitlistJoinsStore
 import eg.bahr.core.testing.captureScreenshot
+import eg.bahr.core.testing.storedJoin
 import eg.bahr.feature.trips.data.FakeTripRepository
-import eg.bahr.feature.trips.data.FakeWaitlistJoinsStore
 import eg.bahr.feature.trips.data.TripDetailPayloads
 import eg.bahr.feature.trips.data.TripFixtures.trip
-import eg.bahr.feature.trips.data.storedJoin
 import eg.bahr.feature.trips.data.waitlistMemory
 import eg.bahr.feature.trips.model.DepartureDto
 import eg.bahr.feature.trips.model.TripDetailDto

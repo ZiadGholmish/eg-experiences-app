@@ -26,6 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,7 +56,6 @@ import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.action_retry
-import eg.bahr.core.localization.generated.resources.home_footer_note
 import eg.bahr.core.localization.generated.resources.home_wordmark
 import eg.bahr.core.localization.generated.resources.map_open
 import eg.bahr.core.localization.generated.resources.search_hint
@@ -82,8 +82,8 @@ import org.koin.compose.viewmodel.koinViewModel
  *
  * Top to bottom (HANDOFF Home, M4-M1): the app bar (logo, wordmark, the Map pill), the search entry
  * (M4-M3, not in the handoff), the header, Home's server-driven sections in the server's order
- * (M4-M1a), the filter chips (wrapping, with live counts), "All trips" with its count, the cards, and
- * once the last page is in, the footer note. A banner tap goes to [onAction]; a trip card in a row to
+ * (M4-M1a), the filter chips (wrapping, with live counts), "All trips" with its count at the end of the
+ * line, the cards, and once the last page is in, Home's trailing notes (see [HomePlacement], M4-M7). A banner tap goes to [onAction]; a trip card in a row to
  * [onTripClick], like one in the list.
  *
  * A filter tap reloads only the list (M4-M6 rules, as on the category page): the cards stay, dimmed,
@@ -119,6 +119,8 @@ internal fun TripListScreen(
     val listBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + BahrSpacing.xl
 
     val sections = state.sections
+    // HANDOFF Home: the footer note sits under the last card (user decision 2026-10-11, M4-M7).
+    val placed = remember(sections) { HomePlacement.of(sections) }
     // One loading state for the list and Home's sections (see HOME_WAIT_MILLIS), and only until the
     // list has answered once: after that, a reload happens under the chips (they must stay, or a
     // filter that failed or found nothing could not be changed back).
@@ -181,7 +183,7 @@ internal fun TripListScreen(
         // Sections can arrive after the list (the view model caps how long the list waits for them).
         // Every item is keyed, so a user who has scrolled keeps the card they are on: LazyColumn
         // holds its position by the first visible item's key, and the sections go in above it.
-        items(sections, key = { "$KEY_SECTION${it.key}" }) { section ->
+        items(placed.inline, key = { homeSectionKey(it.key) }) { section ->
             HomeSection(
                 section = section,
                 perPersonLabel = perPersonLabel,
@@ -207,10 +209,12 @@ internal fun TripListScreen(
             }
         }
         item(key = KEY_ALL_TRIPS) {
+            // HANDOFF Home: "All trips" with its result count at the end of the line (M4-M7).
             ListHeading(
                 label = stringResource(Res.string.trips_all_title),
                 totalItems = state.totalItems.takeUnless { nothingOnSaleHere },
                 stale = refreshing,
+                countAtEnd = true,
                 modifier = Modifier.padding(horizontal = BahrSpacing.gutter),
             )
         }
@@ -228,9 +232,18 @@ internal fun TripListScreen(
             onTripClick = onTripClick,
         )
 
-        // Under the last card only: while more pages can load, the note would sit between them.
+        // Under the last card only, as the app's own footer note was: while more pages can load, the
+        // notes would sit between them.
         if (status == PagedListStatus.Loaded && trips.loadState.append.endOfPaginationReached) {
-            item(key = HOME_FOOTER_KEY) { FooterNote(Modifier.padding(horizontal = BahrSpacing.gutter)) }
+            items(placed.trailing, key = { homeSectionKey(it.key) }) { section ->
+                HomeSection(
+                    section = section,
+                    perPersonLabel = perPersonLabel,
+                    waitlistTags = state.waitlistTags,
+                    onTripClick = onTripClick,
+                    onAction = onAction,
+                )
+            }
         }
     }
 }
@@ -270,36 +283,6 @@ private fun HomeAppBar(onMap: (() -> Unit)?) {
         )
         // HANDOFF Home app bar: the "Map" pill at the end (M4-M2).
         onMap?.let { MapPill(onClick = it) }
-    }
-}
-
-/**
- * HANDOFF Home footer note: a primary-container panel with the bus icon. The handoff's text named one
- * stop and one time for every trip, which the catalogue no longer bears out, so it says where to look.
- */
-@Composable
-private fun FooterNote(modifier: Modifier = Modifier) {
-    Row(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .clip(BahrTheme.shapes.extraLarge)
-                .background(MaterialTheme.colorScheme.primaryContainer)
-                .padding(horizontal = BahrSpacing.gutter, vertical = BahrSpacing.lg),
-        horizontalArrangement = Arrangement.spacedBy(BahrSpacing.md),
-        verticalAlignment = Alignment.Top,
-    ) {
-        Icon(
-            BahrIcons.DirectionsBus.filled(),
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(BahrSize.iconLarge),
-        )
-        Text(
-            text = stringResource(Res.string.home_footer_note),
-            style = MaterialTheme.typography.bodyMedium,
-            color = BahrTheme.colors.onSurfaceSecondary,
-        )
     }
 }
 
@@ -354,5 +337,5 @@ private const val KEY_CHIPS = "chips"
 private const val KEY_ALL_TRIPS = "all-trips"
 private const val KEY_SECTION = "section:"
 
-/** The footer note's list key; tests scroll to it. */
-internal const val HOME_FOOTER_KEY = "footer"
+/** A section's list key; tests scroll to one. */
+internal fun homeSectionKey(sectionKey: String): String = "$KEY_SECTION$sectionKey"

@@ -221,9 +221,9 @@ fun NextDepartureDto.seatsLeft(): Int? = if (soldOut == true) 0 else seatsRemain
 
 /**
  * The contract's lowercase `Tone` to the badge's tone. A tone this build does not know (or none)
- * is the primary tint rather than a decode failure.
+ * is the primary tint rather than a decode failure. Shared with Home's hero slides (M4-M7).
  */
-internal fun badgeTone(tone: String?): BahrBadge.Tone =
+fun badgeTone(tone: String?): BahrBadge.Tone =
     when (tone) {
         "secondary" -> BahrBadge.Tone.Secondary
         "tertiary" -> BahrBadge.Tone.Tertiary

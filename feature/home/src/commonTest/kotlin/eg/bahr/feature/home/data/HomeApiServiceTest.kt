@@ -9,6 +9,7 @@ import eg.bahr.feature.home.model.CategoriesSectionDto
 import eg.bahr.feature.home.model.HomeDto
 import eg.bahr.feature.home.model.HomeSectionsSerializer
 import eg.bahr.feature.home.model.HomeSeeAllDto
+import eg.bahr.feature.home.model.NoteSectionDto
 import eg.bahr.feature.home.model.SkippedSectionDto
 import eg.bahr.feature.home.model.TripsSectionDto
 import eg.bahr.feature.home.presentation.drawableSections
@@ -23,6 +24,7 @@ import kotlinx.datetime.LocalDate
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -90,6 +92,71 @@ class HomeApiServiceTest {
             assertEquals(900, banners.items[0].image.width)
             assertNull(banners.items[2].title)
             assertNull(banners.items[2].action.value)
+        }
+
+    @Test
+    fun `a hero slide reads its badge - from price - meta and forward flag`() =
+        runTest {
+            val (hero, _, url) = assertIs<BannersSectionDto>(home(HomePayloads.HERO_AND_NOTES).sections[0]).items
+
+            assertEquals("الأكثر حجزًا", hero.badge?.label)
+            assertEquals("secondary", hero.badge?.tone)
+            assertEquals(450L, hero.price?.amount)
+            assertEquals("EGP", hero.price?.currencyCode)
+            assertEquals("بحيرة البرلس · يوم واحد", hero.meta)
+            assertTrue(hero.showForward)
+            assertTrue(url.showForward)
+        }
+
+    @Test
+    fun `a slide without the hero fields - as an older server sends it - has none and no forward button`() =
+        runTest {
+            val plain = assertIs<BannersSectionDto>(home(HomePayloads.HERO_AND_NOTES).sections[0]).items[1]
+            val older = assertIs<BannersSectionDto>(home().sections[0]).items[0]
+
+            listOf(plain, older).forEach { slide ->
+                assertNull(slide.badge)
+                assertNull(slide.price)
+                assertNull(slide.meta)
+                assertFalse(slide.showForward)
+            }
+        }
+
+    @Test
+    fun `a note reads its body - icon and title - in the server's order`() =
+        runTest {
+            val sections = home(HomePayloads.HERO_AND_NOTES).sections
+
+            val footer = assertIs<NoteSectionDto>(sections[1])
+            assertNull(footer.title)
+            val note = footer.items.single()
+            assertTrue(note.body.startsWith("كل الرحلات بتتحرك من موقف عبد المنعم رياض"))
+            assertEquals("directions_bus", note.icon)
+
+            val titled = assertIs<NoteSectionDto>(sections[2])
+            assertEquals("قبل ما تحجز", titled.title)
+            assertEquals("a_symbol_this_build_lacks", titled.items.single().icon)
+        }
+
+    @Test
+    fun `a note whose body is blank is unreadable - and its section is dropped as empty`() =
+        runTest {
+            val sections = home(HomePayloads.HERO_AND_NOTES).sections
+            val blank = assertIs<NoteSectionDto>(sections[3])
+            assertEquals(0, blank.items.size)
+            assertEquals(1, blank.droppedItems)
+
+            val drawn = drawableSections(sections) {}
+            assertEquals(listOf(sections[0], sections[1], sections[2], sections[4]), drawn)
+        }
+
+    @Test
+    fun `a note without an icon key reads as no icon`() =
+        runTest {
+            val note = assertIs<NoteSectionDto>(home(HomePayloads.HERO_AND_NOTES).sections[4]).items.single()
+
+            assertEquals("Bring a hat.", note.body)
+            assertNull(note.icon)
         }
 
     @Test
