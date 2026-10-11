@@ -20,9 +20,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.Role
-import coil3.compose.AsyncImage
+import eg.bahr.core.catalog.model.ImageDto
+import eg.bahr.core.catalog.presentation.components.Photo
 import eg.bahr.core.designsystem.components.ImageGround
 import eg.bahr.core.designsystem.format.BahrFormat
 import eg.bahr.core.designsystem.icon.BahrIcons
@@ -33,7 +33,6 @@ import eg.bahr.core.designsystem.theme.bahrShadow
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.action_back
 import eg.bahr.core.localization.generated.resources.trip_photo_counter
-import eg.bahr.feature.trips.model.ImageDto
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -85,25 +84,6 @@ internal fun TripHero(
                     .align(Alignment.TopStart)
                     .windowInsetsPadding(WindowInsets.statusBars)
                     .padding(BahrSpacing.md),
-        )
-    }
-}
-
-/**
- * LQIP first, then the photo over it; the ground is already painted, so nothing shifts. Also Home's
- * banners.
- */
-@Composable
-internal fun Photo(image: ImageDto) {
-    Box(Modifier.fillMaxSize()) {
-        image.lqip?.let {
-            AsyncImage(model = it, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-        }
-        AsyncImage(
-            model = image.url,
-            contentDescription = image.alt,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize(),
         )
     }
 }

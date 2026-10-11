@@ -1,5 +1,6 @@
 package eg.bahr.feature.trips.data
 
+import eg.bahr.core.catalog.data.WaitlistMemory
 import eg.bahr.core.datastore.MAX_STORED_WAITLIST_JOINS
 import eg.bahr.core.datastore.StoredWaitlistJoin
 import eg.bahr.core.datastore.WaitlistJoinsStore

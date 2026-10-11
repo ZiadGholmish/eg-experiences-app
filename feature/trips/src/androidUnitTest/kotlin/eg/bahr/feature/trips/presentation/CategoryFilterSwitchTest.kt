@@ -23,6 +23,12 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.paging.compose.collectAsLazyPagingItems
+import eg.bahr.core.catalog.model.TripPageDto
+import eg.bahr.core.catalog.presentation.components.PagedListStatus
+import eg.bahr.core.catalog.presentation.components.REFRESH_BAR_TAG
+import eg.bahr.core.catalog.presentation.components.REFRESH_SLOT_TAG
+import eg.bahr.core.catalog.presentation.components.queryStatus
+import eg.bahr.core.catalog.presentation.components.tripRowTag
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
@@ -35,12 +41,6 @@ import eg.bahr.feature.trips.data.TripFixtures.page
 import eg.bahr.feature.trips.data.TripFixtures.trip
 import eg.bahr.feature.trips.data.TripQuery
 import eg.bahr.feature.trips.data.waitlistMemory
-import eg.bahr.feature.trips.model.TripPageDto
-import eg.bahr.feature.trips.presentation.components.PagedListStatus
-import eg.bahr.feature.trips.presentation.components.REFRESH_BAR_TAG
-import eg.bahr.feature.trips.presentation.components.REFRESH_SLOT_TAG
-import eg.bahr.feature.trips.presentation.components.queryStatus
-import eg.bahr.feature.trips.presentation.components.tripRowTag
 import kotlinx.coroutines.CompletableDeferred
 import org.junit.After
 import org.junit.Before

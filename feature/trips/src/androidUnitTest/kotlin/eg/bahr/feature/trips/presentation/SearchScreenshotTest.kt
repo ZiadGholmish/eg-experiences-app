@@ -10,6 +10,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
+import eg.bahr.core.catalog.model.NextDepartureDto
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
@@ -24,7 +25,6 @@ import eg.bahr.feature.trips.data.TripFixtures.facets
 import eg.bahr.feature.trips.data.TripFixtures.page
 import eg.bahr.feature.trips.data.TripFixtures.trip
 import eg.bahr.feature.trips.data.waitlistMemory
-import eg.bahr.feature.trips.model.NextDepartureDto
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.datetime.LocalDate
 import org.junit.After
@@ -41,7 +41,7 @@ import java.util.Locale
  * M4-M3: the search screen × {ar, en} × {recent searches, start hint, loading, results, no results, error}, through the
  * real view model on a fake repository. A search is started the way a recent-search tap starts one
  * (at once), not by typing: the clock is paused here, so a debounce would never end. Device English
- * on purpose (see TripListScreenshotTest).
+ * on purpose (see feature:home's TripListScreenshotTest).
  *
  * Record: `./gradlew :feature:trips:recordRoborazziDebug`; verify: `verifyRoborazziDebug`.
  */

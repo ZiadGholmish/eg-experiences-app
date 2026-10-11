@@ -3,6 +3,8 @@ package eg.bahr.feature.trips.presentation
 import androidx.paging.PagingData
 import androidx.paging.PagingDataEvent
 import androidx.paging.PagingDataPresenter
+import eg.bahr.core.catalog.model.TripPageDto
+import eg.bahr.core.catalog.presentation.RETRY_THROTTLE_MILLIS
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.testing.runViewModelTest
@@ -14,7 +16,6 @@ import eg.bahr.feature.trips.data.TripFixtures.sectionPage
 import eg.bahr.feature.trips.data.TripFixtures.trip
 import eg.bahr.feature.trips.data.TripQuery
 import eg.bahr.feature.trips.data.waitlistMemory
-import eg.bahr.feature.trips.model.TripPageDto
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -164,49 +165,6 @@ class ListRequestThrottlingTest {
             vm.retry()
             runCurrent()
             assertEquals(3, repository.sectionRequests.size)
-        }
-
-    @Test
-    fun `a burst of Retry on Home is one reload`() =
-        runViewModelTest {
-            val repository =
-                FakeTripRepository(
-                    listTrips = { AppResult.Failure(AppError.Network) },
-                    home = { AppResult.Failure(AppError.Network) },
-                )
-            val vm = TripListViewModel(repository, waitlistMemory())
-            present(vm.trips)
-            runCurrent()
-            assertEquals(1, repository.homeReads)
-
-            repeat(BURST) {
-                vm.refresh()
-                runCurrent()
-            }
-
-            assertEquals(2, repository.homeReads)
-            assertEquals(listOf(0, 0), repository.requestedPages)
-        }
-
-    @Test
-    fun `rapid chip taps on Home collapse to one request for the last - and Home is not read again`() =
-        runViewModelTest {
-            val repository =
-                FakeTripRepository(
-                    listFiltered = { q -> page(listOf(trip(1)), facets = facets(filter = q.filter)) },
-                    home = { AppResult.Failure(AppError.Network) },
-                )
-            val vm = TripListViewModel(repository, waitlistMemory())
-            present(vm.trips)
-            advanceUntilIdle()
-
-            vm.selectFilter("weekend")
-            vm.selectFilter("under_400")
-            vm.selectFilter("half_day")
-            advanceUntilIdle()
-
-            assertEquals(listOf(null, "half_day"), repository.requestedQueries.map { it.filter })
-            assertEquals(1, repository.homeReads)
         }
 
     /** A presenter on [trips] for the rest of the test, as `collectAsLazyPagingItems` would be. */

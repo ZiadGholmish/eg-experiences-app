@@ -38,12 +38,15 @@ include(":core:network")
 include(":core:designsystem")
 include(":core:localization")
 include(":core:datastore")
+// What Home, the trip lists and the map share (M4-M1c): no screens.
+include(":core:catalog")
 
 // Test-only: helpers for other modules' test source sets (bahr-modularization: core:testing → core:common).
 include(":core:testing")
 
 // Feature modules — one per area of the `/api/v1/**` contract.
 include(":feature:splash")
+include(":feature:home")
 include(":feature:trips")
 include(":feature:booking")
 include(":feature:map")

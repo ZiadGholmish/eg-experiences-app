@@ -28,23 +28,25 @@ import eg.bahr.feature.booking.navigation.holdScreen
 import eg.bahr.feature.booking.navigation.navigateToBooking
 import eg.bahr.feature.booking.navigation.navigateToHold
 import eg.bahr.feature.booking.navigation.returnToDateSelection
+import eg.bahr.feature.home.navigation.HomeAction
+import eg.bahr.feature.home.navigation.TripListRoute
+import eg.bahr.feature.home.navigation.isHome
+import eg.bahr.feature.home.navigation.navigateToTripList
+import eg.bahr.feature.home.navigation.tripListScreen
 import eg.bahr.feature.map.navigation.isTripMap
 import eg.bahr.feature.map.navigation.navigateToTripMap
 import eg.bahr.feature.map.navigation.tripMapScreen
 import eg.bahr.feature.splash.navigation.SplashRoute
 import eg.bahr.feature.splash.navigation.splashScreen
-import eg.bahr.feature.trips.navigation.HomeAction
-import eg.bahr.feature.trips.navigation.TripListRoute
 import eg.bahr.feature.trips.navigation.categoryTripsScreen
+import eg.bahr.feature.trips.navigation.isOpenedFromHome
 import eg.bahr.feature.trips.navigation.navigateToCategoryTrips
 import eg.bahr.feature.trips.navigation.navigateToSearchTrips
 import eg.bahr.feature.trips.navigation.navigateToSectionTrips
 import eg.bahr.feature.trips.navigation.navigateToTripDetail
-import eg.bahr.feature.trips.navigation.navigateToTripList
 import eg.bahr.feature.trips.navigation.searchTripsScreen
 import eg.bahr.feature.trips.navigation.sectionTripsScreen
 import eg.bahr.feature.trips.navigation.tripDetailScreen
-import eg.bahr.feature.trips.navigation.tripListScreen
 import org.koin.compose.koinInject
 
 /**
@@ -102,9 +104,10 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
                     }
                 },
                 onSearch = { navController.navigateToSearchTrips() },
-                // The map (M4-M2) is another feature: Home's pill opens it, and Home slides aside for it.
+                // The map (M4-M2) is another feature: Home's pill opens it.
                 onMap = { navController.navigateToTripMap() },
-                opensFromHome = { it.isTripMap() },
+                // Home slides aside for the pages it opens (M4-M6), all other features' since M4-M1c.
+                opensFromHome = { it.isOpenedFromHome() || it.isTripMap() },
                 reducedMotion = reducedMotion,
             )
 
@@ -117,18 +120,21 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
             searchTripsScreen(
                 onBack = { navController.popBackStack() },
                 onTripClick = navController::navigateToTripDetail,
+                isHome = { it.isHome() },
                 reducedMotion = reducedMotion,
             )
 
             categoryTripsScreen(
                 onBack = { navController.popBackStack() },
                 onTripClick = navController::navigateToTripDetail,
+                isHome = { it.isHome() },
                 reducedMotion = reducedMotion,
             )
 
             sectionTripsScreen(
                 onBack = { navController.popBackStack() },
                 onTripClick = navController::navigateToTripDetail,
+                isHome = { it.isHome() },
                 reducedMotion = reducedMotion,
             )
 

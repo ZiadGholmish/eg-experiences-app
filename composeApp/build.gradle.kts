@@ -53,6 +53,7 @@ kotlin {
         }
         commonMain.dependencies {
             implementation(projects.feature.splash)
+            implementation(projects.feature.home)
             implementation(projects.feature.trips)
             implementation(projects.feature.booking)
             implementation(projects.feature.map)
@@ -62,6 +63,8 @@ kotlin {
             implementation(projects.core.designsystem)
             implementation(projects.core.localization)
             implementation(projects.core.datastore)
+            // Its Koin module (the card cache, `GET /trips`, the waiting-list memory) is started here, M4-M1c.
+            implementation(projects.core.catalog)
 
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)

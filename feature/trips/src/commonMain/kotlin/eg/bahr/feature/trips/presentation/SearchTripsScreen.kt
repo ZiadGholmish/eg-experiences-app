@@ -57,6 +57,15 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
+import eg.bahr.core.catalog.presentation.components.FacetFilterChips
+import eg.bahr.core.catalog.presentation.components.ListHeading
+import eg.bahr.core.catalog.presentation.components.PagedListStatus
+import eg.bahr.core.catalog.presentation.components.RefreshBar
+import eg.bahr.core.catalog.presentation.components.listBody
+import eg.bahr.core.catalog.presentation.components.rememberListMotion
+import eg.bahr.core.catalog.presentation.components.rememberQueryStatus
+import eg.bahr.core.catalog.presentation.components.selectedOrder
+import eg.bahr.core.catalog.presentation.rememberThrottled
 import eg.bahr.core.designsystem.components.BahrBackButton
 import eg.bahr.core.designsystem.icon.BahrIcons
 import eg.bahr.core.designsystem.theme.BahrSize
@@ -72,14 +81,6 @@ import eg.bahr.core.localization.generated.resources.search_start
 import eg.bahr.core.localization.generated.resources.trip_per_person
 import eg.bahr.core.localization.generated.resources.trips_filter_empty
 import eg.bahr.feature.trips.data.TripApiService
-import eg.bahr.feature.trips.presentation.components.FacetFilterChips
-import eg.bahr.feature.trips.presentation.components.ListHeading
-import eg.bahr.feature.trips.presentation.components.PagedListStatus
-import eg.bahr.feature.trips.presentation.components.RefreshBar
-import eg.bahr.feature.trips.presentation.components.listBody
-import eg.bahr.feature.trips.presentation.components.rememberListMotion
-import eg.bahr.feature.trips.presentation.components.rememberQueryStatus
-import eg.bahr.feature.trips.presentation.components.selectedOrder
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 

@@ -3,6 +3,7 @@ package eg.bahr.feature.trips.presentation
 import androidx.paging.testing.ErrorRecovery
 import androidx.paging.testing.LoadErrorHandler
 import androidx.paging.testing.asSnapshot
+import eg.bahr.core.catalog.model.FacetDto
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.network.ApiErrorCodes
@@ -15,7 +16,6 @@ import eg.bahr.feature.trips.data.TripFixtures.page
 import eg.bahr.feature.trips.data.TripFixtures.trip
 import eg.bahr.feature.trips.data.TripQuery
 import eg.bahr.feature.trips.data.waitlistMemory
-import eg.bahr.feature.trips.model.FacetDto
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.launch

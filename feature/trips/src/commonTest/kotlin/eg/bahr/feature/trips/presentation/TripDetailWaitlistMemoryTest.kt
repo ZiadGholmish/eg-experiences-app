@@ -1,5 +1,6 @@
 package eg.bahr.feature.trips.presentation
 
+import eg.bahr.core.catalog.data.WaitlistMemory
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.network.ApiErrorCodes
@@ -11,7 +12,6 @@ import eg.bahr.feature.trips.data.FixedClock
 import eg.bahr.feature.trips.data.TEST_NOW
 import eg.bahr.feature.trips.data.TripFixtures.detail
 import eg.bahr.feature.trips.data.TripFixtures.saturdays
-import eg.bahr.feature.trips.data.WaitlistMemory
 import eg.bahr.feature.trips.data.storedJoin
 import eg.bahr.feature.trips.model.DepartureDto
 import eg.bahr.feature.trips.model.TripDetailDto

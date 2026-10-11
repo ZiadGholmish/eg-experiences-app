@@ -1,5 +1,6 @@
 package eg.bahr.feature.trips.data
 
+import eg.bahr.core.catalog.data.WaitlistMemory
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDate

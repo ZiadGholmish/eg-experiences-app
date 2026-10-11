@@ -8,6 +8,9 @@ kotlin {
         commonMain.dependencies {
             // Warns once when the map runs without an API key (the pins then sit on a plain ground).
             implementation(libs.kermit)
+            // NextDeparture / HomeCategory and the `Tone` mapping, shared with Home and the trip lists
+            // (M4-M1c). An allowed edge: a feature may depend on any core module.
+            implementation(projects.core.catalog)
         }
         androidMain.dependencies {
             // The map itself on Android (M4-M2, Google Maps by user decision). iOS draws it with the

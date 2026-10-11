@@ -26,6 +26,11 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.Dp
 import coil3.compose.AsyncImage
+import eg.bahr.core.catalog.presentation.components.SectionTitle
+import eg.bahr.core.catalog.presentation.components.Tint
+import eg.bahr.core.catalog.presentation.components.colors
+import eg.bahr.core.catalog.presentation.components.symbolIcon
+import eg.bahr.core.catalog.presentation.components.toneTint
 import eg.bahr.core.designsystem.components.BahrCard
 import eg.bahr.core.designsystem.format.BahrFormat
 import eg.bahr.core.designsystem.icon.BahrIcons

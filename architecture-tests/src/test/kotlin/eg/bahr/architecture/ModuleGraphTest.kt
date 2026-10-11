@@ -122,15 +122,36 @@ class ModuleGraphTest {
     }
 
     @Test
-    fun `feature sources hold no design literals`() {
+    fun `feature and core catalog sources hold no design literals`() {
+        // core:catalog holds the UI Home, the trip lists and the map share (TripCard, the paged list's
+        // parts, CategoryTile, M4-M1c): moved out of feature/*, it stays under mobile rule 3.
         val violations =
-            featureFiles.flatMap { file ->
+            (featureFiles + catalogFiles).flatMap { file ->
                 val code = file.text.withoutComments()
                 designLiterals.flatMap { (pattern, why) ->
                     pattern.findAll(code).map { match -> "${file.rel}:${code.lineAt(match.range.first)}: `${match.value}` ($why)" }
                 }
             }
-        assertNone(violations, "Design literals in feature/* (use BahrTheme / MaterialTheme / BahrSpacing / BahrMotion)")
+        assertNone(violations, "Design literals in feature/* or core/catalog (use BahrTheme / MaterialTheme / BahrSpacing / BahrMotion)")
+    }
+
+    @Test
+    fun `core catalog holds no screens`() {
+        // SKILL.md: core:catalog has "no screens". A destination, a view model lookup or a *Screen
+        // composable means a screen moved in; screens belong in a feature.
+        val violations =
+            catalogFiles.filter { it.isMain }.flatMap { file ->
+                val code = file.text.withoutComments()
+                val screens =
+                    file
+                        .functions(includeNested = true, includeLocal = true)
+                        .filter { it.hasAnnotationWithName("Composable") && it.name.endsWith("Screen") }
+                        .map { "${file.rel}: @Composable ${it.name}" }
+                val wiring =
+                    screenWiring.filter { it.containsMatchIn(code) }.map { "${file.rel}: `${it.pattern}`" }
+                screens + wiring
+            }
+        assertNone(violations, "Screens in core:catalog (a screen belongs in a feature)")
     }
 
     @Test
@@ -173,6 +194,8 @@ class ModuleGraphTest {
                 ":core:datastore" to setOf(":core:common"),
                 ":core:localization" to setOf(":core:common", ":core:datastore"),
                 ":core:designsystem" to setOf(":core:localization"),
+                // What Home, the trip lists and the map share (M4-M1c, user decision 2026-10-10). No screens.
+                ":core:catalog" to setOf(":core:common", ":core:network", ":core:datastore", ":core:localization", ":core:designsystem"),
                 // Test-only module: its main code is consumed by other modules' test source sets.
                 CORE_TESTING to setOf(":core:common"),
             )
@@ -211,6 +234,10 @@ class ModuleGraphTest {
                 .filterNot { "/build/" in it.rel }
         }
         val featureFiles by lazy { sourceFiles.filter { it.rel.startsWith("feature/") }.nonEmpty("feature") }
+        val catalogFiles by lazy { sourceFiles.filter { it.rel.startsWith("core/catalog/") }.nonEmpty("core/catalog") }
+
+        /** What only a screen's wiring uses: a nav destination, a view model lookup. */
+        val screenWiring = listOf(Regex("""\bNavGraphBuilder\b"""), Regex("""\bkoinViewModel\b"""), Regex("""\bcomposable<"""))
         val coreFiles by lazy { sourceFiles.filter { it.rel.startsWith("core/") }.nonEmpty("core") }
         val appFiles by lazy { sourceFiles.filter { it.rel.startsWith("composeApp/") }.nonEmpty("composeApp") }
 

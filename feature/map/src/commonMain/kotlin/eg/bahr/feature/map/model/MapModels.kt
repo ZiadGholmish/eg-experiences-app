@@ -1,16 +1,17 @@
 package eg.bahr.feature.map.model
 
+import eg.bahr.core.catalog.model.HomeCategoryDto
+import eg.bahr.core.catalog.model.NextDepartureDto
 import eg.bahr.core.network.MoneyDto
-import kotlinx.datetime.LocalDate
 import kotlinx.serialization.Serializable
 
 /*
  * Wire shapes for `GET /api/v1/trips/map` (`getTripMap`), field for field with
  * `../docs/api/openapi.yaml`: `MapData`, `MapPin`, `MapPlace`, `HomeCategory`, `NextDeparture`.
  *
- * This feature keeps its own copies of `NextDeparture` and `HomeCategory` (feature:trips has them
- * too): a feature never imports another, and neither shape carries screen logic worth promoting to
- * `core:*` yet. `Money` is core:network's [MoneyDto].
+ * `NextDeparture` and `HomeCategory` (the legend) are core:catalog's [NextDepartureDto] and
+ * [HomeCategoryDto], one copy shared with Home and the trip lists (M4-M1c). `Money` is core:network's
+ * [MoneyDto].
  *
  * Enum-like values (`tone`) stay strings, so a value added later draws as the default colour instead
  * of failing the whole map. Optional fields are nullable with a default, so an older server (no
@@ -22,7 +23,7 @@ import kotlinx.serialization.Serializable
 internal data class TripMapDto(
     val pins: List<MapPinDto> = emptyList(),
     val departurePoints: List<MapPlaceDto> = emptyList(),
-    val legend: List<MapLegendCategoryDto> = emptyList(),
+    val legend: List<HomeCategoryDto> = emptyList(),
 )
 
 /**
@@ -42,21 +43,10 @@ internal data class MapPinDto(
     val placeName: String? = null,
     val category: String? = null,
     val tone: String,
-    val nextDeparture: MapNextDepartureDto? = null,
+    val nextDeparture: NextDepartureDto? = null,
     val departTime: String? = null,
     val departurePointId: String? = null,
     val distanceKm: Int? = null,
-)
-
-/** openapi `NextDeparture`, the trip's `TripCard.nextDeparture`. [soldOut] only when every open date is full. */
-@Serializable
-internal data class MapNextDepartureDto(
-    val id: String? = null,
-    val date: LocalDate? = null,
-    val returnDate: LocalDate? = null,
-    val seatsRemaining: Int? = null,
-    val capacity: Int? = null,
-    val soldOut: Boolean? = null,
 )
 
 /** openapi `MapPlace`: a place a bus leaves from. It carries no time; the pins leaving from it do. */
@@ -68,13 +58,4 @@ internal data class MapPlaceDto(
     val governorate: String? = null,
     val lat: Double,
     val lng: Double,
-)
-
-/** openapi `HomeCategory`, as the map's legend: [tone] is the colour of the pins in [key]. */
-@Serializable
-internal data class MapLegendCategoryDto(
-    val key: String,
-    val label: String,
-    val icon: String? = null,
-    val tone: String,
 )

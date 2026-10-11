@@ -20,6 +20,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import eg.bahr.core.catalog.model.RatingDto
+import eg.bahr.core.catalog.presentation.components.SectionTitle
+import eg.bahr.core.catalog.presentation.components.Tint
+import eg.bahr.core.catalog.presentation.components.colors
 import eg.bahr.core.designsystem.format.BahrFormat
 import eg.bahr.core.designsystem.icon.BahrIcons
 import eg.bahr.core.designsystem.theme.BahrSize
@@ -40,7 +44,6 @@ import eg.bahr.core.localization.generated.resources.trip_fact_price_note
 import eg.bahr.core.localization.generated.resources.trip_hours_door_to_door
 import eg.bahr.core.localization.generated.resources.trip_whats_included
 import eg.bahr.core.network.MoneyDto
-import eg.bahr.feature.trips.model.RatingDto
 import eg.bahr.feature.trips.model.TripDetailDto
 import eg.bahr.feature.trips.model.isMultiDay
 import org.jetbrains.compose.resources.pluralStringResource

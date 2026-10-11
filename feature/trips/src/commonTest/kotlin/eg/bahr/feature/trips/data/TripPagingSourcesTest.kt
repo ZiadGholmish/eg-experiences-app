@@ -2,13 +2,16 @@ package eg.bahr.feature.trips.data
 
 import androidx.paging.PagingSource.LoadResult
 import androidx.paging.testing.TestPager
+import eg.bahr.core.catalog.data.TripListPagingSource
+import eg.bahr.core.catalog.data.TripPagingConfig
+import eg.bahr.core.catalog.data.appError
+import eg.bahr.core.catalog.model.TripCardDto
+import eg.bahr.core.catalog.model.TripPageDto
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.feature.trips.data.TripFixtures.page
 import eg.bahr.feature.trips.data.TripFixtures.sectionPage
 import eg.bahr.feature.trips.data.TripFixtures.trip
-import eg.bahr.feature.trips.model.TripCardDto
-import eg.bahr.feature.trips.model.TripPageDto
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals

@@ -21,10 +21,12 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
+import eg.bahr.core.catalog.presentation.components.Tint
+import eg.bahr.core.catalog.presentation.components.colors
+import eg.bahr.core.catalog.presentation.components.toneTint
 import eg.bahr.core.designsystem.theme.BahrBorder
 import eg.bahr.core.designsystem.theme.BahrSize
 import eg.bahr.core.designsystem.theme.BahrSpacing
-import eg.bahr.core.designsystem.theme.BahrTheme
 import kotlin.math.ceil
 
 /** A pin's colours: the pill, stem and dot are [fill], the label [content]; [outline] rings it, if any. */
@@ -159,40 +161,34 @@ internal class MarkerPainter(
 /** The colours of the map's markers, all from the theme. */
 @Immutable
 internal data class MapPalette(
-    val tones: Map<String, PinColors>,
-    val fallback: PinColors,
+    val tints: Map<Tint, PinColors>,
     val soldOut: PinColors,
     val departure: PinColors,
     val distance: PinColors,
     val route: Color,
 ) {
-    /** A pin in the contract's `Tone`; one this build does not know is drawn as `primary`. */
-    fun tone(tone: String?): PinColors = tones[tone] ?: fallback
+    /**
+     * A pin in the contract's `Tone`, through core:catalog's [toneTint] (the one `Tone` mapping, shared
+     * with the trip page and Home's category tiles, M4-M1c); one this build does not know is teal.
+     */
+    fun tone(tone: String?): PinColors = tints.getValue(toneTint(tone))
 }
 
 /**
  * Solid pins, dark fill and light label, as the handoff draws them on the map (teal for the water,
- * a dark coral for the village, ink for the bus). Each tone takes its tint family's darkest role for
- * the fill and its container for the label, the badge pairing turned inside out, so every tone stays
- * readable on a pale map. The coral tone uses the coral *container* family only: coral itself is for
- * actions (mobile rule 3). Sold out is grey with an outline; the bus departure is ink.
+ * a dark coral for the village, ink for the bus). Each tone takes its tint's text colour for the fill
+ * and its container for the label, the badge pairing turned inside out, so every tone stays readable
+ * on a pale map. The coral tint is the coral *container* family only: coral itself is for actions
+ * (mobile rule 3). Sold out is grey with an outline; the bus departure is ink.
  */
 @Composable
 internal fun rememberMapPalette(): MapPalette {
     val c = MaterialTheme.colorScheme
-    val x = BahrTheme.colors
-    return remember(c, x) {
-        val primary = PinColors(c.onPrimaryContainer, c.primaryContainer)
+    // Read here, not in `remember`: a tint's colours are the theme's, read in composition.
+    val tints = Tint.entries.associateWith { it.colors() }
+    return remember(c, tints) {
         MapPalette(
-            tones =
-                mapOf(
-                    "primary" to primary,
-                    "secondary" to PinColors(c.onSecondaryContainer, c.secondaryContainer),
-                    "tertiary" to PinColors(c.onTertiaryContainer, c.tertiaryContainer),
-                    "quaternary" to PinColors(x.onQuaternaryContainer, x.quaternaryContainer),
-                    "success" to PinColors(x.onSuccessContainer, x.successContainer),
-                ),
-            fallback = primary,
+            tints = tints.mapValues { (_, tint) -> PinColors(fill = tint.content, content = tint.container) },
             soldOut = PinColors(c.surfaceContainer, c.onSurfaceVariant, outline = c.outline),
             departure = PinColors(c.onSurface, c.surface),
             distance = PinColors(c.surface, c.onSurface, outline = c.onSurface),

@@ -2,6 +2,7 @@ package eg.bahr.di
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import eg.bahr.core.catalog.di.catalogModule
 import eg.bahr.core.common.error.AppErrorController
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.datastore.AppSettingsStore
@@ -12,6 +13,7 @@ import eg.bahr.core.network.LanguageTagProvider
 import eg.bahr.core.network.di.networkModule
 import eg.bahr.deeplink.DeepLinkParser
 import eg.bahr.feature.booking.di.bookingModule
+import eg.bahr.feature.home.di.homeModule
 import eg.bahr.feature.map.di.mapModule
 import eg.bahr.feature.trips.di.tripsModule
 import kotlinx.coroutines.flow.first
@@ -77,6 +79,9 @@ fun initKoin(
             appModule(baseUrl, isDebug, appLinks, preferencesPath),
             networkModule,
             dataStoreModule,
+            // Shared by Home and the trip lists (M4-M1c): one card cache, one waiting-list memory.
+            catalogModule,
+            homeModule,
             tripsModule,
             bookingModule,
             mapModule,

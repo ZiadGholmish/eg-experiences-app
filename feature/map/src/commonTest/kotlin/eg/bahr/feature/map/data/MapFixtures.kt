@@ -1,8 +1,8 @@
 package eg.bahr.feature.map.data
 
+import eg.bahr.core.catalog.model.HomeCategoryDto
+import eg.bahr.core.catalog.model.NextDepartureDto
 import eg.bahr.core.network.MoneyDto
-import eg.bahr.feature.map.model.MapLegendCategoryDto
-import eg.bahr.feature.map.model.MapNextDepartureDto
 import eg.bahr.feature.map.model.MapPinDto
 import eg.bahr.feature.map.model.MapPlaceDto
 import eg.bahr.feature.map.model.TripMapDto
@@ -53,7 +53,7 @@ internal object MapFixtures {
         tone = tone,
         nextDeparture =
             seats?.let {
-                MapNextDepartureDto(
+                NextDepartureDto(
                     id = "dep-$slug",
                     date = SATURDAY,
                     returnDate = LocalDate(2026, 10, 17 + nights),
@@ -128,10 +128,10 @@ internal object MapFixtures {
             departurePoints = listOf(cairo(arabic)),
             legend =
                 listOf(
-                    MapLegendCategoryDto("on_the_boat", t("On the boat", "في القارب"), "sailing", "primary"),
-                    MapLegendCategoryDto("murals", t("Murals", "جداريات"), "palette", "quaternary"),
-                    MapLegendCategoryDto("beach", t("Beach", "شاطئ"), "beach_access", "success"),
-                    MapLegendCategoryDto("night_trips", t("Night trips", "رحلات ليلية"), "bedtime", "primary"),
+                    HomeCategoryDto("on_the_boat", t("On the boat", "في القارب"), "sailing", "primary"),
+                    HomeCategoryDto("murals", t("Murals", "جداريات"), "palette", "quaternary"),
+                    HomeCategoryDto("beach", t("Beach", "شاطئ"), "beach_access", "success"),
+                    HomeCategoryDto("night_trips", t("Night trips", "رحلات ليلية"), "bedtime", "primary"),
                 ),
         )
     }

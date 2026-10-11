@@ -1,5 +1,11 @@
 package eg.bahr.feature.trips.model
 
+import eg.bahr.core.catalog.model.BadgeDto
+import eg.bahr.core.catalog.model.ImageDto
+import eg.bahr.core.catalog.model.LocationDto
+import eg.bahr.core.catalog.model.NextDepartureDto
+import eg.bahr.core.catalog.model.RatingDto
+import eg.bahr.core.catalog.model.TripCardDto
 import eg.bahr.core.network.MoneyDto
 import kotlinx.datetime.LocalDate
 import kotlinx.serialization.Serializable
@@ -7,28 +13,15 @@ import kotlinx.serialization.Serializable
 /*
  * Wire shapes for `/api/v1/trips`, field for field with `../docs/api/openapi.yaml`.
  *
- * The list side is [TripPageDto] and [TripCardDto]; the trip page is [TripDetailDto] (`TripDetail`)
- * and [DepartureDto] (`Departure`, also `GET /trips/{slug}/departures`). Joining a sold-out date's
- * waiting list sends a [WaitlistRequest].
+ * A "See all" page is [TripCardPageDto]; the trip page is [TripDetailDto] (`TripDetail`) and
+ * [DepartureDto] (`Departure`, also `GET /trips/{slug}/departures`). Joining a sold-out date's
+ * waiting list sends a [WaitlistRequest]. The list's own shapes (`TripPage`, `TripCard`, `Facet`, …)
+ * are core:catalog's, shared with Home and the map (M4-M1c).
  *
  * The backend omits null fields, so everything the contract does not mark `required` is nullable
  * with a default here. When the backend adds a field, add it the same way: the JSON parser ignores
  * unknown keys, so an old app keeps working, and a non-nullable addition would break it instead.
  */
-
-/**
- * openapi `TripPage` (`listTrips`). [facets] are the chips above a filtered list (M4-B1): every chip,
- * zero counts included, in the served order (filters first, then categories).
- */
-@Serializable
-internal data class TripPageDto(
-    val items: List<TripCardDto> = emptyList(),
-    val page: Int = 0,
-    val size: Int = 0,
-    val totalItems: Long = 0,
-    val totalPages: Int = 0,
-    val facets: List<FacetDto> = emptyList(),
-)
 
 /**
  * openapi `TripCardPage` (`listHomeSectionTrips`): a page of a Home row's whole list, with no chips.
@@ -40,127 +33,6 @@ internal data class TripCardPageDto(
     val size: Int = 0,
     val totalItems: Long = 0,
     val totalPages: Int = 0,
-)
-
-/**
- * openapi `Facet`: one chip with its live count. [type] says which query parameter the chip sets
- * (`filter` or `category`, see [FacetType]); a chip is identified by [type] and [key] together, because
- * a category may share a key with a filter value. [tone] is on category chips only. A [count] of 0 is
- * a dimmed chip, never a hidden one. [selected] marks the request's active chip of each type.
- *
- * Every field has a default although the contract marks most required: the backend omits nulls, and
- * one odd chip must not fail the page the trips are on.
- */
-@Serializable
-internal data class FacetDto(
-    val type: String? = null,
-    val key: String? = null,
-    val label: String? = null,
-    val icon: String? = null,
-    val tone: String? = null,
-    val count: Int? = null,
-    val selected: Boolean = false,
-)
-
-/** openapi `Facet.type` values. */
-internal object FacetType {
-    const val FILTER = "filter"
-    const val CATEGORY = "category"
-}
-
-/** The `filter` value that means "no filter" (openapi `listTrips`: clear = omit or `all`). */
-internal const val FILTER_ALL = "all"
-
-/**
- * openapi `TripCard`: one trip in a list. Every text arrives already in the request's
- * `Accept-Language`, so nothing here is translated on the client.
- *
- * [categories] are category *keys* (`on_the_boat`), not labels; the labels come with Home (M4).
- * [durationLabel] is `05:00 → 22:00`, or a bare duration (`17h`) when the times are unknown, and
- * may be empty. On a multi-day trip ([nights] > 0, M4-B0b) it is words (`2 days · 1 night` /
- * `يومان · ليلة واحدة`), so it must not be forced left to right; see [isMultiDay].
- *
- * [nights] is non-null with the contract's default 0 rather than nullable: the contract says to treat
- * an absent value as 0 (a day trip), so an older server's payload still decodes to the right thing.
- */
-@Serializable
-internal data class TripCardDto(
-    val slug: String,
-    val title: String,
-    val subtitle: String? = null,
-    val durationLabel: String,
-    val durationMinutes: Int? = null,
-    val nights: Int = 0,
-    val price: MoneyDto,
-    val categories: List<String> = emptyList(),
-    val heroImage: ImageDto? = null,
-    val cardImage: ImageDto? = null,
-    val nextDeparture: NextDepartureDto? = null,
-    val badge: BadgeDto? = null,
-    val rating: RatingDto? = null,
-    val location: LocationDto? = null,
-)
-
-/**
- * openapi `Image`. [width] and [height] are there so the photo's space is laid out before it loads;
- * [lqip] is a tiny blurred `data:` URI shown while the real photo downloads.
- */
-@Serializable
-internal data class ImageDto(
-    val url: String,
-    val width: Int,
-    val height: Int,
-    val alt: String? = null,
-    val lqip: String? = null,
-    val variants: List<ImageVariantDto> = emptyList(),
-)
-
-/**
- * openapi `ImageVariant`: a smaller re-encoded copy. [format] is the contract's lowercase
- * `avif`/`webp`/`jpeg`, kept as a string so a new format cannot fail the decode. Decoded but not
- * picked from yet: the app loads [ImageDto.url].
- */
-@Serializable
-internal data class ImageVariantDto(
-    val url: String,
-    val width: Int,
-    val format: String,
-)
-
-/**
- * The trip's next open date. [seatsRemaining] is a display hint, stale the moment it is read;
- * the seat hold is the authoritative check. [returnDate] is [date] plus the trip's nights (M4-B0b).
- */
-@Serializable
-internal data class NextDepartureDto(
-    val date: LocalDate? = null,
-    val returnDate: LocalDate? = null,
-    val seatsRemaining: Int? = null,
-    val capacity: Int? = null,
-    val soldOut: Boolean? = null,
-)
-
-/**
- * openapi `Badge`. [tone] is the contract's lowercase `Tone` enum, kept as a string so a tone this
- * build does not know falls back to a default instead of failing the whole page's decode.
- */
-@Serializable
-internal data class BadgeDto(
-    val label: String? = null,
-    val tone: String? = null,
-)
-
-@Serializable
-internal data class RatingDto(
-    val value: Double? = null,
-    val count: Int? = null,
-)
-
-@Serializable
-internal data class LocationDto(
-    val lat: Double? = null,
-    val lng: Double? = null,
-    val label: String? = null,
 )
 
 /**
@@ -345,8 +217,6 @@ internal data class WaitlistRequest(
 )
 
 /** True for a trip that stays away overnight: its duration label is words, not a time range. */
-internal val TripCardDto.isMultiDay: Boolean get() = nights > 0
-
 internal val TripDetailDto.isMultiDay: Boolean get() = nights > 0
 
 /** The day this date is back, when that is a later day than it leaves (a multi-day trip); else null. */

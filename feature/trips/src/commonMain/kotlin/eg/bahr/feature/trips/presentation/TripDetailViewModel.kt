@@ -2,14 +2,14 @@ package eg.bahr.feature.trips.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import eg.bahr.core.catalog.data.JoinedWaitlist
+import eg.bahr.core.catalog.data.WaitlistMemory
+import eg.bahr.core.catalog.model.TripCardDto
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.network.ApiErrorCodes
-import eg.bahr.feature.trips.data.JoinedWaitlist
 import eg.bahr.feature.trips.data.TripRepository
-import eg.bahr.feature.trips.data.WaitlistMemory
 import eg.bahr.feature.trips.model.DepartureDto
-import eg.bahr.feature.trips.model.TripCardDto
 import eg.bahr.feature.trips.model.TripDetailDto
 import eg.bahr.feature.trips.model.WaitlistRequest
 import kotlinx.coroutines.flow.MutableStateFlow

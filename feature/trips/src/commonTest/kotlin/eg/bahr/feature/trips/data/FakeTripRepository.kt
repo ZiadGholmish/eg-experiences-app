@@ -1,17 +1,16 @@
 package eg.bahr.feature.trips.data
 
+import eg.bahr.core.catalog.model.BadgeDto
+import eg.bahr.core.catalog.model.FacetDto
+import eg.bahr.core.catalog.model.NextDepartureDto
+import eg.bahr.core.catalog.model.TripCardDto
+import eg.bahr.core.catalog.model.TripPageDto
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.network.MoneyDto
-import eg.bahr.feature.trips.model.BadgeDto
 import eg.bahr.feature.trips.model.DepartureDto
-import eg.bahr.feature.trips.model.FacetDto
-import eg.bahr.feature.trips.model.HomeDto
-import eg.bahr.feature.trips.model.NextDepartureDto
-import eg.bahr.feature.trips.model.TripCardDto
 import eg.bahr.feature.trips.model.TripCardPageDto
 import eg.bahr.feature.trips.model.TripDetailDto
-import eg.bahr.feature.trips.model.TripPageDto
 import eg.bahr.feature.trips.model.WaitlistRequest
 import kotlinx.datetime.LocalDate
 
@@ -31,19 +30,10 @@ internal class FakeTripRepository(
     var departuresFor: suspend (slug: String) -> AppResult<List<DepartureDto>> = { unset() },
     var cards: Map<String, TripCardDto> = emptyMap(),
     var joinWaitlist: suspend (departureId: String, request: WaitlistRequest) -> AppResult<Unit> = { _, _ -> unset() },
-    var home: suspend () -> AppResult<HomeDto> = { unset() },
 ) : TripRepository {
     val requestedPages = mutableListOf<Int>()
     val requestedQueries = mutableListOf<TripQuery>()
     val sectionRequests = mutableListOf<Pair<String, Int>>()
-    var homeReads = 0
-        private set
-
-    override suspend fun home(): AppResult<HomeDto> {
-        homeReads++
-        return home.invoke()
-    }
-
     val departureReads = mutableListOf<String>()
     val waitlistJoins = mutableListOf<Pair<String, WaitlistRequest>>()
 

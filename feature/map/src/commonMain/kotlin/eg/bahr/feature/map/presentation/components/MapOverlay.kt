@@ -32,6 +32,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
+import eg.bahr.core.catalog.presentation.components.seatsLeft
 import eg.bahr.core.designsystem.components.BahrBadge
 import eg.bahr.core.designsystem.components.BahrCard
 import eg.bahr.core.designsystem.components.SeatBadge
@@ -271,7 +272,7 @@ private fun PriceRow(pin: MapPinDto) {
 @Composable
 private fun DateRow(pin: MapPinDto) {
     val next = pin.nextDeparture ?: return
-    val seats = if (next.soldOut == true) 0 else next.seatsRemaining
+    val seats = next.seatsLeft()
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm)) {
         next.date?.let {
             Text(BahrFormat.date(it), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)

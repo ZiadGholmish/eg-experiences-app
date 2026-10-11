@@ -8,6 +8,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performScrollToKey
+import eg.bahr.core.catalog.data.WaitlistMemory
+import eg.bahr.core.catalog.model.BadgeDto
+import eg.bahr.core.catalog.model.ImageDto
+import eg.bahr.core.catalog.model.RatingDto
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
@@ -20,13 +24,9 @@ import eg.bahr.feature.trips.data.FakeTripRepository
 import eg.bahr.feature.trips.data.FakeWaitlistJoinsStore
 import eg.bahr.feature.trips.data.TripDetailPayloads
 import eg.bahr.feature.trips.data.TripFixtures.trip
-import eg.bahr.feature.trips.data.WaitlistMemory
 import eg.bahr.feature.trips.data.storedJoin
 import eg.bahr.feature.trips.data.waitlistMemory
-import eg.bahr.feature.trips.model.BadgeDto
 import eg.bahr.feature.trips.model.DepartureDto
-import eg.bahr.feature.trips.model.ImageDto
-import eg.bahr.feature.trips.model.RatingDto
 import eg.bahr.feature.trips.model.TripDetailDto
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.datetime.DateTimeUnit

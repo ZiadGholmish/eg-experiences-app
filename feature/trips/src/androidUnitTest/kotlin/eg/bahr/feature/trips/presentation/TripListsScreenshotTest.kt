@@ -10,6 +10,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
+import eg.bahr.core.catalog.model.BadgeDto
+import eg.bahr.core.catalog.model.NextDepartureDto
+import eg.bahr.core.catalog.model.TripCardDto
+import eg.bahr.core.catalog.model.TripPageDto
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
@@ -24,13 +28,6 @@ import eg.bahr.feature.trips.data.TripFixtures.page
 import eg.bahr.feature.trips.data.TripFixtures.sectionPage
 import eg.bahr.feature.trips.data.TripFixtures.trip
 import eg.bahr.feature.trips.data.waitlistMemory
-import eg.bahr.feature.trips.model.BadgeDto
-import eg.bahr.feature.trips.model.HomeDto
-import eg.bahr.feature.trips.model.HomeSeeAllDto
-import eg.bahr.feature.trips.model.NextDepartureDto
-import eg.bahr.feature.trips.model.TripCardDto
-import eg.bahr.feature.trips.model.TripPageDto
-import eg.bahr.feature.trips.model.TripsSectionDto
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.datetime.LocalDate
@@ -45,10 +42,10 @@ import org.robolectric.annotation.GraphicsMode
 import java.util.Locale
 
 /**
- * M4-M1b: the category page × {ar, en} × {filtered, empty, loading, stale key}, a row's "See all"
- * list × {ar, en} × {loaded, gone}, and Home's row with its "See all" link, through the real view
- * models on a fake repository. The server answers in the request's language, so each language gets its
- * own copy. Device English on purpose (see TripListScreenshotTest).
+ * M4-M1b: the category page × {ar, en} × {filtered, empty, loading, stale key} and a row's "See all"
+ * list × {ar, en} × {loaded, gone}, through the real view models on a fake repository (Home's row with
+ * its "See all" link is feature:home's `HomeSeeAllScreenshotTest`, M4-M1c). The server answers in the request's language, so each language gets its
+ * own copy. Device English on purpose (see feature:home's TripListScreenshotTest).
  *
  * Record: `./gradlew :feature:trips:recordRoborazziDebug`; verify: `verifyRoborazziDebug`.
  */
@@ -232,34 +229,6 @@ class TripListsScreenshotTest {
             })
         val vm = SectionTripsViewModel("s-1", title, repository, waitlistMemory())
         snap(prefix, language) { SectionTripsScreen("s-1", title, {}, {}, viewModel = vm) }
-    }
-
-    // ---------- Home: a row with "See all" ----------
-
-    /** The row holds 2 of 14 trips, so its title line carries "See all" (rows are up to 50 long now). */
-    @Test
-    @Config(qualifiers = "en-w360dp-h640dp-xhdpi")
-    fun homeSeeAllArabic() = homeSeeAll(AppLanguage.ARABIC)
-
-    @Test
-    @Config(qualifiers = "en-w360dp-h640dp-xhdpi")
-    fun homeSeeAllEnglish() = homeSeeAll(AppLanguage.ENGLISH)
-
-    private fun homeSeeAll(language: AppLanguage) {
-        val arabic = language == AppLanguage.ARABIC
-        val row =
-            TripsSectionDto(
-                id = "s-1",
-                type = "trips",
-                title = if (arabic) "مختارات" else "Featured trips",
-                layout = "row",
-                items = cards(arabic),
-                totalItems = 14,
-                seeAll = HomeSeeAllDto(type = "section", value = "s-1"),
-            )
-        val repository = FakeTripRepository(listTrips = { page(cards(arabic)) }, home = { AppResult.Success(HomeDto(listOf(row))) })
-        val vm = TripListViewModel(repository, waitlistMemory())
-        snap("home_see_all", language) { TripListScreen(onTripClick = {}, onMap = {}, viewModel = vm) }
     }
 
     // ---------- Fixtures and plumbing ----------

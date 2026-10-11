@@ -6,18 +6,21 @@ import androidx.paging.Pager
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import co.touchlab.kermit.Logger
-import eg.bahr.core.common.result.AppError
+import eg.bahr.core.catalog.data.TripListPagingSource
+import eg.bahr.core.catalog.data.TripPagingConfig
+import eg.bahr.core.catalog.data.WaitlistMemory
+import eg.bahr.core.catalog.model.FILTER_ALL
+import eg.bahr.core.catalog.model.FacetDto
+import eg.bahr.core.catalog.model.FacetType
+import eg.bahr.core.catalog.model.TripCardDto
+import eg.bahr.core.catalog.model.TripPageDto
+import eg.bahr.core.catalog.presentation.Throttle
+import eg.bahr.core.catalog.presentation.WaitlistTags
+import eg.bahr.core.catalog.presentation.collectWaitlistTags
+import eg.bahr.core.catalog.presentation.distinctTrips
+import eg.bahr.core.catalog.presentation.isValidationFailure
 import eg.bahr.core.common.result.AppResult
-import eg.bahr.core.network.ApiErrorCodes
-import eg.bahr.feature.trips.data.TripListPagingSource
-import eg.bahr.feature.trips.data.TripPagingConfig
 import eg.bahr.feature.trips.data.TripRepository
-import eg.bahr.feature.trips.data.WaitlistMemory
-import eg.bahr.feature.trips.model.FILTER_ALL
-import eg.bahr.feature.trips.model.FacetDto
-import eg.bahr.feature.trips.model.FacetType
-import eg.bahr.feature.trips.model.TripCardDto
-import eg.bahr.feature.trips.model.TripPageDto
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -175,6 +178,3 @@ internal class CategoryTripsViewModel(
         val log = Logger.withTag("CategoryTrips")
     }
 }
-
-/** A 400 VALIDATION_FAILED: the server refused a key the request sent (a stale category or filter). */
-internal fun AppError.isValidationFailure(): Boolean = this is AppError.Api && code == ApiErrorCodes.VALIDATION_FAILED

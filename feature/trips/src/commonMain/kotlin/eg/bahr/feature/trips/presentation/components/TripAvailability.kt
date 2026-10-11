@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
+import eg.bahr.core.catalog.presentation.components.SectionTitle
 import eg.bahr.core.designsystem.components.BahrPrimaryButton
 import eg.bahr.core.designsystem.components.StickyActionBar
 import eg.bahr.core.designsystem.format.BahrFormat
