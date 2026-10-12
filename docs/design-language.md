@@ -49,8 +49,8 @@ wins.
 name: the icon sizes (`iconSmall/Medium/Large`, M1-M1a review #9) and component dimensions from the
 trip page (`marker`, `avatar`, `avatarSmall`, `timeColumn`, `connector`, `dateCard`, `skeletonLine`) and
 the date + party screen (`radio`, `stepSegmentWidth/Height`, `stepperValue`, M2-M1), the thin
-`progressBar` over a refreshing list (M4-M6), and the map's pins and drive line from map.html
-(`pinStem`, `pinDot`, `routeLine`, `routeDash`, `routeGap`, `legendDot`, M4-M2), and Home's
+`progressBar` over a refreshing list (M4-M6), and the map's pins and legend from map.html
+(`pinStem`, `pinDot`, `legendDot`, M4-M2; the drive line's `route*` sizes went with the drive, M4-M9), and Home's
 `logoTile` and hero-slide `heroForward` circle (M4-M1, M4-M7).
 They exist so `feature/*` holds no `.dp` (ModuleGraphTest). They are not design tokens: changing one
 changes a component, not the theme, and none has a Dusk/HighContrast variant. If design adds a size

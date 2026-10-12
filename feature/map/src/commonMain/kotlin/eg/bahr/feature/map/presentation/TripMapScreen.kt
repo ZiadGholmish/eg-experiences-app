@@ -19,9 +19,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,17 +44,15 @@ import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.action_retry
 import eg.bahr.core.localization.generated.resources.map_empty
 import eg.bahr.core.localization.generated.resources.map_list
-import eg.bahr.core.localization.generated.resources.map_note_drive
-import eg.bahr.core.localization.generated.resources.map_note_pick
 import eg.bahr.core.localization.generated.resources.map_note_pins
-import eg.bahr.core.localization.generated.resources.map_show_drive
-import eg.bahr.core.localization.generated.resources.map_show_drive_from
 import eg.bahr.core.localization.generated.resources.map_title
 import eg.bahr.core.localization.isRetryable
 import eg.bahr.core.localization.localizedMessage
 import eg.bahr.feature.map.presentation.components.MapOverlay
+import eg.bahr.feature.map.presentation.components.PinReveal
 import eg.bahr.feature.map.presentation.components.TripMap
 import eg.bahr.feature.map.presentation.components.TripMapScene
+import eg.bahr.feature.map.presentation.components.mapGround
 import eg.bahr.feature.map.presentation.components.rememberTripMapScene
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -74,7 +71,7 @@ internal typealias MapContent = @Composable (
 
 /**
  * The map (M4-M2, HANDOFF screen 2): an app bar (back, "Where the trips are", "List" back to Home),
- * the map in a rounded, raised panel with its toggles at the top and the legend (or a tapped pin's
+ * the map in a rounded, raised panel with the legend (or a tapped pin's
  * card) at the bottom, and a note under it on how to read it.
  *
  * Loading, error and empty take the map panel's place; the bar and note stay. A tapped pin opens its
@@ -93,7 +90,6 @@ internal fun TripMapScreen(
     map: MapContent = { scene, onPin, onMap, padding, mod -> TripMap(scene, onPin, onMap, padding, mod) },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val labels = rememberDriveLabels(state)
 
     Column(
         modifier =
@@ -127,38 +123,56 @@ internal fun TripMapScreen(
 
                 state.isEmpty -> BahrEmptyView(message = stringResource(Res.string.map_empty))
 
-                else -> MapPanel(state, labels, viewModel, onTripClick, map)
+                else -> MapPanel(state, viewModel, onTripClick, map)
             }
         }
-        MapNote(text = labels.note)
+        MapNote(text = stringResource(Res.string.map_note_pins))
     }
 }
 
-/** The map with its chrome. The chrome's measured height is the map's content padding. */
+/**
+ * The map with its chrome. The chrome's measured height is the map's content padding.
+ *
+ * The map itself is created once the chrome has been measured (a frame after the chrome is first
+ * laid out), so it starts framed inside the chrome rather than moving there after (M4-M9). Until
+ * then, and while the tiles load, the panel shows the map's placeholder ground.
+ */
 @Composable
 private fun MapPanel(
     state: TripMapUiState,
-    labels: DriveLabels,
     viewModel: TripMapViewModel,
     onTripClick: (String) -> Unit,
     map: MapContent,
 ) {
-    val scene = rememberTripMapScene(state) ?: return
+    val built = rememberTripMapScene(state) ?: return
     val density = LocalDensity.current
-    var topChrome by remember { mutableStateOf(0) }
-    var bottomChrome by remember { mutableStateOf(0) }
-    val padding = with(density) { PaddingValues(top = topChrome.toDp(), bottom = bottomChrome.toDp()) }
-    Box(Modifier.fillMaxSize()) {
-        map(scene, viewModel::selectPin, viewModel::clearSelection, padding, Modifier.fillMaxSize())
+    // Each bottom chrome's measured height, by the pin whose card it is (the legend under no pin):
+    // the map's bottom padding is the current selection's, once it has been measured.
+    val bottoms = remember { mutableStateMapOf<String, Int>() }
+    val bottomKey = state.selectedSlug ?: LEGEND_KEY
+    // The selection's card has been measured (a frame after it opens): only then is a pin revealed.
+    val chromeReady = bottomKey in bottoms
+    val bottomChrome = bottoms[bottomKey] ?: bottoms[LEGEND_KEY] ?: 0
+    val padding = with(density) { PaddingValues(bottom = bottomChrome.toDp()) }
+    // The picked pin, kept clear of its own card once that card is measured (M4-M9 review #2).
+    val margin = with(density) { BahrSpacing.sm.toPx() }
+    val reveal =
+        state.selectedSlug?.takeIf { chromeReady }?.let { slug ->
+            built.markers.firstOrNull { it.id == slug }?.let { pin ->
+                val belowAnchor = pin.image.bitmap.height * (1f - pin.image.anchorY)
+                PinReveal(pin.id, pin.point, clearancePx = belowAnchor + margin, cardHeightPx = bottomChrome)
+            }
+        }
+    val scene = built.copy(reveal = reveal)
+    Box(Modifier.fillMaxSize().background(mapGround())) {
+        if (bottomChrome > 0) {
+            map(scene, viewModel::selectPin, viewModel::clearSelection, padding, Modifier.fillMaxSize())
+        }
         MapOverlay(
             state = state,
-            driveLabel = labels.toggle,
-            onAllTrips = viewModel::showAllTrips,
-            onToggleDrive = viewModel::toggleDrive,
             onCloseCard = viewModel::clearSelection,
             onTripClick = onTripClick,
-            onTopSize = { topChrome = it },
-            onBottomSize = { bottomChrome = it },
+            onBottomSize = { height, slug -> bottoms[slug ?: LEGEND_KEY] = height },
         )
     }
 }
@@ -195,7 +209,7 @@ private fun MapTopBar(
     }
 }
 
-/** The note under the map (the prototype's mapNote panel): how to read the pins and the drive. */
+/** The note under the map (the prototype's mapNote panel): how to read the pins. */
 @Composable
 private fun MapNote(text: String) {
     val bottom = WindowInsets.navigationBars
@@ -224,27 +238,5 @@ private fun MapNote(text: String) {
     }
 }
 
-/** The drive toggle's label and the note, both naming the city the buses leave (Cairo). */
-private data class DriveLabels(
-    val toggle: String,
-    val note: String,
-)
-
-/**
- * "Show the drive from Cairo" when every departure point is in one city (today: Cairo), else the
- * plain "Show the drive". The note says how to read the map; with the drive on and no pin picked, it
- * says to pick one, since the line runs to the picked trip.
- */
-@Composable
-private fun rememberDriveLabels(state: TripMapUiState): DriveLabels {
-    val points = state.map?.departurePoints.orEmpty()
-    val city = points.map { it.city ?: it.placeName }.distinct().singleOrNull()
-    val toggle = city?.let { stringResource(Res.string.map_show_drive_from, it) } ?: stringResource(Res.string.map_show_drive)
-    val note =
-        when {
-            city == null -> stringResource(Res.string.map_note_pins)
-            state.showsDrive && state.selectedSlug == null -> stringResource(Res.string.map_note_pick, city)
-            else -> stringResource(Res.string.map_note_drive, city, toggle)
-        }
-    return DriveLabels(toggle = toggle, note = note)
-}
+/** The legend's entry among the bottom chrome heights (cards are keyed by their pin's slug). */
+private const val LEGEND_KEY = ""

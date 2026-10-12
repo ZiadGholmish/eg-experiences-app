@@ -1,8 +1,19 @@
 package eg.bahr.feature.map.presentation.components
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -19,7 +30,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -30,8 +40,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.LayoutDirection
 import eg.bahr.core.catalog.presentation.components.seatsLeft
 import eg.bahr.core.designsystem.components.BahrBadge
 import eg.bahr.core.designsystem.components.BahrCard
@@ -40,18 +53,17 @@ import eg.bahr.core.designsystem.format.BahrFormat
 import eg.bahr.core.designsystem.icon.BahrIcons
 import eg.bahr.core.designsystem.theme.BahrBorder
 import eg.bahr.core.designsystem.theme.BahrElevation
+import eg.bahr.core.designsystem.theme.BahrMotion
 import eg.bahr.core.designsystem.theme.BahrSize
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.designsystem.theme.bahrShadow
-import eg.bahr.core.designsystem.theme.bahrTween
+import eg.bahr.core.designsystem.theme.reducedMotion
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.departure_sold_out
 import eg.bahr.core.localization.generated.resources.format_pair
-import eg.bahr.core.localization.generated.resources.map_all_trips
 import eg.bahr.core.localization.generated.resources.map_card_bus_time
 import eg.bahr.core.localization.generated.resources.map_card_close
-import eg.bahr.core.localization.generated.resources.map_legend_departure
 import eg.bahr.core.localization.generated.resources.map_view_trip
 import eg.bahr.core.localization.generated.resources.trip_fact_distance
 import eg.bahr.core.localization.generated.resources.trip_nights_badge
@@ -60,95 +72,110 @@ import eg.bahr.feature.map.model.MapPinDto
 import eg.bahr.feature.map.presentation.TripMapUiState
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
+import kotlin.math.roundToInt
 
 /**
- * Everything drawn over the map: the two toggles at the top (map.html `.ui`: "All trips" and "Show
- * the drive from Cairo", the pressed one filled), and at the bottom either the legend or, when a pin
- * is tapped, its card. The legend and card swap with a crossfade (instant under reduce motion).
+ * What is drawn over the bottom of the map: the legend, or, when a pin is tapped, its card. The card
+ * slides in and out, and between pins ([cardTransition], M4-M9). (The prototype's toggles over the
+ * map, "Show the drive" and "All trips", were removed by user decision 2026-10-12.)
  *
- * [onTopSize] and [onBottomSize] report the chrome's heights in pixels: the map keeps its camera and
- * Google's logo clear of them.
+ * [onBottomSize] reports each card's height in pixels with the pin whose card it is (null for the
+ * legend): the map keeps its camera and Google's logo clear of it.
  */
 @Composable
 internal fun MapOverlay(
     state: TripMapUiState,
-    driveLabel: String,
-    onAllTrips: () -> Unit,
-    onToggleDrive: () -> Unit,
     onCloseCard: () -> Unit,
     onTripClick: (String) -> Unit,
-    onTopSize: (Int) -> Unit,
-    onBottomSize: (Int) -> Unit,
+    onBottomSize: (height: Int, forSlug: String?) -> Unit,
 ) {
     Box(Modifier.fillMaxSize()) {
-        @OptIn(ExperimentalLayoutApi::class)
-        FlowRow(
-            modifier =
-                Modifier
-                    .align(Alignment.TopStart)
-                    .fillMaxWidth()
-                    .onSizeChanged { onTopSize(it.height) }
-                    .padding(BahrSpacing.md),
-            horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm),
-            verticalArrangement = Arrangement.spacedBy(BahrSpacing.sm),
-        ) {
-            MapToggle(text = stringResource(Res.string.map_all_trips), selected = !state.showsDrive, onClick = onAllTrips)
-            if (state.map?.departurePoints?.isNotEmpty() == true) {
-                MapToggle(text = driveLabel, selected = state.showsDrive, onClick = onToggleDrive)
-            }
-        }
-
         val selected = state.selectedPin
-        val fade = bahrTween<Float>()
+        val reduced = BahrTheme.reducedMotion
+        val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
         AnimatedContent(
             targetState = selected,
             modifier =
                 Modifier
                     .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .onSizeChanged { onBottomSize(it.height) },
-            transitionSpec = { fadeIn(fade) togetherWith fadeOut(fade) },
+                    .fillMaxWidth(),
+            transitionSpec = { cardTransition(reduced, rtl) },
             contentAlignment = Alignment.BottomStart,
             contentKey = { it?.slug },
+            label = "pinCard",
         ) { pin ->
-            if (pin != null) {
-                PinCard(pin = pin, onClick = { onTripClick(pin.slug) }, onClose = onCloseCard)
-            } else {
-                MapLegend(state)
+            // Each content's own height, by the pin it shows (null: the legend), as soon as it is
+            // measured: the screen looks up the current selection's, so the map's padding changes once
+            // (not frame by frame as the box grows), and quick taps cannot leave a stale height behind
+            // (M4-M9).
+            Box(Modifier.onSizeChanged { onBottomSize(it.height, pin?.slug) }) {
+                if (pin != null) {
+                    PinCard(pin = pin, onClick = { onTripClick(pin.slug) }, onClose = onCloseCard)
+                } else {
+                    MapLegend(state)
+                }
             }
         }
     }
 }
 
-/** One of the two toggles: filled when it is the current view. */
-@Composable
-private fun MapToggle(
-    text: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    val c = MaterialTheme.colorScheme
-    val shape = BahrTheme.shapes.full
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelLarge,
-        color = if (selected) c.onPrimary else c.primary,
-        maxLines = 1,
-        modifier =
-            Modifier
-                .bahrShadow(BahrElevation.Float, shape, BahrTheme.colors)
-                .clip(shape)
-                .background(if (selected) c.primary else c.surface)
-                .selectable(selected = selected, role = Role.Tab, onClick = onClick)
-                .heightIn(min = BahrSpacing.minTouch)
-                .padding(horizontal = BahrSpacing.lg, vertical = BahrSpacing.md),
-    )
+/**
+ * How the bottom of the map changes (M4-M9, user request 2026-10-11), on the M4-M6 tokens
+ * ([BahrMotion.Medium], [BahrMotion.Standard]):
+ * - a pin picked: its card slides up from the panel's bottom edge, fading in, as the legend fades;
+ * - another pin picked: the card's content slides a short way ([BahrMotion.CardSlideFraction]) in from
+ *   the new pin's side of the old one, fading, and the old content out the other way;
+ * - the card closed: it slides down out of the panel, fading, as the legend fades back in.
+ *
+ * The space the card takes grows or shrinks with it and is not clipped, so the card is seen sliding,
+ * not uncovered. Under reduce motion everything changes at once.
+ */
+private fun AnimatedContentTransitionScope<MapPinDto?>.cardTransition(
+    reduced: Boolean,
+    rtl: Boolean,
+): ContentTransform {
+    if (reduced) return EnterTransition.None togetherWith ExitTransition.None using SizeTransform(clip = false) { _, _ -> snap() }
+    val slide = tween<IntOffset>(BahrMotion.Medium, easing = BahrMotion.Standard)
+    val fade = tween<Float>(BahrMotion.Medium, easing = BahrMotion.Standard)
+    val from = initialState
+    val to = targetState
+    val change =
+        when {
+            from == null && to != null -> (slideInVertically(slide) { it } + fadeIn(fade)) togetherWith fadeOut(fade)
+            from != null && to == null -> fadeIn(fade) togetherWith (slideOutVertically(slide) { it } + fadeOut(fade))
+            from != null && to != null -> {
+                val side = cardEntrySide(from, to, rtl)
+                (slideInHorizontally(slide) { side * (it * BahrMotion.CardSlideFraction).roundToInt() } + fadeIn(fade)) togetherWith
+                    (slideOutHorizontally(slide) { -side * (it * BahrMotion.CardSlideFraction).roundToInt() } + fadeOut(fade))
+            }
+            else -> fadeIn(fade) togetherWith fadeOut(fade)
+        }
+    return change using SizeTransform(clip = false) { _, _ -> tween(BahrMotion.Medium, easing = BahrMotion.Standard) }
 }
 
 /**
- * What the pin colours mean: each category in the legend with its tone, "Sold out" when a pin is
- * grey, and the dark bus marker ("Bus departure", this app's own entry; the contract's legend lists
- * categories only). Chips that wrap, on the page colour slightly see-through (map.html `.legend`).
+ * Which side the new pin's card comes in from, as a sign on the x axis: +1 from the right, -1 from the
+ * left. Geographic, the same in both languages (PLAN M4-M9, clarified 2026-10-11): a pin east of the
+ * old one brings its card in from the right, a pin west of it from the left, in English and in Arabic
+ * alike, because the map is not mirrored in Arabic and cannot be rotated. Right-to-left only breaks a
+ * tie (two pins on the same meridian): the card then comes in from the end side, as a step forward in
+ * the reading direction does: from the right in English, from the left in Arabic.
+ */
+internal fun cardEntrySide(
+    from: MapPinDto,
+    to: MapPinDto,
+    rtl: Boolean,
+): Int =
+    when {
+        to.lng > from.lng -> 1
+        to.lng < from.lng -> -1
+        rtl -> -1
+        else -> 1
+    }
+
+/**
+ * What the pin colours mean: each category in the legend with its tone, and "Sold out" when a pin is
+ * grey. Chips that wrap, on the page colour slightly see-through (map.html `.legend`).
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -169,7 +196,6 @@ private fun MapLegend(state: TripMapUiState) {
     ) {
         data.legend.forEach { LegendEntry(it.label, palette.tone(it.tone)) }
         if (data.pins.any { it.isSoldOut }) LegendEntry(stringResource(Res.string.departure_sold_out), palette.soldOut)
-        if (data.departurePoints.isNotEmpty()) LegendEntry(stringResource(Res.string.map_legend_departure), palette.departure)
     }
 }
 
@@ -188,8 +214,8 @@ private fun LegendEntry(
 
 /**
  * A tapped pin's card (map.html's popup): title and place, the price per person with a nights badge
- * on a multi-day trip, the next date with its seats (or "Sold out"), the bus time and the drive's
- * length, and "View trip". The whole card opens the trip; the × closes it.
+ * on a multi-day trip, the next date with its seats (or "Sold out"), the bus time and the road
+ * distance, and "View trip". The whole card opens the trip; the × closes it.
  */
 @Composable
 private fun PinCard(
@@ -281,7 +307,7 @@ private fun DateRow(pin: MapPinDto) {
     }
 }
 
-/** "Bus leaves at 05:00 · 150 km": this pin's own bus time and drive, whichever are known. */
+/** "Bus leaves at 05:00 · 150 km": this pin's own bus time and road distance, whichever are known. */
 @Composable
 private fun BusRow(pin: MapPinDto) {
     val time = pin.departTime?.let { stringResource(Res.string.map_card_bus_time, BahrFormat.ltr(it)) }

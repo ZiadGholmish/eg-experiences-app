@@ -35,13 +35,13 @@ import org.robolectric.annotation.GraphicsMode
 import kotlin.test.assertEquals
 
 /**
- * M4-M2: the map screen × {ar, en} × {loading, legend, a pin's card with the drive, a sold-out
+ * M4-M2: the map screen × {ar, en} × {loading, legend, a sold-out
  * overnight pin's card, error, empty}, through the real view model on a fake repository.
  *
  * The map itself is [TripMapCanvas], the plain-ground fallback a build without a Maps key draws:
  * neither Google map (maps-compose's MapView, the iOS SDK's GMSMapView) can render under Robolectric.
- * So these goldens cover the chrome (bar, toggles, legend, card, note, states) and the pins' and
- * line's own pictures, not Google's tiles, style or camera.
+ * So these goldens cover the chrome (bar, legend, card, note, states) and the pins' own pictures,
+ * not Google's tiles, style or camera.
  *
  * Record: `./gradlew :feature:map:recordRoborazziDebug`; verify: `verifyRoborazziDebug`.
  */
@@ -68,7 +68,7 @@ class TripMapScreenshotTest {
         shoot("map_loading", language, vm)
     }
 
-    /** Every pin framed, the legend with "Sold out" and "Bus departure", the toggles, the note. */
+    /** Every pin framed, the legend with "Sold out", the note. */
     @Test
     fun loadedArabic() = loaded(AppLanguage.ARABIC)
 
@@ -76,21 +76,6 @@ class TripMapScreenshotTest {
     fun loadedEnglish() = loaded(AppLanguage.ENGLISH)
 
     private fun loaded(language: AppLanguage) = shoot("map_loaded", language, viewModel(language))
-
-    /** A pin tapped with the drive on: its card, the dark Cairo marker, the dashed line and "150 km". */
-    @Test
-    fun driveArabic() = drive(AppLanguage.ARABIC)
-
-    @Test
-    fun driveEnglish() = drive(AppLanguage.ENGLISH)
-
-    private fun drive(language: AppLanguage) {
-        val vm = viewModel(language)
-        shoot("map_drive", language, vm) {
-            vm.selectPin("burullus-dawn")
-            vm.toggleDrive()
-        }
-    }
 
     /** The sold-out two-day pin's card: "Sold out", the nights badge, its own bus time. */
     @Test

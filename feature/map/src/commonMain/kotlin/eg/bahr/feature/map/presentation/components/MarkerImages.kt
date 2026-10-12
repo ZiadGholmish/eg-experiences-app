@@ -13,6 +13,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.TextMeasurer
@@ -25,6 +26,7 @@ import eg.bahr.core.catalog.presentation.components.Tint
 import eg.bahr.core.catalog.presentation.components.colors
 import eg.bahr.core.catalog.presentation.components.toneTint
 import eg.bahr.core.designsystem.theme.BahrBorder
+import eg.bahr.core.designsystem.theme.BahrMotion
 import eg.bahr.core.designsystem.theme.BahrSize
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import kotlin.math.ceil
@@ -72,8 +74,9 @@ internal class MarkerPainter(
     /**
      * Pictures already drawn, by what they show. A tap changes two pins (the old and new selection), so
      * the rest keep their very picture, and the platform maps (iOS caches its `UIImage`s by picture)
-     * convert only those two. Bounded by the map's content: each pin selected or not, plus the
-     * departure markers and distance tags shown. Only touched from composition.
+     * convert only those two. Bounded by the map's content: each pin selected (drawn grown) or not.
+     * The selected pin's spring (M4-M9) scales
+     * that one grown picture on the way and draws nothing new. Only touched from composition.
      */
     private val drawn = mutableMapOf<DrawnKey, MarkerImage>()
 
@@ -81,23 +84,26 @@ internal class MarkerPainter(
         val label: String,
         val colors: PinColors,
         val selected: Boolean,
-        val tag: Boolean,
+        val scale: Float = 1f,
     )
 
     /**
      * A pin: [label] in a pill over a stem and a dot, anchored on the dot's centre. [selected] rings the
-     * pill in the page colour, so the open card's pin stands out on the map.
+     * pill in the page colour, so the open card's pin stands out on the map. [scale] draws the whole
+     * pin that much bigger, sharp (the selected pin, [BahrMotion.PinSelectedScale], M4-M9).
      */
     fun pin(
         label: String,
         colors: PinColors,
         selected: Boolean = false,
-    ): MarkerImage = drawn.getOrPut(DrawnKey(label, colors, selected, tag = false)) { drawPin(label, colors, selected) }
+        scale: Float = 1f,
+    ): MarkerImage = drawn.getOrPut(DrawnKey(label, colors, selected, scale = scale)) { drawPin(label, colors, selected, scale) }
 
     private fun drawPin(
         label: String,
         colors: PinColors,
         selected: Boolean,
+        scale: Float,
     ): MarkerImage {
         val text = measurer.measure(label, style.copy(color = colors.content), layoutDirection = direction, density = density)
         // The ring is drawn inside the picture, so the pill sits inset by it on every side.
@@ -105,12 +111,13 @@ internal class MarkerPainter(
         val pillW = text.size.width + 2 * padH
         val pillH = text.size.height + 2 * padV
         val dotOuter = dotRadius + ringWidth
-        val width = ceil(pillW + 2 * inset).toInt()
-        val height = ceil(inset + pillH + stemHeight + 2 * dotOuter).toInt()
-        val bitmap = ImageBitmap(width, height)
-        val centerX = width / 2f
+        val width = pillW + 2 * inset
+        val height = inset + pillH + stemHeight + 2 * dotOuter
+        val bitmap = ImageBitmap(ceil(width * scale).toInt(), ceil(height * scale).toInt())
+        // The picture's own middle (its width rounded up), unscaled: where the stem and dot stand.
+        val centerX = bitmap.width / scale / 2f
         val dotCenterY = inset + pillH + stemHeight + dotOuter
-        draw(bitmap) {
+        draw(bitmap, scale) {
             val pillTopLeft = Offset(inset, inset)
             val corner = CornerRadius(pillH / 2)
             drawRect(colors.fill, Offset(centerX - stemWidth / 2, inset + pillH), Size(stemWidth, stemHeight))
@@ -123,38 +130,17 @@ internal class MarkerPainter(
             colors.outline?.let { drawRoundRect(it, pillTopLeft, Size(pillW, pillH), corner, style = Stroke(hairline)) }
             drawText(text, topLeft = Offset(inset + padH, inset + padV))
         }
-        return MarkerImage(bitmap, anchorX = .5f, anchorY = dotCenterY / height)
+        return MarkerImage(bitmap, anchorX = .5f, anchorY = dotCenterY * scale / bitmap.height)
     }
 
-    /** A label alone (the drive's "150 km"), centred on its point. */
-    fun tag(
-        label: String,
-        colors: PinColors,
-    ): MarkerImage = drawn.getOrPut(DrawnKey(label, colors, selected = false, tag = true)) { drawTag(label, colors) }
-
-    private fun drawTag(
-        label: String,
-        colors: PinColors,
-    ): MarkerImage {
-        val text = measurer.measure(label, style.copy(color = colors.content), layoutDirection = direction, density = density)
-        val width = ceil(text.size.width + 2 * padH).toInt()
-        val height = ceil(text.size.height + 2 * padV).toInt()
-        val bitmap = ImageBitmap(width, height)
-        draw(bitmap) {
-            val corner = CornerRadius(height / 2f)
-            drawRoundRect(colors.fill, cornerRadius = corner)
-            colors.outline?.let { drawRoundRect(it, cornerRadius = corner, style = Stroke(hairline)) }
-            drawText(text, topLeft = Offset(padH, padV))
-        }
-        return MarkerImage(bitmap, anchorX = .5f, anchorY = .5f)
-    }
-
+    /** Draws [block] into [bitmap], [scale]d from its top-left corner (the picture is sized for it). */
     private fun draw(
         bitmap: ImageBitmap,
+        scale: Float = 1f,
         block: DrawScope.() -> Unit,
     ) {
         val size = Size(bitmap.width.toFloat(), bitmap.height.toFloat())
-        CanvasDrawScope().draw(density, direction, Canvas(bitmap), size, block)
+        CanvasDrawScope().draw(density, direction, Canvas(bitmap), size) { scale(scale, pivot = Offset.Zero) { block() } }
     }
 }
 
@@ -163,9 +149,6 @@ internal class MarkerPainter(
 internal data class MapPalette(
     val tints: Map<Tint, PinColors>,
     val soldOut: PinColors,
-    val departure: PinColors,
-    val distance: PinColors,
-    val route: Color,
 ) {
     /**
      * A pin in the contract's `Tone`, through core:catalog's [toneTint] (the one `Tone` mapping, shared
@@ -176,10 +159,10 @@ internal data class MapPalette(
 
 /**
  * Solid pins, dark fill and light label, as the handoff draws them on the map (teal for the water,
- * a dark coral for the village, ink for the bus). Each tone takes its tint's text colour for the fill
+ * a dark coral for the village). Each tone takes its tint's text colour for the fill
  * and its container for the label, the badge pairing turned inside out, so every tone stays readable
  * on a pale map. The coral tint is the coral *container* family only: coral itself is for actions
- * (mobile rule 3). Sold out is grey with an outline; the bus departure is ink.
+ * (mobile rule 3). Sold out is grey with an outline.
  */
 @Composable
 internal fun rememberMapPalette(): MapPalette {
@@ -190,9 +173,6 @@ internal fun rememberMapPalette(): MapPalette {
         MapPalette(
             tints = tints.mapValues { (_, tint) -> PinColors(fill = tint.content, content = tint.container) },
             soldOut = PinColors(c.surfaceContainer, c.onSurfaceVariant, outline = c.outline),
-            departure = PinColors(c.onSurface, c.surface),
-            distance = PinColors(c.surface, c.onSurface, outline = c.onSurface),
-            route = c.onSurface,
         )
     }
 }

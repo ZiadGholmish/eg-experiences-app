@@ -60,7 +60,7 @@ struct ContentView: View {
         }
         // The selected tab's own colour (Home teal, Search gold, Map green, Settings magenta), from the
         // shared theme. The others are muted with the theme's onSurfaceVariant, also from the shared code:
-        // the labels through TabBarModel.mute, the icons drawn in that colour (TabBarModel.icon).
+        // the labels through TabBarModel.muteLabels, the icons drawn in that colour (TabBarModel.icon).
         .tint(tabs.selectedTint)
         .modifier(MinimizesOnScroll())
         .environment(\.layoutDirection, tabs.rightToLeft ? .rightToLeft : .leftToRight)

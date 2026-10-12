@@ -25,30 +25,36 @@ enum GoogleMapsSetup {
 }
 
 final class GoogleMapsBridge: NSObject, MapTripMapNativeViews {
-    func createMap(styleJson: String, events: MapTripMapNativeEvents) -> UIView {
-        TripMapContainer(styleJson: styleJson, events: events)
+    func createMap(styleJson: String, events: MapTripMapNativeEvents, start: MapTripMapNativeStart) -> UIView {
+        TripMapContainer(styleJson: styleJson, events: events, start: start)
     }
 
-    func setPadding(map: UIView, top: Double, left: Double, bottom: Double, right: Double) {
-        (map as? TripMapContainer)?.map.padding = UIEdgeInsets(top: top, left: left, bottom: bottom, right: right)
+    func setPadding(map: UIView, top: Double, left: Double, bottom: Double, right: Double, shiftX: Double, shiftY: Double) {
+        (map as? TripMapContainer)?.setPadding(
+            UIEdgeInsets(top: top, left: left, bottom: bottom, right: right), shift: CGPoint(x: shiftX, y: shiftY)
+        )
     }
 
     func setMarkers(map: UIView, markers: [MapTripMapNativeMarker]) {
         (map as? TripMapContainer)?.show(markers: markers)
     }
 
-    func setRoute(map: UIView, route: MapTripMapNativeRoute?) {
-        (map as? TripMapContainer)?.show(route: route)
+    func pointY(map: UIView, lat: Double, lng: Double) -> Double {
+        (map as? TripMapContainer)?.pointY(CLLocationCoordinate2D(latitude: lat, longitude: lng)) ?? .nan
+    }
+
+    func pan(map: UIView, dy: Double, durationSeconds: Double) {
+        (map as? TripMapContainer)?.pan(dy: dy, duration: durationSeconds)
     }
 
     func fitBounds(
-        map: UIView, south: Double, west: Double, north: Double, east: Double, edgePadding: Double, animated: Bool
+        map: UIView, south: Double, west: Double, north: Double, east: Double, edgePadding: Double
     ) {
         let bounds = GMSCoordinateBounds(
             coordinate: CLLocationCoordinate2D(latitude: south, longitude: west),
             coordinate: CLLocationCoordinate2D(latitude: north, longitude: east)
         )
-        (map as? TripMapContainer)?.fit(bounds, padding: edgePadding, animated: animated)
+        (map as? TripMapContainer)?.fit(bounds, padding: edgePadding)
     }
 }
 
@@ -57,18 +63,33 @@ final class GoogleMapsBridge: NSObject, MapTripMapNativeViews {
 private final class TripMapContainer: UIView, GMSMapViewDelegate {
     let map: GMSMapView
     private let events: MapTripMapNativeEvents
-    private var markers: [GMSMarker] = []
-    private var line: GMSPolyline?
+    /// The markers on the map, by the id Kotlin gave them: updated in place (M4-M9).
+    private var markers: [String: GMSMarker] = [:]
     private var pendingFit: (bounds: GMSCoordinateBounds, padding: Double)?
+    /// The selected pin's spring, from the shared motion tokens.
+    private let springStiffness: Double
+    private let springDamping: Double
+    /// How long a marker view whose picture changed is tracked, so the SDK draws the new picture.
+    private static let redrawWindow: TimeInterval = 0.1
+    /// Set by the first framing: from then on a padding change keeps the map still.
+    private var framed = false
+    /// The pan's curve, the shared motion tokens' Standard easing.
+    private let panTiming: CAMediaTimingFunction
 
-    /// How many dashes the drive line is cut into. GMSStyleSpans measure in metres, not points, so the
-    /// pattern is spread along the line's own length rather than kept at the design's 6/7 pt.
-    private static let dashCount = 40.0
-
-    init(styleJson: String, events: MapTripMapNativeEvents) {
+    init(styleJson: String, events: MapTripMapNativeEvents, start: MapTripMapNativeStart) {
         let options = GMSMapViewOptions()
+        // Framed on the pins from the first frame, not on the world at zoom 0, and on the app's map
+        // ground until the tiles arrive (M4-M9). Both come from Kotlin.
+        options.camera = GMSCameraPosition(latitude: start.lat, longitude: start.lng, zoom: Float(start.zoom))
+        options.backgroundColor = start.placeholder
         map = GMSMapView(options: options)
         self.events = events
+        springStiffness = start.springStiffness
+        // UIKit's spring takes a damping coefficient; the token is a ratio of the critical one (mass 1).
+        springDamping = 2 * start.springDampingRatio * start.springStiffness.squareRoot()
+        panTiming = CAMediaTimingFunction(
+            controlPoints: Float(start.easeX1), Float(start.easeY1), Float(start.easeX2), Float(start.easeY2)
+        )
         super.init(frame: .zero)
         // No map ID anywhere: a map ID makes the SDK ignore a JSON style.
         do {
@@ -107,56 +128,99 @@ private final class TripMapContainer: UIView, GMSMapViewDelegate {
         map.frame = bounds
         if let pending = pendingFit, bounds.width > 0, bounds.height > 0 {
             pendingFit = nil
-            fit(pending.bounds, padding: pending.padding, animated: false)
+            fit(pending.bounds, padding: pending.padding)
         }
     }
 
+    /// The chrome's space at the edges. Once framed, the camera moves by `shift`, which Kotlin works
+    /// out (`keepStillShift`, shared with Android) so the map keeps still under a card that opens or
+    /// closes (M4-M9); Google's logo still moves with the padding, clear of the card.
+    func setPadding(_ padding: UIEdgeInsets, shift: CGPoint) {
+        guard padding != map.padding else { return }
+        map.padding = padding
+        guard framed, shift != .zero else { return }
+        map.moveCamera(GMSCameraUpdate.scrollBy(x: shift.x, y: shift.y))
+    }
+
+    /// Where a coordinate is drawn, in points from the top; NaN until the first framing.
+    func pointY(_ coordinate: CLLocationCoordinate2D) -> Double {
+        guard framed else { return .nan }
+        return Double(map.projection.point(for: coordinate).y)
+    }
+
+    /// Moves the content up by `dy` points (the camera down): over `duration` on the shared curve, or
+    /// at once when it is 0. Kotlin decides whether and how far (a picked pin kept clear of its card).
+    func pan(dy: Double, duration: Double) {
+        let update = GMSCameraUpdate.scrollBy(x: 0, y: dy)
+        guard duration > 0 else {
+            map.moveCamera(update)
+            return
+        }
+        CATransaction.begin()
+        CATransaction.setAnimationDuration(duration)
+        CATransaction.setAnimationTimingFunction(panTiming)
+        map.animate(with: update)
+        CATransaction.commit()
+    }
+
+    /// Updates the markers in place by id; a marker that starts growing springs (M4-M9).
     func show(markers items: [MapTripMapNativeMarker]) {
-        markers.forEach { $0.map = nil }
-        markers = items.map { item in
-            let marker = GMSMarker(position: CLLocationCoordinate2D(latitude: item.lat, longitude: item.lng))
-            marker.icon = item.icon
+        let wanted = Set(items.map(\.id))
+        for (id, marker) in markers where !wanted.contains(id) {
+            marker.map = nil
+            markers[id] = nil
+        }
+        for item in items {
+            let marker = markers[item.id] ?? GMSMarker()
+            marker.position = CLLocationCoordinate2D(latitude: item.lat, longitude: item.lng)
             marker.groundAnchor = CGPoint(x: item.anchorX, y: item.anchorY)
             marker.zIndex = item.zIndex
             marker.isTappable = item.tappable
             marker.userData = item.id
             // What VoiceOver reads. No info window opens: taps are consumed in didTap below.
             marker.title = item.accessibilityLabel
-            marker.map = map
-            return marker
+            if item.growFrom < 1 {
+                if let pin = marker.iconView as? GrowingPin {
+                    // Still selected with a new picture: re-laid out to its size, and drawn again once
+                    // (after its spring the SDK no longer tracks the view).
+                    if pin.image !== item.icon {
+                        pin.show(item.icon, anchor: marker.groundAnchor)
+                        if !pin.growing {
+                            marker.tracksViewChanges = true
+                            DispatchQueue.main.asyncAfter(deadline: .now() + Self.redrawWindow) {
+                                if !pin.growing { marker.tracksViewChanges = false }
+                            }
+                        }
+                    }
+                } else {
+                    let pin = GrowingPin(image: item.icon, anchor: marker.groundAnchor)
+                    marker.icon = nil
+                    marker.iconView = pin
+                    // Redrawn every frame only while the spring runs.
+                    marker.tracksViewChanges = true
+                    pin.grow(from: item.growFrom, stiffness: springStiffness, damping: springDamping) {
+                        marker.tracksViewChanges = false
+                    }
+                }
+            } else {
+                marker.iconView = nil
+                marker.icon = item.icon
+            }
+            if markers[item.id] == nil {
+                marker.map = map
+                markers[item.id] = marker
+            }
         }
     }
 
-    func show(route: MapTripMapNativeRoute?) {
-        line?.map = nil
-        line = nil
-        guard let route else { return }
-        let path = GMSMutablePath()
-        path.add(CLLocationCoordinate2D(latitude: route.fromLat, longitude: route.fromLng))
-        path.add(CLLocationCoordinate2D(latitude: route.toLat, longitude: route.toLng))
-        let polyline = GMSPolyline(path: path)
-        polyline.strokeWidth = route.width
-        polyline.strokeColor = route.color
-        let metres = GMSGeometryLength(path)
-        let period = metres / Self.dashCount
-        let dash = period * route.dash / (route.dash + route.gap)
-        polyline.spans = GMSStyleSpans(
-            path,
-            [GMSStrokeStyle.solidColor(route.color), GMSStrokeStyle.solidColor(.clear)],
-            [NSNumber(value: dash), NSNumber(value: period - dash)],
-            .rhumb
-        )
-        polyline.map = map
-        line = polyline
-    }
-
-    func fit(_ target: GMSCoordinateBounds, padding: Double, animated: Bool) {
+    /// The map's one framing, at once (M4-M9: picking a pin never re-frames the map).
+    func fit(_ target: GMSCoordinateBounds, padding: Double) {
         guard bounds.width > 0, bounds.height > 0 else {
             pendingFit = (target, padding)
             return
         }
-        let update = GMSCameraUpdate.fit(target, withPadding: padding)
-        if animated { map.animate(with: update) } else { map.moveCamera(update) }
+        map.moveCamera(GMSCameraUpdate.fit(target, withPadding: padding))
+        framed = true
     }
 
     func mapView(_ mapView: GMSMapView, didTap marker: GMSMarker) -> Bool {
@@ -167,5 +231,65 @@ private final class TripMapContainer: UIView, GMSMapViewDelegate {
 
     func mapView(_ mapView: GMSMapView, didTapAt coordinate: CLLocationCoordinate2D) {
         events.onMapTap()
+    }
+}
+
+/// The selected pin as a marker view (M4-M9): its picture (drawn grown by Kotlin) springs up from its
+/// unselected share around the anchor, the point on the map. A marker view is clipped to its bounds, so
+/// the picture sits in a slightly larger box with room for the spring's overshoot, placed so the anchor
+/// is the same fraction of the box as of the picture: the marker's ground anchor stays as Kotlin set it.
+private final class GrowingPin: UIView {
+    /// The spring overshoots its target by under 2% (medium-bouncy damping over a 12% grow); 5% room
+    /// keeps the overshoot from being cut off.
+    private static let overshootRoom: CGFloat = 1.05
+
+    private let picture = UIImageView()
+
+    var image: UIImage? { picture.image }
+
+    /// True while the spring runs (the SDK tracks the view then anyway).
+    private(set) var growing = false
+
+    init(image: UIImage, anchor: CGPoint) {
+        super.init(frame: .zero)
+        addSubview(picture)
+        show(image, anchor: anchor)
+    }
+
+    /// Shows [image], the box sized for it with room, the anchor where it would be without room.
+    func show(_ image: UIImage, anchor: CGPoint) {
+        let size = image.size
+        let room = Self.overshootRoom
+        let transform = picture.transform
+        picture.transform = .identity
+        frame = CGRect(origin: .zero, size: CGSize(width: size.width * room, height: size.height * room))
+        picture.image = image
+        // Scale about the anchor, which sits where it would in a box without room.
+        picture.layer.anchorPoint = anchor
+        picture.frame = CGRect(
+            x: anchor.x * size.width * (room - 1),
+            y: anchor.y * size.height * (room - 1),
+            width: size.width,
+            height: size.height
+        )
+        picture.transform = transform
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+
+    /// From [from] of full size up to full, on a spring of the given stiffness and damping (mass 1).
+    func grow(from: Double, stiffness: Double, damping: Double, completion: @escaping () -> Void) {
+        picture.transform = CGAffineTransform(scaleX: from, y: from)
+        let spring = UISpringTimingParameters(mass: 1, stiffness: stiffness, damping: damping, initialVelocity: .zero)
+        // The duration is ignored for a spring given by mass, stiffness and damping: it runs until it settles.
+        let animator = UIViewPropertyAnimator(duration: 0, timingParameters: spring)
+        growing = true
+        animator.addAnimations { self.picture.transform = .identity }
+        animator.addCompletion { _ in
+            self.growing = false
+            completion()
+        }
+        animator.startAnimation()
     }
 }

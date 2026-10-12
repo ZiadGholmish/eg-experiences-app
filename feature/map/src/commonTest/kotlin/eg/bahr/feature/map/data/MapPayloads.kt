@@ -3,8 +3,8 @@ package eg.bahr.feature.map.data
 /**
  * `GET /api/v1/trips/map` bodies captured from the local api (2026-10-10, seed data) with four of the
  * fifteen pins kept: a beach pin (`success`), two Burullus pins and the sold-out two-day White
- * Desert trip. Every pin carries every optional field, as the seed does. The pins leave Cairo at 05:00
- * and 06:00, so the departure marker reads the place alone.
+ * Desert trip. Every pin carries every optional field, as the seed does (the departure fields are
+ * still decoded, though since the drive's removal on 2026-10-12 nothing draws them).
  */
 internal object MapPayloads {
     val ENGLISH =

@@ -1,6 +1,7 @@
 package eg.bahr.core.designsystem.theme
 
 import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Shapes
@@ -143,6 +144,27 @@ object BahrMotion {
     const val ListSlideFraction = .12f
 
     /**
+     * How far a map pin's card slides in from the side of the newly tapped pin, as a share of the
+     * card's width, while the previous pin's card slides out the other way (M4-M9). Short, like
+     * [ListSlideFraction]: the content changes, the card stays put.
+     */
+    const val CardSlideFraction = .2f
+
+    /**
+     * How much bigger the selected map pin is drawn than the others (M4-M9): "grows a little". It
+     * gets there with [PinSpring], from its unselected size.
+     */
+    const val PinSelectedScale = 1.12f
+
+    /**
+     * The selected pin's spring (M4-M9): Compose's medium-bouncy damping, so it overshoots once and
+     * settles, at a low-medium stiffness (about a third of a second). iOS runs the same spring
+     * natively (the map's Swift bridge gets these two numbers).
+     */
+    const val PinSpringDampingRatio = Spring.DampingRatioMediumBouncy
+    const val PinSpringStiffness = Spring.StiffnessMediumLow
+
+    /**
      * The hold countdown's last-minute pulse (M4-M4): one swell of the timer's circle, out and back
      * over twice this. Slow enough to read as "gentle", not as an alarm.
      */
@@ -153,7 +175,13 @@ object BahrMotion {
 
     /** CSS `ease-in-out` (`cubic-bezier(.42,0,.58,1)`): the shimmer's easing in the handoff. */
     val EaseInOut = CubicBezierEasing(.42f, 0f, .58f, 1f)
-    val Standard = CubicBezierEasing(.2f, 0f, 0f, 1f)
+
+    /**
+     * [Standard]'s cubic-bezier control points (x1, y1, x2, y2), for platform animations that take the
+     * curve as numbers: the iOS map's pan to keep a picked pin clear of its card (M4-M9).
+     */
+    val StandardControlPoints: List<Float> = listOf(.2f, 0f, 0f, 1f)
+    val Standard = CubicBezierEasing(StandardControlPoints[0], StandardControlPoints[1], StandardControlPoints[2], StandardControlPoints[3])
     val Emphasized = CubicBezierEasing(.05f, .7f, .1f, 1f)
 }
 
@@ -257,11 +285,6 @@ object BahrSize {
      */
     val pinStem = 10.dp
     val pinDot = 8.dp
-
-    /** The map's dashed drive line (map.html: `weight:2, dashArray:'6 7'`). */
-    val routeLine = 2.dp
-    val routeDash = 6.dp
-    val routeGap = 7.dp
 
     /** A legend entry's colour dot (map.html `.legend span`: 9px). */
     val legendDot = 9.dp

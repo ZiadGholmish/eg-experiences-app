@@ -20,6 +20,10 @@ ktor = "3.1.1"
 
 # Navigation
 navigationCompose = "2.9.1"
+# AndroidX navigation-testing (TestNavHostController, Android only: no KMP artifact has it), pinned to the
+# androidx navigation-runtime that JetBrains' navigation-compose 2.9.1 resolves to on Android (2.9.4), so
+# the two never disagree at runtime (M4-M9).
+androidxNavigationTesting = "2.9.4"
 # JetBrains' multiplatform build of androidx navigationevent 1.0.1, the version Compose Multiplatform 1.10 resolves to.
 navigationEvent = "1.0.1"
 
@@ -106,6 +110,7 @@ ktor-client-mock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
 
 # Navigation
 navigation-compose = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
+androidx-navigation-testing = { module = "androidx.navigation:navigation-testing", version.ref = "androidxNavigationTesting" }
 
 # Paging (AndroidX, multiplatform)
 androidx-paging-common = { module = "androidx.paging:paging-common", version.ref = "paging" }

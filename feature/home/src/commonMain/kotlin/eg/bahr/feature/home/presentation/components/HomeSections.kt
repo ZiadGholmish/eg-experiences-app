@@ -28,6 +28,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -37,7 +38,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.CollectionInfo
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.collectionInfo
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -212,6 +216,11 @@ private fun BannerSection(
  * The carousel: one banner a page, advancing every [BahrMotion.CarouselAdvance] ms. A finger on it
  * holds it still (the timer starts over when it lifts), and a swipe restarts the timer from the page
  * it settles on. Dots only when there is more than one banner.
+ *
+ * Endless (M4-M9): the pager holds [CAROUSEL_LAPS] laps of the banners and starts mid-way, so after
+ * the last slide the next one is the first again, reached going forward like every other step, not
+ * by scrolling back across every slide. Either way a swipe also wraps. A page's banner is its index
+ * modulo the banner count; the dots and their "Slide n of N" labels count banners, not pages.
  */
 @Composable
 private fun BannerCarousel(
@@ -219,51 +228,73 @@ private fun BannerCarousel(
     ratio: Float,
     onAction: (HomeAction) -> Unit,
 ) {
-    val pager = rememberPagerState { banners.size }
-    val scope = rememberCoroutineScope()
-    var touched by remember { mutableStateOf(false) }
-    if (banners.size > 1) {
-        LaunchedEffect(pager.settledPage, touched) {
-            if (touched) return@LaunchedEffect
-            delay(BahrMotion.CarouselAdvance)
-            // Wraps back to the first, as the prototype's slider does.
-            pager.animateScrollToPage((pager.settledPage + 1) % banners.size)
+    val count = banners.size
+    // A new banner count is a new pager: the laps are counted in banners.
+    key(count) {
+        val laps = carouselLaps(count)
+        val pager = rememberPagerState(initialPage = carouselStartPage(count)) { count * laps }
+        val scope = rememberCoroutineScope()
+        var touched by remember { mutableStateOf(false) }
+        if (count > 1) {
+            LaunchedEffect(pager.settledPage, touched) {
+                if (touched) return@LaunchedEffect
+                delay(BahrMotion.CarouselAdvance)
+                val next = pager.settledPage + 1
+                // Hours of idle advancing reach the last lap: back to the same banner mid-way, unseen.
+                if (next >= pager.pageCount) pager.scrollToPage(carouselStartPage(count) + pager.settledPage % count)
+                pager.animateScrollToPage(pager.currentPage + 1)
+            }
         }
-    }
-    Column(
-        verticalArrangement = Arrangement.spacedBy(BahrSpacing.sm),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        HorizontalPager(
-            state = pager,
-            contentPadding = PaddingValues(horizontal = BahrSpacing.gutter),
-            pageSpacing = BahrSpacing.sm,
-            key = { banners[it].id },
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    // Watches touches on the Initial pass without consuming them, so the pager
-                    // still scrolls and a banner still takes its tap. A drag alone would miss a
-                    // finger resting on a slide to read it.
-                    .pointerInput(Unit) {
-                        awaitEachGesture {
-                            awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-                            touched = true
-                            do {
-                                val event = awaitPointerEvent(PointerEventPass.Initial)
-                            } while (event.changes.any { it.pressed })
-                            touched = false
-                        }
-                    },
-        ) { page ->
-            Banner(banners[page], ratio, onAction)
-        }
-        if (banners.size > 1) {
-            // A tap on a dot goes to its slide; the timer starts over from there (keyed on settledPage).
-            PagerDots(count = banners.size, current = pager.currentPage) { page -> scope.launch { pager.animateScrollToPage(page) } }
+        Column(
+            verticalArrangement = Arrangement.spacedBy(BahrSpacing.sm),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            HorizontalPager(
+                state = pager,
+                contentPadding = PaddingValues(horizontal = BahrSpacing.gutter),
+                pageSpacing = BahrSpacing.sm,
+                // The same banner shows once a lap, so the lap is part of the key.
+                key = { page -> "${banners[page % count].id}#${page / count}" },
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .testTag(HOME_CAROUSEL_TAG)
+                        // Screen readers hear the banners, not the laps: the pager's own collection info
+                        // counts every page of every lap (M4-M9 review #3). Outermost on this node, so it
+                        // wins over the pager's.
+                        .semantics { collectionInfo = CollectionInfo(rowCount = 1, columnCount = count) }
+                        // Watches touches on the Initial pass without consuming them, so the pager
+                        // still scrolls and a banner still takes its tap. A drag alone would miss a
+                        // finger resting on a slide to read it.
+                        .pointerInput(Unit) {
+                            awaitEachGesture {
+                                awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                                touched = true
+                                do {
+                                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                                } while (event.changes.any { it.pressed })
+                                touched = false
+                            }
+                        },
+            ) { page ->
+                Banner(banners[page % count], ratio, onAction)
+            }
+            if (count > 1) {
+                // A tap on a dot goes to its slide in the current lap; the timer starts over from there
+                // (keyed on settledPage).
+                PagerDots(count = count, current = pager.currentPage % count) { banner ->
+                    scope.launch { pager.animateScrollToPage(pager.currentPage - pager.currentPage % count + banner) }
+                }
+            }
         }
     }
 }
+
+/** How many laps of [count] banners the pager holds: one when there is nothing to wrap. */
+internal fun carouselLaps(count: Int): Int = if (count > 1) CAROUSEL_LAPS else 1
+
+/** The first page shown: the first banner, half-way through the laps, so either way has room. */
+internal fun carouselStartPage(count: Int): Int = count * (carouselLaps(count) / 2)
 
 /**
  * One banner: the image at [ratio], LQIP first, with its title over a bottom scrim when it has one.
@@ -533,6 +564,15 @@ private fun HomeBannerDto.imageRatio(): Float =
     if (image.width > 0 && image.height > 0) image.width.toFloat() / image.height else FALLBACK_BANNER_RATIO
 
 private const val LAYOUT_ROW = "row"
+
+/** For tests: Home's banner carousel (the pager). */
+internal const val HOME_CAROUSEL_TAG = "home_carousel"
+
+/**
+ * Laps of the banners in the endless carousel. At one slide per [BahrMotion.CarouselAdvance] ms, half of
+ * them lasts hours even with two banners; a lap is cheap, the pager only composes the pages on screen.
+ */
+private const val CAROUSEL_LAPS = 1000
 
 /** A row shows one item and a peek of the next, so it reads as scrollable. */
 private const val ROW_ITEM_WIDTH_FRACTION = .72f

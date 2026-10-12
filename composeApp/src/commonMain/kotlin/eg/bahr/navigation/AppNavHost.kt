@@ -6,6 +6,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
@@ -225,10 +226,13 @@ fun AppNavHost(
 }
 
 /** Home starts on splash until splash has run once in this process. */
-private fun AppTab.startRoute(splashDone: Boolean): Any = if (this == AppTab.Home && !splashDone) SplashRoute else rootRoute
+internal fun AppTab.startRoute(splashDone: Boolean): Any = if (this == AppTab.Home && !splashDone) SplashRoute else rootRoute
 
-/** The route at the bottom of [this] tab's stack once splash is over. */
-private val AppTab.rootRoute: Any
+/**
+ * The route at the bottom of [this] tab's stack once splash is over. Internal, with [isRoot],
+ * [isAt] and [popToRoot], for AppNavHostRootsTest (M4-M8 review #6).
+ */
+internal val AppTab.rootRoute: Any
     get() =
         when (this) {
             AppTab.Home -> TripListRoute
@@ -237,7 +241,8 @@ private val AppTab.rootRoute: Any
             AppTab.Settings -> SettingsRoute
         }
 
-private fun AppTab.isRoot(destination: NavDestination): Boolean =
+/** Whether [destination] is [this] tab's root: the bar shows there only. */
+internal fun AppTab.isRoot(destination: NavDestination): Boolean =
     when (this) {
         AppTab.Home -> destination.hasRoute<TripListRoute>()
         AppTab.Search -> destination.hasRoute<SearchTripsRoute>()
@@ -245,10 +250,10 @@ private fun AppTab.isRoot(destination: NavDestination): Boolean =
         AppTab.Settings -> destination.hasRoute<SettingsRoute>()
     }
 
-private fun NavHostController.isAt(tab: AppTab): Boolean = currentBackStackEntry?.destination?.let { tab.isRoot(it) } == true
+internal fun NavController.isAt(tab: AppTab): Boolean = currentBackStackEntry?.destination?.let { tab.isRoot(it) } == true
 
 /** Back to [tab]'s root; if it is not on the stack (it always is after splash), start the tab over at it. */
-private fun NavHostController.popToRoot(tab: AppTab) {
+internal fun NavController.popToRoot(tab: AppTab) {
     if (!popBackStack(tab.rootRoute, inclusive = false) && !isAt(tab)) {
         navigate(tab.rootRoute) { popUpTo(graph.id) { inclusive = true } }
     }

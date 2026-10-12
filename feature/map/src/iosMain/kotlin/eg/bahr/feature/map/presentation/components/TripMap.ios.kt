@@ -1,6 +1,8 @@
 package eg.bahr.feature.map.presentation.components
 
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -19,9 +21,10 @@ import androidx.compose.ui.viewinterop.UIKitInteropInteractionMode
 import androidx.compose.ui.viewinterop.UIKitInteropProperties
 import androidx.compose.ui.viewinterop.UIKitView
 import co.touchlab.kermit.Logger
+import eg.bahr.core.designsystem.theme.BahrMotion
 import eg.bahr.feature.map.di.TripMapNativeEvents
 import eg.bahr.feature.map.di.TripMapNativeMarker
-import eg.bahr.feature.map.di.TripMapNativeRoute
+import eg.bahr.feature.map.di.TripMapNativeStart
 import eg.bahr.feature.map.di.TripMapNativeViews
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
@@ -40,8 +43,12 @@ import platform.UIKit.UIView
  * under the Compose chrome. The app registers the bridge only when it has an API key
  * (`MAPS_API_KEY_IOS`); without one this draws [TripMapCanvas].
  *
- * Markers are re-sent when their pictures change (a selection, the drive toggle), which for a
- * catalogue-sized map is a handful of small images.
+ * Markers are re-sent when their pictures change (a selection), which for a
+ * catalogue-sized map is a handful of small images; the bridge updates them in place by id. The
+ * selected pin's spring runs natively there (a UIKit spring on the marker's view, M4-M9), on the
+ * shared [BahrMotion] numbers: Kotlin cannot animate a GMSMarker frame by frame without re-encoding
+ * its picture each frame. The map is created already framed and on the map's placeholder ground, and
+ * keeps still when the chrome's padding changes under an open card.
  */
 @OptIn(ExperimentalForeignApi::class, ExperimentalComposeUiApi::class)
 @Composable
@@ -73,38 +80,79 @@ internal actual fun TripMap(
             }
         }
     var map by remember { mutableStateOf<UIView?>(null) }
-    var framedOnce by remember { mutableStateOf(false) }
     val icons = remember { IconCache(density.density.toDouble()) }
+    val placeholder = mapGround().toUIColor()
 
-    UIKitView(
-        factory = { views.createMap(scene.style, events).also { map = it } },
-        modifier = modifier,
-        properties =
-            UIKitInteropProperties(
-                // The map owns its gestures at once: there is nothing around it to scroll.
-                interactionMode = UIKitInteropInteractionMode.NonCooperative,
-                isNativeAccessibilityEnabled = true,
-            ),
-    )
-
-    val view = map ?: return
-    LaunchedEffect(view, contentPadding, direction) {
-        views.setPadding(
-            view,
-            top = contentPadding.calculateTopPadding().value.toDouble(),
-            left = contentPadding.calculateLeftPadding(direction).value.toDouble(),
-            bottom = contentPadding.calculateBottomPadding().value.toDouble(),
-            right = contentPadding.calculateRightPadding(direction).value.toDouble(),
+    val applied = remember { Applied() }
+    BoxWithConstraints(modifier) {
+        applied.height = maxHeight.value
+        // Created already framed on the pins (M4-M9), in points (the dp of this layout): no world view first.
+        val start =
+            remember {
+                val camera = scene.camera
+                val insets =
+                    MapInsets(
+                        left = contentPadding.calculateLeftPadding(direction).value,
+                        top = contentPadding.calculateTopPadding().value,
+                        right = contentPadding.calculateRightPadding(direction).value,
+                        bottom = contentPadding.calculateBottomPadding().value,
+                    )
+                val pose = cameraToFit(camera.bounds, maxWidth.value, maxHeight.value, insets, camera.edgePaddingPx / density.density)
+                TripMapNativeStart(
+                    lat = pose.target.lat,
+                    lng = pose.target.lng,
+                    zoom = pose.zoom.toDouble(),
+                    placeholder = placeholder,
+                    springStiffness = BahrMotion.PinSpringStiffness.toDouble(),
+                    springDampingRatio = BahrMotion.PinSpringDampingRatio.toDouble(),
+                    easeX1 = BahrMotion.StandardControlPoints[0].toDouble(),
+                    easeY1 = BahrMotion.StandardControlPoints[1].toDouble(),
+                    easeX2 = BahrMotion.StandardControlPoints[2].toDouble(),
+                    easeY2 = BahrMotion.StandardControlPoints[3].toDouble(),
+                )
+            }
+        UIKitView(
+            factory = { views.createMap(scene.style, events, start).also { map = it } },
+            modifier = Modifier.fillMaxSize(),
+            properties =
+                UIKitInteropProperties(
+                    // The map owns its gestures at once: there is nothing around it to scroll.
+                    interactionMode = UIKitInteropInteractionMode.NonCooperative,
+                    isNativeAccessibilityEnabled = true,
+                ),
         )
     }
-    LaunchedEffect(view, scene.markers) {
+
+    val view = map ?: return
+    // Padding: the keep-still shift is worked out here ([keepStillShift], the same as Android's) and
+    // the bridge applies it once the map is framed (M4-M9 review #10).
+    LaunchedEffect(view, contentPadding, direction) {
+        val now =
+            MapInsets(
+                left = contentPadding.calculateLeftPadding(direction).value,
+                top = contentPadding.calculateTopPadding().value,
+                right = contentPadding.calculateRightPadding(direction).value,
+                bottom = contentPadding.calculateBottomPadding().value,
+            )
+        val (dx, dy) = applied.padding?.let { keepStillShift(it, now) } ?: (0f to 0f)
+        applied.padding = now
+        views.setPadding(
+            view,
+            top = now.top.toDouble(),
+            left = now.left.toDouble(),
+            bottom = now.bottom.toDouble(),
+            right = now.right.toDouble(),
+            shiftX = dx.toDouble(),
+            shiftY = dy.toDouble(),
+        )
+    }
+    LaunchedEffect(view, scene.markers, scene.motion) {
         icons.keepOnly(scene.markers.map { it.image })
-        views.setMarkers(view, scene.markers.mapNotNull { it.toNative(icons) })
+        views.setMarkers(view, scene.markers.mapNotNull { it.toNative(icons, scene.motion) })
     }
-    LaunchedEffect(view, scene.route) {
-        views.setRoute(view, scene.route?.toNative(density.density.toDouble()))
-    }
-    LaunchedEffect(view, scene.camera.id) {
+    // The map's one framing, exact, once it has a size (the bridge waits for its first layout). It is
+    // created already standing there; picking a pin never re-frames it.
+    LaunchedEffect(view) {
         val camera = scene.camera
         val b = camera.bounds
         views.fitBounds(
@@ -114,13 +162,40 @@ internal actual fun TripMap(
             north = b.north,
             east = b.east,
             edgePadding = camera.edgePaddingPx / density.density.toDouble(),
-            animated = framedOnce && camera.animate,
         )
-        framedOnce = true
+    }
+    // After the padding and the framing (effects run in this order): a picked pin its card would cover
+    // is panned just clear of it; a request already handled is not panned again ([shouldReveal]).
+    LaunchedEffect(view, scene.reveal) {
+        val reveal = scene.reveal
+        if (reveal != null && shouldReveal(reveal, applied.reveal)) {
+            val y = views.pointY(view, reveal.point.lat, reveal.point.lng)
+            if (!y.isNaN()) {
+                val scale = density.density
+                val shift = revealShift(y.toFloat(), applied.height, reveal.cardHeightPx / scale, reveal.clearancePx / scale)
+                if (shift > 0f) views.pan(view, shift.toDouble(), if (scene.motion) BahrMotion.Medium / MILLIS_PER_SECOND else 0.0)
+            }
+        }
+        applied.reveal = reveal
     }
 }
 
-private fun MapMarker.toNative(icons: IconCache): TripMapNativeMarker? {
+/**
+ * What this map last handed the bridge, kept across effects and not state (nothing redraws on it):
+ * the padding (for the keep-still shift), the picked pin's request, and the map's height in points.
+ */
+private class Applied {
+    var padding: MapInsets? = null
+    var reveal: PinReveal? = null
+    var height: Float = 0f
+}
+
+private const val MILLIS_PER_SECOND = 1000.0
+
+private fun MapMarker.toNative(
+    icons: IconCache,
+    motion: Boolean,
+): TripMapNativeMarker? {
     val icon = icons[image] ?: return null
     return TripMapNativeMarker(
         id = id,
@@ -132,21 +207,10 @@ private fun MapMarker.toNative(icons: IconCache): TripMapNativeMarker? {
         zIndex = zIndex.toInt(),
         tappable = clickable,
         accessibilityLabel = description,
+        // Under reduce motion the selected pin is simply drawn grown.
+        growFrom = if (motion) growFrom.toDouble() else 1.0,
     )
 }
-
-/** Sizes are drawn in pixels; UIKit wants points, so they are divided by the screen [scale]. */
-private fun MapRoute.toNative(scale: Double) =
-    TripMapNativeRoute(
-        fromLat = from.lat,
-        fromLng = from.lng,
-        toLat = to.lat,
-        toLng = to.lng,
-        color = color.toUIColor(),
-        width = widthPx / scale,
-        dash = dashPx / scale,
-        gap = gapPx / scale,
-    )
 
 private fun Color.toUIColor(): UIColor =
     UIColor.colorWithRed(red.toDouble(), green = green.toDouble(), blue = blue.toDouble(), alpha = alpha.toDouble())

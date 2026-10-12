@@ -116,13 +116,13 @@ final class TabBarModel: NSObject, ObservableObject, AppTabBar {
     // MARK: AppTabBar (called by the shared code)
 
     func showContent(languageTag: String, rightToLeft: Bool, titles: [String], tints: [UIColor], unselectedTint: UIColor) {
-        // The tabs not selected, muted (as on Android). SwiftUI's TabView has no modifier for it, and its
-        // UITabBar exists before this first call (hiding the bar does not delay it), so the appearance
-        // proxy alone would miss it: the live bar is set as well (M4-M8 review #1).
+        // The tabs not selected, muted (as on Android). Their icons are drawn already muted (`icon(_:)`);
+        // their labels take the colour from the bar's item appearance. SwiftUI's TabView has no modifier
+        // for that, and its UITabBar exists before this first call (hiding the bar does not delay it), so
+        // the live bar is set (M4-M8 review #1).
         if self.unselectedTint != unselectedTint {
             self.unselectedTint = unselectedTint
-            UITabBar.appearance().unselectedItemTintColor = unselectedTint
-            Self.mute(unselectedTint)
+            Self.muteLabels(unselectedTint)
         }
         if self.languageTag != languageTag { self.languageTag = languageTag }
         if self.rightToLeft != rightToLeft { self.rightToLeft = rightToLeft }
@@ -135,14 +135,14 @@ final class TabBarModel: NSObject, ObservableObject, AppTabBar {
     /// The muted colour of the tabs not selected (the shared theme's onSurfaceVariant).
     @Published private(set) var unselectedTint: UIColor?
 
-    /// Every tab bar on screen gets [color] for its unselected items: the icon and the label.
-    private static func mute(_ color: UIColor) {
+    /// Every tab bar on screen gets [color] for the labels of its unselected items. Labels only: the
+    /// iOS 26 glass bar ignores `unselectedItemTintColor` and the appearance's `iconColor` for icons,
+    /// which is why `icon(_:)` draws them muted itself (M4-M8 review #10, #12).
+    private static func muteLabels(_ color: UIColor) {
         let windows = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.flatMap(\.windows)
         windows.flatMap { tabBars(in: $0) }.forEach { bar in
-            bar.unselectedItemTintColor = color
             let appearance = bar.standardAppearance.copy()
             for layout in [appearance.stackedLayoutAppearance, appearance.inlineLayoutAppearance, appearance.compactInlineLayoutAppearance] {
-                layout.normal.iconColor = color
                 layout.normal.titleTextAttributes = [.foregroundColor: color]
             }
             bar.standardAppearance = appearance

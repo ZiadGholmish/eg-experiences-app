@@ -97,6 +97,8 @@ kotlin {
             implementation(libs.junit)
             implementation(libs.robolectric)
             implementation(libs.androidx.compose.ui.test.junit4)
+            // TestNavHostController for AppNavHost's root mapping (M4-M9, M4-M8 review #6).
+            implementation(libs.androidx.navigation.testing)
         }
     }
 }
