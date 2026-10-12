@@ -81,6 +81,9 @@ class TripDetailApiServiceTest {
 
             val host = trip.host!!
             assertEquals("Ashraf El Bahr", host.name)
+            // M4-B7: the card opens the host's page by this slug.
+            assertEquals("ashraf-el-bahr", host.slug)
+            assertEquals("person", host.kind)
             assertEquals(11, host.tripsRun)
             assertTrue(host.verified)
             assertEquals(240, host.avatar?.width)

@@ -116,6 +116,8 @@ class BahrFormatTest {
         assertEquals("27\u00A0ديسمبر", BahrFormat.dayMonth(sunday, arabic))
         assertEquals("21\u00A0Sep 2026", BahrFormat.dayMonthYear(LocalDate(2026, 9, 21), english))
         assertEquals("21\u00A0سبتمبر 2026", BahrFormat.dayMonthYear(LocalDate(2026, 9, 21), arabic))
+        assertEquals("Sep\u00A02026", BahrFormat.monthYear(LocalDate(2026, 9, 21), english))
+        assertEquals("سبتمبر\u00A02026", BahrFormat.monthYear(LocalDate(2026, 9, 21), arabic))
     }
 
     @Test
@@ -126,6 +128,7 @@ class BahrFormatTest {
         assertEquals("2026-10-17", BahrFormat.weekday(date, none))
         assertEquals("2026-10-17", BahrFormat.dayMonth(date, none))
         assertEquals("2026-10-17", BahrFormat.dayMonthYear(date, none))
+        assertEquals("2026-10-17", BahrFormat.monthYear(date, none))
     }
 
     @Test

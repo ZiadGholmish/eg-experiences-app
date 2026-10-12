@@ -22,6 +22,9 @@ internal class TripListApiService(
      *
      * [q] goes as the user typed it (Ktor URL-encodes it): the server folds Arabic spelling, case and
      * digits itself, and does so for both languages whatever `Accept-Language` is.
+     *
+     * [host] (M4-B7) is a host's public slug: only that host's trips, the host page's list. A slug with
+     * no public profile is answered NOT_FOUND, never an empty page.
      */
     suspend fun listTrips(
         page: Int = 0,
@@ -29,6 +32,7 @@ internal class TripListApiService(
         category: String? = null,
         filter: String? = null,
         q: String? = null,
+        host: String? = null,
     ): AppResult<TripPageDto> =
         callApi {
             client.get("trips") {
@@ -36,6 +40,7 @@ internal class TripListApiService(
                 parameter("category", category)
                 parameter("filter", filter)
                 parameter("q", q)
+                parameter("host", host)
                 parameter("page", page)
                 parameter("size", size)
             }

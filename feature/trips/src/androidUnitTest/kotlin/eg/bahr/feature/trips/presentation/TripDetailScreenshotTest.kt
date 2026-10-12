@@ -27,6 +27,7 @@ import eg.bahr.feature.trips.data.TripDetailPayloads
 import eg.bahr.feature.trips.data.TripFixtures.trip
 import eg.bahr.feature.trips.data.waitlistMemory
 import eg.bahr.feature.trips.model.DepartureDto
+import eg.bahr.feature.trips.model.HostDto
 import eg.bahr.feature.trips.model.TripDetailDto
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.datetime.DateTimeUnit
@@ -313,6 +314,22 @@ class TripDetailScreenshotTest {
         }
 
     /**
+     * M4-M10: with the host page wired, the host card's row is tappable, with a forward arrow (pointing
+     * left in Arabic). Scrolled to the host card.
+     */
+    @Test
+    fun hostCardArabic() =
+        snap("trip_detail_host_card", AppLanguage.ARABIC, onHostClick = {}, scrollTo = TripSection.Host) {
+            serve(TripDetailPayloads.arabic, TripDetailPayloads.arabicDepartures)
+        }
+
+    @Test
+    fun hostCardEnglish() =
+        snap("trip_detail_host_card", AppLanguage.ENGLISH, onHostClick = {}, scrollTo = TripSection.Host) {
+            serve(TripDetailPayloads.english, TripDetailPayloads.englishDepartures)
+        }
+
+    /**
      * The photo counter ("1 / 3") over a three-photo gallery, which must read left to right in Arabic
      * too (M1-M1 review #1). The URLs point at a closed local port, so Coil draws nothing and the
      * golden does not depend on the network; the counter and the ground still render.
@@ -357,6 +374,8 @@ class TripDetailScreenshotTest {
         select: String? = null,
         act: (TripDetailViewModel) -> Unit = {},
         waitlists: WaitlistMemory = waitlistMemory(),
+        onHostClick: ((HostDto) -> Unit)? = null,
+        scrollTo: TripSection? = null,
         stub: FakeTripRepository.() -> Unit,
     ) {
         val viewModel = TripDetailViewModel(SLUG, FakeTripRepository().apply(stub), waitlists)
@@ -364,7 +383,11 @@ class TripDetailScreenshotTest {
             ProvideAppLanguage(language) {
                 BahrTheme(locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English) {
                     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-                        TripDetailScreen(slug = SLUG, onBack = {}, onContinue = { _, _ -> }, viewModel = viewModel)
+                        TripDetailScreen(slug = SLUG, onBack = {}, onContinue = {
+                            _,
+                            _,
+                            ->
+                        }, onHostClick = onHostClick, viewModel = viewModel)
                     }
                 }
             }
@@ -384,6 +407,11 @@ class TripDetailScreenshotTest {
             // Again, now that the band has grown by the notice (and the waiting list): the first
             // scroll measured the band before they were drawn and stopped short of them.
             compose.onNodeWithTag(TRIP_PAGE_TAG).performScrollToKey(TripSection.Availability.name)
+            compose.waitForIdle()
+            compose.mainClock.advanceTimeBy(SETTLE_MS)
+        }
+        if (scrollTo != null) {
+            compose.onNodeWithTag(TRIP_PAGE_TAG).performScrollToKey(scrollTo.name)
             compose.waitForIdle()
             compose.mainClock.advanceTimeBy(SETTLE_MS)
         }

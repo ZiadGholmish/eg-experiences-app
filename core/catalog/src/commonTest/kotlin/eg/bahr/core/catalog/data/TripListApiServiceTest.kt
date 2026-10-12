@@ -13,6 +13,7 @@ import io.ktor.client.request.HttpRequestData
 import io.ktor.client.request.HttpResponseData
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDate
@@ -122,6 +123,33 @@ class TripListApiServiceTest {
 
             assertIs<AppResult.Failure>(result)
             assertIs<AppError.Serialization>(result.error)
+        }
+
+    @Test
+    fun `a host's list sends the host's slug - and a list without one leaves it out`() =
+        runTest {
+            val service = service(TripListPayloads.english)
+
+            service.listTrips(host = "red-sea-days")
+            service.listTrips()
+
+            assertEquals("red-sea-days", requests[0].url.parameters["host"])
+            assertNull(requests[1].url.parameters["host"])
+        }
+
+    @Test
+    fun `a host with no public profile is NOT_FOUND - never an empty list`() =
+        runTest {
+            val body = """{"success":false,"data":null,"error":{"code":"NOT_FOUND","message":"Host not found"}}"""
+            val engine = MockEngine { respond(body, HttpStatusCode.NotFound, headersOf(HttpHeaders.ContentType, "application/json")) }
+            val service = TripListApiService(apiHttpClient(engine, ApiConfig(BASE_URL, isDebug = false)) { "en" })
+
+            val result = service.listTrips(host = "pending-host")
+
+            assertIs<AppResult.Failure>(result)
+            val error = assertIs<AppError.Api>(result.error)
+            assertEquals("NOT_FOUND", error.code)
+            assertEquals(404, error.httpStatus)
         }
 
     private fun success(result: AppResult<TripPageDto>): TripPageDto {

@@ -4,6 +4,7 @@ import eg.bahr.core.catalog.data.TRIP_PAGE_SIZE
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.network.callApi
 import eg.bahr.feature.trips.model.DepartureDto
+import eg.bahr.feature.trips.model.HostProfileDto
 import eg.bahr.feature.trips.model.TripCardPageDto
 import eg.bahr.feature.trips.model.TripDetailDto
 import eg.bahr.feature.trips.model.WaitlistRequest
@@ -14,7 +15,7 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 
 /**
- * The trip page, a Home row's "See all" and the waiting list. `GET /trips` (the category page and
+ * The trip page, a Home row's "See all", the host page and the waiting list. `GET /trips` (the category page and
  * search) is core:catalog's `TripListApiService`, shared with Home (M4-M1c).
  *
  * None of these require a token: a trip link dropped into a social post is opened cold by someone
@@ -48,6 +49,15 @@ internal class TripApiService(
     suspend fun departuresFor(slug: String): AppResult<List<DepartureDto>> =
         callApi {
             client.get("trips/$slug/departures")
+        }
+
+    /**
+     * `getHost` (M4-M10): a host's public page, opened from the trip page's host card. NOT_FOUND for an
+     * unknown slug and for a host who is not approved, though the trip card always carries the slug.
+     */
+    suspend fun hostBySlug(slug: String): AppResult<HostProfileDto> =
+        callApi {
+            client.get("hosts/$slug")
         }
 
     /**

@@ -100,6 +100,27 @@
         <item quantity="other">%1$d trips run</item>
     </plurals>
 
+    <!-- Host page (M4-M10), opened from the trip page's host card. The handoff has no host page. -->
+    <string name="host_open">Open the host’s page</string>
+    <string name="host_kind_person">Host</string>
+    <string name="host_kind_company">Host company</string>
+    <string name="host_member_since">Member since %1$s</string>
+    <string name="host_no_reviews">No reviews yet.</string>
+    <string name="host_rating_average">Rated %1$s out of 5</string>
+    <string name="host_trips_heading">Trips by %1$s</string>
+    <string name="host_trips_empty">No trips from this host right now.</string>
+    <!-- 404 on the host or their trips: unknown, or not approved (pending, suspended). -->
+    <string name="host_not_available">This host isn’t available right now.</string>
+    <plurals name="host_reviews_count">
+        <item quantity="one">%1$d review</item>
+        <item quantity="other">%1$d reviews</item>
+    </plurals>
+    <!-- A rating bar, read out: the stars, then how many reviews gave that many. -->
+    <plurals name="host_rating_bar">
+        <item quantity="one">%1$d star: %2$d</item>
+        <item quantity="other">%1$d stars: %2$d</item>
+    </plurals>
+
     <!-- Departures -->
     <string name="departures_pick_a_date">Pick a date</string>
     <plurals name="departure_seats_left">

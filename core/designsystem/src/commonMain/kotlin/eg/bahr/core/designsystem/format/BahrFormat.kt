@@ -104,6 +104,10 @@ object BahrFormat {
     @Composable
     fun dayMonthYear(d: LocalDate): String = dayMonthYear(d, dateNames())
 
+    /** "Sep 2026" / "سبتمبر 2026": when a host joined (M4-M10), where the day says nothing. */
+    @Composable
+    fun monthYear(d: LocalDate): String = monthYear(d, dateNames())
+
     // Pure cores, so the arithmetic is tested without a composition. Both languages put the parts in
     // the same order (weekday, day, month, year), so the order lives here and only the words are
     // translated. Until the arrays load (compose-resources reads them asynchronously on some
@@ -132,6 +136,16 @@ object BahrFormat {
         d: LocalDate,
         names: DateNames,
     ): String = if (names.isComplete) "${dayMonth(d, names)} ${d.year}" else d.toString()
+
+    /** Joined by a no-break space, like [dayMonth], so the year never wraps away from its month. */
+    internal fun monthYear(
+        d: LocalDate,
+        names: DateNames,
+    ): String =
+        names.months
+            .getOrNull(d.monthNumber - 1)
+            ?.takeIf { names.isComplete }
+            ?.let { "$it$NO_BREAK_SPACE${d.year}" } ?: d.toString()
 
     /** Weekday names Monday first (ISO order), month names January first. */
     internal data class DateNames(

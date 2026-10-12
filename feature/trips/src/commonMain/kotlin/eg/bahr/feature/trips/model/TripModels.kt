@@ -113,12 +113,17 @@ internal data class ItineraryStopDto(
 )
 
 /**
- * The host card. The contract has no id or display-name field: [name] is what is shown. [avatar] may
- * be absent (a host without one), so the card falls back to the initial. The public page carries no
- * phone number: that is only on a paid booking (product decision D4).
+ * The host card. [name] is what is shown. [avatar] may be absent (a host without one), so the card
+ * falls back to the initial. The public page carries no phone number: that is only on a paid booking
+ * (product decision D4).
+ *
+ * [slug] opens the host's page (M4-M10, `getHost`); absent from servers before M4-B7, and then the card
+ * is not tappable. [kind] is the contract's `HostKind` as a string, see [HostProfileDto.kind].
  */
 @Serializable
 internal data class HostDto(
+    val slug: String? = null,
+    val kind: String? = null,
     val name: String? = null,
     val avatar: ImageDto? = null,
     val role: String? = null,

@@ -9,6 +9,7 @@ import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.network.MoneyDto
 import eg.bahr.feature.trips.model.DepartureDto
+import eg.bahr.feature.trips.model.HostProfileDto
 import eg.bahr.feature.trips.model.TripCardPageDto
 import eg.bahr.feature.trips.model.TripDetailDto
 import eg.bahr.feature.trips.model.WaitlistRequest
@@ -30,20 +31,23 @@ internal class FakeTripRepository(
     var departuresFor: suspend (slug: String) -> AppResult<List<DepartureDto>> = { unset() },
     var cards: Map<String, TripCardDto> = emptyMap(),
     var joinWaitlist: suspend (departureId: String, request: WaitlistRequest) -> AppResult<Unit> = { _, _ -> unset() },
+    var hostBySlug: suspend (slug: String) -> AppResult<HostProfileDto> = { unset() },
 ) : TripRepository {
     val requestedPages = mutableListOf<Int>()
     val requestedQueries = mutableListOf<TripQuery>()
     val sectionRequests = mutableListOf<Pair<String, Int>>()
     val departureReads = mutableListOf<String>()
     val waitlistJoins = mutableListOf<Pair<String, WaitlistRequest>>()
+    val hostReads = mutableListOf<String>()
 
     override suspend fun listTrips(
         page: Int,
         category: String?,
         filter: String?,
         q: String?,
+        host: String?,
     ): AppResult<TripPageDto> {
-        val query = TripQuery(page, category, filter, q)
+        val query = TripQuery(page, category, filter, q, host)
         requestedPages += page
         requestedQueries += query
         return listFiltered?.invoke(query) ?: listTrips.invoke(page)
@@ -72,6 +76,11 @@ internal class FakeTripRepository(
         return joinWaitlist.invoke(departureId, request)
     }
 
+    override suspend fun hostBySlug(slug: String): AppResult<HostProfileDto> {
+        hostReads += slug
+        return hostBySlug.invoke(slug)
+    }
+
     override fun cachedCard(slug: String): TripCardDto? = cards[slug]
 
     private companion object {
@@ -85,6 +94,7 @@ internal data class TripQuery(
     val category: String? = null,
     val filter: String? = null,
     val q: String? = null,
+    val host: String? = null,
 )
 
 /**

@@ -47,7 +47,7 @@ class AppErrorException(
 fun Throwable.appError(): AppError = (this as? AppErrorException)?.error ?: AppError.Unknown(message)
 
 /**
- * `GET /trips`, narrowed by [category], [filter] and the search text [q] (null = not sent). With [q]
+ * `GET /trips`, narrowed by [category], [filter], the search text [q] and a [host]'s slug (null = not sent). With [q]
  * the server orders the pages best match first; they are shown in that order. [onFirstPage] hears every
  * page-0 answer, success or failure, so the view model can read the facets and the total, or fall
  * back from a stale key, without a second request.
@@ -57,11 +57,12 @@ class TripListPagingSource(
     private val category: String? = null,
     private val filter: String? = null,
     private val q: String? = null,
+    private val host: String? = null,
     private val onFirstPage: (AppResult<TripPageDto>) -> Unit = {},
 ) : PagingSource<Int, TripCardDto>() {
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, TripCardDto> {
         val page = params.key ?: FIRST_PAGE
-        val result = repository.listTrips(page = page, category = category, filter = filter, q = q)
+        val result = repository.listTrips(page = page, category = category, filter = filter, q = q, host = host)
         if (page == FIRST_PAGE) onFirstPage(result)
         return when (result) {
             is AppResult.Success -> tripCardPage(result.data.items, page, result.data.totalPages)

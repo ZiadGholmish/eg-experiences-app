@@ -41,6 +41,7 @@ import eg.bahr.core.localization.generated.resources.action_retry
 import eg.bahr.core.localization.generated.resources.trip_per_person
 import eg.bahr.core.localization.isRetryable
 import eg.bahr.core.localization.localizedMessage
+import eg.bahr.feature.trips.model.HostDto
 import eg.bahr.feature.trips.model.TripDetailDto
 import eg.bahr.feature.trips.presentation.components.TextSkeleton
 import eg.bahr.feature.trips.presentation.components.TripAvailability
@@ -77,6 +78,7 @@ internal fun TripDetailScreen(
     onBack: () -> Unit,
     onContinue: (slug: String, departureId: String) -> Unit,
     modifier: Modifier = Modifier,
+    onHostClick: ((HostDto) -> Unit)? = null,
     viewModel: TripDetailViewModel = koinViewModel { parametersOf(slug) },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -113,6 +115,7 @@ internal fun TripDetailScreen(
         onBack = onBack,
         onSelectDeparture = viewModel::selectDeparture,
         onContinue = { departureId -> onContinue(slug, departureId) },
+        onHostClick = onHostClick,
         modifier = modifier,
     )
 }
@@ -127,6 +130,7 @@ private fun TripPage(
     onBack: () -> Unit,
     onSelectDeparture: (String) -> Unit,
     onContinue: (String) -> Unit,
+    onHostClick: ((HostDto) -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val trip = state.trip
@@ -145,7 +149,7 @@ private fun TripPage(
                 contentPadding = PaddingValues(bottom = BahrSpacing.xl),
             ) {
                 items(sections, key = { it.name }) { section ->
-                    Section(section, state, header, trip, waitlist, onBack, onSelectDeparture)
+                    Section(section, state, header, trip, waitlist, onBack, onSelectDeparture, onHostClick)
                 }
             }
             StatusBarScrim(visible = { listState.firstVisibleItemIndex > 0 })
@@ -223,6 +227,7 @@ private fun Section(
     waitlist: WaitlistPanelState,
     onBack: () -> Unit,
     onSelectDeparture: (String) -> Unit,
+    onHostClick: ((HostDto) -> Unit)?,
 ) {
     val padded = Modifier.padding(start = BahrSpacing.gutter, end = BahrSpacing.gutter, top = BahrSpacing.xl)
     when (section) {
@@ -245,7 +250,7 @@ private fun Section(
         TripSection.Itinerary ->
             if (trip != null) TripItinerary(trip.itinerary, padded) else TextSkeleton(ITINERARY_SKELETON_LINES, padded)
 
-        TripSection.Host -> trip?.let { TripHostCard(it.host, it.tips, padded) }
+        TripSection.Host -> trip?.let { TripHostCard(it.host, it.tips, padded, onHostClick) }
 
         TripSection.Reviews -> trip?.reviews?.let { TripReviews(it, padded) }
 

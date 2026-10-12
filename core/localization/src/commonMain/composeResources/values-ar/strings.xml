@@ -105,6 +105,33 @@
         <item quantity="other">نظّم %1$d رحلة</item>
     </plurals>
 
+    <!-- صفحة المضيف (M4-M10)، بتتفتح من كارت المضيف في صفحة الرحلة. -->
+    <string name="host_open">افتح صفحة المضيف</string>
+    <string name="host_kind_person">مضيف</string>
+    <string name="host_kind_company">شركة مضيفة</string>
+    <string name="host_member_since">معانا من %1$s</string>
+    <string name="host_no_reviews">لسه مفيش تقييمات.</string>
+    <string name="host_rating_average">التقييم %1$s من 5</string>
+    <string name="host_trips_heading">رحلات %1$s</string>
+    <string name="host_trips_empty">مفيش رحلات للمضيف ده دلوقتي.</string>
+    <string name="host_not_available">المضيف ده مش متاح دلوقتي.</string>
+    <plurals name="host_reviews_count">
+        <item quantity="zero">مفيش تقييمات</item>
+        <item quantity="one">تقييم واحد</item>
+        <item quantity="two">تقييمين</item>
+        <item quantity="few">%1$d تقييمات</item>
+        <item quantity="many">%1$d تقييم</item>
+        <item quantity="other">%1$d تقييم</item>
+    </plurals>
+    <plurals name="host_rating_bar">
+        <item quantity="zero">%1$d نجمة: %2$d</item>
+        <item quantity="one">نجمة واحدة: %2$d</item>
+        <item quantity="two">نجمتين: %2$d</item>
+        <item quantity="few">%1$d نجوم: %2$d</item>
+        <item quantity="many">%1$d نجمة: %2$d</item>
+        <item quantity="other">%1$d نجمة: %2$d</item>
+    </plurals>
+
     <string name="departures_pick_a_date">اختار التاريخ</string>
     <!-- CLDR ar: one = 1, two = 2, few = 3–10, many = 11–99, other = 0 and 100+ (zero = 0). -->
     <plurals name="departure_seats_left">

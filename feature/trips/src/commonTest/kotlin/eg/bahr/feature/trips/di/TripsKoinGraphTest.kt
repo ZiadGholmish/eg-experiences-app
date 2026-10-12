@@ -17,6 +17,7 @@ import eg.bahr.feature.trips.data.FakeRecentSearchesStore
 import eg.bahr.feature.trips.data.TripFixtures.trip
 import eg.bahr.feature.trips.data.TripRepository
 import eg.bahr.feature.trips.presentation.CategoryTripsViewModel
+import eg.bahr.feature.trips.presentation.HostProfileViewModel
 import eg.bahr.feature.trips.presentation.SearchTripsViewModel
 import eg.bahr.feature.trips.presentation.SectionTripsViewModel
 import eg.bahr.feature.trips.presentation.TripDetailViewModel
@@ -62,6 +63,7 @@ class TripsKoinGraphTest {
             koin.get<CategoryTripsViewModel> { parametersOf("birds", null) }
             koin.get<SectionTripsViewModel> { parametersOf("s-1", "Featured") }
             koin.get<SearchTripsViewModel>()
+            koin.get<HostProfileViewModel> { parametersOf("red-sea-days", "Red Sea Days", null) }
             assertSame(koin.get<TripCardCache>(), koin.get<TripCardCache>())
             assertSame(koin.get<WaitlistMemory>(), koin.get<WaitlistMemory>())
         }

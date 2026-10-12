@@ -45,8 +45,10 @@ import eg.bahr.feature.splash.navigation.SplashRoute
 import eg.bahr.feature.splash.navigation.splashScreen
 import eg.bahr.feature.trips.navigation.SearchTripsRoute
 import eg.bahr.feature.trips.navigation.categoryTripsScreen
+import eg.bahr.feature.trips.navigation.hostProfileScreen
 import eg.bahr.feature.trips.navigation.isOpenedFromHome
 import eg.bahr.feature.trips.navigation.navigateToCategoryTrips
+import eg.bahr.feature.trips.navigation.navigateToHostProfile
 import eg.bahr.feature.trips.navigation.navigateToSectionTrips
 import eg.bahr.feature.trips.navigation.navigateToTripDetail
 import eg.bahr.feature.trips.navigation.searchTripsScreen
@@ -209,6 +211,15 @@ fun AppNavHost(
             tripDetailScreen(
                 onBack = { navController.popBackStack() },
                 onContinue = navController::navigateToBooking,
+                // The host card opens the host's page (M4-M10), in this tab's stack, bar hidden.
+                onHostClick = navController::navigateToHostProfile,
+                reducedMotion = reducedMotion,
+            )
+
+            hostProfileScreen(
+                onBack = { navController.popBackStack() },
+                onTripClick = navController::navigateToTripDetail,
+                reducedMotion = reducedMotion,
             )
 
             bookingScreen(

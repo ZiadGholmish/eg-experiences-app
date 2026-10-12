@@ -5,6 +5,7 @@ import eg.bahr.core.catalog.data.TripListRepository
 import eg.bahr.core.catalog.model.TripCardDto
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.feature.trips.model.DepartureDto
+import eg.bahr.feature.trips.model.HostProfileDto
 import eg.bahr.feature.trips.model.TripCardPageDto
 import eg.bahr.feature.trips.model.TripDetailDto
 import eg.bahr.feature.trips.model.WaitlistRequest
@@ -24,6 +25,9 @@ internal interface TripRepository : TripListRepository {
     suspend fun tripBySlug(slug: String): AppResult<TripDetailDto>
 
     suspend fun departuresFor(slug: String): AppResult<List<DepartureDto>>
+
+    /** A host's public page (M4-M10). Their trips are [listTrips] with `host`. */
+    suspend fun hostBySlug(slug: String): AppResult<HostProfileDto>
 
     /** Puts a phone on a sold-out date's waiting list (capture only: no seat is offered automatically). */
     suspend fun joinWaitlist(
@@ -64,6 +68,8 @@ internal class DefaultTripRepository(
     override suspend fun tripBySlug(slug: String): AppResult<TripDetailDto> = api.tripBySlug(slug)
 
     override suspend fun departuresFor(slug: String): AppResult<List<DepartureDto>> = api.departuresFor(slug)
+
+    override suspend fun hostBySlug(slug: String): AppResult<HostProfileDto> = api.hostBySlug(slug)
 
     override suspend fun joinWaitlist(
         departureId: String,

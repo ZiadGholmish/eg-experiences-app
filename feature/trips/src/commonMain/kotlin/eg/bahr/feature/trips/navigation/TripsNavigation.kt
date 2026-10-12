@@ -9,9 +9,12 @@ import androidx.navigation.NavOptionsBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import eg.bahr.core.designsystem.theme.ProvideBahrNavScope
+import eg.bahr.core.designsystem.theme.bahrBackEnter
 import eg.bahr.core.designsystem.theme.bahrBackExit
 import eg.bahr.core.designsystem.theme.bahrForwardEnter
+import eg.bahr.core.designsystem.theme.bahrForwardExit
 import eg.bahr.feature.trips.presentation.CategoryTripsScreen
+import eg.bahr.feature.trips.presentation.HostProfileScreen
 import eg.bahr.feature.trips.presentation.SearchTripsScreen
 import eg.bahr.feature.trips.presentation.SectionTripsScreen
 import eg.bahr.feature.trips.presentation.TripDetailScreen
@@ -32,15 +35,80 @@ import kotlinx.coroutines.flow.emptyFlow
 /**
  * [onContinue] gets the trip and the picked date (a UUID string, as the contract has it); it is only
  * called for a bookable date.
+ *
+ * M4-M10: [onHostClick] opens the host's page from the host card (only when the server sent the host's
+ * slug), usually [navigateToHostProfile]. Between the trip page and the host page the pages slide with
+ * the M4-M6 transition and the card's row grows into the page's header; to and from anything else
+ * (booking, a list) the NavHost's own transition applies, as before.
  */
 fun NavGraphBuilder.tripDetailScreen(
     onBack: () -> Unit,
     onContinue: (slug: String, departureId: String) -> Unit,
+    onHostClick: ((HostLink) -> Unit)? = null,
+    reducedMotion: () -> Boolean = { false },
 ) {
-    composable<TripDetailRoute> { entry ->
-        TripDetailScreen(slug = entry.toRoute<TripDetailRoute>().slug, onBack = onBack, onContinue = onContinue)
+    composable<TripDetailRoute>(
+        // To the host page and back.
+        exitTransition = { if (targetState.isHostProfile()) bahrForwardExit(reducedMotion()) else null },
+        popEnterTransition = { if (initialState.isHostProfile()) bahrBackEnter(reducedMotion()) else null },
+        // A trip opened from the host page's list, and Back to it.
+        enterTransition = { if (initialState.isHostProfile()) bahrForwardEnter(reducedMotion()) else null },
+        popExitTransition = { if (targetState.isHostProfile()) bahrBackExit(reducedMotion()) else null },
+    ) { entry ->
+        ProvideBahrNavScope(this) {
+            TripDetailScreen(
+                slug = entry.toRoute<TripDetailRoute>().slug,
+                onBack = onBack,
+                onContinue = onContinue,
+                // Null when the app wires no host page: the card then stays as it was, not tappable.
+                onHostClick =
+                    onHostClick?.let { open ->
+                        { host -> host.slug?.let { open(HostLink(it, host.name, host.avatar?.url)) } }
+                    },
+            )
+        }
     }
 }
+
+/**
+ * The host page (M4-M10): the host's profile, rating and reviews, then their trips ([onTripClick]).
+ * Opened from a trip page, it slides in from the end side and leaves the same way on Back (M4-M6).
+ */
+fun NavGraphBuilder.hostProfileScreen(
+    onBack: () -> Unit,
+    onTripClick: (slug: String) -> Unit,
+    reducedMotion: () -> Boolean = { false },
+) {
+    composable<HostProfileRoute>(
+        enterTransition = { if (initialState.isTripDetail()) bahrForwardEnter(reducedMotion()) else null },
+        popExitTransition = { if (targetState.isTripDetail()) bahrBackExit(reducedMotion()) else null },
+        // A trip opened from the host page: the host page steps aside the same way, and comes back on Back.
+        exitTransition = { if (targetState.isTripDetail()) bahrForwardExit(reducedMotion()) else null },
+        popEnterTransition = { if (initialState.isTripDetail()) bahrBackEnter(reducedMotion()) else null },
+    ) { entry ->
+        val route = entry.toRoute<HostProfileRoute>()
+        ProvideBahrNavScope(this) {
+            HostProfileScreen(
+                slug = route.slug,
+                name = route.name,
+                avatar = route.avatar,
+                onBack = onBack,
+                onTripClick = onTripClick,
+            )
+        }
+    }
+}
+
+/** What a trip page's host card hands to [tripDetailScreen]'s `onHostClick`: the host's slug and what the card showed. */
+data class HostLink(
+    val slug: String,
+    val name: String? = null,
+    val avatar: String? = null,
+)
+
+private fun NavBackStackEntry.isHostProfile(): Boolean = destination.hasRoute<HostProfileRoute>()
+
+private fun NavBackStackEntry.isTripDetail(): Boolean = destination.hasRoute<TripDetailRoute>()
 
 /**
  * The category page (M4-M1b). Back is [onBack]; Home under it keeps its scroll position, because its
@@ -154,6 +222,12 @@ fun NavController.navigateToSectionTrips(
     sharedKey: String? = null,
     builder: NavOptionsBuilder.() -> Unit = {},
 ) = navigate(SectionTripsRoute(sectionId, title, sharedKey), builder)
+
+/** The host page for [link] (M4-M10). */
+fun NavController.navigateToHostProfile(
+    link: HostLink,
+    builder: NavOptionsBuilder.() -> Unit = {},
+) = navigate(HostProfileRoute(link.slug, link.name, link.avatar), builder)
 
 fun NavController.navigateToTripDetail(
     slug: String,

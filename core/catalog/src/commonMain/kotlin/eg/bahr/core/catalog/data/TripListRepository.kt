@@ -11,14 +11,15 @@ import eg.bahr.core.common.result.AppResult
  */
 interface TripListRepository {
     /**
-     * One page of `GET /trips`, optionally narrowed by a [category] key, a [filter] value and the search
-     * text [q] (null = none).
+     * One page of `GET /trips`, optionally narrowed by a [category] key, a [filter] value, the search
+     * text [q] and a [host]'s public slug (M4-B7) (null = none).
      */
     suspend fun listTrips(
         page: Int = 0,
         category: String? = null,
         filter: String? = null,
         q: String? = null,
+        host: String? = null,
     ): AppResult<TripPageDto>
 }
 
@@ -32,8 +33,9 @@ internal class DefaultTripListRepository(
         category: String?,
         filter: String?,
         q: String?,
+        host: String?,
     ): AppResult<TripPageDto> =
-        api.listTrips(page = page, category = category, filter = filter, q = q).also { result ->
+        api.listTrips(page = page, category = category, filter = filter, q = q, host = host).also { result ->
             if (result is AppResult.Success) cards.remember(result.data.items)
         }
 }

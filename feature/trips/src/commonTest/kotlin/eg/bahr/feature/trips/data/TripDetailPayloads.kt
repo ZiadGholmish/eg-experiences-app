@@ -6,7 +6,8 @@ package eg.bahr.feature.trips.data
  * with 6, 2, 0 (sold out) and 11 seats left of 18. Null fields are omitted, as the backend omits them
  * (`shareUrl`). Images carry `variants` (390px avif/webp/jpeg) and the host has an avatar, as served since
  * the bahr-be `Image.variants` / `host.avatar` change, and as M2-B5 serves them (D1, D3, D4): the full date
- * carries `unavailableReason`, and there is no `host.phone` or `policy.childFreeUnder`. Dates are fixed
+ * carries `unavailableReason`, and there is no `host.phone` or `policy.childFreeUnder`. The host card
+ * carries the host's `slug` and `kind` (M4-B7). Dates are fixed
  * to October 2026; the seed computes them from today.
  * LQIPs are shortened: the decode does not look inside them.
  */
@@ -204,6 +205,8 @@ internal object TripDetailPayloads {
    }
   ],
   "host": {
+   "slug": "ashraf-el-bahr",
+   "kind": "person",
    "name": "Ashraf El Bahr",
    "avatar": {
     "url": "http://localhost:9000/bahr-assets/seed/host.png",
@@ -765,6 +768,8 @@ internal object TripDetailPayloads {
    }
   ],
   "host": {
+   "slug": "ashraf-el-bahr",
+   "kind": "person",
    "name": "Ashraf El Bahr",
    "avatar": {
     "url": "http://localhost:9000/bahr-assets/seed/host.png",

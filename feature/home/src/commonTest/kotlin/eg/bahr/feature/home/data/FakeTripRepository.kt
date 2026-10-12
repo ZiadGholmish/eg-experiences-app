@@ -39,8 +39,9 @@ internal class FakeTripRepository(
         category: String?,
         filter: String?,
         q: String?,
+        host: String?,
     ): AppResult<TripPageDto> {
-        val query = TripQuery(page, category, filter, q)
+        val query = TripQuery(page, category, filter, q, host)
         requestedPages += page
         requestedQueries += query
         return listFiltered?.invoke(query) ?: listTrips.invoke(page)
@@ -57,6 +58,7 @@ internal data class TripQuery(
     val category: String? = null,
     val filter: String? = null,
     val q: String? = null,
+    val host: String? = null,
 )
 
 /**

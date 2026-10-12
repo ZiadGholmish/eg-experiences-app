@@ -288,6 +288,19 @@ object BahrSize {
 
     /** A legend entry's colour dot (map.html `.legend span`: 9px). */
     val legendDot = 9.dp
+
+    /**
+     * The host page's photo (M4-M10; the handoff has no host page): larger than the trip page's host
+     * card ([avatar]), which morphs into it, so the page reads as the host's own.
+     */
+    val avatarLarge = 76.dp
+
+    /**
+     * One star row's bar in a rating summary (M4-M10): [ratingBarHeight] tall, and the star label in
+     * front of it [ratingStarColumn] wide, so the five bars start on one line whatever the digit.
+     */
+    val ratingBarHeight = 6.dp
+    val ratingStarColumn = 28.dp
 }
 
 internal val LocalBahrShapes = staticCompositionLocalOf { BahrShapes() }

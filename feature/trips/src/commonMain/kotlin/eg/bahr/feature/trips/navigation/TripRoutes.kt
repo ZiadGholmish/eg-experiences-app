@@ -37,6 +37,18 @@ data class SectionTripsRoute(
     val sharedKey: String? = null,
 )
 
+/**
+ * A host's page (M4-M10), opened from the trip page's host card. [name] and [avatar] (a URL) are what
+ * the card showed: the header draws them at once, before `getHost` answers (text first), and the
+ * card's row has something to morph into.
+ */
+@Serializable
+data class HostProfileRoute(
+    val slug: String,
+    val name: String? = null,
+    val avatar: String? = null,
+)
+
 /** Search (M4-M3), opened from Home's search entry. */
 @Serializable
 data object SearchTripsRoute
