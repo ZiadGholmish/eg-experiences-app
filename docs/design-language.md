@@ -26,6 +26,7 @@ wins.
 | `sys.color.primary / secondary / tertiary / error` (+ `on*`, `*Container`) | `MaterialTheme.colorScheme.*` | `theme/BahrColors.kt` |
 | `surface / surfaceLowest / surfaceLow / surfaceContainer / surfaceDim` | `colorScheme.surface / surfaceContainerLowest / surfaceContainerLow / surfaceContainer / surfaceDim` | `theme/BahrColors.kt` |
 | `onSurface / onSurfaceVariant / outline / outlineVariant` | `colorScheme.*` | `theme/BahrColors.kt` |
+| *(not in tokens.json)* page background | `colorScheme.background` = `ref.palette.neutral.97` (Dusk: its warm `surfaceLow`, `#f8f7f5`), M4-M12 | `theme/BahrColors.kt` |
 | `primaryDim, primaryBright, primaryDeep, secondaryDim, tertiaryHover, quaternary*, success*, onSurfaceSecondary, onSurfaceDisabled, track, surfaceTranslucent`, scrims | `BahrTheme.colors.*` | `theme/BahrColors.kt` |
 | `typescale.display` | `typography.displaySmall` / `BahrTheme.type.display` | `theme/BahrType.kt` |
 | `typescale.headline / titleLarge / title` | `typography.headlineMedium / titleLarge / titleMedium` | `theme/BahrType.kt` |
@@ -44,6 +45,19 @@ wins.
 | *(not in tokens.json)* component sizes from the handoff's px | `BahrSize.*`, `BahrBorder.*`, `BahrSpacing.minTouch` | `theme/BahrShapeElevationMotion.kt` |
 | `[data-theme=dusk / highcontrast]` | `BahrTheme(theme = BahrThemeName.Dusk / HighContrast)` | `theme/BahrColors.kt` |
 | `meta.currency`, `meta.timeFormat` | `BahrFormat` (EGP, 24h, Western digits) | `format/BahrFormat.kt` |
+
+**Page vs surface (M4-M12, user decision 2026-10-12).** tokens.json names no page colour: the prototype
+draws white cards on a white page and lets the CSS `level1` shadow set them apart. Compose draws that
+shadow far fainter, so on Android the cards' white bodies melted into the page. The page
+(`colorScheme.background`, painted by the tab `Scaffold` on Android and by the app root on iOS) is
+therefore a very light off-white, the palette's existing `neutral.97`, and everything raised off it keeps
+`surface` white with its usual shadow: cards, sheets, dialogs, the bottom bar. No new palette tone was
+needed. Elements the handoff tints with `surfaceLow` / `surfaceLowest` *directly on the page* (the
+itinerary panel, the booking price and total panels, the map's panel ground, the search fields, the
+booking inputs, Settings' unselected language) are `surface` white instead, since the tint would vanish
+into the page; inside a card, or on a coloured notice, the tints stay as the handoff has them. HighContrast
+keeps its 1dp outline in place of shadows. To feed back into the handoff: a `background` role in
+tokens.json.
 
 **Code-only sizes.** `BahrSize` holds fixed sizes the handoff draws with but tokens.json does not
 name: the icon sizes (`iconSmall/Medium/Large`, M1-M1a review #9) and component dimensions from the

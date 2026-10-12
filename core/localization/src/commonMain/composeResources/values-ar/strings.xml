@@ -273,7 +273,6 @@
     <string name="map_card_bus_time">الأتوبيس بيقوم الساعة %1$s</string>
     <string name="map_view_trip">شوف الرحلة</string>
     <string name="map_card_close">اقفل</string>
-    <string name="map_note_pins">العلامات مكان الرحلة نفسها.</string>
     <string name="map_empty">مفيش رحلات على الخريطة لسه. ارجع تاني قريب.</string>
 
     <string name="error_network">لا يوجد اتصال. تحقق من الإنترنت وحاول مرة أخرى.</string>

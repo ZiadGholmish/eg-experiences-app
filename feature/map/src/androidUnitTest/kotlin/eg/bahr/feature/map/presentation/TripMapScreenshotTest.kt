@@ -40,7 +40,7 @@ import kotlin.test.assertEquals
  *
  * The map itself is [TripMapCanvas], the plain-ground fallback a build without a Maps key draws:
  * neither Google map (maps-compose's MapView, the iOS SDK's GMSMapView) can render under Robolectric.
- * So these goldens cover the chrome (bar, legend, card, note, states) and the pins' own pictures,
+ * So these goldens cover the chrome (bar, legend, card, states) and the pins' own pictures,
  * not Google's tiles, style or camera.
  *
  * Record: `./gradlew :feature:map:recordRoborazziDebug`; verify: `verifyRoborazziDebug`.
@@ -68,7 +68,7 @@ class TripMapScreenshotTest {
         shoot("map_loading", language, vm)
     }
 
-    /** Every pin framed, the legend with "Sold out", the note. */
+    /** Every pin framed, the legend with "Sold out"; the panel runs to the bottom (no note since M4-M12). */
     @Test
     fun loadedArabic() = loaded(AppLanguage.ARABIC)
 

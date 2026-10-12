@@ -99,7 +99,10 @@ class HostProfileScreenshotTest {
         compose.onNodeWithTag(SEE_ALL_REVIEWS_TAG).assertExists()
     }
 
-    /** M4-M11: the summary counts no more reviews than the preview shows (2 of 2): no "See all reviews". */
+    /**
+     * M4-M12: the preview is short of the server's 3 (2 shown), so it is every real review there is,
+     * though the summary counts 6: no "See all reviews".
+     */
     @Config(qualifiers = "en-w360dp-h1400dp-xhdpi")
     @Test
     fun allReviewsShownArabic() = allReviewsShown(AppLanguage.ARABIC)
@@ -110,7 +113,7 @@ class HostProfileScreenshotTest {
 
     private fun allReviewsShown(language: AppLanguage) {
         val arabic = language == AppLanguage.ARABIC
-        val host = ashraf(arabic).let { it.copy(rating = it.rating.copy(average = 4.5, count = 2, distribution = stars(1, 1))) }
+        val host = ashraf(arabic).let { it.copy(reviews = it.reviews.take(2)) }
         snap(
             "host_all_reviews_shown",
             language,
@@ -120,10 +123,29 @@ class HostProfileScreenshotTest {
         compose.onNodeWithTag(SEE_ALL_REVIEWS_TAG).assertDoesNotExist()
     }
 
-    private fun stars(
-        fives: Int,
-        fours: Int,
-    ) = listOf(5 to fives, 4 to fours, 3 to 0, 2 to 0, 1 to 0).map { (stars, count) -> StarCountDto(stars, count) }
+    /**
+     * M4-M12 (user, found on device): a summary that counts reviews (6) with no review rows behind it.
+     * The summary stays; no "See all reviews" under an empty preview.
+     */
+    @Config(qualifiers = "en-w360dp-h1400dp-xhdpi")
+    @Test
+    fun authoredRatingOnlyArabic() = authoredRatingOnly(AppLanguage.ARABIC)
+
+    @Config(qualifiers = "en-w360dp-h1400dp-xhdpi")
+    @Test
+    fun authoredRatingOnlyEnglish() = authoredRatingOnly(AppLanguage.ENGLISH)
+
+    private fun authoredRatingOnly(language: AppLanguage) {
+        val arabic = language == AppLanguage.ARABIC
+        val host = ashraf(arabic).copy(reviews = emptyList())
+        snap(
+            "host_authored_rating_only",
+            language,
+            FakeTripRepository(hostBySlug = { AppResult.Success(host) }, listFiltered = { page(cards(arabic), totalItems = 2) }),
+            name = "Ashraf El Bahr",
+        )
+        compose.onNodeWithTag(SEE_ALL_REVIEWS_TAG).assertDoesNotExist()
+    }
 
     /** A company with no reviews yet (Red Sea Days in the seed): no bars, one line saying so. */
     @Test
@@ -209,6 +231,13 @@ class HostProfileScreenshotTest {
                         dateISO = LocalDate(2026, 9, 7),
                         body = if (arabic) "أشرف عارف كل قناة في البحيرة." else "Ashraf knows every channel of the lake.",
                         tone = "secondary",
+                        rating = 4,
+                    ),
+                    // A full preview (the server's 3), so the page offers "See all reviews" (M4-M12).
+                    ReviewDto(
+                        author = if (arabic) "كريم ف." else "Karim F.",
+                        dateISO = LocalDate(2026, 8, 30),
+                        tone = "tertiary",
                         rating = 4,
                     ),
                 ),

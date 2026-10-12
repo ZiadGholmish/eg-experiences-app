@@ -114,6 +114,9 @@ private const val RAISED_SHADOW_ALPHA = .3f
 private const val FLOAT_SHADOW_ALPHA = .18f
 private const val DUSK_CTA_SHADOW_ALPHA = .3f
 
+/** Dusk's `surfaceLow` (`tokens.css`), also its page background (M4-M12). */
+private val DUSK_SURFACE_LOW = Color(0xFFF8F7F5)
+
 internal val LakeBurullus =
     BahrColorTheme(
         scheme =
@@ -134,7 +137,11 @@ internal val LakeBurullus =
                 onError = P.Neutral100,
                 errorContainer = P.Coral95,
                 onErrorContainer = P.Coral30,
-                background = P.Neutral100,
+                // M4-M12 (user decision 2026-10-12): the page is a very light off-white so the white
+                // cards, sheets and bars on it stand out; on a white page `level1` (much fainter in
+                // Compose than in the CSS) was all that set a card apart. tokens.json has no page role
+                // (the prototype is white on white), so this one is code-side: see design-language.md.
+                background = P.Neutral97,
                 onBackground = P.Neutral10,
                 surface = P.Neutral100,
                 onSurface = P.Neutral10,
@@ -191,7 +198,9 @@ internal val Dusk =
                     tertiary = Color(0xFFC8552F),
                     tertiaryContainer = Color(0xFFFBEBE4),
                     secondary = Color(0xFFD99B3F),
-                    surfaceContainerLow = Color(0xFFF8F7F5),
+                    // The page takes Dusk's own warm off-white, as LakeBurullus takes its neutral one.
+                    background = DUSK_SURFACE_LOW,
+                    surfaceContainerLow = DUSK_SURFACE_LOW,
                     surfaceContainer = Color(0xFFF1EFEC),
                     onSurface = Color(0xFF1C1F22),
                 ),
@@ -200,7 +209,7 @@ internal val Dusk =
                     primaryDim = Color(0xFF4D6A80),
                     primaryBright = Color(0xFFA7CBE3),
                     tertiaryHover = Color(0xFFAD4523),
-                    surfaceLow = Color(0xFFF8F7F5),
+                    surfaceLow = DUSK_SURFACE_LOW,
                     ctaShadow = Color(0xFFC8552F).copy(alpha = DUSK_CTA_SHADOW_ALPHA),
                     chipShadow = Color(0xFF1B4A6B).copy(alpha = CHIP_SHADOW_ALPHA),
                     raisedShadow = Color(0xFF1B4A6B).copy(alpha = RAISED_SHADOW_ALPHA),

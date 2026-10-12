@@ -11,10 +11,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,7 +34,6 @@ import eg.bahr.core.designsystem.components.BahrLoadingView
 import eg.bahr.core.designsystem.components.BahrPillButton
 import eg.bahr.core.designsystem.icon.BahrIcons
 import eg.bahr.core.designsystem.theme.BahrElevation
-import eg.bahr.core.designsystem.theme.BahrSize
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.designsystem.theme.bahrShadow
@@ -44,7 +41,6 @@ import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.action_retry
 import eg.bahr.core.localization.generated.resources.map_empty
 import eg.bahr.core.localization.generated.resources.map_list
-import eg.bahr.core.localization.generated.resources.map_note_pins
 import eg.bahr.core.localization.generated.resources.map_title
 import eg.bahr.core.localization.isRetryable
 import eg.bahr.core.localization.localizedMessage
@@ -72,9 +68,10 @@ internal typealias MapContent = @Composable (
 /**
  * The map (M4-M2, HANDOFF screen 2): an app bar (back, "Where the trips are", "List" back to Home),
  * the map in a rounded, raised panel with the legend (or a tapped pin's
- * card) at the bottom, and a note under it on how to read it.
+ * card) at the bottom. M4-M12 (user decision 2026-10-12): the prototype's note under the map ("Pins are
+ * the trip itself.") is gone and the panel takes its space, down to the navigation bar.
  *
- * Loading, error and empty take the map panel's place; the bar and note stay. A tapped pin opens its
+ * Loading, error and empty take the map panel's place; the bar stays. A tapped pin opens its
  * card; the card opens the trip ([onTripClick]); the map itself closes it.
  *
  * M4-M8: the map is the Map tab's root, with nothing to go back to: [onBack] null draws no Back, and
@@ -96,7 +93,9 @@ internal fun TripMapScreen(
             modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
-                .windowInsetsPadding(WindowInsets.statusBars),
+                .windowInsetsPadding(WindowInsets.statusBars)
+                // The note under the panel used to keep it off the gesture area; now the panel does.
+                .windowInsetsPadding(WindowInsets.navigationBars),
     ) {
         MapTopBar(onBack = onBack, onList = onList)
         val panelShape = BahrTheme.shapes.hero
@@ -105,10 +104,12 @@ internal fun TripMapScreen(
                 Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .padding(horizontal = BahrSpacing.md)
+                    .padding(start = BahrSpacing.md, end = BahrSpacing.md, bottom = BahrSpacing.md)
                     .bahrShadow(BahrElevation.Level3, panelShape, BahrTheme.colors)
                     .clip(panelShape)
-                    .background(BahrTheme.colors.surfaceLow),
+                    // White on the off-white page (M4-M12), like every raised panel; the map covers it
+                    // once loaded, so this is the loading / error / empty ground.
+                    .background(MaterialTheme.colorScheme.surface),
         ) {
             val error = state.error
             when {
@@ -126,7 +127,6 @@ internal fun TripMapScreen(
                 else -> MapPanel(state, viewModel, onTripClick, map)
             }
         }
-        MapNote(text = stringResource(Res.string.map_note_pins))
     }
 }
 
@@ -205,35 +205,6 @@ private fun MapTopBar(
         // The prototype's "List": back to Home's list (since M4-M8, the Home tab).
         BahrPillButton(
             props = BahrPillButton.Props(text = stringResource(Res.string.map_list), icon = BahrIcons.FormatListBulleted, onClick = onList),
-        )
-    }
-}
-
-/** The note under the map (the prototype's mapNote panel): how to read the pins. */
-@Composable
-private fun MapNote(text: String) {
-    val bottom = WindowInsets.navigationBars
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .windowInsetsPadding(bottom)
-                .padding(horizontal = BahrSpacing.gutter, vertical = BahrSpacing.lg)
-                .clip(BahrTheme.shapes.extraLarge)
-                .background(MaterialTheme.colorScheme.secondaryContainer)
-                .padding(horizontal = BahrSpacing.lg, vertical = BahrSpacing.md),
-        horizontalArrangement = Arrangement.spacedBy(BahrSpacing.md),
-    ) {
-        Icon(
-            imageVector = BahrIcons.Info.filled(),
-            contentDescription = null,
-            tint = BahrTheme.colors.secondaryDim,
-            modifier = Modifier.size(BahrSize.iconLarge),
-        )
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSecondaryContainer,
         )
     }
 }

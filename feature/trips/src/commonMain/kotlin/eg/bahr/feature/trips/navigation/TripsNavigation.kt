@@ -84,7 +84,7 @@ fun NavGraphBuilder.tripDetailScreen(
  * Opened from a trip page, it slides in from the end side and leaves the same way on Back (M4-M6).
  *
  * M4-M11: [onSeeAllReviews] opens every review of the host's trips (usually [navigateToReviews]), from
- * "See all reviews" under the previews, shown only when the summary counts more than they show.
+ * "See all reviews" under the previews, shown only under a full preview when the summary counts more.
  */
 fun NavGraphBuilder.hostProfileScreen(
     onBack: () -> Unit,

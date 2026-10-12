@@ -316,7 +316,8 @@ private fun SearchEntry(onClick: () -> Unit) {
                 .fillMaxWidth()
                 .heightIn(min = BahrSpacing.minTouch)
                 .clip(shape)
-                .background(BahrTheme.colors.surfaceLowest)
+                // White on the off-white page (M4-M12), as the search screen's field it opens.
+                .background(MaterialTheme.colorScheme.surface)
                 .border(BahrBorder.hairline, MaterialTheme.colorScheme.outlineVariant, shape)
                 .clickable(role = Role.Button, onClick = onClick)
                 .padding(horizontal = BahrSpacing.lg, vertical = BahrSpacing.md),

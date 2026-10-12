@@ -292,10 +292,11 @@ private fun SearchBar(
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             onKeyboardAction = { onSearch() },
             shape = BahrTheme.shapes.full,
+            // White on the off-white page (M4-M12), where the handoff's `surfaceLowest` would vanish.
             colors =
                 OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = BahrTheme.colors.surfaceLowest,
-                    unfocusedContainerColor = BahrTheme.colors.surfaceLowest,
+                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                     unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
                 ),
         )

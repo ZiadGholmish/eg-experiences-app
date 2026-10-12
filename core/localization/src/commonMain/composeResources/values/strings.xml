@@ -249,7 +249,6 @@
     <string name="map_card_bus_time">Bus leaves at %1$s</string>
     <string name="map_view_trip">View trip</string>
     <string name="map_card_close">Close</string>
-    <string name="map_note_pins">Pins are the trip itself.</string>
     <string name="map_empty">No trips on the map yet. Check back soon.</string>
 
     <!-- The bottom bar (M4-M8): one label per tab. The iOS tab bar reads the same strings (handed to Swift by

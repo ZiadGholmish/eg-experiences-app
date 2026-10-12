@@ -251,7 +251,8 @@ private fun TotalPanel(state: HoldUiState) {
             Modifier
                 .fillMaxWidth()
                 .clip(BahrTheme.shapes.card)
-                .background(BahrTheme.colors.surfaceLow)
+                // White on the off-white page (M4-M12): `surfaceLow` would vanish into it.
+                .background(MaterialTheme.colorScheme.surface)
                 .padding(BahrSpacing.lg),
         verticalArrangement = Arrangement.spacedBy(BahrSpacing.sm),
     ) {

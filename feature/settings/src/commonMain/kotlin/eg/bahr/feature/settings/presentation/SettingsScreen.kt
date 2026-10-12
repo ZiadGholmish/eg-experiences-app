@@ -102,7 +102,8 @@ internal fun SettingsScreen(
                         SegmentedButtonDefaults.colors(
                             activeContainerColor = MaterialTheme.colorScheme.primaryContainer,
                             activeContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                            inactiveContainerColor = BahrTheme.colors.surfaceLowest,
+                            // White on the off-white page (M4-M12).
+                            inactiveContainerColor = MaterialTheme.colorScheme.surface,
                         ),
                     modifier = Modifier.heightIn(min = BahrSpacing.minTouch).testTag(languageTag(language)),
                 ) {

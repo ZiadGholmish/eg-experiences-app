@@ -47,6 +47,7 @@ import eg.bahr.feature.trips.presentation.components.ListTopBar
 import eg.bahr.feature.trips.presentation.components.RatingSummary
 import eg.bahr.feature.trips.presentation.components.ReviewCard
 import eg.bahr.feature.trips.presentation.components.SeeAllReviewsLink
+import eg.bahr.feature.trips.presentation.components.showsSeeAllReviews
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -150,8 +151,8 @@ private fun HostPageList(
             items(profile.reviews.withIndex().toList(), key = { "$KEY_REVIEW${it.index}" }) { (_, review) ->
                 Box(padded) { ReviewCard(review) }
             }
-            // M4-M11: only when the summary counts more reviews than the preview shows.
-            if (onSeeAllReviews != null && profile.rating.count > profile.reviews.size) {
+            // M4-M11, M4-M12: only under a full preview, when the summary counts more than it shows.
+            if (onSeeAllReviews != null && showsSeeAllReviews(count = profile.rating.count, previewed = profile.reviews.size)) {
                 item(key = KEY_SEE_ALL_REVIEWS) { SeeAllReviewsLink(onClick = { onSeeAllReviews(profile.name) }, modifier = padded) }
             }
         }

@@ -29,10 +29,14 @@ import eg.bahr.feature.trips.data.TripFixtures.trip
 import eg.bahr.feature.trips.data.waitlistMemory
 import eg.bahr.feature.trips.model.DepartureDto
 import eg.bahr.feature.trips.model.HostDto
+import eg.bahr.feature.trips.model.ReviewDto
+import eg.bahr.feature.trips.model.ReviewsDto
 import eg.bahr.feature.trips.model.TripDetailDto
+import eg.bahr.feature.trips.presentation.components.REVIEW_PREVIEW_SIZE
 import eg.bahr.feature.trips.presentation.components.SEE_ALL_REVIEWS_TAG
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.plus
 import kotlinx.serialization.json.Json
 import org.junit.After
@@ -333,22 +337,28 @@ class TripDetailScreenshotTest {
 
     /**
      * M4-M11: the reviews with their stars, and "See all reviews" under them: the trip counts 37 (an
-     * authored total) and previews 2. The link carries no number.
+     * authored total) and previews a full 3 (M4-M12: the link needs a full preview). The link carries
+     * no number. Taller than the class default: three review cards and the link under them.
      */
+    @Config(qualifiers = "en-w360dp-h1000dp-xhdpi")
     @Test
     fun reviewsSeeAllArabic() = reviewsSeeAll(AppLanguage.ARABIC)
 
+    @Config(qualifiers = "en-w360dp-h1000dp-xhdpi")
     @Test
     fun reviewsSeeAllEnglish() = reviewsSeeAll(AppLanguage.ENGLISH)
 
     private fun reviewsSeeAll(language: AppLanguage) {
         snap("trip_detail_reviews_see_all", language, onSeeAllReviews = {}, scrollTo = TripSection.Reviews) {
-            serve(payload(language), departures(language), detail = ::withStars)
+            serve(payload(language), departures(language), detail = { withFullPreview(withStars(it), language) })
         }
         compose.onNodeWithTag(SEE_ALL_REVIEWS_TAG).assertIsDisplayed()
     }
 
-    /** M4-M11: every review is in the preview (count 2, 2 shown): no "See all reviews". */
+    /**
+     * M4-M12: the preview is short of the server's 3 (2 shown), so it is every real review there is,
+     * though the authored count says 37: no "See all reviews".
+     */
     @Test
     fun reviewsAllShownArabic() = reviewsAllShown(AppLanguage.ARABIC)
 
@@ -357,13 +367,43 @@ class TripDetailScreenshotTest {
 
     private fun reviewsAllShown(language: AppLanguage) {
         snap("trip_detail_reviews_all_shown", language, onSeeAllReviews = {}, scrollTo = TripSection.Reviews) {
+            serve(payload(language), departures(language), detail = ::withStars)
+        }
+        compose.onNodeWithTag(SEE_ALL_REVIEWS_TAG).assertDoesNotExist()
+    }
+
+    /**
+     * M4-M12 (user, found on device): an authored rating ("4.9 · 64") with no review rows behind it.
+     * The pill stays; no empty preview's "See all reviews", which would open an empty list.
+     */
+    @Test
+    fun reviewsAuthoredOnlyArabic() = reviewsAuthoredOnly(AppLanguage.ARABIC)
+
+    @Test
+    fun reviewsAuthoredOnlyEnglish() = reviewsAuthoredOnly(AppLanguage.ENGLISH)
+
+    private fun reviewsAuthoredOnly(language: AppLanguage) {
+        snap("trip_detail_reviews_authored_only", language, onSeeAllReviews = {}, scrollTo = TripSection.Reviews) {
             serve(payload(language), departures(language), detail = {
-                withStars(it).let { t ->
-                    t.copy(reviews = t.reviews?.copy(count = 2))
-                }
+                it.copy(reviews = ReviewsDto(average = AUTHORED_AVERAGE, count = AUTHORED_COUNT, items = emptyList()))
             })
         }
         compose.onNodeWithTag(SEE_ALL_REVIEWS_TAG).assertDoesNotExist()
+    }
+
+    /** The payload previews 2 reviews; a full preview is the server's 3, so a rating-only third is added. */
+    private fun withFullPreview(
+        trip: TripDetailDto,
+        language: AppLanguage,
+    ): TripDetailDto {
+        val third =
+            ReviewDto(
+                author = if (language == AppLanguage.ARABIC) "كريم ف." else "Karim F.",
+                dateISO = LocalDate(2026, 9, 2),
+                tone = "secondary",
+                rating = 3,
+            )
+        return trip.copy(reviews = trip.reviews?.let { r -> r.copy(items = (r.items + third).take(REVIEW_PREVIEW_SIZE)) })
     }
 
     private fun payload(language: AppLanguage) =
@@ -481,3 +521,7 @@ class TripDetailScreenshotTest {
         val json = Json { ignoreUnknownKeys = true }
     }
 }
+
+/** The device report's authored rating: "4.9 · 64" with no review rows. */
+private const val AUTHORED_AVERAGE = 4.9
+private const val AUTHORED_COUNT = 64

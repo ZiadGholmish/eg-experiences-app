@@ -1,11 +1,15 @@
 package eg.bahr
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import eg.bahr.core.common.error.AppErrorController
@@ -102,7 +106,12 @@ private fun App(content: @Composable (AppLanguage) -> Unit) {
                 message = pendingError?.let { BahrErrorMessage(id = it.id, text = it.error.messageRes()) },
                 onDismissed = { shown -> errors.dismiss(shown.id) },
             ) {
-                content(language)
+                // The page's off-white (M4-M12) under every screen. Android's tab Scaffold paints it
+                // too; on iOS each tab's root is this, under SwiftUI's TabView, and most screens paint
+                // no ground of their own, so without it the page would stay the host view's white.
+                Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+                    content(language)
+                }
             }
         }
     }

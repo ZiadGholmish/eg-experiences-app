@@ -410,18 +410,22 @@ internal fun GuestDetails(
     }
 }
 
-/** HANDOFF screen 5's inputs: `surfaceLowest` with an `outlineVariant` border. */
+/**
+ * HANDOFF screen 5's inputs with their `outlineVariant` border. The handoff fills them `surfaceLowest`
+ * on a white page; on the off-white page (M4-M12) they are `surface` white, as cards are, so a field
+ * still reads as a field rather than a hole in the page.
+ */
 @Composable
 private fun fieldColors() =
     OutlinedTextFieldDefaults.colors(
-        focusedContainerColor = BahrTheme.colors.surfaceLowest,
-        unfocusedContainerColor = BahrTheme.colors.surfaceLowest,
-        errorContainerColor = BahrTheme.colors.surfaceLowest,
+        focusedContainerColor = MaterialTheme.colorScheme.surface,
+        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+        errorContainerColor = MaterialTheme.colorScheme.surface,
         unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
     )
 
 /**
- * The price panel on `surfaceLow`: the per-person price and the party, side by side, and a note that
+ * The price panel (white since M4-M12; the handoff's `surfaceLow`): the per-person price and the party, side by side, and a note that
  * the total comes with the hold. The handoff shows `2 × 450` and a total of 900 here, but the client
  * never multiplies money: before the hold, the contract has no total to show (`HeldSeats.total` is
  * the first), and no booking fee is served in R1, so there is no fee row either.
@@ -437,7 +441,9 @@ internal fun PriceSummary(
             Modifier
                 .fillMaxWidth()
                 .clip(BahrTheme.shapes.card)
-                .background(BahrTheme.colors.surfaceLow)
+                // The handoff's `surfaceLow` panel was a tint on a white page; on the off-white page
+                // (M4-M12) it would vanish, so it is the white of everything raised off the page.
+                .background(MaterialTheme.colorScheme.surface)
                 .padding(BahrSpacing.lg),
         verticalArrangement = Arrangement.spacedBy(BahrSpacing.xs),
     ) {

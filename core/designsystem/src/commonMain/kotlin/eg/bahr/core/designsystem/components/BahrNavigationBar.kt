@@ -15,7 +15,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import eg.bahr.core.designsystem.icon.BahrIcons
 import eg.bahr.core.designsystem.theme.BahrSize
-import eg.bahr.core.designsystem.theme.BahrTheme
 
 /**
  * The app's bottom bar on Android (M4-M8): a Material 3 `NavigationBar` in Bahr colours, one item per
@@ -61,7 +60,8 @@ fun BahrNavigationBar(
 ) {
     NavigationBar(
         modifier = modifier,
-        containerColor = BahrTheme.colors.surfaceLowest,
+        // Bars are `surface` white over the off-white page (M4-M12), as cards and sheets are.
+        containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
     ) {
         props.items.forEachIndexed { index, item ->

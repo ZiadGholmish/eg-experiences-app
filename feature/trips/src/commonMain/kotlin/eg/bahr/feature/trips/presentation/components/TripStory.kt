@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
@@ -72,7 +73,7 @@ import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
 /**
- * The day, in order (item 6): `time | dot | text` rows on a `surfaceLow` panel, the dots joined by a
+ * The day, in order (item 6): `time | dot | text` rows on a white panel (the handoff's `surfaceLow`, M4-M12), the dots joined by a
  * line. A stop the server marks `approximate` prints its time as "≈12:15", and the note above says
  * what the mark means. The prototype's note ("times after 12:00…") was this trip's copy; the
  * contract carries the flag per stop instead.
@@ -97,7 +98,9 @@ internal fun TripItinerary(
                     .padding(top = BahrSpacing.sm)
                     .fillMaxWidth()
                     .clip(BahrTheme.shapes.card)
-                    .background(BahrTheme.colors.surfaceLow)
+                    // The handoff's `surfaceLow` panel was a tint on a white page; on the off-white
+                    // page (M4-M12) it is white, like everything raised off the page.
+                    .background(ItineraryPanelColor)
                     .padding(start = BahrSpacing.lg, end = BahrSpacing.lg, top = BahrSpacing.lg),
         ) {
             stops.forEachIndexed { index, stop -> StopRow(stop, isLast = index == stops.lastIndex) }
@@ -127,7 +130,8 @@ private fun StopRow(
                 Modifier
                     .width(BahrSize.connector)
                     .weight(1f)
-                    .background(if (isLast) BahrTheme.colors.surfaceLow else MaterialTheme.colorScheme.outlineVariant),
+                    // The last stop's segment is painted out in the panel's own colour.
+                    .background(if (isLast) ItineraryPanelColor else MaterialTheme.colorScheme.outlineVariant),
             )
         }
         Text(
@@ -285,8 +289,9 @@ private fun tipStyle(key: String?): Triple<Tint, BahrIcons, StringResource> =
  * Reviews (item 9): a "★ 4.8 · 37" pill, then one card per review with a tinted initial, the
  * author, the date and the text. The server sends the average and count it wants shown.
  *
- * M4-M11: "See all reviews" under the cards ([onSeeAll]) when the count says there are more than the
- * preview shows. Never with the number: the count can be an authored total larger than the real list.
+ * M4-M11: "See all reviews" under the cards ([onSeeAll]) when there are more reviews than the preview
+ * shows ([showsSeeAllReviews]). Never with the number: the count can be an authored total larger than
+ * the real list.
  */
 @Composable
 internal fun TripReviews(
@@ -301,9 +306,26 @@ internal fun TripReviews(
             reviews.average?.let { average -> ReviewsPill(BahrFormat.rating(average), reviews.count) }
         }
         reviews.items.forEach { ReviewCard(it) }
-        if (onSeeAll != null && (reviews.count ?: 0) > reviews.items.size) SeeAllReviewsLink(onSeeAll)
+        if (onSeeAll != null && showsSeeAllReviews(count = reviews.count ?: 0, previewed = reviews.items.size)) SeeAllReviewsLink(onSeeAll)
     }
 }
+
+/**
+ * The server's preview size (`TripDetail.reviews.items`, `HostProfile.reviews`: "a server-configured
+ * number, 3 by default", openapi.yaml). A preview shorter than this is every real review there is.
+ */
+internal const val REVIEW_PREVIEW_SIZE = 3
+
+/**
+ * Whether a page's review preview gets "See all reviews" (the trip page's and the host page's): only
+ * when the preview is full and the summary counts more than it shows. The count alone is not enough:
+ * it can be an authored total ("4.9 · 64") with no review rows behind it, or only a few, and then the
+ * link would open an empty list or the same reviews again (user, 2026-10-12, M4-M12).
+ */
+internal fun showsSeeAllReviews(
+    count: Int,
+    previewed: Int,
+): Boolean = previewed >= REVIEW_PREVIEW_SIZE && count > previewed
 
 /**
  * "See all reviews" under a page's review previews (the trip page's and the host page's, M4-M11), at
@@ -436,3 +458,7 @@ internal fun InitialAvatar(
  * direction, or the bidi algorithm moves its trailing period to the front.
  */
 private fun TextStyle.byContent() = copy(textDirection = TextDirection.Content)
+
+/** The itinerary panel's ground, which the last stop's connector also takes to hide itself. */
+private val ItineraryPanelColor: Color
+    @Composable get() = MaterialTheme.colorScheme.surface
