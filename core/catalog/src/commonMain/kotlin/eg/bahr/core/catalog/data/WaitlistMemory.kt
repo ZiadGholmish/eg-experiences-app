@@ -15,14 +15,14 @@ import kotlin.time.Clock
 
 /**
  * A waiting-list join this device made (M4-M5), read back from `core:datastore`: [date] is the
- * departure's Cairo calendar date, [phone] the number it was left on.
+ * departure's Cairo calendar date, [email] the address it was left on (trimmed, as sent; M4-M13).
  */
 data class JoinedWaitlist(
     val departureId: String,
     val tripSlug: String,
     val date: LocalDate,
     val partySize: Int,
-    val phone: String,
+    val email: String,
 )
 
 /**
@@ -59,7 +59,7 @@ class WaitlistMemory(
         tripSlug: String,
         date: LocalDate,
         partySize: Int,
-        phone: String,
+        email: String,
     ) = safely("remember") {
         store.save(
             StoredWaitlistJoin(
@@ -67,7 +67,7 @@ class WaitlistMemory(
                 tripSlug = tripSlug,
                 date = date.toString(),
                 partySize = partySize,
-                phone = phone,
+                email = email,
                 joinedAt = clock.now().toString(),
             ),
         )
@@ -78,15 +78,16 @@ class WaitlistMemory(
     }
 
     /**
-     * Drops every join whose date has passed, on any trip, and any entry that no longer parses, so a
-     * phone number does not outlive its trip on the device. Run where the app starts (Home) and on a
-     * trip page.
+     * Drops every join whose date has passed, on any trip, and any entry that no longer parses, so an
+     * email address does not outlive its trip on the device. Run where the app starts (Home) and on a
+     * trip page. Always writes, even with nothing passed: the store's remove also erases the phone
+     * joins an older build left (M4-M13), so the first start of this build clears them.
      */
     suspend fun forgetPassed() =
         safely("prune") {
             val today = today()
             val stale = store.joins.first().filter { it.parsed()?.date?.let { date -> date < today } ?: true }
-            forget(stale.mapTo(mutableSetOf()) { it.departureId })
+            store.remove(stale.mapTo(mutableSetOf()) { it.departureId })
         }
 
     private suspend fun safely(
@@ -116,7 +117,7 @@ class WaitlistMemory(
             } catch (_: IllegalArgumentException) {
                 return null
             }
-        return JoinedWaitlist(departureId, tripSlug, day, partySize, phone)
+        return JoinedWaitlist(departureId, tripSlug, day, partySize, email)
     }
 
     private companion object {

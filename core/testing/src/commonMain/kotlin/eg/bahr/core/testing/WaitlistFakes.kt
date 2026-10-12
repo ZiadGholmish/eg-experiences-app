@@ -19,13 +19,15 @@ import kotlin.time.Instant
 /**
  * Hand-written fake of core:datastore's store, with the same upsert-by-departure and cap. One
  * instance shared by two view models is "the app restarted over the same file". [failWrites] makes
- * save and remove throw, as a broken preferences file does.
+ * save and remove throw, as a broken preferences file does. [removals] records every remove call,
+ * an empty one included (the real store's tidy-up of older builds' phone joins, M4-M13).
  */
 class FakeWaitlistJoinsStore(
     initial: List<StoredWaitlistJoin> = emptyList(),
     var failWrites: Boolean = false,
 ) : WaitlistJoinsStore {
     override val joins = MutableStateFlow(initial)
+    val removals = mutableListOf<Set<String>>()
 
     override suspend fun save(join: StoredWaitlistJoin) {
         if (failWrites) throw StorageFailure("save")
@@ -34,6 +36,7 @@ class FakeWaitlistJoinsStore(
 
     override suspend fun remove(departureIds: Set<String>) {
         if (failWrites) throw StorageFailure("remove")
+        removals += departureIds
         joins.value = joins.value.filter { it.departureId !in departureIds }
     }
 }
@@ -73,5 +76,5 @@ fun storedJoin(
     tripSlug: String = "burullus-dawn",
     date: String = "2026-10-24",
     partySize: Int = 2,
-    phone: String = "+201001234567",
-) = StoredWaitlistJoin(departureId, tripSlug, date, partySize, phone, joinedAt = TEST_NOW.toString())
+    email: String = "sara@example.com",
+) = StoredWaitlistJoin(departureId, tripSlug, date, partySize, email, joinedAt = TEST_NOW.toString())

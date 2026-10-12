@@ -217,15 +217,16 @@ internal data class DepartureDto(
 )
 
 /**
- * openapi `WaitlistRequest` (`POST /departures/{departureId}/waitlist`, `joinWaitlist`): a phone and a
- * party size for a sold-out date (D3: only `SOLD_OUT` has a list).
+ * openapi `WaitlistRequest` (`POST /departures/{departureId}/waitlist`, `joinWaitlist`): an email and a
+ * party size for a sold-out date (D3: only `SOLD_OUT` has a list). [email] replaced `phone` in M4-B9; it is
+ * sent trimmed and checked against the server's rule first (`WaitlistEmail`).
  *
  * [locale] is left out (null is not sent): the contract defaults it to the request's
  * `Accept-Language`, which is already the app's stored language.
  */
 @Serializable
 internal data class WaitlistRequest(
-    val phone: String,
+    val email: String,
     val partySize: Int,
     val locale: String? = null,
 )

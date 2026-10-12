@@ -161,7 +161,41 @@ class TripDetailScreenshotTest {
     /** One night away: back the day after each departure. */
     private fun overnight(dates: List<DepartureDto>) = dates.map { it.copy(returnDate = it.date.plus(1, DateTimeUnit.DAY)) }
 
-    /** M2-M3: the waiting-list form open under the sold-out date, a number typed and a party of two. */
+    /** M4-M13: the waiting-list form just opened under the sold-out date: nothing typed, the button disabled. */
+    @Config(qualifiers = "en-w360dp-h900dp-xhdpi")
+    @Test
+    fun waitlistFormEmptyArabic() =
+        snap("trip_detail_waitlist_form_empty", AppLanguage.ARABIC, select = SOLD_OUT_ID, act = ::openForm) {
+            serve(TripDetailPayloads.arabic, TripDetailPayloads.arabicDepartures)
+        }
+
+    @Config(qualifiers = "en-w360dp-h900dp-xhdpi")
+    @Test
+    fun waitlistFormEmptyEnglish() =
+        snap("trip_detail_waitlist_form_empty", AppLanguage.ENGLISH, select = SOLD_OUT_ID, act = ::openForm) {
+            serve(TripDetailPayloads.english, TripDetailPayloads.englishDepartures)
+        }
+
+    /**
+     * M4-M13: an address the server's rule refuses (no dot in the domain), the field not focused: it is
+     * flagged inline with its sentence and the button stays disabled. The server's own refusal would
+     * name no field.
+     */
+    @Config(qualifiers = "en-w360dp-h900dp-xhdpi")
+    @Test
+    fun waitlistFormInvalidArabic() =
+        snap("trip_detail_waitlist_form_invalid", AppLanguage.ARABIC, select = SOLD_OUT_ID, act = ::fillInvalid) {
+            serve(TripDetailPayloads.arabic, TripDetailPayloads.arabicDepartures)
+        }
+
+    @Config(qualifiers = "en-w360dp-h900dp-xhdpi")
+    @Test
+    fun waitlistFormInvalidEnglish() =
+        snap("trip_detail_waitlist_form_invalid", AppLanguage.ENGLISH, select = SOLD_OUT_ID, act = ::fillInvalid) {
+            serve(TripDetailPayloads.english, TripDetailPayloads.englishDepartures)
+        }
+
+    /** M2-M3: the waiting-list form open under the sold-out date, an email typed (M4-M13) and a party of two. */
     @Config(qualifiers = "en-w360dp-h900dp-xhdpi")
     @Test
     fun waitlistFormArabic() =
@@ -193,7 +227,7 @@ class TripDetailScreenshotTest {
             joinWaitlist = { _, _ -> AppResult.Failure(AppError.Api(ApiErrorCodes.RATE_LIMITED, "full", 429)) }
         }
 
-    /** Joined: the confirmation, with the date and the number (left to right in Arabic too). */
+    /** Joined: the confirmation, with the date and the email (left to right in Arabic too). */
     @Test
     fun waitlistJoinedArabic() =
         snap("trip_detail_waitlist_joined", AppLanguage.ARABIC, select = SOLD_OUT_ID, act = ::fillAndJoin) {
@@ -211,7 +245,7 @@ class TripDetailScreenshotTest {
     /**
      * M4-M5: the device joined this sold-out date's list on an earlier visit (a restart: a new view
      * model over the stored join). Its date card reads "Waiting list" and the notice says so with
-     * the phone it was left on, instead of offering Join again.
+     * the email it was left on, instead of offering Join again.
      */
     @Test
     fun waitlistRememberedArabic() =
@@ -299,10 +333,17 @@ class TripDetailScreenshotTest {
     private fun reopen(d: DepartureDto) =
         if (d.id == SOLD_OUT_ID) d.copy(seatsRemaining = 2, soldOut = false, bookable = true, unavailableReason = null) else d
 
+    private fun openForm(vm: TripDetailViewModel) = vm.openWaitlist()
+
     private fun fillForm(vm: TripDetailViewModel) {
         vm.openWaitlist()
-        vm.setWaitlistPhone("+201001234567")
+        vm.setWaitlistEmail("sara@example.com")
         vm.increaseWaitlistParty()
+    }
+
+    private fun fillInvalid(vm: TripDetailViewModel) {
+        vm.openWaitlist()
+        vm.setWaitlistEmail("sara@localhost")
     }
 
     private fun fillAndJoin(vm: TripDetailViewModel) {

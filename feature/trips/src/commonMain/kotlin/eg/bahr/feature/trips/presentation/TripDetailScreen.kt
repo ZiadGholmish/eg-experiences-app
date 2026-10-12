@@ -94,17 +94,17 @@ internal fun TripDetailScreen(
         return
     }
     val form = state.openWaitlist
-    val joinedPhone = state.joinedPhone
+    val joinedEmail = state.joinedEmail
     val maxPartySize = state.maxPartySize
     // Remembered so an unrelated recomposition hands the band the same instance (it compares by identity).
     val waitlist =
-        remember(form, joinedPhone, maxPartySize, viewModel) {
+        remember(form, joinedEmail, maxPartySize, viewModel) {
             WaitlistPanelState(
                 form = form,
-                joinedPhone = joinedPhone,
+                joinedEmail = joinedEmail,
                 maxPartySize = maxPartySize,
                 onOpen = viewModel::openWaitlist,
-                onPhoneChange = viewModel::setWaitlistPhone,
+                onEmailChange = viewModel::setWaitlistEmail,
                 onDecrease = viewModel::decreaseWaitlistParty,
                 onIncrease = viewModel::increaseWaitlistParty,
                 onJoin = viewModel::joinWaitlist,
@@ -142,7 +142,7 @@ private fun TripPage(
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
 
-    // imePadding: the waiting-list phone field sits low on the page; the list shrinks above the
+    // imePadding: the waiting-list email field sits low on the page; the list shrinks above the
     // keyboard (and the sticky bar rides on it) so the focused field can be scrolled into view.
     Column(modifier = modifier.fillMaxSize().imePadding()) {
         Box(modifier = Modifier.weight(1f)) {
@@ -311,7 +311,7 @@ private fun TripDetailDto.photos() = gallery.ifEmpty { listOfNotNull(heroImage ?
 /** Lets screenshot tests scroll the page to a section by key. */
 internal const val TRIP_PAGE_TAG = "trip_page"
 
-/** The sticky bar, for the keyboard test (the waiting-list phone field must stay above it). */
+/** The sticky bar, for the keyboard test (the waiting-list email field must stay above it). */
 internal const val TRIP_STICKY_BAR_TAG = "trip_sticky_bar"
 
 private const val TITLE_SKELETON_LINES = 3

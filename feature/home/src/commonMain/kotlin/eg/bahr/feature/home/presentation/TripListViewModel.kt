@@ -131,8 +131,9 @@ internal class TripListViewModel(
     init {
         loadHome()
         viewModelScope.launch {
-            // Home opens on every start, so a phone left on a date that has since run is not kept on
-            // the device just because its trip page was never opened again.
+            // Home opens on every start, so an email left on a date that has since run is not kept on
+            // the device just because its trip page was never opened again (nor an older build's phone
+            // joins, which this also erases: M4-M13).
             waitlists.forgetPassed()
         }
         collectWaitlistTags(waitlists) { tags -> _uiState.update { it.copy(waitlistTags = tags) } }

@@ -54,13 +54,13 @@ class TripDetailWaitlistMemoryTest {
     private fun DepartureDto.asBookable() = copy(seatsRemaining = 3, soldOut = false, bookable = true, unavailableReason = null)
 
     @Test
-    fun `a join is remembered - after a restart the date reads joined with its phone and the form is not offered`() =
+    fun `a join is remembered trimmed - after a restart the date reads joined with its email and the form is not offered`() =
         runViewModelTest {
             val store = FakeWaitlistJoinsStore()
             val first = open(store)
             first.selectDeparture("dep-3")
             first.openWaitlist()
-            first.setWaitlistPhone("+20 100 123 4567")
+            first.setWaitlistEmail("  Sara@Example.com ")
             first.increaseWaitlistParty()
             first.joinWaitlist()
             advanceUntilIdle()
@@ -70,13 +70,13 @@ class TripDetailWaitlistMemoryTest {
             assertEquals(slug, saved.tripSlug)
             assertEquals("2026-10-24", saved.date)
             assertEquals(2, saved.partySize)
-            assertEquals("+201001234567", saved.phone)
+            assertEquals("Sara@Example.com", saved.email)
             assertEquals(TEST_NOW.toString(), saved.joinedAt)
 
             val restarted = open(store)
-            assertEquals(mapOf("dep-3" to "+201001234567"), restarted.uiState.value.joinedWaitlists)
+            assertEquals(mapOf("dep-3" to "Sara@Example.com"), restarted.uiState.value.joinedWaitlists)
             restarted.selectDeparture("dep-3")
-            assertEquals("+201001234567", restarted.uiState.value.joinedPhone)
+            assertEquals("Sara@Example.com", restarted.uiState.value.joinedEmail)
             restarted.openWaitlist()
             assertNull(restarted.uiState.value.openWaitlist, "already on the list: no form")
             assertNull(restarted.uiState.value.waitlistOutcome)
@@ -205,17 +205,17 @@ class TripDetailWaitlistMemoryTest {
     @Test
     fun `two joins on two dates are both remembered by date`() =
         runViewModelTest {
-            val store = FakeWaitlistJoinsStore(listOf(storedJoin(departureId = "dep-4", date = "2026-10-31", phone = "+201112223334")))
+            val store = FakeWaitlistJoinsStore(listOf(storedJoin(departureId = "dep-4", date = "2026-10-31", email = "omar@example.com")))
             val vm = open(store, repo(dates = soldOut("dep-4")))
             vm.selectDeparture("dep-3")
             vm.openWaitlist()
-            vm.setWaitlistPhone("+201001234567")
+            vm.setWaitlistEmail("sara@example.com")
             vm.joinWaitlist()
             advanceUntilIdle()
 
             val restarted = open(store, repo(dates = soldOut("dep-4")))
 
-            assertEquals(mapOf("dep-4" to "+201112223334", "dep-3" to "+201001234567"), restarted.uiState.value.joinedWaitlists)
+            assertEquals(mapOf("dep-4" to "omar@example.com", "dep-3" to "sara@example.com"), restarted.uiState.value.joinedWaitlists)
         }
 
     @Test
@@ -225,12 +225,12 @@ class TripDetailWaitlistMemoryTest {
             val vm = open(store)
             vm.selectDeparture("dep-3")
             vm.openWaitlist()
-            vm.setWaitlistPhone("+201001234567")
+            vm.setWaitlistEmail("sara@example.com")
 
             vm.joinWaitlist()
             advanceUntilIdle()
 
-            assertEquals("+201001234567", vm.uiState.value.joinedPhone)
+            assertEquals("sara@example.com", vm.uiState.value.joinedEmail)
             assertNull(vm.uiState.value.error)
             assertNull(vm.uiState.value.waitlist)
             assertTrue(store.joins.value.isEmpty(), "nothing was written, and nothing crashed")
@@ -252,10 +252,10 @@ class TripDetailWaitlistMemoryTest {
 
             vm.selectDeparture("dep-3")
             vm.openWaitlist()
-            vm.setWaitlistPhone("+201001234567")
+            vm.setWaitlistEmail("sara@example.com")
             vm.joinWaitlist()
             advanceUntilIdle()
-            assertEquals("+201001234567", vm.uiState.value.joinedPhone)
+            assertEquals("sara@example.com", vm.uiState.value.joinedEmail)
         }
 
     @Test
@@ -266,7 +266,7 @@ class TripDetailWaitlistMemoryTest {
             val vm = open(store, repository)
             vm.selectDeparture("dep-3")
             vm.openWaitlist()
-            vm.setWaitlistPhone("+201001234567")
+            vm.setWaitlistEmail("sara@example.com")
             // Another writer (an earlier visit's late save) stores the date after the form opened.
             store.save(storedJoin())
             advanceUntilIdle()

@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class WaitlistJoinsStoreTest {
@@ -17,7 +18,7 @@ class WaitlistJoinsStoreTest {
         tripSlug = "burullus-dawn",
         date = "2026-10-24",
         partySize = partySize,
-        phone = "+201001234567",
+        email = "sara@example.com",
         joinedAt = "2026-10-10T09:00:00Z",
     )
 
@@ -78,7 +79,7 @@ class WaitlistJoinsStoreTest {
     @Test
     fun `a payload that does not parse reads as none`() =
         runTest {
-            val broken = mutablePreferencesOf(stringPreferencesKey("waitlist_joins") to "{not a list")
+            val broken = mutablePreferencesOf(JOINS to "{not a list")
             val store = PreferencesWaitlistJoinsStore(InMemoryPreferences(broken))
 
             assertTrue(store.joins.first().isEmpty())
@@ -91,16 +92,53 @@ class WaitlistJoinsStoreTest {
         runTest {
             val later =
                 """[{"departureId":"dep-3","tripSlug":"burullus-dawn","date":"2026-10-24","partySize":2,""" +
-                    """"phone":"+201001234567","joinedAt":"2026-10-10T09:00:00Z","serverEntryId":"w-1"}]"""
+                    """"email":"sara@example.com","joinedAt":"2026-10-10T09:00:00Z","serverEntryId":"w-1"}]"""
             val store =
                 PreferencesWaitlistJoinsStore(
                     InMemoryPreferences(
                         mutablePreferencesOf(
-                            stringPreferencesKey("waitlist_joins") to later,
+                            JOINS to later,
                         ),
                     ),
                 )
 
             assertEquals(listOf(join("dep-3")), store.joins.first())
         }
+
+    @Test
+    fun `the phone joins of an older build are never read and any write erases them`() =
+        runTest {
+            val preferences =
+                InMemoryPreferences(mutablePreferencesOf(PHONE_JOINS to PHONE_JOIN_PAYLOAD, JOINS to "[]"))
+            val store = PreferencesWaitlistJoinsStore(preferences)
+
+            assertTrue(store.joins.first().isEmpty(), "their server entries are gone (V18): nothing to show")
+
+            // What Home's start-up prune does with nothing passed: tidy up only.
+            store.remove(emptySet())
+
+            assertNull(preferences.data.first()[PHONE_JOINS], "the old phone numbers leave the file")
+        }
+
+    @Test
+    fun `a save erases the phone joins of an older build too`() =
+        runTest {
+            val preferences = InMemoryPreferences(mutablePreferencesOf(PHONE_JOINS to PHONE_JOIN_PAYLOAD))
+            val store = PreferencesWaitlistJoinsStore(preferences)
+
+            store.save(join("dep-3"))
+
+            assertEquals(listOf(join("dep-3")), store.joins.first())
+            assertNull(preferences.data.first()[PHONE_JOINS])
+        }
+
+    private companion object {
+        val JOINS = stringPreferencesKey("waitlist_joins_email")
+        val PHONE_JOINS = stringPreferencesKey("waitlist_joins")
+
+        /** As M4-M5..M4-M12 wrote it. */
+        const val PHONE_JOIN_PAYLOAD =
+            """[{"departureId":"dep-3","tripSlug":"burullus-dawn","date":"2026-10-24","partySize":2,""" +
+                """"phone":"+201001234567","joinedAt":"2026-10-10T09:00:00Z"}]"""
+    }
 }

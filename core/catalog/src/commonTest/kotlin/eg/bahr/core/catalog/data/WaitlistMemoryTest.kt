@@ -41,6 +41,21 @@ class WaitlistMemoryTest {
         }
 
     /**
+     * M4-M13: the store's remove is also where an older build's phone joins are erased, so the prune
+     * at start-up must reach it even when no date has passed.
+     */
+    @Test
+    fun `forgetPassed reaches the store even with nothing to drop`() =
+        runTest {
+            val store = FakeWaitlistJoinsStore(listOf(storedJoin(departureId = "kept", date = "2026-10-24")))
+
+            waitlistMemory(store).forgetPassed()
+
+            assertEquals(listOf(emptySet<String>()), store.removals)
+            assertEquals(listOf("kept"), store.joins.value.map { it.departureId })
+        }
+
+    /**
      * M4-M5 review S4: a well-formed but impossible date fails to parse with an IllegalArgumentException
      * on both platforms (the only exception `parsed()` catches), so the entry is left out of [WaitlistMemory.joins]
      * straight away, before any pruning, and `forgetPassed` removes it from the store.

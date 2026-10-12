@@ -73,10 +73,12 @@
     <string name="trip_sold_out_alternative">%1$s فيه %2$s.</string>
     <string name="trip_sold_out_alternative_same_price">%1$s فيه %2$s بنفس السعر.</string>
     <string name="trip_waitlist_join">سجّلني في قائمة الانتظار</string>
-    <string name="trip_waitlist_form_note">سيب رقمك، ولو فضيت أماكن في اليوم ده هنكلّمك.</string>
+    <string name="trip_waitlist_form_note">سيب إيميلك، ولو فضي مكان في اليوم ده هنبلّغك.</string>
+    <string name="trip_waitlist_email">الإيميل</string>
+    <string name="trip_waitlist_email_invalid">اكتب إيميل صحيح.</string>
     <string name="trip_waitlist_submit">ضيفني للقائمة</string>
-    <string name="trip_waitlist_joined_title">رقمك في قائمة الانتظار</string>
-    <string name="trip_waitlist_joined_body">لو فضيت أماكن يوم %1$s هنكلّمك على %2$s.</string>
+    <string name="trip_waitlist_joined_title">إنت في قائمة الانتظار</string>
+    <string name="trip_waitlist_joined_body">لو فضي مكان يوم %1$s هنبعتلك إيميل على %2$s.</string>
     <string name="trip_waitlist_full">قائمة الانتظار لليوم ده اكتملت.</string>
     <string name="trip_waitlist_seats_opened">فضيت أماكن يوم %1$s. تقدر تحجز دلوقتي.</string>
     <string name="trip_waitlist_date_closed">يوم %1$s مبقاش متاح للحجز. اختار تاريخ تاني.</string>

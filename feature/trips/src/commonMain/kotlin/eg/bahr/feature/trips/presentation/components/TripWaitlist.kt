@@ -28,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
@@ -36,10 +37,12 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.contentType
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
@@ -54,13 +57,13 @@ import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.designsystem.theme.bahrShadow
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.a11y_busy
-import eg.bahr.core.localization.generated.resources.booking_guest_phone
-import eg.bahr.core.localization.generated.resources.booking_guest_phone_invalid
 import eg.bahr.core.localization.generated.resources.booking_party_count
 import eg.bahr.core.localization.generated.resources.booking_party_decrease
 import eg.bahr.core.localization.generated.resources.booking_party_increase
 import eg.bahr.core.localization.generated.resources.booking_party_size
 import eg.bahr.core.localization.generated.resources.trip_waitlist_date_closed
+import eg.bahr.core.localization.generated.resources.trip_waitlist_email
+import eg.bahr.core.localization.generated.resources.trip_waitlist_email_invalid
 import eg.bahr.core.localization.generated.resources.trip_waitlist_form_note
 import eg.bahr.core.localization.generated.resources.trip_waitlist_full
 import eg.bahr.core.localization.generated.resources.trip_waitlist_join
@@ -79,7 +82,7 @@ import org.jetbrains.compose.resources.stringResource
 /*
  * The waiting list under the sold-out notice (PLAN C10, D3: only a SOLD_OUT date has one). The
  * handoff draws just the "Join the waiting list" button; tapping it opens a short form in place
- * (phone and party, the contract's `WaitlistRequest`), and a successful join replaces both with a
+ * (email and party, the contract's `WaitlistRequest`), and a successful join replaces both with a
  * confirmation. Capture only: nothing here promises an automatic seat offer.
  */
 
@@ -89,13 +92,13 @@ internal class WaitlistPanelState(
     /** The open form, or null while only the button shows. */
     val form: WaitlistForm?,
     /**
-     * The phone the date was joined under, or null when it was not joined. Remembered on the device
+     * The email the date was joined under, or null when it was not joined. Remembered on the device
      * (M4-M5), so a join from an earlier visit or before a restart counts too.
      */
-    val joinedPhone: String?,
+    val joinedEmail: String?,
     val maxPartySize: Int,
     val onOpen: () -> Unit = {},
-    val onPhoneChange: (String) -> Unit = {},
+    val onEmailChange: (String) -> Unit = {},
     val onDecrease: () -> Unit = {},
     val onIncrease: () -> Unit = {},
     val onJoin: () -> Unit = {},
@@ -107,7 +110,7 @@ internal fun WaitlistPanel(
     fullDate: String,
     panel: WaitlistPanelState,
 ) {
-    val joined = panel.joinedPhone
+    val joined = panel.joinedEmail
     val form = panel.form
     when {
         joined != null -> JoinedNote(fullDate, joined)
@@ -122,9 +125,11 @@ internal fun WaitlistPanel(
 }
 
 /**
- * The phone, the party, the refusal if any, and "Add me to the list". The phone field behaves as on
- * date + party: typed and shown left to right, flagged once left with a number the contract's
- * `Phone` pattern refuses.
+ * The email, the party, the refusal if any, and "Add me to the list". The email field is typed and
+ * shown left to right (an address reads LTR inside Arabic, like a time), on the email keyboard, with
+ * no capitalisation or autocorrect to change what was typed, and offered to autofill as an email.
+ * It is flagged once left with an address the server's rule refuses (`WaitlistEmail`): the server's
+ * own refusal names no field, so this is where the user learns which one is wrong.
  */
 @Composable
 private fun WaitlistFormFields(
@@ -132,8 +137,8 @@ private fun WaitlistFormFields(
     panel: WaitlistPanelState,
 ) {
     val c = MaterialTheme.colorScheme
-    var phoneFocused by remember { mutableStateOf(false) }
-    val phoneError = form.phone.isNotEmpty() && !form.isPhoneValid && !phoneFocused
+    var emailFocused by remember { mutableStateOf(false) }
+    val emailError = form.email.isNotBlank() && !form.isEmailValid && !emailFocused
     Column(
         modifier = Modifier.testTag(WAITLIST_FORM_TAG),
         verticalArrangement = Arrangement.spacedBy(BahrSpacing.md),
@@ -144,19 +149,30 @@ private fun WaitlistFormFields(
             color = c.onTertiaryContainer,
         )
         OutlinedTextField(
-            value = form.phone,
-            onValueChange = panel.onPhoneChange,
-            label = { Text(stringResource(Res.string.booking_guest_phone)) },
+            value = form.email,
+            onValueChange = panel.onEmailChange,
+            label = { Text(stringResource(Res.string.trip_waitlist_email)) },
             singleLine = true,
-            isError = phoneError,
-            supportingText = if (phoneError) ({ Text(stringResource(Res.string.booking_guest_phone_invalid)) }) else null,
-            // Phone numbers stay left to right inside Arabic, like times.
+            isError = emailError,
+            supportingText = if (emailError) ({ Text(stringResource(Res.string.trip_waitlist_email_invalid)) }) else null,
+            // Addresses stay left to right inside Arabic, like times.
             textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Ltr),
             shape = BahrTheme.shapes.medium,
             colors = fieldColors(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Done),
+            keyboardOptions =
+                KeyboardOptions(
+                    capitalization = KeyboardCapitalization.None,
+                    autoCorrectEnabled = false,
+                    keyboardType = KeyboardType.Email,
+                    imeAction = ImeAction.Done,
+                ),
             keyboardActions = KeyboardActions(onDone = { panel.onJoin() }),
-            modifier = Modifier.fillMaxWidth().testTag(WAITLIST_PHONE_TAG).onFocusChanged { phoneFocused = it.isFocused },
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .semantics { contentType = ContentType.EmailAddress }
+                    .testTag(WAITLIST_EMAIL_TAG)
+                    .onFocusChanged { emailFocused = it.isFocused },
         )
         PartyRow(form.partySize, panel)
         // The notice's own text is already coral-dark, so the refusal carries an icon to stand apart.
@@ -164,7 +180,7 @@ private fun WaitlistFormFields(
         NoticeButton(
             text = stringResource(Res.string.trip_waitlist_submit),
             icon = BahrIcons.NotificationsActive.outlined(),
-            enabled = form.isPhoneValid,
+            enabled = form.isEmailValid,
             loading = form.submitting,
             onClick = panel.onJoin,
         )
@@ -315,11 +331,11 @@ private fun NoticeButton(
     }
 }
 
-/** After a join: a tick and "You're on the waiting list", with the date and the number it was made under. */
+/** After a join: a tick and "You're on the waiting list", with the date and the email it was made under. */
 @Composable
 private fun JoinedNote(
     fullDate: String,
-    phone: String,
+    email: String,
 ) {
     val c = MaterialTheme.colorScheme
     val x = BahrTheme.colors
@@ -346,7 +362,7 @@ private fun JoinedNote(
                 color = c.onSurface,
             )
             Text(
-                text = stringResource(Res.string.trip_waitlist_joined_body, fullDate, BahrFormat.ltr(phone)),
+                text = stringResource(Res.string.trip_waitlist_joined_body, fullDate, BahrFormat.ltr(email)),
                 style = MaterialTheme.typography.bodyMedium,
                 color = c.onSurfaceVariant,
             )
@@ -402,7 +418,11 @@ private fun OutcomeRow(
     }
 }
 
-/** HANDOFF screen 5's inputs, as on date + party: `surfaceLowest` with an `outlineVariant` border. */
+/**
+ * HANDOFF screen 5's inputs: `surfaceLowest` with an `outlineVariant` border. Not white as date +
+ * party's are since M4-M12 (those sit on the off-white page): these sit on the coral notice, where
+ * the handoff's near-white fill already reads as a field.
+ */
 @Composable
 private fun fieldColors() =
     OutlinedTextFieldDefaults.colors(
@@ -412,6 +432,6 @@ private fun fieldColors() =
         unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
     )
 
-/** For tests: the open form and its phone field. */
+/** For tests: the open form and its email field. */
 internal const val WAITLIST_FORM_TAG = "waitlist_form"
-internal const val WAITLIST_PHONE_TAG = "waitlist_phone"
+internal const val WAITLIST_EMAIL_TAG = "waitlist_email"

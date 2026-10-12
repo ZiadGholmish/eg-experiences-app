@@ -43,7 +43,7 @@ internal interface TripRepository : TripListRepository {
         page: Int,
     ): AppResult<ReviewPageDto>
 
-    /** Puts a phone on a sold-out date's waiting list (capture only: no seat is offered automatically). */
+    /** Puts an email on a sold-out date's waiting list (capture only: no seat is offered automatically). */
     suspend fun joinWaitlist(
         departureId: String,
         request: WaitlistRequest,

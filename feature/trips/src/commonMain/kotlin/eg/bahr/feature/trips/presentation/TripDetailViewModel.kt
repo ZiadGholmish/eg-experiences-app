@@ -36,7 +36,7 @@ internal data class TripDetailUiState(
     /** The waiting-list form under the sold-out notice; null until "Join the waiting list" is tapped. */
     val waitlist: WaitlistForm? = null,
     /**
-     * This trip's dates the device is on the waiting list of, by departure id, with the phone they were
+     * This trip's dates the device is on the waiting list of, by departure id, with the email they were
      * joined under (said back in the confirmation). Kept per date so another date never reads as
      * joined. Remembered on the device (M4-M5, `WaitlistMemory`), so it survives leaving the page and
      * a restart; a join made now shows at once, before the store has written it.
@@ -88,8 +88,8 @@ internal data class TripDetailUiState(
     val openWaitlist: WaitlistForm?
         get() = waitlist?.takeIf { it.departureId == selectedDeparture?.takeIf { d -> d.availability == DateAvailability.SoldOut }?.id }
 
-    /** The phone the selected date was joined under, if the device is on its waiting list. */
-    val joinedPhone: String?
+    /** The email the selected date was joined under, if the device is on its waiting list. */
+    val joinedEmail: String?
         get() = selectedDepartureId?.let { joinedWaitlists[it] }
 
     internal companion object {
@@ -97,29 +97,24 @@ internal data class TripDetailUiState(
 
         /** Only when the trip does not state `policy.maxPartySize`: the handoff's 6 (as on date + party). */
         const val FALLBACK_MAX_PARTY_SIZE = 6
-
-        /** The longest value the contract's `Phone` pattern accepts: a `+` and 15 digits. */
-        const val PHONE_MAX_LENGTH = 16
-
-        /** openapi `Phone`. */
-        val PHONE_PATTERN = Regex("""^\+?[0-9]{7,15}$""")
     }
 }
 
 /**
- * The waiting-list form for one sold-out date ([departureId]): the phone and party to put on its
- * list. [error] is a refusal the form can recover from (list full, bad details, no network).
+ * The waiting-list form for one sold-out date ([departureId]): the email and party to put on its
+ * list. [email] is as typed (the field owns its cursor); it is trimmed when sent. [error] is a
+ * refusal the form can recover from (list full, bad details, no network).
  */
 internal data class WaitlistForm(
     val departureId: String,
-    val phone: String = "",
+    val email: String = "",
     val partySize: Int = TripDetailUiState.MIN_PARTY_SIZE,
     val submitting: Boolean = false,
     val error: AppError? = null,
 ) {
-    /** The contract's `Phone` pattern, so a typo is caught before the request. */
-    val isPhoneValid: Boolean
-        get() = TripDetailUiState.PHONE_PATTERN.matches(phone)
+    /** The server's own rule ([WaitlistEmail]), so a typo is caught before the request. */
+    val isEmailValid: Boolean
+        get() = WaitlistEmail.isValid(email)
 }
 
 /**
@@ -162,7 +157,7 @@ internal class TripDetailViewModel(
         viewModelScope.launch {
             waitlists.joins.collect { joins ->
                 val today = waitlists.today()
-                val mine = joins.filter { it.tripSlug == slug && it.date >= today }.associate { it.departureId to it.phone }
+                val mine = joins.filter { it.tripSlug == slug && it.date >= today }.associate { it.departureId to it.email }
                 _uiState.update { it.copy(joinedWaitlists = mine) }
             }
         }
@@ -254,13 +249,11 @@ internal class TripDetailViewModel(
     }
 
     /**
-     * Keeps digits and a leading `+` only, capped at the longest number the contract's `Phone` pattern
-     * accepts (as on date + party). The server compares phones by their digits.
+     * Kept as typed, nothing filtered: rewriting the text under the user's cursor fights the keyboard,
+     * and the inline check ([WaitlistForm.isEmailValid]) says what is wrong instead.
      */
-    fun setWaitlistPhone(phone: String) {
-        val digits = phone.filter { it.isDigit() }
-        val cleaned = (if (phone.trimStart().startsWith('+')) "+$digits" else digits).take(TripDetailUiState.PHONE_MAX_LENGTH)
-        updateForm { it.copy(phone = cleaned, error = null) }
+    fun setWaitlistEmail(email: String) {
+        updateForm { it.copy(email = email, error = null) }
     }
 
     fun increaseWaitlistParty() {
@@ -285,19 +278,20 @@ internal class TripDetailViewModel(
         val state = _uiState.value
         val form = state.openWaitlist ?: return
         val full = state.selectedDeparture ?: return
-        if (form.submitting || !form.isPhoneValid) return
+        if (form.submitting || !form.isEmailValid) return
+        val email = WaitlistEmail.normalised(form.email)
         updateForm { it.copy(submitting = true, error = null) }
         viewModelScope.launch {
-            val result = repository.joinWaitlist(form.departureId, WaitlistRequest(phone = form.phone, partySize = form.partySize))
+            val result = repository.joinWaitlist(form.departureId, WaitlistRequest(email = email, partySize = form.partySize))
             when (result) {
                 is AppResult.Success -> {
                     _uiState.update {
                         it.copy(
-                            joinedWaitlists = it.joinedWaitlists + (form.departureId to form.phone),
+                            joinedWaitlists = it.joinedWaitlists + (form.departureId to email),
                             waitlist = it.waitlist?.takeUnless { open -> open.departureId == form.departureId },
                         )
                     }
-                    waitlists.remember(form.departureId, slug, full.date, form.partySize, form.phone)
+                    waitlists.remember(form.departureId, slug, full.date, form.partySize, email)
                 }
                 is AppResult.Failure ->
                     when ((result.error as? AppError.Api)?.code) {

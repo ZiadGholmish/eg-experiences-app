@@ -49,10 +49,10 @@ class WaitlistApiServiceTest {
     private suspend fun join(
         body: String,
         status: HttpStatusCode,
-    ) = service(body, status).joinWaitlist(DEPARTURE_ID, WaitlistRequest(phone = "+201001234567", partySize = 2))
+    ) = service(body, status).joinWaitlist(DEPARTURE_ID, WaitlistRequest(email = "sara@example.com", partySize = 2))
 
     @Test
-    fun `posts the phone and party to the departure's list without a locale`() =
+    fun `posts the email and party to the departure's list without a locale or a phone`() =
         runTest {
             join("""{"success":true}""", HttpStatusCode.Created)
 
@@ -61,7 +61,9 @@ class WaitlistApiServiceTest {
             assertEquals("/api/v1/departures/$DEPARTURE_ID/waitlist", sent.url.encodedPath)
             assertEquals("ar", sent.headers[HttpHeaders.AcceptLanguage])
             val body = Json.parseToJsonElement((sent.body as OutgoingContent.ByteArrayContent).bytes().decodeToString()).jsonObject
-            assertEquals("+201001234567", body["phone"]?.jsonPrimitive?.content)
+            // openapi `WaitlistRequest`'s example; `phone` is gone since M4-B9 (a body with it alone is a 400).
+            assertEquals("sara@example.com", body["email"]?.jsonPrimitive?.content)
+            assertFalse("phone" in body)
             assertEquals("2", body["partySize"]?.jsonPrimitive?.content)
             // Left out, not sent as null: the contract defaults it to Accept-Language, and null is not in its enum.
             assertFalse("locale" in body)

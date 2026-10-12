@@ -68,49 +68,52 @@ class TripDetailWaitlistTest {
         }
 
     @Test
-    fun `the phone keeps digits and a leading plus and must match the contract pattern`() =
+    fun `the email is kept as typed and checked by the server's rule`() =
         runViewModelTest {
             val vm = soldOutPicked(repo())
             vm.openWaitlist()
+            assertFalse(
+                vm.uiState.value.openWaitlist!!
+                    .isEmailValid,
+                "an empty form cannot be sent",
+            )
 
-            vm.setWaitlistPhone("+20 100-123")
+            vm.setWaitlistEmail(" Sara@Example.com")
             assertEquals(
-                "+20100123",
+                " Sara@Example.com",
                 vm.uiState.value.openWaitlist
-                    ?.phone,
+                    ?.email,
+                "nothing rewritten under the cursor",
             )
             assertTrue(
                 vm.uiState.value.openWaitlist!!
-                    .isPhoneValid,
+                    .isEmailValid,
             )
 
-            vm.setWaitlistPhone("12345")
+            vm.setWaitlistEmail("sara@localhost")
             assertFalse(
                 vm.uiState.value.openWaitlist!!
-                    .isPhoneValid,
-            )
-
-            vm.setWaitlistPhone("+1234567890123456789")
-            assertEquals(
-                TripDetailUiState.PHONE_MAX_LENGTH,
-                vm.uiState.value.openWaitlist
-                    ?.phone
-                    ?.length,
+                    .isEmailValid,
+                "the server wants a dot in the domain",
             )
         }
 
     @Test
-    fun `an invalid phone is not sent`() =
+    fun `an invalid email is not sent`() =
         runViewModelTest {
             val repository = repo()
             val vm = soldOutPicked(repository)
             vm.openWaitlist()
-            vm.setWaitlistPhone("123")
+            vm.setWaitlistEmail("sara@")
 
             vm.joinWaitlist()
             advanceUntilIdle()
 
             assertTrue(repository.waitlistJoins.isEmpty())
+            assertFalse(
+                vm.uiState.value.openWaitlist!!
+                    .submitting,
+            )
         }
 
     @Test
@@ -143,20 +146,21 @@ class TripDetailWaitlistTest {
         }
 
     @Test
-    fun `a join sends the phone and party then confirms with that phone`() =
+    fun `a join sends the trimmed email and party then confirms with that email`() =
         runViewModelTest {
             val repository = repo()
             val vm = soldOutPicked(repository)
             vm.openWaitlist()
-            vm.setWaitlistPhone("+201001234567")
+            vm.setWaitlistEmail(" Sara@Example.com\n")
             vm.increaseWaitlistParty()
 
             vm.joinWaitlist()
             advanceUntilIdle()
 
-            assertEquals(listOf(SOLD_OUT to WaitlistRequest(phone = "+201001234567", partySize = 2)), repository.waitlistJoins)
+            // Trimmed as the server would, its case kept: the server compares case-insensitively itself.
+            assertEquals(listOf(SOLD_OUT to WaitlistRequest(email = "Sara@Example.com", partySize = 2)), repository.waitlistJoins)
             val state = vm.uiState.value
-            assertEquals("+201001234567", state.joinedPhone)
+            assertEquals("Sara@Example.com", state.joinedEmail)
             assertNull(state.openWaitlist)
             // The date is still sold out: nothing about it changed.
             assertEquals(TripCta.SoldOut, state.cta)
@@ -169,7 +173,7 @@ class TripDetailWaitlistTest {
             val repository = repo(join = { _, _ -> answer.await() })
             val vm = soldOutPicked(repository)
             vm.openWaitlist()
-            vm.setWaitlistPhone("+201001234567")
+            vm.setWaitlistEmail("sara@example.com")
 
             vm.joinWaitlist()
             advanceUntilIdle()
@@ -196,22 +200,22 @@ class TripDetailWaitlistTest {
                 )
             val vm = soldOutPicked(repository)
             vm.openWaitlist()
-            vm.setWaitlistPhone("+201001234567")
+            vm.setWaitlistEmail("sara@example.com")
             vm.joinWaitlist()
             advanceUntilIdle()
 
             vm.selectDeparture("dep-1")
-            assertNull(vm.uiState.value.joinedPhone)
+            assertNull(vm.uiState.value.joinedEmail)
             vm.openWaitlist()
             assertEquals(
                 "",
                 vm.uiState.value.openWaitlist
-                    ?.phone,
+                    ?.email,
                 "the typed form does not carry over",
             )
 
             vm.selectDeparture(SOLD_OUT)
-            assertEquals("+201001234567", vm.uiState.value.joinedPhone)
+            assertEquals("sara@example.com", vm.uiState.value.joinedEmail)
         }
 
     @Test
@@ -229,7 +233,7 @@ class TripDetailWaitlistTest {
                 )
             val vm = soldOutPicked(repository)
             vm.openWaitlist()
-            vm.setWaitlistPhone("+201001234567")
+            vm.setWaitlistEmail("sara@example.com")
             val readsBefore = repository.departureReads.size
 
             vm.joinWaitlist()
@@ -241,7 +245,7 @@ class TripDetailWaitlistTest {
             assertEquals(TripCta.Continue, state.cta)
             assertEquals(WaitlistOutcome.Kind.SeatsOpened, state.waitlistOutcome?.kind)
             assertNull(state.openWaitlist)
-            assertNull(state.joinedPhone)
+            assertNull(state.joinedEmail)
         }
 
     @Test
@@ -259,7 +263,7 @@ class TripDetailWaitlistTest {
                 )
             val vm = soldOutPicked(repository)
             vm.openWaitlist()
-            vm.setWaitlistPhone("+201001234567")
+            vm.setWaitlistEmail("sara@example.com")
 
             vm.joinWaitlist()
             advanceUntilIdle()
@@ -289,7 +293,7 @@ class TripDetailWaitlistTest {
                 )
             val vm = soldOutPicked(repository)
             vm.openWaitlist()
-            vm.setWaitlistPhone("+201001234567")
+            vm.setWaitlistEmail("sara@example.com")
 
             vm.joinWaitlist()
             advanceUntilIdle()
@@ -314,7 +318,7 @@ class TripDetailWaitlistTest {
                 )
             val vm = soldOutPicked(repository)
             vm.openWaitlist()
-            vm.setWaitlistPhone("+201001234567")
+            vm.setWaitlistEmail("sara@example.com")
             val readsBefore = repository.departureReads.size
 
             vm.joinWaitlist()
@@ -342,7 +346,7 @@ class TripDetailWaitlistTest {
                 )
             val vm = soldOutPicked(repository)
             vm.openWaitlist()
-            vm.setWaitlistPhone("+201001234567")
+            vm.setWaitlistEmail("sara@example.com")
 
             vm.joinWaitlist()
             advanceUntilIdle()
@@ -362,7 +366,7 @@ class TripDetailWaitlistTest {
                 .forEach { refusal ->
                     val vm = soldOutPicked(repo(join = { _, _ -> refusal }))
                     vm.openWaitlist()
-                    vm.setWaitlistPhone("+201001234567")
+                    vm.setWaitlistEmail("sara@example.com")
 
                     vm.joinWaitlist()
                     advanceUntilIdle()
@@ -370,11 +374,11 @@ class TripDetailWaitlistTest {
                     val form = assertNotNull(vm.uiState.value.openWaitlist)
                     assertEquals(refusal.error, form.error)
                     assertFalse(form.submitting)
-                    assertNull(vm.uiState.value.joinedPhone)
+                    assertNull(vm.uiState.value.joinedEmail)
                     assertNull(vm.uiState.value.waitlistOutcome)
 
                     // Editing clears the error, so the next try starts clean.
-                    vm.setWaitlistPhone("+201001234568")
+                    vm.setWaitlistEmail("omar@example.com")
                     assertNull(
                         vm.uiState.value.openWaitlist
                             ?.error,

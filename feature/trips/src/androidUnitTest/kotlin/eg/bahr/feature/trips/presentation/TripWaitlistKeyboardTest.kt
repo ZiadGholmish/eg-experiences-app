@@ -29,7 +29,7 @@ import eg.bahr.feature.trips.data.FakeTripRepository
 import eg.bahr.feature.trips.data.TripFixtures.detail
 import eg.bahr.feature.trips.data.TripFixtures.saturdays
 import eg.bahr.feature.trips.data.waitlistMemory
-import eg.bahr.feature.trips.presentation.components.WAITLIST_PHONE_TAG
+import eg.bahr.feature.trips.presentation.components.WAITLIST_EMAIL_TAG
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -40,7 +40,7 @@ import org.robolectric.annotation.GraphicsMode
 import kotlin.test.assertTrue
 
 /**
- * The waiting-list phone field stays on screen and above the sticky bar once the keyboard is up
+ * The waiting-list email field stays on screen and above the sticky bar once the keyboard is up
  * (M2-M3 review #1), modelled on booking's `BookingKeyboardTest`. The keyboard is a real IME inset
  * dispatched to the window, the way the platform delivers it; the field is focused first, as a tap
  * does, and the inset arrives after. Here the field is inside a `LazyColumn` item low on the page,
@@ -64,10 +64,10 @@ class TripWaitlistKeyboardTest {
     }
 
     @Test
-    fun phoneFieldStaysAboveTheBarEnglish() = check(AppLanguage.ENGLISH)
+    fun emailFieldStaysAboveTheBarEnglish() = check(AppLanguage.ENGLISH)
 
     @Test
-    fun phoneFieldStaysAboveTheBarArabic() = check(AppLanguage.ARABIC)
+    fun emailFieldStaysAboveTheBarArabic() = check(AppLanguage.ARABIC)
 
     private fun check(language: AppLanguage) {
         val repo =
@@ -96,7 +96,7 @@ class TripWaitlistKeyboardTest {
 
         // Scrolled so the field just shows above the bar, then tapped: the worst case, where the
         // keyboard's arrival alone pushes it under the bar.
-        compose.onNodeWithTag(WAITLIST_PHONE_TAG).performScrollTo().performClick()
+        compose.onNodeWithTag(WAITLIST_EMAIL_TAG).performScrollTo().performClick()
         compose.waitForIdle()
 
         val rootHeight =
@@ -118,17 +118,17 @@ class TripWaitlistKeyboardTest {
         compose.mainClock.advanceTimeBy(SETTLE_MS)
         compose.waitForIdle()
 
-        val field = compose.onNodeWithTag(WAITLIST_PHONE_TAG).fetchSemanticsNode().unclippedBounds()
+        val field = compose.onNodeWithTag(WAITLIST_EMAIL_TAG).fetchSemanticsNode().unclippedBounds()
         val bar = compose.onNodeWithTag(TRIP_STICKY_BAR_TAG).fetchSemanticsNode().unclippedBounds()
         // Checked first, on its own: with the bar left under the keyboard (no imePadding), the field can
         // still be above the bar and yet hidden by the keyboard.
         assertTrue(
             field.bottom <= rootHeight - imeHeight + 1,
-            "the phone field ($field) is above the keyboard (from ${rootHeight - imeHeight})",
+            "the email field ($field) is above the keyboard (from ${rootHeight - imeHeight})",
         )
         assertTrue(bar.bottom <= rootHeight - imeHeight + 1, "the bar sits on the keyboard: $bar, ime from ${rootHeight - imeHeight}")
-        assertTrue(field.bottom <= bar.top, "the phone field ($field) is above the sticky bar ($bar)")
-        assertTrue(field.top >= 0f, "the phone field ($field) is on screen")
+        assertTrue(field.bottom <= bar.top, "the email field ($field) is above the sticky bar ($bar)")
+        assertTrue(field.top >= 0f, "the email field ($field) is on screen")
 
         compose.captureScreenshot("trip_detail_waitlist_keyboard_${language.tag}")
     }
@@ -139,7 +139,7 @@ class TripWaitlistKeyboardTest {
     private companion object {
         const val SOLD_OUT = "dep-3"
 
-        /** A phone keyboard takes about 40 % of the screen's height. */
+        /** A handset's keyboard takes about 40 % of the screen's height. */
         const val IME_SHARE = 40
         const val SETTLE_MS = 1_000L
     }

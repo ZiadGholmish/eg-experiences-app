@@ -88,7 +88,7 @@ internal class TripApiService(
         }
 
     /**
-     * `joinWaitlist`: puts a phone on a sold-out date's waiting list. Lives with the trip page, not
+     * `joinWaitlist`: puts an email on a sold-out date's waiting list. Lives with the trip page, not
      * in `feature:booking`, because the button sits on the trip page's sold-out notice and the call
      * is a departure-level public endpoint; owning it here avoids a feature-to-feature edge.
      *

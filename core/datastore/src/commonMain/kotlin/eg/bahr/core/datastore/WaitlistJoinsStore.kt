@@ -12,7 +12,8 @@ import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 
 /**
- * A sold-out date this device put a phone on the waiting list of (PLAN M4-M5), so the trip page can
+ * A sold-out date this device put an email on the waiting list of (PLAN M4-M5; an email since M4-M13,
+ * a phone before), so the trip page can
  * say "On the waiting list" after a restart instead of offering the form again. The backend has no
  * anonymous "my waiting lists" read; once the user is identified by OTP, M6-M1 lists the server's.
  *
@@ -25,14 +26,14 @@ data class StoredWaitlistJoin(
     val tripSlug: String,
     val date: String,
     val partySize: Int,
-    val phone: String,
+    val email: String,
     val joinedAt: String,
 )
 
 /**
  * The waiting-list joins this device made, one per departure.
  *
- * [StoredWaitlistJoin.phone] is personal data in a plain preferences file, so an entry is dropped as
+ * [StoredWaitlistJoin.email] is personal data in a plain preferences file, so an entry is dropped as
  * soon as it stops meaning anything: its date has passed, the date became bookable again, or it was
  * cancelled or closed (the trip feature decides, see its `WaitlistMemory`).
  */
@@ -47,7 +48,11 @@ interface WaitlistJoinsStore {
      */
     suspend fun save(join: StoredWaitlistJoin)
 
-    /** Forgets the joins for these departures; ids not stored are ignored. */
+    /**
+     * Forgets the joins for these departures; ids not stored are ignored. Also erases what an older
+     * build left that this one cannot show (the phone joins from before M4-M13), so `remove(emptySet())`
+     * is a valid "tidy up" call.
+     */
     suspend fun remove(departureIds: Set<String>)
 }
 
@@ -60,6 +65,10 @@ const val MAX_STORED_WAITLIST_JOINS = 20
 /**
  * One preferences key holding a JSON array, as [PreferencesRecentSearchesStore] does. A payload that
  * no longer parses reads as no joins, never a crash; a field a later build adds is ignored.
+ *
+ * The joins before M4-M13 were by phone, under another key. Their server entries are gone (the
+ * backend's V18 deleted every phone entry), so they are not migrated: they are never read, and every
+ * write (including an empty [remove]) erases that key, so the old phone numbers leave the file.
  */
 class PreferencesWaitlistJoinsStore(
     private val dataStore: DataStore<Preferences>,
@@ -68,14 +77,15 @@ class PreferencesWaitlistJoinsStore(
 
     override suspend fun save(join: StoredWaitlistJoin) {
         dataStore.edit { preferences ->
+            preferences.remove(phoneJoinsKey)
             val others = decode(preferences[key]).filter { it.departureId != join.departureId }
             preferences[key] = json.encodeToString(serializer, (others + join).takeLast(MAX_STORED_WAITLIST_JOINS))
         }
     }
 
     override suspend fun remove(departureIds: Set<String>) {
-        if (departureIds.isEmpty()) return
         dataStore.edit { preferences ->
+            preferences.remove(phoneJoinsKey)
             val stored = decode(preferences[key])
             val kept = stored.filter { it.departureId !in departureIds }
             when {
@@ -98,7 +108,10 @@ class PreferencesWaitlistJoinsStore(
         } ?: emptyList()
 
     private companion object {
-        val key = stringPreferencesKey("waitlist_joins")
+        val key = stringPreferencesKey("waitlist_joins_email")
+
+        /** Where the phone joins of M4-M5..M4-M12 were kept: only ever erased now. */
+        val phoneJoinsKey = stringPreferencesKey("waitlist_joins")
         val serializer = ListSerializer(StoredWaitlistJoin.serializer())
         val json = Json { ignoreUnknownKeys = true }
     }

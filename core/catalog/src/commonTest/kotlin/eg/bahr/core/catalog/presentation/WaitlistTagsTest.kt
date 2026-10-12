@@ -20,7 +20,7 @@ class WaitlistTagsTest {
     private fun joined(
         slug: String = "trip-1",
         date: LocalDate = saturday,
-    ) = WaitlistTags.of(listOf(JoinedWaitlist("dep-3", slug, date, partySize = 2, phone = "+201001234567")))
+    ) = WaitlistTags.of(listOf(JoinedWaitlist("dep-3", slug, date, partySize = 2, email = "sara@example.com")))
 
     private fun trip(nextDeparture: NextDepartureDto? = null) =
         TripCardDto(
