@@ -5,6 +5,8 @@ import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.network.callApi
 import eg.bahr.feature.trips.model.DepartureDto
 import eg.bahr.feature.trips.model.HostProfileDto
+import eg.bahr.feature.trips.model.ReviewPageDto
+import eg.bahr.feature.trips.model.ReviewSort
 import eg.bahr.feature.trips.model.TripCardPageDto
 import eg.bahr.feature.trips.model.TripDetailDto
 import eg.bahr.feature.trips.model.WaitlistRequest
@@ -15,7 +17,7 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 
 /**
- * The trip page, a Home row's "See all", the host page and the waiting list. `GET /trips` (the category page and
+ * The trip page, a Home row's "See all", the host page, the reviews list and the waiting list. `GET /trips` (the category page and
  * search) is core:catalog's `TripListApiService`, shared with Home (M4-M1c).
  *
  * None of these require a token: a trip link dropped into a social post is opened cold by someone
@@ -58,6 +60,31 @@ internal class TripApiService(
     suspend fun hostBySlug(slug: String): AppResult<HostProfileDto> =
         callApi {
             client.get("hosts/$slug")
+        }
+
+    /**
+     * `listReviews` (M4-M11): a page of every review of the trip [trip] or of the host [host] (exactly one
+     * is given; the other is left out), in [sort] order, narrowed to reviews of exactly [stars] stars when
+     * set. NOT_FOUND for a trip that is not published and a host with no public page.
+     */
+    suspend fun reviews(
+        trip: String?,
+        host: String?,
+        sort: ReviewSort,
+        stars: Int?,
+        page: Int = 0,
+        size: Int = PAGE_SIZE,
+    ): AppResult<ReviewPageDto> =
+        callApi {
+            client.get("reviews") {
+                // A null value is not sent.
+                parameter("trip", trip)
+                parameter("host", host)
+                parameter("sort", sort.wire)
+                parameter("stars", stars)
+                parameter("page", page)
+                parameter("size", size)
+            }
         }
 
     /**

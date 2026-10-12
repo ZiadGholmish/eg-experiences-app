@@ -132,6 +132,15 @@
         <item quantity="other">%1$d نجمة: %2$d</item>
     </plurals>
 
+    <!-- كل التقييمات (M4-M11): كل تقييمات رحلة أو مضيف، بتتفتح من تحت التقييمات اللي في الصفحة. -->
+    <string name="reviews_see_all">شوف كل التقييمات</string>
+    <string name="reviews_sort_newest">الأحدث</string>
+    <string name="reviews_sort_highest">الأعلى تقييمًا</string>
+    <string name="reviews_sort_lowest">الأقل تقييمًا</string>
+    <string name="reviews_all_trips">كل الرحلات</string>
+    <string name="reviews_filter_empty">مفيش تقييمات بالفلتر ده.</string>
+    <string name="reviews_not_available">التقييمات دي مش متاحة دلوقتي.</string>
+
     <string name="departures_pick_a_date">اختار التاريخ</string>
     <!-- CLDR ar: one = 1, two = 2, few = 3–10, many = 11–99, other = 0 and 100+ (zero = 0). -->
     <plurals name="departure_seats_left">

@@ -121,6 +121,17 @@
         <item quantity="other">%1$d stars: %2$d</item>
     </plurals>
 
+    <!-- "See all reviews" (M4-M11): every review of a trip or a host, opened under the review previews. -->
+    <string name="reviews_see_all">See all reviews</string>
+    <string name="reviews_sort_newest">Most recent</string>
+    <string name="reviews_sort_highest">Highest rated</string>
+    <string name="reviews_sort_lowest">Lowest rated</string>
+    <!-- The host's reviews: the Trip filter's first chip, every one of the host's trips. -->
+    <string name="reviews_all_trips">All trips</string>
+    <string name="reviews_filter_empty">No reviews match this filter.</string>
+    <!-- 404 on the reviews list: the trip is not published, or the host is unknown or not approved. -->
+    <string name="reviews_not_available">These reviews aren’t available right now.</string>
+
     <!-- Departures -->
     <string name="departures_pick_a_date">Pick a date</string>
     <plurals name="departure_seats_left">

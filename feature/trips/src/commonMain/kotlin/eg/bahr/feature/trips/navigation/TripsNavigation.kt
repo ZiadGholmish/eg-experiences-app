@@ -15,6 +15,7 @@ import eg.bahr.core.designsystem.theme.bahrForwardEnter
 import eg.bahr.core.designsystem.theme.bahrForwardExit
 import eg.bahr.feature.trips.presentation.CategoryTripsScreen
 import eg.bahr.feature.trips.presentation.HostProfileScreen
+import eg.bahr.feature.trips.presentation.ReviewsScreen
 import eg.bahr.feature.trips.presentation.SearchTripsScreen
 import eg.bahr.feature.trips.presentation.SectionTripsScreen
 import eg.bahr.feature.trips.presentation.TripDetailScreen
@@ -40,24 +41,30 @@ import kotlinx.coroutines.flow.emptyFlow
  * slug), usually [navigateToHostProfile]. Between the trip page and the host page the pages slide with
  * the M4-M6 transition and the card's row grows into the page's header; to and from anything else
  * (booking, a list) the NavHost's own transition applies, as before.
+ *
+ * M4-M11: [onSeeAllReviews] opens every review of the trip from "See all reviews" under the previews
+ * (shown only when the trip counts more reviews than it previews), usually [navigateToReviews]. It
+ * slides like the host page.
  */
 fun NavGraphBuilder.tripDetailScreen(
     onBack: () -> Unit,
     onContinue: (slug: String, departureId: String) -> Unit,
     onHostClick: ((HostLink) -> Unit)? = null,
+    onSeeAllReviews: ((ReviewsRoute) -> Unit)? = null,
     reducedMotion: () -> Boolean = { false },
 ) {
     composable<TripDetailRoute>(
-        // To the host page and back.
-        exitTransition = { if (targetState.isHostProfile()) bahrForwardExit(reducedMotion()) else null },
-        popEnterTransition = { if (initialState.isHostProfile()) bahrBackEnter(reducedMotion()) else null },
+        // To the host page or the reviews and back.
+        exitTransition = { if (targetState.isHostProfile() || targetState.isReviews()) bahrForwardExit(reducedMotion()) else null },
+        popEnterTransition = { if (initialState.isHostProfile() || initialState.isReviews()) bahrBackEnter(reducedMotion()) else null },
         // A trip opened from the host page's list, and Back to it.
         enterTransition = { if (initialState.isHostProfile()) bahrForwardEnter(reducedMotion()) else null },
         popExitTransition = { if (targetState.isHostProfile()) bahrBackExit(reducedMotion()) else null },
     ) { entry ->
+        val slug = entry.toRoute<TripDetailRoute>().slug
         ProvideBahrNavScope(this) {
             TripDetailScreen(
-                slug = entry.toRoute<TripDetailRoute>().slug,
+                slug = slug,
                 onBack = onBack,
                 onContinue = onContinue,
                 // Null when the app wires no host page: the card then stays as it was, not tappable.
@@ -65,6 +72,8 @@ fun NavGraphBuilder.tripDetailScreen(
                     onHostClick?.let { open ->
                         { host -> host.slug?.let { open(HostLink(it, host.name, host.avatar?.url)) } }
                     },
+                // Null when the app wires no reviews page: no "See all reviews".
+                onSeeAllReviews = onSeeAllReviews?.let { open -> { title -> open(ReviewsRoute(trip = slug, title = title)) } },
             )
         }
     }
@@ -73,18 +82,22 @@ fun NavGraphBuilder.tripDetailScreen(
 /**
  * The host page (M4-M10): the host's profile, rating and reviews, then their trips ([onTripClick]).
  * Opened from a trip page, it slides in from the end side and leaves the same way on Back (M4-M6).
+ *
+ * M4-M11: [onSeeAllReviews] opens every review of the host's trips (usually [navigateToReviews]), from
+ * "See all reviews" under the previews, shown only when the summary counts more than they show.
  */
 fun NavGraphBuilder.hostProfileScreen(
     onBack: () -> Unit,
     onTripClick: (slug: String) -> Unit,
+    onSeeAllReviews: ((ReviewsRoute) -> Unit)? = null,
     reducedMotion: () -> Boolean = { false },
 ) {
     composable<HostProfileRoute>(
         enterTransition = { if (initialState.isTripDetail()) bahrForwardEnter(reducedMotion()) else null },
         popExitTransition = { if (targetState.isTripDetail()) bahrBackExit(reducedMotion()) else null },
-        // A trip opened from the host page: the host page steps aside the same way, and comes back on Back.
-        exitTransition = { if (targetState.isTripDetail()) bahrForwardExit(reducedMotion()) else null },
-        popEnterTransition = { if (initialState.isTripDetail()) bahrBackEnter(reducedMotion()) else null },
+        // A trip or the reviews opened from the host page: the host page steps aside the same way, and comes back on Back.
+        exitTransition = { if (targetState.isTripDetail() || targetState.isReviews()) bahrForwardExit(reducedMotion()) else null },
+        popEnterTransition = { if (initialState.isTripDetail() || initialState.isReviews()) bahrBackEnter(reducedMotion()) else null },
     ) { entry ->
         val route = entry.toRoute<HostProfileRoute>()
         ProvideBahrNavScope(this) {
@@ -94,7 +107,28 @@ fun NavGraphBuilder.hostProfileScreen(
                 avatar = route.avatar,
                 onBack = onBack,
                 onTripClick = onTripClick,
+                onSeeAllReviews = onSeeAllReviews?.let { open -> { name -> open(ReviewsRoute(host = route.slug, title = name)) } },
             )
+        }
+    }
+}
+
+/**
+ * "See all reviews" (M4-M11): a trip's or a host's reviews, paged, with sort, star and (a host's) Trip
+ * filters. Opened from the trip page or the host page, it slides in from the end side and leaves the
+ * same way on Back (M4-M6). It opens nothing else.
+ */
+fun NavGraphBuilder.reviewsScreen(
+    onBack: () -> Unit,
+    reducedMotion: () -> Boolean = { false },
+) {
+    composable<ReviewsRoute>(
+        enterTransition = { if (initialState.opensReviews()) bahrForwardEnter(reducedMotion()) else null },
+        popExitTransition = { if (targetState.opensReviews()) bahrBackExit(reducedMotion()) else null },
+    ) { entry ->
+        val route = entry.toRoute<ReviewsRoute>()
+        ProvideBahrNavScope(this) {
+            ReviewsScreen(trip = route.trip, host = route.host, title = route.title, onBack = onBack)
         }
     }
 }
@@ -109,6 +143,11 @@ data class HostLink(
 private fun NavBackStackEntry.isHostProfile(): Boolean = destination.hasRoute<HostProfileRoute>()
 
 private fun NavBackStackEntry.isTripDetail(): Boolean = destination.hasRoute<TripDetailRoute>()
+
+private fun NavBackStackEntry.isReviews(): Boolean = destination.hasRoute<ReviewsRoute>()
+
+/** The pages with "See all reviews": the reviews page slides to and from them. */
+private fun NavBackStackEntry.opensReviews(): Boolean = isTripDetail() || isHostProfile()
 
 /**
  * The category page (M4-M1b). Back is [onBack]; Home under it keeps its scroll position, because its
@@ -228,6 +267,12 @@ fun NavController.navigateToHostProfile(
     link: HostLink,
     builder: NavOptionsBuilder.() -> Unit = {},
 ) = navigate(HostProfileRoute(link.slug, link.name, link.avatar), builder)
+
+/** "See all reviews" (M4-M11): [route] is what the trip page's or host page's `onSeeAllReviews` hands over. */
+fun NavController.navigateToReviews(
+    route: ReviewsRoute,
+    builder: NavOptionsBuilder.() -> Unit = {},
+) = navigate(route, builder)
 
 fun NavController.navigateToTripDetail(
     slug: String,

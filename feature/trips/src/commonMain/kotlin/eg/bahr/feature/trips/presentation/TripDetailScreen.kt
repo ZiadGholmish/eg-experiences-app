@@ -79,6 +79,7 @@ internal fun TripDetailScreen(
     onContinue: (slug: String, departureId: String) -> Unit,
     modifier: Modifier = Modifier,
     onHostClick: ((HostDto) -> Unit)? = null,
+    onSeeAllReviews: ((title: String) -> Unit)? = null,
     viewModel: TripDetailViewModel = koinViewModel { parametersOf(slug) },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -116,6 +117,7 @@ internal fun TripDetailScreen(
         onSelectDeparture = viewModel::selectDeparture,
         onContinue = { departureId -> onContinue(slug, departureId) },
         onHostClick = onHostClick,
+        onSeeAllReviews = onSeeAllReviews,
         modifier = modifier,
     )
 }
@@ -131,6 +133,7 @@ private fun TripPage(
     onSelectDeparture: (String) -> Unit,
     onContinue: (String) -> Unit,
     onHostClick: ((HostDto) -> Unit)?,
+    onSeeAllReviews: ((title: String) -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val trip = state.trip
@@ -149,7 +152,7 @@ private fun TripPage(
                 contentPadding = PaddingValues(bottom = BahrSpacing.xl),
             ) {
                 items(sections, key = { it.name }) { section ->
-                    Section(section, state, header, trip, waitlist, onBack, onSelectDeparture, onHostClick)
+                    Section(section, state, header, trip, waitlist, onBack, onSelectDeparture, onHostClick, onSeeAllReviews)
                 }
             }
             StatusBarScrim(visible = { listState.firstVisibleItemIndex > 0 })
@@ -228,6 +231,7 @@ private fun Section(
     onBack: () -> Unit,
     onSelectDeparture: (String) -> Unit,
     onHostClick: ((HostDto) -> Unit)?,
+    onSeeAllReviews: ((title: String) -> Unit)?,
 ) {
     val padded = Modifier.padding(start = BahrSpacing.gutter, end = BahrSpacing.gutter, top = BahrSpacing.xl)
     when (section) {
@@ -252,7 +256,10 @@ private fun Section(
 
         TripSection.Host -> trip?.let { TripHostCard(it.host, it.tips, padded, onHostClick) }
 
-        TripSection.Reviews -> trip?.reviews?.let { TripReviews(it, padded) }
+        TripSection.Reviews ->
+            trip?.reviews?.let { reviews ->
+                TripReviews(reviews, padded, onSeeAll = onSeeAllReviews?.let { open -> { open(trip.title) } })
+            }
 
         TripSection.Availability ->
             TripAvailability(

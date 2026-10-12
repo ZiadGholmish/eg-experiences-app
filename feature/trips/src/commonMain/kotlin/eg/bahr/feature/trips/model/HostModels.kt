@@ -70,4 +70,4 @@ internal val RatingSummaryDto.stars: List<StarCountDto>
     }
 
 internal const val MAX_STARS = 5
-private const val MIN_STARS = 1
+internal const val MIN_STARS = 1

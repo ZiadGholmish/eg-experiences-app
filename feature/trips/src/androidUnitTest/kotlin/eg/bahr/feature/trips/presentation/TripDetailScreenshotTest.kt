@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performScrollToKey
@@ -29,6 +30,7 @@ import eg.bahr.feature.trips.data.waitlistMemory
 import eg.bahr.feature.trips.model.DepartureDto
 import eg.bahr.feature.trips.model.HostDto
 import eg.bahr.feature.trips.model.TripDetailDto
+import eg.bahr.feature.trips.presentation.components.SEE_ALL_REVIEWS_TAG
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.plus
@@ -330,6 +332,51 @@ class TripDetailScreenshotTest {
         }
 
     /**
+     * M4-M11: the reviews with their stars, and "See all reviews" under them: the trip counts 37 (an
+     * authored total) and previews 2. The link carries no number.
+     */
+    @Test
+    fun reviewsSeeAllArabic() = reviewsSeeAll(AppLanguage.ARABIC)
+
+    @Test
+    fun reviewsSeeAllEnglish() = reviewsSeeAll(AppLanguage.ENGLISH)
+
+    private fun reviewsSeeAll(language: AppLanguage) {
+        snap("trip_detail_reviews_see_all", language, onSeeAllReviews = {}, scrollTo = TripSection.Reviews) {
+            serve(payload(language), departures(language), detail = ::withStars)
+        }
+        compose.onNodeWithTag(SEE_ALL_REVIEWS_TAG).assertIsDisplayed()
+    }
+
+    /** M4-M11: every review is in the preview (count 2, 2 shown): no "See all reviews". */
+    @Test
+    fun reviewsAllShownArabic() = reviewsAllShown(AppLanguage.ARABIC)
+
+    @Test
+    fun reviewsAllShownEnglish() = reviewsAllShown(AppLanguage.ENGLISH)
+
+    private fun reviewsAllShown(language: AppLanguage) {
+        snap("trip_detail_reviews_all_shown", language, onSeeAllReviews = {}, scrollTo = TripSection.Reviews) {
+            serve(payload(language), departures(language), detail = {
+                withStars(it).let { t ->
+                    t.copy(reviews = t.reviews?.copy(count = 2))
+                }
+            })
+        }
+        compose.onNodeWithTag(SEE_ALL_REVIEWS_TAG).assertDoesNotExist()
+    }
+
+    private fun payload(language: AppLanguage) =
+        if (language == AppLanguage.ARABIC) TripDetailPayloads.arabic else TripDetailPayloads.english
+
+    private fun departures(language: AppLanguage) =
+        if (language == AppLanguage.ARABIC) TripDetailPayloads.arabicDepartures else TripDetailPayloads.englishDepartures
+
+    /** The payload's reviews with stars (M4-B8): 5 and 4. */
+    private fun withStars(trip: TripDetailDto) =
+        trip.copy(reviews = trip.reviews?.let { r -> r.copy(items = r.items.mapIndexed { i, review -> review.copy(rating = 5 - i) }) })
+
+    /**
      * The photo counter ("1 / 3") over a three-photo gallery, which must read left to right in Arabic
      * too (M1-M1 review #1). The URLs point at a closed local port, so Coil draws nothing and the
      * golden does not depend on the network; the counter and the ground still render.
@@ -351,8 +398,9 @@ class TripDetailScreenshotTest {
         departures: String,
         photos: List<ImageDto> = emptyList(),
         dates: (List<DepartureDto>) -> List<DepartureDto> = { it },
+        detail: (TripDetailDto) -> TripDetailDto = { it },
     ) {
-        val detail = withoutPhotos(json.decodeFromString<Envelope<TripDetailDto>>(trip).data).copy(gallery = photos)
+        val detail = detail(withoutPhotos(json.decodeFromString<Envelope<TripDetailDto>>(trip).data).copy(gallery = photos))
         val dates = dates(json.decodeFromString<Envelope<List<DepartureDto>>>(departures).data)
         tripBySlug = { AppResult.Success(detail) }
         departuresFor = { AppResult.Success(dates) }
@@ -375,6 +423,7 @@ class TripDetailScreenshotTest {
         act: (TripDetailViewModel) -> Unit = {},
         waitlists: WaitlistMemory = waitlistMemory(),
         onHostClick: ((HostDto) -> Unit)? = null,
+        onSeeAllReviews: ((String) -> Unit)? = null,
         scrollTo: TripSection? = null,
         stub: FakeTripRepository.() -> Unit,
     ) {
@@ -387,7 +436,7 @@ class TripDetailScreenshotTest {
                             _,
                             _,
                             ->
-                        }, onHostClick = onHostClick, viewModel = viewModel)
+                        }, onHostClick = onHostClick, onSeeAllReviews = onSeeAllReviews, viewModel = viewModel)
                     }
                 }
             }

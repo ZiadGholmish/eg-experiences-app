@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import eg.bahr.core.catalog.model.NextDepartureDto
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.common.result.AppError
@@ -23,6 +24,7 @@ import eg.bahr.feature.trips.model.HostProfileDto
 import eg.bahr.feature.trips.model.RatingSummaryDto
 import eg.bahr.feature.trips.model.ReviewDto
 import eg.bahr.feature.trips.model.StarCountDto
+import eg.bahr.feature.trips.presentation.components.SEE_ALL_REVIEWS_TAG
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.datetime.LocalDate
 import org.junit.After
@@ -71,7 +73,10 @@ class HostProfileScreenshotTest {
     private fun loading(language: AppLanguage) =
         snap("host_loading", language, FakeTripRepository(hostBySlug = { awaitCancellation() }, listFiltered = { awaitCancellation() }))
 
-    /** A verified person with reviews: header, rating bars, two reviews, then their trips with the count. */
+    /**
+     * A verified person with reviews: header, rating bars, two reviews with their stars, "See all reviews"
+     * (6 counted, 2 shown; M4-M11), then their trips with the count.
+     */
     @Config(qualifiers = "en-w360dp-h1400dp-xhdpi")
     @Test
     fun loadedArabic() = loaded(AppLanguage.ARABIC)
@@ -91,7 +96,34 @@ class HostProfileScreenshotTest {
             ),
             name = "Ashraf El Bahr",
         )
+        compose.onNodeWithTag(SEE_ALL_REVIEWS_TAG).assertExists()
     }
+
+    /** M4-M11: the summary counts no more reviews than the preview shows (2 of 2): no "See all reviews". */
+    @Config(qualifiers = "en-w360dp-h1400dp-xhdpi")
+    @Test
+    fun allReviewsShownArabic() = allReviewsShown(AppLanguage.ARABIC)
+
+    @Config(qualifiers = "en-w360dp-h1400dp-xhdpi")
+    @Test
+    fun allReviewsShownEnglish() = allReviewsShown(AppLanguage.ENGLISH)
+
+    private fun allReviewsShown(language: AppLanguage) {
+        val arabic = language == AppLanguage.ARABIC
+        val host = ashraf(arabic).let { it.copy(rating = it.rating.copy(average = 4.5, count = 2, distribution = stars(1, 1))) }
+        snap(
+            "host_all_reviews_shown",
+            language,
+            FakeTripRepository(hostBySlug = { AppResult.Success(host) }, listFiltered = { page(cards(arabic), totalItems = 2) }),
+            name = "Ashraf El Bahr",
+        )
+        compose.onNodeWithTag(SEE_ALL_REVIEWS_TAG).assertDoesNotExist()
+    }
+
+    private fun stars(
+        fives: Int,
+        fours: Int,
+    ) = listOf(5 to fives, 4 to fours, 3 to 0, 2 to 0, 1 to 0).map { (stars, count) -> StarCountDto(stars, count) }
 
     /** A company with no reviews yet (Red Sea Days in the seed): no bars, one line saying so. */
     @Test
@@ -170,12 +202,14 @@ class HostProfileScreenshotTest {
                         body = if (arabic) "الفلامنجو وقت الشروق كان حاجة مش طبيعية." else "The flamingos at sunrise were unreal.",
                         partyLabel = if (arabic) "مجموعة من 2" else "Party of 2",
                         tone = "primary",
+                        rating = 5,
                     ),
                     ReviewDto(
                         author = if (arabic) "سلمى ك." else "Salma K.",
                         dateISO = LocalDate(2026, 9, 7),
                         body = if (arabic) "أشرف عارف كل قناة في البحيرة." else "Ashraf knows every channel of the lake.",
                         tone = "secondary",
+                        rating = 4,
                     ),
                 ),
         )
@@ -226,7 +260,7 @@ class HostProfileScreenshotTest {
             ProvideAppLanguage(language) {
                 BahrTheme(locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English) {
                     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-                        HostProfileScreen(SLUG, name, null, onBack = {}, onTripClick = {}, viewModel = vm)
+                        HostProfileScreen(SLUG, name, null, onBack = {}, onTripClick = {}, onSeeAllReviews = {}, viewModel = vm)
                     }
                 }
             }

@@ -43,9 +43,10 @@ import eg.bahr.core.localization.generated.resources.trips_title
 import eg.bahr.core.localization.isRetryable
 import eg.bahr.core.localization.localizedMessage
 import eg.bahr.feature.trips.presentation.components.HostHeader
-import eg.bahr.feature.trips.presentation.components.HostRating
 import eg.bahr.feature.trips.presentation.components.ListTopBar
+import eg.bahr.feature.trips.presentation.components.RatingSummary
 import eg.bahr.feature.trips.presentation.components.ReviewCard
+import eg.bahr.feature.trips.presentation.components.SeeAllReviewsLink
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -55,6 +56,9 @@ import org.koin.core.parameter.parametersOf
  * mark, person or company, member since, trips run), the rating summary and the newest reviews, then
  * the host's trips, paged (tap → the trip page). The handoff has no host page; it follows the trip
  * page's host card and reviews and the category page's list.
+ *
+ * M4-M11: "See all reviews" under the previews ([onSeeAllReviews], with the host's name) when the summary
+ * counts more reviews than they show.
  *
  * Text first: the name and photo the card showed are drawn at once; the facts and the rating shimmer
  * until `getHost` answers, and the trips load beside it. The back button stays in every state, the
@@ -68,6 +72,7 @@ internal fun HostProfileScreen(
     onBack: () -> Unit,
     onTripClick: (slug: String) -> Unit,
     modifier: Modifier = Modifier,
+    onSeeAllReviews: ((name: String) -> Unit)? = null,
     viewModel: HostProfileViewModel = koinViewModel(key = "host:$slug") { parametersOf(slug, name, avatar) },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -105,7 +110,7 @@ internal fun HostProfileScreen(
                         )
                     } ?: Box(Modifier.fillMaxSize())
 
-                HostPage.Shown -> HostPageList(slug, state, trips, onTripClick, viewModel::retryTrips)
+                HostPage.Shown -> HostPageList(slug, state, trips, onTripClick, viewModel::retryTrips, onSeeAllReviews)
             }
         }
     }
@@ -121,6 +126,7 @@ private fun HostPageList(
     trips: LazyPagingItems<TripCardDto>,
     onTripClick: (slug: String) -> Unit,
     onRetryTrips: () -> Unit,
+    onSeeAllReviews: ((name: String) -> Unit)?,
 ) {
     val listState = rememberLazyListState()
     val perPersonLabel = stringResource(Res.string.trip_per_person)
@@ -140,9 +146,13 @@ private fun HostPageList(
     ) {
         item(key = KEY_HEADER) { HostHeader(slug, state.name, state.avatar, profile, padded) }
         if (profile != null) {
-            item(key = KEY_RATING) { HostRating(profile.rating, padded.padding(top = BahrSpacing.sm)) }
+            item(key = KEY_RATING) { RatingSummary(profile.rating, padded.padding(top = BahrSpacing.sm)) }
             items(profile.reviews.withIndex().toList(), key = { "$KEY_REVIEW${it.index}" }) { (_, review) ->
                 Box(padded) { ReviewCard(review) }
+            }
+            // M4-M11: only when the summary counts more reviews than the preview shows.
+            if (onSeeAllReviews != null && profile.rating.count > profile.reviews.size) {
+                item(key = KEY_SEE_ALL_REVIEWS) { SeeAllReviewsLink(onClick = { onSeeAllReviews(profile.name) }, modifier = padded) }
             }
         }
         item(key = KEY_TRIPS_HEADING) {
@@ -175,3 +185,4 @@ private const val KEY_HEADER = "host-header"
 private const val KEY_RATING = "host-rating"
 private const val KEY_REVIEW = "host-review:"
 private const val KEY_TRIPS_HEADING = "host-trips-heading"
+private const val KEY_SEE_ALL_REVIEWS = "host-see-all-reviews"

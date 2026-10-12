@@ -10,6 +10,8 @@ import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.network.MoneyDto
 import eg.bahr.feature.trips.model.DepartureDto
 import eg.bahr.feature.trips.model.HostProfileDto
+import eg.bahr.feature.trips.model.ReviewPageDto
+import eg.bahr.feature.trips.model.ReviewSort
 import eg.bahr.feature.trips.model.TripCardPageDto
 import eg.bahr.feature.trips.model.TripDetailDto
 import eg.bahr.feature.trips.model.WaitlistRequest
@@ -32,6 +34,7 @@ internal class FakeTripRepository(
     var cards: Map<String, TripCardDto> = emptyMap(),
     var joinWaitlist: suspend (departureId: String, request: WaitlistRequest) -> AppResult<Unit> = { _, _ -> unset() },
     var hostBySlug: suspend (slug: String) -> AppResult<HostProfileDto> = { unset() },
+    var reviews: suspend (request: ReviewRequest) -> AppResult<ReviewPageDto> = { unset() },
 ) : TripRepository {
     val requestedPages = mutableListOf<Int>()
     val requestedQueries = mutableListOf<TripQuery>()
@@ -39,6 +42,7 @@ internal class FakeTripRepository(
     val departureReads = mutableListOf<String>()
     val waitlistJoins = mutableListOf<Pair<String, WaitlistRequest>>()
     val hostReads = mutableListOf<String>()
+    val reviewRequests = mutableListOf<ReviewRequest>()
 
     override suspend fun listTrips(
         page: Int,
@@ -81,6 +85,18 @@ internal class FakeTripRepository(
         return hostBySlug.invoke(slug)
     }
 
+    override suspend fun reviews(
+        trip: String?,
+        host: String?,
+        sort: ReviewSort,
+        stars: Int?,
+        page: Int,
+    ): AppResult<ReviewPageDto> {
+        val request = ReviewRequest(trip, host, sort, stars, page)
+        reviewRequests += request
+        return reviews.invoke(request)
+    }
+
     override fun cachedCard(slug: String): TripCardDto? = cards[slug]
 
     private companion object {
@@ -95,6 +111,15 @@ internal data class TripQuery(
     val filter: String? = null,
     val q: String? = null,
     val host: String? = null,
+)
+
+/** One `GET /reviews` call as the fake saw it. */
+internal data class ReviewRequest(
+    val trip: String?,
+    val host: String?,
+    val sort: ReviewSort,
+    val stars: Int?,
+    val page: Int,
 )
 
 /**

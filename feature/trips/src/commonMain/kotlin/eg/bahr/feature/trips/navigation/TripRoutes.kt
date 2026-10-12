@@ -49,6 +49,18 @@ data class HostProfileRoute(
     val avatar: String? = null,
 )
 
+/**
+ * "See all reviews" (M4-M11): every review of the trip [trip] or of the host [host] (exactly one is
+ * set), opened under the review previews of the trip page or the host page. [title] is the trip's title
+ * or the host's name, shown under the heading.
+ */
+@Serializable
+data class ReviewsRoute(
+    val trip: String? = null,
+    val host: String? = null,
+    val title: String? = null,
+)
+
 /** Search (M4-M3), opened from Home's search entry. */
 @Serializable
 data object SearchTripsRoute

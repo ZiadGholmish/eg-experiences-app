@@ -51,7 +51,7 @@ import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
 /*
- * The host page's own parts (M4-M10). The handoff has no host page: these follow the trip page's host
+ * The host page's own parts (M4-M10); the rating summary is the reviews page's header too (M4-M11). The handoff has no host page: these follow the trip page's host
  * card (avatar, name, verified mark) and reviews, so the card reads as growing into the page.
  */
 
@@ -133,14 +133,18 @@ private fun HostProfileDto.facts(): String {
  * The rating summary: the average large, with how many reviews it is over, beside five bars from 5
  * stars down to 1, each as long as its share of the reviews. With no reviews (count 0, no average),
  * one line says so.
+ *
+ * The host page's, and the reviews page's header (M4-M11), which has its own heading: [showTitle] false
+ * leaves out the "Reviews" title.
  */
 @Composable
-internal fun HostRating(
+internal fun RatingSummary(
     rating: RatingSummaryDto,
     modifier: Modifier = Modifier,
+    showTitle: Boolean = true,
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(BahrSpacing.md)) {
-        SectionTitle(stringResource(Res.string.trip_reviews), Modifier.semantics { heading() })
+        if (showTitle) SectionTitle(stringResource(Res.string.trip_reviews), Modifier.semantics { heading() })
         val average = rating.average
         if (rating.count <= 0 || average == null) {
             Text(

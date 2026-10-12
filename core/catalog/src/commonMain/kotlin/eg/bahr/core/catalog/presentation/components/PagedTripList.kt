@@ -245,10 +245,11 @@ fun rememberListMotion(
 
 /**
  * `animateItem` with the design system's timing: an item fades in and out and slides to its new
- * place when the list around it changes. Instant under reduce motion.
+ * place when the list around it changes. Instant under reduce motion. Public for feature:trips' reviews
+ * list (M4-M11), the second paged list whose items are not trip cards.
  */
 @Composable
-internal fun LazyItemScope.bahrAnimateItem(): Modifier =
+fun LazyItemScope.bahrAnimateItem(): Modifier =
     Modifier.animateItem(
         fadeInSpec = bahrTweenOrNull(),
         placementSpec = bahrTweenOrNull(),

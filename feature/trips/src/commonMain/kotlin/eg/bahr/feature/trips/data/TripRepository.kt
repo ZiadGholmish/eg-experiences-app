@@ -6,6 +6,8 @@ import eg.bahr.core.catalog.model.TripCardDto
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.feature.trips.model.DepartureDto
 import eg.bahr.feature.trips.model.HostProfileDto
+import eg.bahr.feature.trips.model.ReviewPageDto
+import eg.bahr.feature.trips.model.ReviewSort
 import eg.bahr.feature.trips.model.TripCardPageDto
 import eg.bahr.feature.trips.model.TripDetailDto
 import eg.bahr.feature.trips.model.WaitlistRequest
@@ -28,6 +30,18 @@ internal interface TripRepository : TripListRepository {
 
     /** A host's public page (M4-M10). Their trips are [listTrips] with `host`. */
     suspend fun hostBySlug(slug: String): AppResult<HostProfileDto>
+
+    /**
+     * One page of a trip's ([trip]) or a host's ([host]) reviews, the "See all reviews" list (M4-M11).
+     * Exactly one of the two is given.
+     */
+    suspend fun reviews(
+        trip: String?,
+        host: String?,
+        sort: ReviewSort,
+        stars: Int?,
+        page: Int,
+    ): AppResult<ReviewPageDto>
 
     /** Puts a phone on a sold-out date's waiting list (capture only: no seat is offered automatically). */
     suspend fun joinWaitlist(
@@ -70,6 +84,14 @@ internal class DefaultTripRepository(
     override suspend fun departuresFor(slug: String): AppResult<List<DepartureDto>> = api.departuresFor(slug)
 
     override suspend fun hostBySlug(slug: String): AppResult<HostProfileDto> = api.hostBySlug(slug)
+
+    override suspend fun reviews(
+        trip: String?,
+        host: String?,
+        sort: ReviewSort,
+        stars: Int?,
+        page: Int,
+    ): AppResult<ReviewPageDto> = api.reviews(trip = trip, host = host, sort = sort, stars = stars, page = page)
 
     override suspend fun joinWaitlist(
         departureId: String,

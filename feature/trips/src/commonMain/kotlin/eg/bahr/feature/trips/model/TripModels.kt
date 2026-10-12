@@ -139,7 +139,11 @@ internal data class TipDto(
     val body: String? = null,
 )
 
-/** The authored rating summary and the curated reviews under it. */
+/**
+ * The authored rating summary and a preview of the reviews under it. [count] can be an authored total
+ * larger than the trip's real review list (M4-B8), so it only says whether there is more to see than
+ * [items]; the full list (`listReviews?trip=`) carries its own summary.
+ */
 @Serializable
 internal data class ReviewsDto(
     val average: Double? = null,
@@ -147,7 +151,11 @@ internal data class ReviewsDto(
     val items: List<ReviewDto> = emptyList(),
 )
 
-/** One review. [tone] tints the author's initial (the contract's `Tone`). */
+/**
+ * One review, the same shape on the trip page, the host page and the full list (`listReviews`). [tone]
+ * tints the author's initial (the contract's `Tone`). [body] is absent for a review that is a rating
+ * only; [rating] (1–5 stars, M4-B8) is absent from older servers, and then no stars are drawn.
+ */
 @Serializable
 internal data class ReviewDto(
     val author: String? = null,
@@ -155,6 +163,7 @@ internal data class ReviewDto(
     val body: String? = null,
     val partyLabel: String? = null,
     val tone: String? = null,
+    val rating: Int? = null,
 )
 
 /**

@@ -12,18 +12,23 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.Dp
@@ -43,6 +48,8 @@ import eg.bahr.core.designsystem.theme.bahrSharedBounds
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.format_pair
 import eg.bahr.core.localization.generated.resources.host_open
+import eg.bahr.core.localization.generated.resources.host_rating_average
+import eg.bahr.core.localization.generated.resources.reviews_see_all
 import eg.bahr.core.localization.generated.resources.trip_best_time
 import eg.bahr.core.localization.generated.resources.trip_day_note
 import eg.bahr.core.localization.generated.resources.trip_host_trips_run
@@ -55,6 +62,8 @@ import eg.bahr.core.localization.generated.resources.trip_what_to_bring
 import eg.bahr.core.localization.generated.resources.trip_what_to_know
 import eg.bahr.feature.trips.model.HostDto
 import eg.bahr.feature.trips.model.ItineraryStopDto
+import eg.bahr.feature.trips.model.MAX_STARS
+import eg.bahr.feature.trips.model.MIN_STARS
 import eg.bahr.feature.trips.model.ReviewDto
 import eg.bahr.feature.trips.model.ReviewsDto
 import eg.bahr.feature.trips.model.TipDto
@@ -275,11 +284,15 @@ private fun tipStyle(key: String?): Triple<Tint, BahrIcons, StringResource> =
 /**
  * Reviews (item 9): a "★ 4.8 · 37" pill, then one card per review with a tinted initial, the
  * author, the date and the text. The server sends the average and count it wants shown.
+ *
+ * M4-M11: "See all reviews" under the cards ([onSeeAll]) when the count says there are more than the
+ * preview shows. Never with the number: the count can be an authored total larger than the real list.
  */
 @Composable
 internal fun TripReviews(
     reviews: ReviewsDto,
     modifier: Modifier = Modifier,
+    onSeeAll: (() -> Unit)? = null,
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(BahrSpacing.md)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -288,8 +301,31 @@ internal fun TripReviews(
             reviews.average?.let { average -> ReviewsPill(BahrFormat.rating(average), reviews.count) }
         }
         reviews.items.forEach { ReviewCard(it) }
+        if (onSeeAll != null && (reviews.count ?: 0) > reviews.items.size) SeeAllReviewsLink(onSeeAll)
     }
 }
+
+/**
+ * "See all reviews" under a page's review previews (the trip page's and the host page's, M4-M11), at
+ * the 44dp touch minimum. A link, not the page's goal, so primary, never coral. No count in it (user
+ * decision 2026-10-12).
+ */
+@Composable
+internal fun SeeAllReviewsLink(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    TextButton(onClick = onClick, modifier = modifier.heightIn(min = BahrSpacing.minTouch).testTag(SEE_ALL_REVIEWS_TAG)) {
+        Text(
+            text = stringResource(Res.string.reviews_see_all),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+        )
+    }
+}
+
+/** For tests: the "See all reviews" link. */
+internal const val SEE_ALL_REVIEWS_TAG = "see_all_reviews"
 
 @Composable
 private fun ReviewsPill(
@@ -315,7 +351,11 @@ private fun ReviewsPill(
     }
 }
 
-/** One review: shared by the trip page's reviews and the host page's (the contract's one `Review` shape). */
+/**
+ * One review: shared by the trip page's reviews, the host page's and the full list (the contract's one
+ * `Review` shape). Its stars when the server sent them (M4-B8; an older server sends none, and then
+ * none are drawn); a rating-only review has stars and no text.
+ */
 @Composable
 internal fun ReviewCard(review: ReviewDto) {
     BahrCard(modifier = Modifier.fillMaxWidth()) {
@@ -332,12 +372,36 @@ internal fun ReviewCard(review: ReviewDto) {
                     )
                 }
             }
+            review.rating?.let { ReviewStars(it) }
             review.body?.let {
                 Text(text = it, style = MaterialTheme.typography.bodyMedium, color = BahrTheme.colors.onSurfaceSecondary)
             }
             review.partyLabel?.let {
                 Text(text = it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+        }
+    }
+}
+
+/**
+ * A review's stars: [rating] filled, the rest outlined, read out once as "Rated 4 out of 5". A value
+ * outside 1–5 is held to it, so a bad payload still draws five stars.
+ */
+@Composable
+private fun ReviewStars(rating: Int) {
+    val shown = rating.coerceIn(MIN_STARS, MAX_STARS)
+    val spoken = stringResource(Res.string.host_rating_average, shown.toString())
+    Row(
+        modifier = Modifier.clearAndSetSemantics { contentDescription = spoken },
+        horizontalArrangement = Arrangement.spacedBy(BahrSpacing.xs),
+    ) {
+        repeat(MAX_STARS) { index ->
+            Icon(
+                imageVector = if (index < shown) BahrIcons.Star.filled() else BahrIcons.Star.outlined(),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.size(BahrSize.iconSmall),
+            )
         }
     }
 }
