@@ -19,8 +19,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -64,7 +62,6 @@ import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.designsystem.theme.bahrSharedBounds
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.home_banner_price_from
-import eg.bahr.core.localization.generated.resources.home_slide_of
 import eg.bahr.core.localization.generated.resources.trips_see_all
 import eg.bahr.feature.home.model.BannersSectionDto
 import eg.bahr.feature.home.model.CategoriesSectionDto
@@ -282,7 +279,14 @@ private fun BannerCarousel(
             if (count > 1) {
                 // A tap on a dot goes to its slide in the current lap; the timer starts over from there
                 // (keyed on settledPage).
-                PagerDots(count = count, current = pager.currentPage % count) { banner ->
+                // The dots read the live scroll position only while drawing (M4-M14), so a swipe does
+                // not recompose the carousel frame by frame.
+                PagerDots(
+                    count = count,
+                    current = pager.currentPage % count,
+                    page = { pager.currentPage },
+                    offset = { pager.currentPageOffsetFraction },
+                ) { banner ->
                     scope.launch { pager.animateScrollToPage(pager.currentPage - pager.currentPage % count + banner) }
                 }
             }
@@ -441,45 +445,6 @@ private fun NotePanel(
             style = MaterialTheme.typography.bodyMedium,
             color = BahrTheme.colors.onSurfaceSecondary,
         )
-    }
-}
-
-/**
- * The handoff's dot indicator: the current page a wide primary pill, the rest small track dots. Each
- * dot is a tab that goes to its slide ([onSelect], HANDOFF Home: "tappable").
- *
- * The dots keep the handoff's size and spacing. Each sits in a cell as tall as the touch minimum, and
- * Compose widens a target narrower than the minimum for touch on its own (the nearest dot wins where
- * two overlap), so a dot is easy to hit without spreading the row out.
- */
-@Composable
-private fun PagerDots(
-    count: Int,
-    current: Int,
-    onSelect: (page: Int) -> Unit,
-) {
-    Row(modifier = Modifier.selectableGroup()) {
-        repeat(count) { index ->
-            val active = index == current
-            val label = stringResource(Res.string.home_slide_of, index + 1, count)
-            Box(
-                modifier =
-                    Modifier
-                        .heightIn(min = BahrSpacing.minTouch)
-                        .selectable(selected = active, role = Role.Tab, onClick = { onSelect(index) })
-                        .semantics { contentDescription = label }
-                        // Half the handoff's gap on each side, so neighbours sit the full gap apart.
-                        .padding(horizontal = BahrSpacing.xs / 2),
-                contentAlignment = Alignment.Center,
-            ) {
-                Box(
-                    Modifier
-                        .size(width = if (active) BahrSize.pagerDotActive else BahrSize.pagerDot, height = BahrSize.pagerDot)
-                        .clip(BahrTheme.shapes.full)
-                        .background(if (active) MaterialTheme.colorScheme.primary else BahrTheme.colors.track),
-                )
-            }
-        }
     }
 }
 

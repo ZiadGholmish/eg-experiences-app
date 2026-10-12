@@ -131,6 +131,23 @@ object BahrMotion {
     const val CarouselAdvance = 4600L
 
     /**
+     * The carousel's liquid dots (M4-M14): between two dots each edge of the active pill travels over
+     * this share of the swipe. The leading edge starts at once and the trailing edge only arrives at
+     * the end, so for a while in the middle the pill stretches over both dots (a worm), then contracts
+     * into the new one. 1 would move both edges together; .5 would leave no overlap.
+     */
+    const val PagerPillEdgeShare = .6f
+
+    /** How thin the pill gets at its longest, as a share of a dot's height: stretched liquid thins. */
+    const val PagerPillStretchThickness = .85f
+
+    /**
+     * How small an inactive dot gets while the pill covers it or lets it go (M4-M14), so it reads as
+     * absorbed and released rather than painted over.
+     */
+    const val PagerDotPassScale = .6f
+
+    /**
      * How far a screen opened from Home (a category, "See all", search) slides in, as a share of its
      * width, while it fades in (M4-M6). A partial slide reads as "forward" without the whole page
      * sweeping across.
