@@ -90,7 +90,17 @@ class TripDetailApiServiceTest {
             assertEquals(listOf("bring", "best_time", "look_out", "know"), trip.tips.map { it.key })
 
             assertEquals(4.8, trip.reviews?.average)
-            assertEquals(37, trip.reviews?.count)
+            // M4-B10: derived from the review rows, so the count agrees with the trip's rating.
+            assertEquals(5, trip.reviews?.count)
+            assertEquals(trip.rating?.count, trip.reviews?.count)
+            assertEquals(3, trip.reviews?.items?.size)
+            assertEquals(
+                5,
+                trip.reviews
+                    ?.items
+                    ?.first()
+                    ?.rating,
+            )
             assertEquals(
                 LocalDate(2026, 9, 21),
                 trip.reviews
@@ -145,6 +155,8 @@ class TripDetailApiServiceTest {
             val trip = success(service(TripDetailPayloads.arabic, language = "ar").tripBySlug("burullus-dawn"))
             assertEquals("الفجر على بحيرة البرلس", trip.title)
             assertEquals("إيه اللي تجيبه معاك", trip.tips.first().title)
+            // M4-B10: the host's name follows Accept-Language too; the app shows it as served.
+            assertEquals("أشرف البحر", trip.host?.name)
             val dates = success(service(TripDetailPayloads.arabicDepartures, language = "ar").departuresFor("burullus-dawn"))
             assertEquals("السبت 10 أكتوبر", dates.first().dayLabel)
         }

@@ -290,8 +290,7 @@ private fun tipStyle(key: String?): Triple<Tint, BahrIcons, StringResource> =
  * author, the date and the text. The server sends the average and count it wants shown.
  *
  * M4-M11: "See all reviews" under the cards ([onSeeAll]) when there are more reviews than the preview
- * shows ([showsSeeAllReviews]). Never with the number: the count can be an authored total larger than
- * the real list.
+ * shows ([showsSeeAllReviews]). Never with the number (user decision 2026-10-12).
  */
 @Composable
 internal fun TripReviews(
@@ -318,9 +317,10 @@ internal const val REVIEW_PREVIEW_SIZE = 3
 
 /**
  * Whether a page's review preview gets "See all reviews" (the trip page's and the host page's): only
- * when the preview is full and the summary counts more than it shows. The count alone is not enough:
- * it can be an authored total ("4.9 · 64") with no review rows behind it, or only a few, and then the
- * link would open an empty list or the same reviews again (user, 2026-10-12, M4-M12).
+ * when the preview is full and the summary counts more than it shows. Since M4-B10 the count is the
+ * review rows, so `count > previewed` alone would do; the full-preview check stays because it costs
+ * nothing and keeps an older server's authored total ("4.9 · 64" over no rows, M4-M12) from offering a
+ * link to an empty list.
  */
 internal fun showsSeeAllReviews(
     count: Int,

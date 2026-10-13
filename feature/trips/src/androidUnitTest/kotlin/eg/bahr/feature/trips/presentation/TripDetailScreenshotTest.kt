@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollToKey
 import eg.bahr.core.catalog.data.WaitlistMemory
 import eg.bahr.core.catalog.model.BadgeDto
@@ -29,14 +30,11 @@ import eg.bahr.feature.trips.data.TripFixtures.trip
 import eg.bahr.feature.trips.data.waitlistMemory
 import eg.bahr.feature.trips.model.DepartureDto
 import eg.bahr.feature.trips.model.HostDto
-import eg.bahr.feature.trips.model.ReviewDto
 import eg.bahr.feature.trips.model.ReviewsDto
 import eg.bahr.feature.trips.model.TripDetailDto
-import eg.bahr.feature.trips.presentation.components.REVIEW_PREVIEW_SIZE
 import eg.bahr.feature.trips.presentation.components.SEE_ALL_REVIEWS_TAG
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.datetime.DateTimeUnit
-import kotlinx.datetime.LocalDate
 import kotlinx.datetime.plus
 import kotlinx.serialization.json.Json
 import org.junit.After
@@ -362,7 +360,8 @@ class TripDetailScreenshotTest {
 
     /**
      * M4-M10: with the host page wired, the host card's row is tappable, with a forward arrow (pointing
-     * left in Arabic). Scrolled to the host card.
+     * left in Arabic). Scrolled to the host card. M4-M15: the server sends the host's name in the page's
+     * language (M4-B10), so the Arabic card reads "أشرف البحر".
      */
     @Test
     fun hostCardArabic() =
@@ -377,9 +376,24 @@ class TripDetailScreenshotTest {
         }
 
     /**
-     * M4-M11: the reviews with their stars, and "See all reviews" under them: the trip counts 37 (an
-     * authored total) and previews a full 3 (M4-M12: the link needs a full preview). The link carries
-     * no number. Taller than the class default: three review cards and the link under them.
+     * M4-M15: a host with no English name gets the Arabic one on the English page (M4-B10's fallback):
+     * the RTL name sits in the LTR card without pulling the role or the arrow out of place.
+     */
+    @Test
+    fun hostCardArabicNameEnglish() =
+        snap("trip_detail_host_card_arabic_name", AppLanguage.ENGLISH, onHostClick = {}, scrollTo = TripSection.Host) {
+            serve(
+                TripDetailPayloads.english,
+                TripDetailPayloads.englishDepartures,
+                detail = { it.copy(host = it.host?.copy(name = ARABIC_HOST_NAME)) },
+            )
+        }
+
+    /**
+     * M4-M11: the reviews with their stars, and "See all reviews" under them. M4-M15: the seed's derived
+     * numbers (M4-B10): burullus-dawn counts 5 review rows and previews the server's full 3, so there is
+     * more to see. The link carries no number. Taller than the class default: three review cards and the
+     * link under them.
      */
     @Config(qualifiers = "en-w360dp-h1000dp-xhdpi")
     @Test
@@ -391,71 +405,64 @@ class TripDetailScreenshotTest {
 
     private fun reviewsSeeAll(language: AppLanguage) {
         snap("trip_detail_reviews_see_all", language, onSeeAllReviews = {}, scrollTo = TripSection.Reviews) {
-            serve(payload(language), departures(language), detail = { withFullPreview(withStars(it), language) })
+            serve(payload(language), departures(language))
         }
         compose.onNodeWithTag(SEE_ALL_REVIEWS_TAG).assertIsDisplayed()
     }
 
     /**
-     * M4-M12: the preview is short of the server's 3 (2 shown), so it is every real review there is,
-     * though the authored count says 37: no "See all reviews".
+     * M4-M12/M4-M15: a trip whose 3 review rows are all in the preview (the count equals what is shown,
+     * as the server now derives it): no "See all reviews", which would open the same three again.
      */
+    @Config(qualifiers = "en-w360dp-h1000dp-xhdpi")
     @Test
     fun reviewsAllShownArabic() = reviewsAllShown(AppLanguage.ARABIC)
 
+    @Config(qualifiers = "en-w360dp-h1000dp-xhdpi")
     @Test
     fun reviewsAllShownEnglish() = reviewsAllShown(AppLanguage.ENGLISH)
 
     private fun reviewsAllShown(language: AppLanguage) {
         snap("trip_detail_reviews_all_shown", language, onSeeAllReviews = {}, scrollTo = TripSection.Reviews) {
-            serve(payload(language), departures(language), detail = ::withStars)
+            serve(payload(language), departures(language), detail = ::withEveryReviewShown)
         }
         compose.onNodeWithTag(SEE_ALL_REVIEWS_TAG).assertDoesNotExist()
     }
 
     /**
-     * M4-M12 (user, found on device): an authored rating ("4.9 · 64") with no review rows behind it.
-     * The pill stays; no empty preview's "See all reviews", which would open an empty list.
+     * M4-M15: a trip with no reviews, as M4-B10 serves it (no `rating`, `reviews` counting 0 with no
+     * items): no rating pill beside the location, no reviews section, no "See all reviews". The whole
+     * page, so both places a pill could be are in the golden.
      */
+    @Config(qualifiers = "en-w360dp-h3200dp-xhdpi")
     @Test
-    fun reviewsAuthoredOnlyArabic() = reviewsAuthoredOnly(AppLanguage.ARABIC)
+    fun noReviewsArabic() = noReviews(AppLanguage.ARABIC)
 
+    @Config(qualifiers = "en-w360dp-h3200dp-xhdpi")
     @Test
-    fun reviewsAuthoredOnlyEnglish() = reviewsAuthoredOnly(AppLanguage.ENGLISH)
+    fun noReviewsEnglish() = noReviews(AppLanguage.ENGLISH)
 
-    private fun reviewsAuthoredOnly(language: AppLanguage) {
-        snap("trip_detail_reviews_authored_only", language, onSeeAllReviews = {}, scrollTo = TripSection.Reviews) {
-            serve(payload(language), departures(language), detail = {
-                it.copy(reviews = ReviewsDto(average = AUTHORED_AVERAGE, count = AUTHORED_COUNT, items = emptyList()))
-            })
+    private fun noReviews(language: AppLanguage) {
+        snap("trip_detail_no_reviews", language, onSeeAllReviews = {}) {
+            serve(payload(language), departures(language), detail = { it.copy(rating = null, reviews = ReviewsDto(count = 0)) })
         }
+        // The average is the only place "4.8" appears on this page: neither pill is drawn.
+        compose.onNodeWithText(DERIVED_AVERAGE, substring = true).assertDoesNotExist()
         compose.onNodeWithTag(SEE_ALL_REVIEWS_TAG).assertDoesNotExist()
     }
 
-    /** The payload previews 2 reviews; a full preview is the server's 3, so a rating-only third is added. */
-    private fun withFullPreview(
-        trip: TripDetailDto,
-        language: AppLanguage,
-    ): TripDetailDto {
-        val third =
-            ReviewDto(
-                author = if (language == AppLanguage.ARABIC) "كريم ف." else "Karim F.",
-                dateISO = LocalDate(2026, 9, 2),
-                tone = "secondary",
-                rating = 3,
-            )
-        return trip.copy(reviews = trip.reviews?.let { r -> r.copy(items = (r.items + third).take(REVIEW_PREVIEW_SIZE)) })
-    }
+    /** The trip's reviews counted as exactly the ones previewed. */
+    private fun withEveryReviewShown(trip: TripDetailDto) =
+        trip.copy(
+            rating = trip.rating?.copy(count = trip.reviews?.items?.size),
+            reviews = trip.reviews?.let { r -> r.copy(count = r.items.size) },
+        )
 
     private fun payload(language: AppLanguage) =
         if (language == AppLanguage.ARABIC) TripDetailPayloads.arabic else TripDetailPayloads.english
 
     private fun departures(language: AppLanguage) =
         if (language == AppLanguage.ARABIC) TripDetailPayloads.arabicDepartures else TripDetailPayloads.englishDepartures
-
-    /** The payload's reviews with stars (M4-B8): 5 and 4. */
-    private fun withStars(trip: TripDetailDto) =
-        trip.copy(reviews = trip.reviews?.let { r -> r.copy(items = r.items.mapIndexed { i, review -> review.copy(rating = 5 - i) }) })
 
     /**
      * The photo counter ("1 / 3") over a three-photo gallery, which must read left to right in Arabic
@@ -495,7 +502,7 @@ class TripDetailScreenshotTest {
         subtitle: String,
         badge: String,
     ) = trip(1, title = title, priceEgp = 450, badge = BadgeDto(badge, "primary"))
-        .copy(slug = SLUG, subtitle = subtitle, rating = RatingDto(4.8, 37))
+        .copy(slug = SLUG, subtitle = subtitle, rating = RatingDto(4.8, 5))
 
     private fun snap(
         prefix: String,
@@ -563,6 +570,8 @@ class TripDetailScreenshotTest {
     }
 }
 
-/** The device report's authored rating: "4.9 · 64" with no review rows. */
-private const val AUTHORED_AVERAGE = 4.9
-private const val AUTHORED_COUNT = 64
+/** burullus-dawn's average as the server derives it from its review rows (M4-B10), as shown. */
+private const val DERIVED_AVERAGE = "4.8"
+
+/** The seed's Arabic name for the Burullus host (M4-B10), served on an English page when the English one is blank. */
+private const val ARABIC_HOST_NAME = "أشرف البحر"

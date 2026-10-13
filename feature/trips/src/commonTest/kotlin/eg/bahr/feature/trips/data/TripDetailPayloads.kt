@@ -7,8 +7,10 @@ package eg.bahr.feature.trips.data
  * (`shareUrl`). Images carry `variants` (390px avif/webp/jpeg) and the host has an avatar, as served since
  * the bahr-be `Image.variants` / `host.avatar` change, and as M2-B5 serves them (D1, D3, D4): the full date
  * carries `unavailableReason`, and there is no `host.phone` or `policy.childFreeUnder`. The host card
- * carries the host's `slug` and `kind` (M4-B7). Dates are fixed
- * to October 2026; the seed computes them from today.
+ * carries the host's `slug` and `kind` (M4-B7). Since M4-B10 the host's name is in the request's
+ * language (أشرف البحر / Ashraf El Bahr) and the rating is derived from the trip's review rows: 4.8 · 5,
+ * the same in the header and the reviews block, with the server's full preview of 3, each with its
+ * stars (M4-B8). Dates are fixed to October 2026; the seed computes them from today.
  * LQIPs are shortened: the decode does not look inside them.
  */
 internal object TripDetailPayloads {
@@ -91,7 +93,7 @@ internal object TripDetailPayloads {
   },
   "rating": {
    "value": 4.8,
-   "count": 37
+   "count": 5
   },
   "location": {
    "lat": 31.503,
@@ -242,21 +244,31 @@ internal object TripDetailPayloads {
   ],
   "reviews": {
    "average": 4.8,
-   "count": 37,
+   "count": 5,
    "items": [
     {
      "author": "Nada H.",
      "dateISO": "2026-09-21",
      "body": "At 09:00 the lake is completely flat and silent, and Ashraf cuts the motor so you hear the birds. Bring a hat — I did not.",
      "partyLabel": "Went with 3 friends",
-     "tone": "quaternary"
+     "tone": "quaternary",
+     "rating": 5
     },
     {
      "author": "Mahmoud A.",
      "dateISO": "2026-09-14",
      "body": "Long day, and we were back in Cairo at 22:40 not 22:00. Worth it for the mullet lunch alone.",
      "partyLabel": "Went as a couple",
-     "tone": "tertiary"
+     "tone": "tertiary",
+     "rating": 5
+    },
+    {
+     "author": "Dina M.",
+     "dateISO": "2026-08-30",
+     "body": "The first time I have seen herons this close. Ashraf talks about the lake as if it were his home.",
+     "partyLabel": "Family",
+     "tone": "secondary",
+     "rating": 5
     }
    ]
   },
@@ -654,7 +666,7 @@ internal object TripDetailPayloads {
   },
   "rating": {
    "value": 4.8,
-   "count": 37
+   "count": 5
   },
   "location": {
    "lat": 31.503,
@@ -770,7 +782,7 @@ internal object TripDetailPayloads {
   "host": {
    "slug": "ashraf-el-bahr",
    "kind": "person",
-   "name": "Ashraf El Bahr",
+   "name": "أشرف البحر",
    "avatar": {
     "url": "http://localhost:9000/bahr-assets/seed/host.png",
     "width": 240,
@@ -805,21 +817,31 @@ internal object TripDetailPayloads {
   ],
   "reviews": {
    "average": 4.8,
-   "count": 37,
+   "count": 5,
    "items": [
     {
      "author": "Nada H.",
      "dateISO": "2026-09-21",
      "body": "الساعة 09:00 البحيرة ساكنة تمامًا وأشرف بيقفل الموتور علشان تسمع الطيور. خد قبعة معاك — أنا نسيت.",
      "partyLabel": "مع 3 أصحاب",
-     "tone": "quaternary"
+     "tone": "quaternary",
+     "rating": 5
     },
     {
      "author": "Mahmoud A.",
      "dateISO": "2026-09-14",
      "body": "يوم طويل، ورجعنا القاهرة 22:40 مش 22:00. بس غدا البوري لوحده يستاهل.",
      "partyLabel": "رحلة لاثنين",
-     "tone": "tertiary"
+     "tone": "tertiary",
+     "rating": 5
+    },
+    {
+     "author": "Dina M.",
+     "dateISO": "2026-08-30",
+     "body": "أول مرة أشوف البلشون من قريب كده. أشرف بيحكي عن البحيرة كأنها بيته.",
+     "partyLabel": "عيلة",
+     "tone": "secondary",
+     "rating": 5
     }
    ]
   },

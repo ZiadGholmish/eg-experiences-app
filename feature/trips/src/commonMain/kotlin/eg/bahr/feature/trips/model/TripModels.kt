@@ -140,9 +140,10 @@ internal data class TipDto(
 )
 
 /**
- * The authored rating summary and a preview of the reviews under it. [count] can be an authored total
- * larger than the trip's real review list (M4-B8), so it only says whether there is more to see than
- * [items]; the full list (`listReviews?trip=`) carries its own summary.
+ * The trip's rating summary and a preview of the reviews under it. Since M4-B10 the server derives
+ * [average] and [count] from the trip's review rows (before, they were authored and could exceed the
+ * real list); a trip with no reviews has no [average] and a [count] of 0. The full list
+ * (`listReviews?trip=`) carries its own summary.
  */
 @Serializable
 internal data class ReviewsDto(

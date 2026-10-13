@@ -85,6 +85,23 @@ class ReviewsScreenshotTest {
     }
 
     /**
+     * M4-M15: a host's reviews, all their trips: the host's name under the heading, in the page's
+     * language (M4-B10), with the Trip filter on "All trips".
+     */
+    @Test
+    fun hostArabic() = host(AppLanguage.ARABIC)
+
+    @Test
+    fun hostEnglish() = host(AppLanguage.ENGLISH)
+
+    private fun host(language: AppLanguage) {
+        val arabic = language == AppLanguage.ARABIC
+        val repository = FakeTripRepository(reviews = { answer(reviews(arabic), HOST_SUMMARY) }, listFiltered = { page(hostTrips(arabic)) })
+        snap("reviews_host", language, hostVm(repository, language))
+        compose.onNodeWithTag(REVIEWS_TRIP_FILTER_TAG).assertIsDisplayed()
+    }
+
+    /**
      * A host's reviews narrowed to one trip and to 5 stars: the Trip filter's chip, the trip's title under
      * the heading, the trip's own summary, the 5★ chip selected.
      */
@@ -112,7 +129,7 @@ class ReviewsScreenshotTest {
                 },
                 listFiltered = { page(hostTrips(arabic)) },
             )
-        snap("reviews_filtered", language, hostVm(repository)) { vm ->
+        snap("reviews_filtered", language, hostVm(repository, language)) { vm ->
             vm.selectTrip(DAWN)
             vm.selectStars(5)
         }
@@ -133,7 +150,7 @@ class ReviewsScreenshotTest {
                 reviews = { r -> if (r.trip == SUNSET) answer(emptyList(), EMPTY_SUMMARY) else answer(reviews(arabic), HOST_SUMMARY) },
                 listFiltered = { page(hostTrips(arabic)) },
             )
-        snap("reviews_filter_empty", language, hostVm(repository)) { vm -> vm.selectTrip(SUNSET) }
+        snap("reviews_filter_empty", language, hostVm(repository, language)) { vm -> vm.selectTrip(SUNSET) }
         compose.onNodeWithTag(REVIEWS_EMPTY_TAG).assertIsDisplayed()
     }
 
@@ -170,8 +187,16 @@ class ReviewsScreenshotTest {
         language: AppLanguage,
     ) = ReviewsViewModel(trip = DAWN, host = null, title = dawnTitle(language == AppLanguage.ARABIC), repository = repository)
 
-    private fun hostVm(repository: FakeTripRepository) =
-        ReviewsViewModel(trip = null, host = HOST, title = "Ashraf El Bahr", repository = repository)
+    /** [title] is the host's name as the host page showed it: in the page's language since M4-B10. */
+    private fun hostVm(
+        repository: FakeTripRepository,
+        language: AppLanguage,
+    ) = ReviewsViewModel(
+        trip = null,
+        host = HOST,
+        title = if (language == AppLanguage.ARABIC) "أشرف البحر" else "Ashraf El Bahr",
+        repository = repository,
+    )
 
     private fun dawnTitle(arabic: Boolean) = if (arabic) "الفجر على بحيرة البرلس" else "Dawn on Lake Burullus"
 

@@ -39,8 +39,8 @@ import java.util.Locale
 
 /**
  * The host page (M4-M10) × {ar, en} × {loading, loaded, no reviews, error, not available}, through the
- * real view model on a fake repository. The server answers in the request's language, so each language
- * gets its own copy. No image URLs: a golden must not depend on Coil or a running MinIO.
+ * real view model on a fake repository. The server answers in the request's language, host names
+ * included since M4-B10 (أشرف البحر, ريد سي دايز), so each language gets its own copy. No image URLs: a golden must not depend on Coil or a running MinIO.
  *
  * Record: `./gradlew :feature:trips:recordRoborazziDebug`; verify: `verifyRoborazziDebug`.
  */
@@ -94,7 +94,7 @@ class HostProfileScreenshotTest {
                 hostBySlug = { AppResult.Success(ashraf(arabic)) },
                 listFiltered = { page(cards(arabic), totalItems = 2) },
             ),
-            name = "Ashraf El Bahr",
+            name = ashrafName(arabic),
         )
         compose.onNodeWithTag(SEE_ALL_REVIEWS_TAG).assertExists()
     }
@@ -118,7 +118,7 @@ class HostProfileScreenshotTest {
             "host_all_reviews_shown",
             language,
             FakeTripRepository(hostBySlug = { AppResult.Success(host) }, listFiltered = { page(cards(arabic), totalItems = 2) }),
-            name = "Ashraf El Bahr",
+            name = ashrafName(arabic),
         )
         compose.onNodeWithTag(SEE_ALL_REVIEWS_TAG).assertDoesNotExist()
     }
@@ -142,7 +142,7 @@ class HostProfileScreenshotTest {
             "host_authored_rating_only",
             language,
             FakeTripRepository(hostBySlug = { AppResult.Success(host) }, listFiltered = { page(cards(arabic), totalItems = 2) }),
-            name = "Ashraf El Bahr",
+            name = ashrafName(arabic),
         )
         compose.onNodeWithTag(SEE_ALL_REVIEWS_TAG).assertDoesNotExist()
     }
@@ -163,6 +163,24 @@ class HostProfileScreenshotTest {
                 hostBySlug = { AppResult.Success(redSeaDays(arabic)) },
                 listFiltered = { page(cards(arabic).take(1), totalItems = 1) },
             ),
+            name = redSeaDaysName(arabic),
+        )
+    }
+
+    /**
+     * M4-M15: a host with no English name gets the Arabic one on the English page (M4-B10's fallback):
+     * the header and "Trips by …" carry the RTL name inside LTR text, the card's name on the first frame
+     * and the profile's after it.
+     */
+    @Config(qualifiers = "en-w360dp-h1400dp-xhdpi")
+    @Test
+    fun arabicNameEnglish() {
+        val host = ashraf(arabic = false).copy(name = ashrafName(arabic = true))
+        snap(
+            "host_arabic_name",
+            AppLanguage.ENGLISH,
+            FakeTripRepository(hostBySlug = { AppResult.Success(host) }, listFiltered = { page(cards(arabic = false), totalItems = 2) }),
+            name = ashrafName(arabic = true),
         )
     }
 
@@ -199,7 +217,7 @@ class HostProfileScreenshotTest {
         HostProfileDto(
             slug = "ashraf-el-bahr",
             kind = "person",
-            name = "Ashraf El Bahr",
+            name = ashrafName(arabic),
             role = if (arabic) "صاحب القارب، برج البرلس" else "Boat owner, Burg El Burullus",
             bio =
                 if (arabic) {
@@ -243,11 +261,16 @@ class HostProfileScreenshotTest {
                 ),
         )
 
+    /** The seed's names (M4-B10): the server sends the one in the request's language. */
+    private fun ashrafName(arabic: Boolean) = if (arabic) "أشرف البحر" else "Ashraf El Bahr"
+
+    private fun redSeaDaysName(arabic: Boolean) = if (arabic) "ريد سي دايز" else "Red Sea Days"
+
     private fun redSeaDays(arabic: Boolean) =
         HostProfileDto(
             slug = SLUG,
             kind = "company",
-            name = "Red Sea Days",
+            name = redSeaDaysName(arabic),
             role = if (arabic) "شركة رحلات يوم واحد، البحر الأحمر" else "Day-trip company, the Red Sea",
             bio =
                 if (arabic) {
@@ -282,7 +305,7 @@ class HostProfileScreenshotTest {
         prefix: String,
         language: AppLanguage,
         repository: FakeTripRepository,
-        name: String = "Red Sea Days",
+        name: String = redSeaDaysName(language == AppLanguage.ARABIC),
     ) {
         val vm = HostProfileViewModel(SLUG, name, null, repository, waitlistMemory())
         compose.setContent {

@@ -75,6 +75,8 @@ class HostApiServiceTest {
             val result = service(HostPayloads.redSeaDaysArabic, language = "ar").hostBySlug("red-sea-days")
 
             val host = success(result)
+            // M4-B10: the name is served in the request's language, and shown as served.
+            assertEquals("ريد سي دايز", host.name)
             assertTrue(HostKind.isCompany(host.kind))
             assertNull(host.rating.average)
             assertEquals(0, host.rating.count)

@@ -5,6 +5,7 @@ package eg.bahr.feature.trips.data
  * (bahr-be `scripts/seed-burullus.sql`, `seed-home.sql`): Ashraf El Bahr (a person, with reviews) and
  * Red Sea Days (a company, no reviews yet: `count` 0, no `average`, five zero buckets). Null fields are
  * omitted, as the backend omits them. No phone or WhatsApp link: the contract never serves them here.
+ * Since M4-B10 the name is in the request's language, so the Arabic copy carries the Arabic name.
  */
 internal object HostPayloads {
     val ashrafEnglish =
@@ -48,7 +49,7 @@ internal object HostPayloads {
  "data": {
   "slug": "red-sea-days",
   "kind": "company",
-  "name": "Red Sea Days",
+  "name": "ريد سي دايز",
   "avatar": { "url": "http://localhost:9000/bahr-assets/seed/host.png", "width": 240, "height": 240, "variants": [] },
   "role": "شركة رحلات يوم واحد، البحر الأحمر",
   "bio": "فريق صغير بينظم رحلات يوم واحد من القاهرة للعين السخنة ورأس سدر.",
