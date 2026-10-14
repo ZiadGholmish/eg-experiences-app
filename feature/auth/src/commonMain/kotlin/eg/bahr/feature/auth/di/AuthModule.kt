@@ -3,6 +3,7 @@ package eg.bahr.feature.auth.di
 import eg.bahr.feature.auth.data.AuthApiService
 import eg.bahr.feature.auth.data.AuthRepository
 import eg.bahr.feature.auth.data.DefaultAuthRepository
+import eg.bahr.feature.auth.presentation.CompleteProfileViewModel
 import eg.bahr.feature.auth.presentation.DeleteAccountViewModel
 import eg.bahr.feature.auth.presentation.SignInViewModel
 import org.koin.core.module.dsl.viewModel
@@ -18,4 +19,5 @@ val authModule =
         single<AuthRepository> { DefaultAuthRepository(get(), get()) }
         viewModel { SignInViewModel(get()) }
         viewModel { DeleteAccountViewModel(get()) }
+        viewModel { CompleteProfileViewModel(get()) }
     }

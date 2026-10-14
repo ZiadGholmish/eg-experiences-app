@@ -20,11 +20,12 @@ import androidx.navigationevent.compose.rememberNavigationEventState
 import eg.bahr.core.designsystem.components.BahrNavigationBar
 import eg.bahr.core.designsystem.theme.BahrMotion
 import eg.bahr.core.designsystem.theme.bahrTween
+import eg.bahr.feature.auth.navigation.CompleteProfileSheetSlot
 import org.jetbrains.compose.resources.stringResource
 
 /**
  * The tab host where the bar is drawn in Compose (Android; iOS draws SwiftUI's `TabView` and hosts
- * [AppNavHost] per tab itself). M4-M8.
+ * [AppNavHost] per tab itself). M4-M8; the handoff's Material 3 bar since M3-M0b.
  *
  * Only the selected tab's NavHost is composed. The others are kept by a [rememberSaveableStateHolder]:
  * each tab's NavController (its back stack, view models included) and its screens' saveable state
@@ -40,12 +41,15 @@ fun AppTabs(
     modifier: Modifier = Modifier,
     // The tab's content; a test passes stand-in NavHosts to check what the host keeps.
     content: @Composable (tab: AppTab) -> Unit = { tab -> AppNavHost(tab = tab, tabs = tabs, appVersion = appVersion) },
+    // What floats over every tab: "Complete your profile" (M3-M0b), after a sign-in without a name or
+    // phone. A test leaves it out (it needs the Koin graph).
+    overlay: @Composable () -> Unit = { CompleteProfileSheetSlot() },
 ) {
     val state by tabs.state.collectAsStateWithLifecycle()
     val holder = rememberSaveableStateHolder()
 
-    // Back on the root of Search, Map or Settings goes to Home; on Home's root it leaves the app. Off a
-    // root the tab's NavHost handles Back (its own handler is the enabled one there).
+    // Back on the root of any tab but Home goes to Home; on Home's root it leaves the app. Off a root the
+    // tab's NavHost handles Back (its own handler is the enabled one there).
     NavigationBackHandler(
         state = rememberNavigationEventState(NavigationEventInfo.None),
         isBackEnabled = state.backGoesHome,
@@ -73,7 +77,7 @@ fun AppTabs(
                                         icon = tab.icon,
                                         selected = tab == state.selected,
                                         testTag = tab.testTag,
-                                        tone = tab.tone,
+                                        badgeCount = tab.badgeCount,
                                     )
                                 },
                             onSelect = { index -> tabs.onTabTapped(AppTab.entries[index]) },
@@ -86,4 +90,5 @@ fun AppTabs(
             holder.SaveableStateProvider(state.selected) { content(state.selected) }
         }
     }
+    overlay()
 }

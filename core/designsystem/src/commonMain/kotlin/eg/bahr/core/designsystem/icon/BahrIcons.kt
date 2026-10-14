@@ -9,6 +9,8 @@ import eg.bahr.core.designsystem.generated.resources.ic_arrow_back
 import eg.bahr.core.designsystem.generated.resources.ic_arrow_forward
 import eg.bahr.core.designsystem.generated.resources.ic_backpack
 import eg.bahr.core.designsystem.generated.resources.ic_backpack_filled
+import eg.bahr.core.designsystem.generated.resources.ic_badge
+import eg.bahr.core.designsystem.generated.resources.ic_badge_filled
 import eg.bahr.core.designsystem.generated.resources.ic_beach_access
 import eg.bahr.core.designsystem.generated.resources.ic_beach_access_filled
 import eg.bahr.core.designsystem.generated.resources.ic_bedtime
@@ -21,13 +23,20 @@ import eg.bahr.core.designsystem.generated.resources.ic_campaign_filled
 import eg.bahr.core.designsystem.generated.resources.ic_chat
 import eg.bahr.core.designsystem.generated.resources.ic_chat_filled
 import eg.bahr.core.designsystem.generated.resources.ic_check
+import eg.bahr.core.designsystem.generated.resources.ic_chevron_right
 import eg.bahr.core.designsystem.generated.resources.ic_circle
 import eg.bahr.core.designsystem.generated.resources.ic_circle_filled
 import eg.bahr.core.designsystem.generated.resources.ic_close
+import eg.bahr.core.designsystem.generated.resources.ic_confirmation_number
+import eg.bahr.core.designsystem.generated.resources.ic_confirmation_number_filled
 import eg.bahr.core.designsystem.generated.resources.ic_credit_card
 import eg.bahr.core.designsystem.generated.resources.ic_credit_card_filled
+import eg.bahr.core.designsystem.generated.resources.ic_delete
+import eg.bahr.core.designsystem.generated.resources.ic_delete_filled
 import eg.bahr.core.designsystem.generated.resources.ic_directions_bus
 import eg.bahr.core.designsystem.generated.resources.ic_directions_bus_filled
+import eg.bahr.core.designsystem.generated.resources.ic_error
+import eg.bahr.core.designsystem.generated.resources.ic_error_filled
 import eg.bahr.core.designsystem.generated.resources.ic_event
 import eg.bahr.core.designsystem.generated.resources.ic_event_busy
 import eg.bahr.core.designsystem.generated.resources.ic_event_busy_filled
@@ -45,6 +54,9 @@ import eg.bahr.core.designsystem.generated.resources.ic_groups_filled
 import eg.bahr.core.designsystem.generated.resources.ic_history
 import eg.bahr.core.designsystem.generated.resources.ic_home
 import eg.bahr.core.designsystem.generated.resources.ic_home_filled
+import eg.bahr.core.designsystem.generated.resources.ic_hourglass_top
+import eg.bahr.core.designsystem.generated.resources.ic_how_to_reg
+import eg.bahr.core.designsystem.generated.resources.ic_how_to_reg_filled
 import eg.bahr.core.designsystem.generated.resources.ic_info
 import eg.bahr.core.designsystem.generated.resources.ic_info_filled
 import eg.bahr.core.designsystem.generated.resources.ic_ios_share
@@ -54,19 +66,28 @@ import eg.bahr.core.designsystem.generated.resources.ic_location_on
 import eg.bahr.core.designsystem.generated.resources.ic_location_on_filled
 import eg.bahr.core.designsystem.generated.resources.ic_lock
 import eg.bahr.core.designsystem.generated.resources.ic_lock_filled
+import eg.bahr.core.designsystem.generated.resources.ic_lock_person
+import eg.bahr.core.designsystem.generated.resources.ic_lock_person_filled
+import eg.bahr.core.designsystem.generated.resources.ic_logout
 import eg.bahr.core.designsystem.generated.resources.ic_map
 import eg.bahr.core.designsystem.generated.resources.ic_map_filled
 import eg.bahr.core.designsystem.generated.resources.ic_more_vert
+import eg.bahr.core.designsystem.generated.resources.ic_notifications
 import eg.bahr.core.designsystem.generated.resources.ic_notifications_active
 import eg.bahr.core.designsystem.generated.resources.ic_notifications_active_filled
+import eg.bahr.core.designsystem.generated.resources.ic_notifications_filled
 import eg.bahr.core.designsystem.generated.resources.ic_palette
 import eg.bahr.core.designsystem.generated.resources.ic_palette_filled
 import eg.bahr.core.designsystem.generated.resources.ic_payments
 import eg.bahr.core.designsystem.generated.resources.ic_payments_filled
 import eg.bahr.core.designsystem.generated.resources.ic_person
 import eg.bahr.core.designsystem.generated.resources.ic_person_filled
+import eg.bahr.core.designsystem.generated.resources.ic_person_remove
+import eg.bahr.core.designsystem.generated.resources.ic_person_remove_filled
 import eg.bahr.core.designsystem.generated.resources.ic_pin_drop
 import eg.bahr.core.designsystem.generated.resources.ic_pin_drop_filled
+import eg.bahr.core.designsystem.generated.resources.ic_rate_review
+import eg.bahr.core.designsystem.generated.resources.ic_rate_review_filled
 import eg.bahr.core.designsystem.generated.resources.ic_remove
 import eg.bahr.core.designsystem.generated.resources.ic_restaurant
 import eg.bahr.core.designsystem.generated.resources.ic_sailing
@@ -86,9 +107,11 @@ import eg.bahr.core.designsystem.generated.resources.ic_storefront
 import eg.bahr.core.designsystem.generated.resources.ic_storefront_filled
 import eg.bahr.core.designsystem.generated.resources.ic_sunny
 import eg.bahr.core.designsystem.generated.resources.ic_sunny_filled
+import eg.bahr.core.designsystem.generated.resources.ic_support_agent
 import eg.bahr.core.designsystem.generated.resources.ic_timer
 import eg.bahr.core.designsystem.generated.resources.ic_timer_filled
 import eg.bahr.core.designsystem.generated.resources.ic_translate
+import eg.bahr.core.designsystem.generated.resources.ic_travel_explore
 import eg.bahr.core.designsystem.generated.resources.ic_verified
 import eg.bahr.core.designsystem.generated.resources.ic_verified_filled
 import eg.bahr.core.designsystem.generated.resources.ic_visibility
@@ -179,6 +202,32 @@ enum class BahrIcons(
     Verified(Res.drawable.ic_verified, Res.drawable.ic_verified_filled),
     Visibility(Res.drawable.ic_visibility, Res.drawable.ic_visibility_filled),
     Waves(Res.drawable.ic_waves, Res.drawable.ic_waves),
+    Badge(Res.drawable.ic_badge, Res.drawable.ic_badge_filled),
+
+    /**
+     * A row that opens a page (M3-M0b, Profile): Material Symbols `chevron_right`, auto-mirrored, so it
+     * points left in Arabic. The prototype swaps `chevron_left`/`chevron_right` by language only because
+     * its icon font cannot mirror.
+     */
+    ChevronForward(Res.drawable.ic_chevron_right, Res.drawable.ic_chevron_right),
+
+    /** The My trips tab (M3-M0b, the handoff's `confirmation_number`; M3-M0 drew [Backpack]). */
+    ConfirmationNumber(Res.drawable.ic_confirmation_number, Res.drawable.ic_confirmation_number_filled),
+    Delete(Res.drawable.ic_delete, Res.drawable.ic_delete_filled),
+    Error(Res.drawable.ic_error, Res.drawable.ic_error_filled),
+    HourglassTop(Res.drawable.ic_hourglass_top, Res.drawable.ic_hourglass_top),
+    HowToReg(Res.drawable.ic_how_to_reg, Res.drawable.ic_how_to_reg_filled),
+    LockPerson(Res.drawable.ic_lock_person, Res.drawable.ic_lock_person_filled),
+
+    /** Profile's "Sign out" (M3-M0b); auto-mirrored upstream. */
+    Logout(Res.drawable.ic_logout, Res.drawable.ic_logout),
+
+    /** The Alerts tab (M3-M0b). */
+    Notifications(Res.drawable.ic_notifications, Res.drawable.ic_notifications_filled),
+    PersonRemove(Res.drawable.ic_person_remove, Res.drawable.ic_person_remove_filled),
+    RateReview(Res.drawable.ic_rate_review, Res.drawable.ic_rate_review_filled),
+    SupportAgent(Res.drawable.ic_support_agent, Res.drawable.ic_support_agent),
+    TravelExplore(Res.drawable.ic_travel_explore, Res.drawable.ic_travel_explore),
     ;
 
     /** FILL 0, the prototype's default (`class="ms"`). */

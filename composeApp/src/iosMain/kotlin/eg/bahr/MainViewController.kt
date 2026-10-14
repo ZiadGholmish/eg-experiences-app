@@ -2,12 +2,13 @@ package eg.bahr
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.window.ComposeUIViewController
-import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.datastore.APP_PREFERENCES_FILE
 import eg.bahr.deeplink.AppDeepLinkInbox
+import eg.bahr.di.AppAppearanceState
 import eg.bahr.di.AppLanguageState
 import eg.bahr.di.AppLinkConfig
 import eg.bahr.di.initKoin
+import eg.bahr.di.seedStoredAppearance
 import eg.bahr.feature.auth.di.AuthConfig
 import eg.bahr.feature.auth.di.NativeSignIn
 import eg.bahr.feature.map.di.TripMapNativeViews
@@ -28,12 +29,13 @@ import platform.UIKit.UIColor
 import platform.UIKit.UIViewController
 
 /**
- * The SwiftUI `TabView` in `iosApp` (M4-M8), as the shared code drives it. Swift implements it
+ * The SwiftUI `TabView` in `iosApp` (M4-M8; kept by the user's decision of 2026-10-14 over M3-M0b's
+ * Compose bar, with the new tabs and the Alerts badge), as the shared code drives it. Swift implements it
  * (`iosApp/iosApp/AppTabs.swift`); the shared code calls it on the main thread.
  *
  * Swift draws the bar natively (Liquid Glass on iOS 26) but makes no decision of its own beyond
- * remembering the selected tab: the labels, language and tab colours come from here, and so does when the bar
- * hides (a pushed screen) and which tab to show (Home's Map pill and search entry, a deep link).
+ * remembering the selected tab: the labels, badges, language and tab colours come from here, and so does when the bar
+ * hides (a pushed screen) and which tab to show (Home's Map pill, a deep link).
  * Taps go back through [onTabTapped].
  *
  * Here, in the app module, rather than in a feature's `di/` (the M4-M2 pattern for feature:map's
@@ -41,18 +43,27 @@ import platform.UIKit.UIViewController
  */
 interface AppTabBar {
     /**
-     * The app's language ([languageTag] `ar`/`en`, [rightToLeft] for the bar's direction), the tab
-     * labels in it and each tab's colour when selected ([tints], from the theme's tab tones), all in
-     * [AppTab] order, and the muted colour of the tabs not selected ([unselectedTint]). Sent by every
-     * tab's root, again on each language switch.
+     * The app's language ([languageTag] `ar`/`en`, [rightToLeft] for the bar's direction); in [AppTab]
+     * order the tab labels in it, what VoiceOver should say for each ([spokenLabels]: the unread count
+     * inside, handoff §1) and each tab's badge ([badges]: "3", "9+", or "" for none, M3-M0b); the
+     * selected tabs' colour ([selectedTint]) and the muted colour of the others ([unselectedTint]). Sent
+     * by every tab's root, again on each language switch and badge change.
      */
     fun showContent(
         languageTag: String,
         rightToLeft: Boolean,
         titles: List<String>,
-        tints: List<UIColor>,
+        spokenLabels: List<String>,
+        badges: List<String>,
+        selectedTint: UIColor,
         unselectedTint: UIColor,
     )
+
+    /**
+     * Profile → Appearance (M3-M0b): `light`, `dark` or `system`. Called once at launch with the stored
+     * value, before any tab draws, and again on each pick.
+     */
+    fun applyAppearance(appearance: String)
 
     /** Show [tab]. Not a tap: Swift must not report it back. */
     fun selectTab(tab: AppTab)
@@ -108,6 +119,8 @@ fun startApp(
         mapViews?.let { views -> modules(module { single<TripMapNativeViews> { views } }) }
         nativeSignIn?.let { bridge -> modules(module { single<NativeSignIn> { bridge } }) }
     }
+    // The stored appearance before any Compose root or the bar draws (M3-M0b review R4-1).
+    KoinPlatform.getKoin().seedStoredAppearance()
     IosTabs.start(tabBar, selectedTab)
 }
 
@@ -148,7 +161,7 @@ internal object IosTabs {
     var started = false
         private set
     private var bar: AppTabBar? = null
-    private var shownContent: List<Any>? = null
+    private var shownContent: IosBarContent? = null
     private val scope = MainScope()
 
     fun start(
@@ -171,25 +184,25 @@ internal object IosTabs {
         // A language switch starts every tab over at its root (see AppTabsState.resetToRoots).
         val languages: AppLanguageState = KoinPlatform.getKoin().get()
         scope.launch { languages.language.drop(1).collect { state.resetToRoots() } }
+        // Profile → Appearance (M3-M0b): the stored value at once (it was seeded), then each pick.
+        val appearance: AppAppearanceState = KoinPlatform.getKoin().get()
+        tabBar.applyAppearance(appearance.appearance.value.tag)
+        scope.launch { appearance.appearance.drop(1).collect { tabBar.applyAppearance(it.tag) } }
         // A link from outside opens in the Home tab's stack: show Home so its NavHost can open it.
         scope.launch { AppDeepLinkInbox.pending.filterNotNull().collect { state.select(AppTab.Home) } }
     }
 
-    fun showContent(
-        language: AppLanguage,
-        titles: List<String>,
-        tints: List<Color>,
-        unselectedTint: Color,
-    ) {
-        val content = listOf(language, titles, tints, unselectedTint)
+    fun showContent(content: IosBarContent) {
         if (shownContent == content) return
         shownContent = content
         bar?.showContent(
-            languageTag = language.tag,
-            rightToLeft = language.isRtl,
-            titles = titles,
-            tints = tints.map { it.toUIColor() },
-            unselectedTint = unselectedTint.toUIColor(),
+            languageTag = content.language.tag,
+            rightToLeft = content.language.isRtl,
+            titles = content.titles,
+            spokenLabels = content.spokenLabels,
+            badges = content.badges.map { it.orEmpty() },
+            selectedTint = content.selectedTint.toUIColor(),
+            unselectedTint = content.unselectedTint.toUIColor(),
         )
     }
 
@@ -197,7 +210,7 @@ internal object IosTabs {
         UIColor(red = red.toDouble(), green = green.toDouble(), blue = blue.toDouble(), alpha = alpha.toDouble())
 }
 
-/** The build's version name, as Settings shows it (Android's comes from BuildConfig). */
+/** The build's version name, as Profile's About shows it (Android's comes from BuildConfig). */
 private fun appVersion(): String = NSBundle.mainBundle.objectForInfoDictionaryKey("CFBundleShortVersionString") as? String ?: ""
 
 @OptIn(kotlinx.cinterop.ExperimentalForeignApi::class)

@@ -11,7 +11,12 @@ import eg.bahr.core.datastore.AppSettingsStore
 import eg.bahr.core.network.auth.AuthSession
 import eg.bahr.core.testing.runKoinGraphTest
 import eg.bahr.feature.settings.data.SettingsRepository
-import eg.bahr.feature.settings.presentation.SettingsViewModel
+import eg.bahr.feature.settings.presentation.EditPersonalInfoViewModel
+import eg.bahr.feature.settings.presentation.ProfileViewModel
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.mock.MockEngine
+import io.ktor.client.engine.mock.respondError
+import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import org.koin.dsl.module
@@ -19,7 +24,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**
- * The Koin graph Settings runs on: `settingsModule` over the real [AppSettingsStore], with only what
+ * The Koin graph Profile (Settings before M3-M0b) runs on: `settingsModule` over the real [AppSettingsStore], with only what
  * the app module provides (the preferences file, the error controller) stubbed.
  */
 class SettingsKoinGraphTest {
@@ -34,10 +39,13 @@ class SettingsKoinGraphTest {
                     single { AppErrorController() }
                     // The sign-in the account row reads (M3-M0), over a store in memory.
                     single { AuthSession(NoSessionStore) }
+                    // Profile's `getMe` / `updateMe` (M3-M0b); never called here.
+                    single { HttpClient(MockEngine { respondError(HttpStatusCode.NotFound) }) }
                 },
             ),
         ) { koin ->
-            koin.get<SettingsViewModel>()
+            koin.get<ProfileViewModel>()
+            koin.get<EditPersonalInfoViewModel>()
             val repository = koin.get<SettingsRepository>()
             repository.setLanguage(AppLanguage.ENGLISH)
             assertEquals(AppLanguage.ENGLISH, koin.get<AppSettingsStore>().language.first())

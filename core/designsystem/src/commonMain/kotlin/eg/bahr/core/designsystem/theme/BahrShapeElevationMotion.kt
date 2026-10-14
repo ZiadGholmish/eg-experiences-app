@@ -217,6 +217,9 @@ object BahrAlpha {
      * slide's meta line (HANDOFF Home: `rgba(255,255,255,.88)`, M4-M7).
      */
     const val onImageSecondary = .88f
+
+    /** A form's fields while it saves (M3-M0b handoff §2: "fields disabled at 60% opacity"). */
+    const val disabledField = .6f
 }
 
 /* ---------- Borders ----------
@@ -237,6 +240,32 @@ object BahrBorder {
  * they do not vary by theme. See docs/design-language.md → "Code-only sizes".
  */
 object BahrSize {
+    /**
+     * tokens.json `sys.size` (Oct 2026), the only sizes there that are tokens: the minimum for every
+     * control ([touchTarget]; the older [BahrSpacing.minTouch] is the prototype's 44px, kept where it was
+     * used), the bottom bar's height ([navBar]) and a top app bar's ([topBar]).
+     */
+    val touchTarget = 48.dp
+    val navBar = 80.dp
+    val topBar = 64.dp
+
+    /** The selected tab's pill in the bottom bar (M3-M0b handoff §1: 64x32). */
+    val navIndicatorWidth = 64.dp
+    val navIndicatorHeight = 32.dp
+
+    /** The bar's icons (24px in the handoff), and a top bar's. */
+    val iconNav = 24.dp
+
+    /** An empty or signed-out state's disc and its icon (account handoff §3: 72px, 34px icon). */
+    val stateDisc = 72.dp
+    val iconState = 34.dp
+
+    /** Profile's initials avatar (account handoff §2: 60px). */
+    val avatarProfile = 60.dp
+
+    /** The tinted disc in front of a short list line (Profile's "Without an account you can": 30px). */
+    val listDisc = 30.dp
+
     /** Icons inside a 26px marker, the seat icon on a date card, the check/close on included rows. */
     val iconSmall = 16.dp
 

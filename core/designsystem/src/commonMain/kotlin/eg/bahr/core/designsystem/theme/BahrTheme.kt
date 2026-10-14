@@ -30,6 +30,10 @@ internal val LocalBahrLocale = staticCompositionLocalOf { BahrLocale.Arabic }
  *
  * [reducedMotion] is the platform's reduce-motion setting by default (M4-M6); tests pass it to pin
  * either way. Read it through `BahrTheme.reducedMotion`, or animate through `bahrTween`.
+ *
+ * [theme] is the Lake Burullus light theme by default. The app root passes [BahrThemeName.Dark] when
+ * the person picked Dark in Profile → Appearance, or System with the phone in dark mode (M3-M0b, user
+ * decision 2026-10-14: dark is opt-in). Tests pass a theme to pin either.
  */
 @Composable
 fun BahrTheme(

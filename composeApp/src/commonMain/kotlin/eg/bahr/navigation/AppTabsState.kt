@@ -1,27 +1,25 @@
 package eg.bahr.navigation
 
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 
 /**
  * Which tab shows, and whether the bar does (M4-M8). Plain state, no Compose, so the rules are unit
- * tests and the same object drives both bars: Android's Compose bar reads it directly; on iOS the
- * shared code mirrors it to the SwiftUI `TabView` (`IosTabs`) and Swift reports taps back.
+ * tests, and the same object drives both bars: Android's Compose bar ([AppTabs]) reads it directly; on iOS
+ * the shared code mirrors it to the SwiftUI `TabView` (`IosTabs`) and Swift reports taps back.
  *
  * - A tap on another tab selects it; a tap on the selected one is a re-tap, sent on [reselected] to
  *   that tab's NavHost, which pops to its root or, already there, scrolls to the top ([reselectAction]).
  * - The bar shows on a tab root only: each tab's NavHost reports whether its root is on top
  *   ([reportAtRoot]), and the bar follows the selected tab's answer. Splash is not a root.
- * - Home's search entry switches to Search and asks for the field's focus ([openSearch]).
+ *
+ * (Home's search entry no longer switches tabs: since M3-M0b search is a page pushed in the tab that
+ * opened it, Home or Map.)
  */
 class AppTabsState(
     initial: AppTab = AppTab.Home,
@@ -64,34 +62,15 @@ class AppTabsState(
     /** Re-taps of the selected tab, for that tab's NavHost. */
     val reselected: SharedFlow<AppTab> = _reselected.asSharedFlow()
 
-    private val searchFocus = MutableStateFlow(false)
-
-    /** A tap on a tab in the bar (Android's, or Swift's reported back). */
+    /** A tap on a tab in the bar. */
     fun onTabTapped(tab: AppTab) {
         if (tab == selected) _reselected.tryEmit(tab) else select(tab)
     }
 
-    /** Shows [tab] without it counting as a tap: Home's Map pill, a deep link (Home), iOS restoring the last tab. */
+    /** Shows [tab] without it counting as a tap: Home's Map pill, a deep link (Home). */
     fun select(tab: AppTab) {
         _state.update { it.copy(selected = tab) }
     }
-
-    /** Home's search entry: the Search tab, at its root, with the field focused ([searchFocusRequests]). */
-    fun openSearch() {
-        searchFocus.value = true
-        select(AppTab.Search)
-    }
-
-    /**
-     * One signal per [openSearch], for the Search tab's NavHost. Held until that NavHost collects it, so
-     * a Search tab composed only now (first visit, or iOS creating the tab lazily) still gets it.
-     */
-    fun searchFocusRequests(): Flow<Unit> =
-        searchFocus
-            .filter { it }
-            // Taken: the flag goes down as the request goes out, so it is delivered once.
-            .onEach { searchFocus.value = false }
-            .map { }
 
     fun reportAtRoot(
         tab: AppTab,

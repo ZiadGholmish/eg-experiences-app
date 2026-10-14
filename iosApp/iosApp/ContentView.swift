@@ -34,10 +34,10 @@ enum SharedApp {
     }
 }
 
-/// The app's tabs (M4-M8): a native `TabView` (Liquid Glass on iOS 26), one Compose root per tab.
+/// The app's tabs (M4-M8; the M3-M0b tabs and Alerts badge): a native `TabView` (Liquid Glass on iOS 26), one Compose root per tab.
 ///
 /// The bar's labels and direction follow the app language, which the shared code sends with the labels
-/// already translated (core:localization), so no string is kept here. A switch in Settings re-sends
+/// already translated (core:localization), so no string is kept here. A switch in Profile re-sends
 /// them and the bar flips at once. Each tab's content decides its own direction in Compose, so it is
 /// kept out of SwiftUI's mirroring.
 struct ContentView: View {
@@ -55,17 +55,23 @@ struct ContentView: View {
                     .tabItem {
                         Label { Text(tabs.title(tab)) } icon: { tabs.icon(tab) }
                             .environment(\.symbolVariants, .none)
+                            // The count is said inside the name ("Alerts, 3 unread"), not as a badge alone.
+                            .accessibilityLabel(Text(tabs.spokenLabel(tab)))
                     }
+                    .badge(tabs.badge(tab))
                     .tag(tab)
                     // Shown on a tab's root only: hidden on the trip page, booking, hold, confirmation.
                     .toolbar(tabs.isBarHidden(tab) ? .hidden : .visible, for: .tabBar)
             }
         }
-        // The selected tab's own colour (Home teal, Search gold, Map green, Settings magenta), from the
+        // The selected tab's colour (the theme's onPrimaryContainer, as Android's selected icon), from the
         // shared theme. The others are muted with the theme's onSurfaceVariant, also from the shared code:
         // the labels through TabBarModel.muteLabels, the icons drawn in that colour (TabBarModel.icon).
         .tint(tabs.selectedTint)
         .modifier(MinimizesOnScroll())
+        // Light unless the person picked Dark, or the phone's setting (nil) in Profile → Appearance.
+        .preferredColorScheme(tabs.colorScheme)
+        .onAppear { TabBarModel.applyWindowStyle(tabs.colorScheme) }
         .environment(\.layoutDirection, tabs.rightToLeft ? .rightToLeft : .leftToRight)
         .environment(\.locale, Locale(identifier: tabs.languageTag))
         // Universal Links (https://<APP_LINK_HOST>/t/{slug}). SwiftUI may deliver one through either

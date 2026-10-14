@@ -19,10 +19,14 @@ import eg.bahr.feature.booking.navigation.navigateToHold
 import eg.bahr.feature.home.navigation.TripListRoute
 import eg.bahr.feature.map.navigation.TripMapRoute
 import eg.bahr.feature.mytrips.navigation.MyTripsRoute
-import eg.bahr.feature.settings.navigation.SettingsRoute
+import eg.bahr.feature.notifications.navigation.NotificationsRoute
+import eg.bahr.feature.settings.navigation.EditPersonalInfoRoute
+import eg.bahr.feature.settings.navigation.ProfileRoute
+import eg.bahr.feature.settings.navigation.navigateToEditPersonalInfo
 import eg.bahr.feature.splash.navigation.SplashRoute
 import eg.bahr.feature.trips.navigation.SearchTripsRoute
 import eg.bahr.feature.trips.navigation.TripDetailRoute
+import eg.bahr.feature.trips.navigation.navigateToSearchTrips
 import eg.bahr.feature.trips.navigation.navigateToTripDetail
 import org.junit.Rule
 import org.junit.Test
@@ -71,13 +75,49 @@ class AppNavHostRootsTest {
 
     @Test
     fun `a pushed trip page is not the root - Back to it is`() {
-        show(start = SearchTripsRoute)
+        show(start = TripMapRoute)
 
         onUi { nav.navigateToTripDetail(SLUG) }
-        assertFalse(nav.isAt(AppTab.Search))
+        assertFalse(nav.isAt(AppTab.Map))
 
         onUi { nav.popBackStack() }
-        assertTrue(nav.isAt(AppTab.Search))
+        assertTrue(nav.isAt(AppTab.Map))
+    }
+
+    /**
+     * M3-M0b: search is no tab; Home's field and the Map header push it in their own tab, which hides
+     * the bar (not a root), and Back comes back to the root with the bar. A trip opened from it keeps the
+     * search under it.
+     */
+    @Test
+    fun `search opens over Home and over the map - not a root - and Back returns`() {
+        listOf(AppTab.Home, AppTab.Map).forEach { tab ->
+            show(start = tab.rootRoute)
+
+            onUi { nav.navigateToSearchTrips() }
+            assertFalse(nav.isAt(tab), "${tab.name}: search hides the bar")
+            onUi { nav.navigateToTripDetail(SLUG) }
+            onUi { nav.popBackStack() }
+            assertEquals(
+                listOf(tab.rootRoute::class.simpleName, SearchTripsRoute::class.simpleName),
+                screens(),
+                "${tab.name}: search kept under the trip",
+            )
+
+            onUi { nav.popBackStack() }
+            assertTrue(nav.isAt(tab), "${tab.name}: back on its root")
+        }
+    }
+
+    @Test
+    fun `Edit personal info is pushed over Profile - not a root`() {
+        show(start = ProfileRoute)
+
+        onUi { nav.navigateToEditPersonalInfo() }
+        assertFalse(nav.isAt(AppTab.Profile))
+
+        onUi { nav.popBackStack() }
+        assertTrue(nav.isAt(AppTab.Profile))
     }
 
     @Test
@@ -130,7 +170,9 @@ class AppNavHostRootsTest {
                         composable<SearchTripsRoute> {}
                         composable<TripMapRoute> {}
                         composable<MyTripsRoute> {}
-                        composable<SettingsRoute> {}
+                        composable<NotificationsRoute> {}
+                        composable<ProfileRoute> {}
+                        composable<EditPersonalInfoRoute> {}
                         composable<TripDetailRoute> {}
                         composable<BookingRoute> {}
                         composable<HoldRoute> {}

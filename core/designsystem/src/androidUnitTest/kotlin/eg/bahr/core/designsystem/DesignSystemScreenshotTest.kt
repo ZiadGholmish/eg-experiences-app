@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -26,10 +28,12 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import eg.bahr.core.common.locale.AppLanguage
-import eg.bahr.core.designsystem.components.BahrBadge
+import eg.bahr.core.designsystem.components.BahrBottomSheet
+import eg.bahr.core.designsystem.components.BahrBottomSheetContent
 import eg.bahr.core.designsystem.components.BahrCard
 import eg.bahr.core.designsystem.components.BahrNavigationBar
 import eg.bahr.core.designsystem.components.BahrPrimaryButton
+import eg.bahr.core.designsystem.components.BahrProviderMark
 import eg.bahr.core.designsystem.components.BahrSignInButton
 import eg.bahr.core.designsystem.components.BahrStepper
 import eg.bahr.core.designsystem.components.HoldCountdown
@@ -47,14 +51,18 @@ import eg.bahr.core.designsystem.theme.bahrShadow
 import eg.bahr.core.localization.ProvideAppLanguage
 import eg.bahr.core.localization.generated.resources.auth_continue_apple
 import eg.bahr.core.localization.generated.resources.auth_continue_google
+import eg.bahr.core.localization.generated.resources.auth_delete_body
+import eg.bahr.core.localization.generated.resources.auth_delete_cancel
+import eg.bahr.core.localization.generated.resources.auth_delete_confirm
+import eg.bahr.core.localization.generated.resources.auth_delete_title
 import eg.bahr.core.localization.generated.resources.booking_confirm
 import eg.bahr.core.localization.generated.resources.booking_hold_label
 import eg.bahr.core.localization.generated.resources.error_no_seats_available
+import eg.bahr.core.localization.generated.resources.tab_alerts
 import eg.bahr.core.localization.generated.resources.tab_home
 import eg.bahr.core.localization.generated.resources.tab_map
 import eg.bahr.core.localization.generated.resources.tab_my_trips
-import eg.bahr.core.localization.generated.resources.tab_search
-import eg.bahr.core.localization.generated.resources.tab_settings
+import eg.bahr.core.localization.generated.resources.tab_profile
 import eg.bahr.core.testing.captureScreenshot
 import org.jetbrains.compose.resources.stringResource
 import org.junit.After
@@ -136,16 +144,29 @@ class DesignSystemScreenshotTest {
             }
         }
 
-    /** M3-M0: Apple's and Google's buttons by their own guidelines, idle and busy, with the app's copy. */
+    /**
+     * M3-M0: Apple's and Google's buttons by their own guidelines, idle and busy, with the app's copy.
+     * M3-M0b: their colours are tokens.json's `brand` values, which have a dark form (Google's dark
+     * button, Apple's white one).
+     */
     @Test
-    fun signInButtons() =
-        snapEach(perLanguage("sign_in_buttons")) {
-            val apple = stringResource(L10n.string.auth_continue_apple)
-            val google = stringResource(L10n.string.auth_continue_google)
-            BahrSignInButton(props = BahrSignInButton.Props(BahrSignInButton.Provider.Apple, apple))
-            BahrSignInButton(props = BahrSignInButton.Props(BahrSignInButton.Provider.Google, google))
-            BahrSignInButton(props = BahrSignInButton.Props(BahrSignInButton.Provider.Google, google, loading = true))
+    fun signInButtons() = snapEach(perLanguage("sign_in_buttons")) { SignInButtons() }
+
+    @Test
+    fun signInButtonsDark() = snapEach(perLanguage("sign_in_buttons_dark"), theme = BahrThemeName.Dark) { SignInButtons() }
+
+    @Composable
+    private fun SignInButtons() {
+        val apple = stringResource(L10n.string.auth_continue_apple)
+        val google = stringResource(L10n.string.auth_continue_google)
+        BahrSignInButton(props = BahrSignInButton.Props(BahrSignInButton.Provider.Apple, apple))
+        BahrSignInButton(props = BahrSignInButton.Props(BahrSignInButton.Provider.Google, google))
+        BahrSignInButton(props = BahrSignInButton.Props(BahrSignInButton.Provider.Google, google, loading = true))
+        Row(horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm)) {
+            BahrProviderMark(BahrSignInButton.Provider.Google)
+            BahrProviderMark(BahrSignInButton.Provider.Apple)
         }
+    }
 
     /** 12 = available, 3 = few, 0 = sold out. Not 1: "1 seats left" is the known plural gap (M1-M1). */
     @Test
@@ -182,35 +203,76 @@ class DesignSystemScreenshotTest {
         }
 
     /**
-     * The Android bottom bar (M4-M8): each tab selected in turn, in its own tone (filled icon and label
-     * on the tone's pill), the others outlined and muted. In Arabic the tabs run from the right (Home first at the right edge) without the list
-     * being reversed. Edge to edge, the bar pads itself for the gesture area, which Robolectric reports
-     * as none.
+     * The bottom bar (M3-M0b, handoff §1, option 1b; both platforms): each tab selected in turn, filled
+     * icon on the `navIndicator` pill and a heavier label, the others outlined and muted; Alerts with a
+     * count (3 on the first bar, 9+ when selected). In Arabic the tabs run from the right (Home first at
+     * the right edge) without the list being reversed, and the badge sits on the icon's top-end corner.
      */
     @Test
-    fun navigationBar() =
-        snapEach(perLanguage("navigation_bar")) {
-            val tabs =
-                listOf(
-                    Triple(BahrIcons.Home, stringResource(L10n.string.tab_home), BahrBadge.Tone.Primary),
-                    Triple(BahrIcons.Search, stringResource(L10n.string.tab_search), BahrBadge.Tone.Secondary),
-                    Triple(BahrIcons.Map, stringResource(L10n.string.tab_map), BahrBadge.Tone.Success),
-                    // The fifth tab (M3-M0): five labels must still fit the bar in both languages.
-                    Triple(BahrIcons.Backpack, stringResource(L10n.string.tab_my_trips), BahrBadge.Tone.Tertiary),
-                    Triple(BahrIcons.Settings, stringResource(L10n.string.tab_settings), BahrBadge.Tone.Quaternary),
-                )
-            // Each tab selected in turn: its own tone on its own pill, the others muted.
-            tabs.indices.forEach { selected ->
-                BahrNavigationBar(
-                    props =
-                        BahrNavigationBar.Props(
-                            items =
-                                tabs.mapIndexed { index, (icon, label, tone) ->
-                                    BahrNavigationBar.Item(label, icon, index == selected, tone = tone)
-                                },
+    fun navigationBar() = snapEach(perLanguage("navigation_bar")) { NavigationBars() }
+
+    @Test
+    fun navigationBarDark() = snapEach(perLanguage("navigation_bar_dark"), theme = BahrThemeName.Dark) { NavigationBars() }
+
+    @Composable
+    private fun NavigationBars() {
+        val tabs =
+            listOf(
+                BahrIcons.Home to stringResource(L10n.string.tab_home),
+                BahrIcons.Map to stringResource(L10n.string.tab_map),
+                BahrIcons.ConfirmationNumber to stringResource(L10n.string.tab_my_trips),
+                BahrIcons.Notifications to stringResource(L10n.string.tab_alerts),
+                BahrIcons.Person to stringResource(L10n.string.tab_profile),
+            )
+        tabs.indices.forEach { selected ->
+            val badge =
+                when (selected) {
+                    0 -> BADGE_FEW
+                    ALERTS -> BADGE_MANY
+                    else -> null
+                }
+            BahrNavigationBar(
+                props =
+                    BahrNavigationBar.Props(
+                        items =
+                            tabs.mapIndexed { index, (icon, label) ->
+                                BahrNavigationBar.Item(label, icon, index == selected, badgeCount = badge.takeIf { index == ALERTS })
+                            },
+                    ),
+            )
+        }
+    }
+
+    /**
+     * M3-M0b (user decision 2026-10-14: sheets instead of dialogs): the confirm sheet's inside, the
+     * destructive step first and the way out last, and a choice sheet with a coral step.
+     */
+    @Test
+    fun bottomSheet() =
+        snapEach(perLanguage("bottom_sheet")) {
+            BahrBottomSheetContent(
+                BahrBottomSheet.Props(
+                    title = stringResource(L10n.string.auth_delete_title),
+                    onDismiss = {},
+                    actions =
+                        listOf(
+                            BahrBottomSheet.Action(
+                                stringResource(L10n.string.auth_delete_confirm),
+                                BahrBottomSheet.Action.Style.Destructive,
+                            ),
                         ),
-                )
+                    cancel = BahrBottomSheet.Action(stringResource(L10n.string.auth_delete_cancel)),
+                ),
+            ) {
+                Text(stringResource(L10n.string.auth_delete_body), color = MaterialTheme.colorScheme.onErrorContainer)
             }
+            BahrBottomSheetContent(
+                BahrBottomSheet.Props(
+                    title = stringResource(L10n.string.booking_hold_label),
+                    onDismiss = {},
+                    actions = listOf(BahrBottomSheet.Action(stringResource(L10n.string.booking_confirm), loading = true)),
+                ),
+            )
         }
 
     @Test
@@ -297,6 +359,9 @@ class DesignSystemScreenshotTest {
 
     private companion object {
         const val LARGE_FONT_SCALE = 2f
+        const val ALERTS = 3
+        const val BADGE_FEW = 3
+        const val BADGE_MANY = 12
         const val STEPPER_MAX = 6
     }
 }

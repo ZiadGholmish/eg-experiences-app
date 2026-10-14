@@ -1,6 +1,7 @@
 package eg.bahr.core.designsystem.theme
 
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -9,8 +10,8 @@ import androidx.compose.ui.graphics.Color
 /*
  * Ported from the design handoff, vendored at `../docs/design/compose-reference/theme/BahrColors.kt`
  * (relative to mobile-app). Source of truth: `../docs/design/design-system/tokens.json`
- * (`ref.palette`, `sys.color`), plus `tokens.css` next to it for the two alternate themes, which
- * tokens.json only names. If a value changes, change it there first, then here.
+ * (`ref.palette`, `sys.color`, `themeOverrides.dark`, `brand`), plus `tokens.css` next to it for the two
+ * alternate themes, which tokens.json only names. If a value changes, change it there first, then here.
  */
 
 /**
@@ -97,7 +98,57 @@ data class BahrExtendedColors(
     val shadowInk: Color,
     /** HighContrast replaces `level1..3` shadows with a 1dp outline (`tokens.css`). */
     val outlinedElevation: Boolean,
+    /**
+     * Destructive fill (Delete account), with the scheme's `onError` on it (tokens.json `errorStrong`,
+     * Oct 2026). Coral is never destructive: coral means go forward.
+     */
+    val errorStrong: Color,
+    /** The unread count on the Alerts tab (`badge` / `onBadge`, Oct 2026): 6.3:1 in light. */
+    val badge: Color,
+    val onBadge: Color,
+    /** The bottom bar's ground (`navSurface`, Oct 2026). */
+    val navSurface: Color,
+    /** The selected tab's 64x32 pill (`navIndicator`, Oct 2026). */
+    val navIndicator: Color,
+    /** An unread notification row's tint, always paired with a dot (`unread`, Oct 2026). */
+    val unread: Color,
+    /** The sign-in buttons' colours, set by Apple and Google, never by a Bahr theme (`brand`, Oct 2026). */
+    val brand: BahrBrandColors,
 )
+
+/**
+ * tokens.json `brand` (`--bahr-brand-*`): "Continue with Google" and "Continue with Apple" as their
+ * owners' guidelines draw them. They change with dark mode only (Google's dark button, Apple's white
+ * one), never with a Bahr theme. The Google "G" keeps its four colours inside its drawable.
+ */
+@Immutable
+data class BahrBrandColors(
+    val googleSurface: Color,
+    val googleOutline: Color,
+    val googleText: Color,
+    val appleSurface: Color,
+    val appleText: Color,
+)
+
+/** `brand.google.light` / `brand.apple.light`. */
+private val BrandLight =
+    BahrBrandColors(
+        googleSurface = Color(0xFFFFFFFF),
+        googleOutline = Color(0xFF747775),
+        googleText = Color(0xFF1F1F1F),
+        appleSurface = Color(0xFF000000),
+        appleText = Color(0xFFFFFFFF),
+    )
+
+/** `brand.google.dark` / `brand.apple.dark`. */
+private val BrandDark =
+    BahrBrandColors(
+        googleSurface = Color(0xFF131314),
+        googleOutline = Color(0xFF8E918F),
+        googleText = Color(0xFFE3E3E3),
+        appleSurface = Color(0xFFFFFFFF),
+        appleText = Color(0xFF000000),
+    )
 
 internal data class BahrColorTheme(
     val scheme: ColorScheme,
@@ -116,6 +167,9 @@ private const val DUSK_CTA_SHADOW_ALPHA = .3f
 
 /** Dusk's `surfaceLow` (`tokens.css`), also its page background (M4-M12). */
 private val DUSK_SURFACE_LOW = Color(0xFFF8F7F5)
+
+/** Dusk's `primaryContainer` (`tokens.css`), which its `navIndicator` and `unread` alias. */
+private val DUSK_PRIMARY_CONTAINER = Color(0xFFE7EFF5)
 
 internal val LakeBurullus =
     BahrColorTheme(
@@ -183,6 +237,15 @@ internal val LakeBurullus =
                 floatShadow = Color.Black.copy(alpha = FLOAT_SHADOW_ALPHA),
                 shadowInk = P.Neutral10,
                 outlinedElevation = false,
+                errorStrong = P.Coral30,
+                badge = P.Coral30,
+                onBadge = P.Neutral100,
+                // `navSurface` is `surfaceLow`, and `navIndicator` and `unread` are `primaryContainer`
+                // (tokens.json aliases): each theme below sets them again with its own values.
+                navSurface = P.Neutral97,
+                navIndicator = P.Teal95,
+                unread = P.Teal95,
+                brand = BrandLight,
             ),
     )
 
@@ -193,7 +256,7 @@ internal val Dusk =
             scheme =
                 base.scheme.copy(
                     primary = Color(0xFF1B4A6B),
-                    primaryContainer = Color(0xFFE7EFF5),
+                    primaryContainer = DUSK_PRIMARY_CONTAINER,
                     onPrimaryContainer = Color(0xFF12324A),
                     tertiary = Color(0xFFC8552F),
                     tertiaryContainer = Color(0xFFFBEBE4),
@@ -210,6 +273,10 @@ internal val Dusk =
                     primaryBright = Color(0xFFA7CBE3),
                     tertiaryHover = Color(0xFFAD4523),
                     surfaceLow = DUSK_SURFACE_LOW,
+                    // tokens.json aliases (navSurface = surfaceLow, navIndicator/unread = primaryContainer).
+                    navSurface = DUSK_SURFACE_LOW,
+                    navIndicator = DUSK_PRIMARY_CONTAINER,
+                    unread = DUSK_PRIMARY_CONTAINER,
                     ctaShadow = Color(0xFFC8552F).copy(alpha = DUSK_CTA_SHADOW_ALPHA),
                     chipShadow = Color(0xFF1B4A6B).copy(alpha = CHIP_SHADOW_ALPHA),
                     raisedShadow = Color(0xFF1B4A6B).copy(alpha = RAISED_SHADOW_ALPHA),
@@ -241,13 +308,113 @@ internal val HighContrast =
         )
     }
 
-enum class BahrThemeName { LakeBurullus, Dusk, HighContrast }
+/**
+ * Dark mode (M3-M0b): `themeOverrides.dark` in tokens.json, every role re-tuned on a lake-ink ground.
+ * Opt-in: the app root picks it from Profile → Appearance (Dark, or System with the phone in dark mode).
+ *
+ * tokens.json leaves some roles out of the dark overrides; these are code-side, chosen so each keeps
+ * its light role's job (see docs/design-language.md → "Dark"):
+ * - the page (`background`, M4-M12's code-side role) is `surfaceLowest`, the darkest ground, so cards
+ *   (`surface`) and grouped rows (`surfaceLow`) sit a step lighter on it, as they sit a step apart in light;
+ * - `secondary`, `onSecondary`, `onTertiary`, `secondaryDim`, `tertiaryHover`, `primaryBright`,
+ *   `primaryDeep` keep their light values (gold and coral fills read on the dark ground as they are);
+ * - `primaryDim` (overline labels inside a primary container) takes `onSurfaceVariant`;
+ * - the M3 slots tokens.json has no role for (`surfaceContainerHigh/Highest`, `surfaceBright`, the
+ *   inverse roles) are set from the dark ramp, so no Material baseline purple shows through.
+ */
+internal val Dark =
+    BahrColorTheme(
+        scheme =
+            darkColorScheme(
+                primary = Color(0xFF5FD0D9),
+                onPrimary = Color(0xFF00363B),
+                primaryContainer = DarkTokens.PrimaryContainer,
+                onPrimaryContainer = P.Teal80,
+                inversePrimary = P.Teal40,
+                secondary = P.Gold60,
+                onSecondary = Color(0xFF3B2C06),
+                secondaryContainer = Color(0xFF3D2F0E),
+                onSecondaryContainer = Color(0xFFF7D48A),
+                tertiary = P.Coral60,
+                onTertiary = P.Neutral100,
+                tertiaryContainer = DarkTokens.CoralContainer,
+                onTertiaryContainer = DarkTokens.OnCoralContainer,
+                error = Color(0xFFFF8A6B),
+                onError = DarkTokens.OnErrorStrong,
+                errorContainer = DarkTokens.CoralContainer,
+                onErrorContainer = DarkTokens.OnCoralContainer,
+                background = DarkTokens.SurfaceLowest,
+                onBackground = DarkTokens.OnSurface,
+                surface = DarkTokens.Surface,
+                onSurface = DarkTokens.OnSurface,
+                surfaceVariant = DarkTokens.SurfaceContainer,
+                onSurfaceVariant = DarkTokens.OnSurfaceVariant,
+                surfaceTint = Color(0xFF5FD0D9),
+                inverseSurface = DarkTokens.OnSurface,
+                inverseOnSurface = DarkTokens.Surface,
+                surfaceContainerLowest = DarkTokens.SurfaceLowest,
+                surfaceContainerLow = DarkTokens.SurfaceLow,
+                surfaceContainer = DarkTokens.SurfaceContainer,
+                surfaceContainerHigh = DarkTokens.SurfaceDim,
+                surfaceContainerHighest = DarkTokens.Track,
+                surfaceBright = DarkTokens.SurfaceDim,
+                surfaceDim = DarkTokens.SurfaceDim,
+                outline = Color(0xFF3A4F55),
+                outlineVariant = Color(0xFF263A40),
+                scrim = P.Ink,
+            ),
+        extended =
+            LakeBurullus.extended.copy(
+                primaryDim = DarkTokens.OnSurfaceVariant,
+                quaternary = Color(0xFFE48BBD),
+                quaternaryContainer = Color(0xFF42182F),
+                onQuaternaryContainer = Color(0xFFF5BFDC),
+                success = Color(0xFF5FC3A8),
+                successContainer = Color(0xFF123A31),
+                onSuccessContainer = Color(0xFF9FE0CC),
+                surfaceLowest = DarkTokens.SurfaceLowest,
+                surfaceLow = DarkTokens.SurfaceLow,
+                surfaceDim = DarkTokens.SurfaceDim,
+                surfaceTranslucent = DarkTokens.Surface.copy(alpha = SURFACE_TRANSLUCENT_ALPHA),
+                onSurfaceSecondary = Color(0xFFC3D3D6),
+                onSurfaceDisabled = Color(0xFF63777C),
+                track = DarkTokens.Track,
+                errorStrong = DarkTokens.ErrorStrong,
+                badge = DarkTokens.ErrorStrong,
+                onBadge = DarkTokens.OnErrorStrong,
+                navSurface = DarkTokens.SurfaceLow,
+                navIndicator = DarkTokens.PrimaryContainer,
+                unread = Color(0xFF12313A),
+                brand = BrandDark,
+            ),
+    )
+
+/** `themeOverrides.dark` values used by more than one role above. */
+private object DarkTokens {
+    val PrimaryContainer = Color(0xFF0F3D43)
+    val CoralContainer = Color(0xFF4A1E12)
+    val OnCoralContainer = Color(0xFFFFB9A4)
+    val ErrorStrong = Color(0xFFFFB4A0)
+    val OnErrorStrong = Color(0xFF5A1A08)
+    val Surface = Color(0xFF0F1A1E)
+    val SurfaceLowest = Color(0xFF0B1417)
+    val SurfaceLow = Color(0xFF132126)
+    val SurfaceContainer = Color(0xFF1A2A30)
+    val SurfaceDim = Color(0xFF22343A)
+    val Track = Color(0xFF2A3D43)
+    val OnSurface = Color(0xFFE3EEF0)
+    val OnSurfaceVariant = Color(0xFF93A7AC)
+}
+
+/** [Dark] is the system's dark mode (M3-M0b); the others are light. */
+enum class BahrThemeName { LakeBurullus, Dusk, HighContrast, Dark }
 
 internal fun bahrColorTheme(name: BahrThemeName) =
     when (name) {
         BahrThemeName.LakeBurullus -> LakeBurullus
         BahrThemeName.Dusk -> Dusk
         BahrThemeName.HighContrast -> HighContrast
+        BahrThemeName.Dark -> Dark
     }
 
 internal val LocalBahrColors = staticCompositionLocalOf { LakeBurullus.extended }

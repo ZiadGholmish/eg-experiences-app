@@ -24,11 +24,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import eg.bahr.core.designsystem.generated.resources.Res
 import eg.bahr.core.designsystem.generated.resources.ic_brand_apple
 import eg.bahr.core.designsystem.generated.resources.ic_brand_google
 import eg.bahr.core.designsystem.theme.BahrBorder
+import eg.bahr.core.designsystem.theme.BahrBrandColors
 import eg.bahr.core.designsystem.theme.BahrSize
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
@@ -41,12 +45,14 @@ import eg.bahr.core.localization.generated.resources.Res as Strings
  * "Continue with Apple" / "Continue with Google" (M3-M0), drawn to each provider's own rules rather
  * than the app's: Apple's black button with the white Apple mark (Human Interface Guidelines, Sign in
  * with Apple), Google's white button with a grey border and the four-colour "G" (Google's sign-in
- * branding guidelines). Their colours are the providers', not theme tokens, so they live here and not
- * in a feature (mobile rule 3), and they stay the same in every Bahr theme.
+ * branding guidelines). Since M3-M0b their colours are tokens.json's `brand` values
+ * (`BahrTheme.colors.brand`, `--bahr-brand-*`), which follow dark mode (Google's dark button, Apple's
+ * white one) and no Bahr theme. The labels are the platform's own face, as both guidelines ask (Google:
+ * Roboto Medium 14, Android's default; Apple: the system font, iOS's default).
  *
- * In the design system with one caller (the sign-in sheet) for that reason only: a feature may hold no
- * colour literal. Equal width and height for both, as both guidelines ask when shown together. The
- * label is the caller's (localised), so the component holds no copy.
+ * Callers: the sign-in sheet, Profile signed out and the Alerts tab signed out (M3-M0b). Equal width and
+ * height for both, as both guidelines ask when shown together. The label is the caller's (localised),
+ * so the component holds no copy.
  */
 interface BahrSignInButton {
     enum class Provider { Apple, Google }
@@ -66,14 +72,14 @@ fun BahrSignInButton(
     modifier: Modifier = Modifier,
     props: BahrSignInButton.Props,
 ) {
-    val look = props.provider.look()
+    val look = props.provider.look(BahrTheme.colors.brand)
     val shape = BahrTheme.shapes.full
     val busy = stringResource(Strings.string.a11y_busy)
     Row(
         modifier =
             modifier
                 .fillMaxWidth()
-                .heightIn(min = BUTTON_MIN_HEIGHT.dp)
+                .heightIn(min = BahrSize.touchTarget)
                 .clip(shape)
                 .background(look.background)
                 .then(look.border?.let { Modifier.border(BahrBorder.hairline, it, shape) } ?: Modifier)
@@ -107,30 +113,51 @@ fun BahrSignInButton(
                     )
             }
         }
-        Text(text = props.text, style = MaterialTheme.typography.titleMedium, color = look.content, maxLines = 1)
+        Text(text = props.text, style = look.label, color = look.content, maxLines = 1)
     }
 }
 
 private class ProviderLook(
     val background: Color,
     val content: Color,
+    val label: TextStyle,
     val border: Color? = null,
 )
 
-/** The providers' own colours (see [BahrSignInButton]). */
-private fun BahrSignInButton.Provider.look(): ProviderLook =
+/** The providers' own colours and label faces (see [BahrSignInButton]). */
+private fun BahrSignInButton.Provider.look(brand: BahrBrandColors): ProviderLook =
     when (this) {
-        BahrSignInButton.Provider.Apple -> ProviderLook(background = Color(APPLE_BLACK), content = Color(APPLE_WHITE))
+        BahrSignInButton.Provider.Apple ->
+            ProviderLook(background = brand.appleSurface, content = brand.appleText, label = APPLE_LABEL)
         BahrSignInButton.Provider.Google ->
-            ProviderLook(background = Color(GOOGLE_FILL), content = Color(GOOGLE_TEXT), border = Color(GOOGLE_STROKE))
+            ProviderLook(background = brand.googleSurface, content = brand.googleText, label = GOOGLE_LABEL, border = brand.googleOutline)
     }
 
-/** Apple's minimum is 44 pt, Google's 40 dp; 54 is the app's primary button, so the sheet's buttons line up. */
-private const val BUTTON_MIN_HEIGHT = 54
-private const val APPLE_BLACK = 0xFF000000
-private const val APPLE_WHITE = 0xFFFFFFFF
+/** tokens.json `brand.google.font`: Roboto Medium 14/20 (Android's default face). */
+private val GOOGLE_LABEL = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium, fontSize = 14.sp, lineHeight = 20.sp)
 
-/** Google's light theme: fill #FFFFFF, stroke #747775, text #1F1F1F. */
-private const val GOOGLE_FILL = 0xFFFFFFFF
-private const val GOOGLE_STROKE = 0xFF747775
-private const val GOOGLE_TEXT = 0xFF1F1F1F
+/** The prototype's Apple label: the system face, 600 15px (`--bahr-brand-apple-font`). */
+private val APPLE_LABEL = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, lineHeight = 20.sp)
+
+/**
+ * The provider's own mark, small, in front of the provider line on Profile (M3-M0b, handoff §2): the
+ * four-colour "G" as it is, the Apple mark in the text colour. Silent for screen readers (the line says
+ * the provider's name).
+ */
+@Composable
+fun BahrProviderMark(
+    provider: BahrSignInButton.Provider,
+    modifier: Modifier = Modifier,
+) {
+    when (provider) {
+        BahrSignInButton.Provider.Google ->
+            Image(painterResource(Res.drawable.ic_brand_google), contentDescription = null, modifier = modifier.size(BahrSize.iconSmall))
+        BahrSignInButton.Provider.Apple ->
+            Icon(
+                painterResource(Res.drawable.ic_brand_apple),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurface,
+                modifier = modifier.size(BahrSize.iconSmall),
+            )
+    }
+}

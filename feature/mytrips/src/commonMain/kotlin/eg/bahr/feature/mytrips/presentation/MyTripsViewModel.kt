@@ -81,6 +81,9 @@ internal class MyTripsViewModel(
 
     private var waitlistJob: Job? = null
 
+    /** The paged list's current source, so a visit can ask it for a fresh read ([refresh]). */
+    private var bookingSource: MyBookingsPagingSource? = null
+
     /** Upcoming or Past for the selected segment while signed in; empty otherwise (and on Waiting list). */
     val bookings: Flow<PagingData<MyBookingDto>> =
         combine(
@@ -92,7 +95,7 @@ internal class MyTripsViewModel(
                 if (list == null) {
                     flowOf(PagingData.empty())
                 } else {
-                    Pager(PAGING) { MyBookingsPagingSource(repository, list) }.flow
+                    Pager(PAGING) { MyBookingsPagingSource(repository, list).also { bookingSource = it } }.flow
                 }
             }.cachedIn(viewModelScope)
 
@@ -137,6 +140,20 @@ internal class MyTripsViewModel(
         _uiState.update { it.copy(segment = segment) }
         // The list may have changed since (a place opened, an entry was attached at sign-in).
         if (segment == MyTripsSegment.Waitlist) loadWaitlist()
+    }
+
+    /**
+     * Each visit after the first (M3-M0 review #11): Upcoming and Past are read again, so a hold placed on
+     * the booking screen, or a booking made on another phone, shows without changing segment. The cards
+     * shown stay until the new page arrives (the paged list keeps them while it refreshes). The waiting
+     * list is read again too, when it is the segment showing.
+     */
+    fun refresh() {
+        if (_uiState.value.session !is SessionState.SignedIn) return
+        when (_uiState.value.segment) {
+            MyTripsSegment.Waitlist -> loadWaitlist()
+            MyTripsSegment.Upcoming, MyTripsSegment.Past -> bookingSource?.invalidate()
+        }
     }
 
     /** "Try again" on a failed waiting list. */

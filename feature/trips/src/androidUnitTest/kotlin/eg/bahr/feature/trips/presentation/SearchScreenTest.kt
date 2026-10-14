@@ -26,6 +26,7 @@ import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.localization.ProvideAppLanguage
 import eg.bahr.feature.trips.data.FakeRecentSearchesStore
 import eg.bahr.feature.trips.data.FakeTripRepository
+import eg.bahr.feature.trips.data.LastSearch
 import eg.bahr.feature.trips.data.TripApiService
 import eg.bahr.feature.trips.data.TripFixtures.page
 import eg.bahr.feature.trips.data.TripFixtures.trip
@@ -66,7 +67,7 @@ class SearchScreenTest {
     @Test
     fun `a recent search fills the field and shows its results - x goes back to the recents`() {
         val repository = FakeTripRepository(listFiltered = { q -> page(listOf(trip(1, title = "A trip for ${q.q}"))) })
-        val vm = SearchTripsViewModel(repository, FakeRecentSearchesStore(listOf("birds", "kayak")), waitlistMemory())
+        val vm = SearchTripsViewModel(repository, FakeRecentSearchesStore(listOf("birds", "kayak")), waitlistMemory(), LastSearch())
         show(vm)
         compose.onNodeWithTag(SEARCH_FIELD_TAG).assertIsFocused()
 
@@ -88,7 +89,7 @@ class SearchScreenTest {
 
     @Test
     fun `typed or pasted control characters never reach the field`() {
-        val vm = SearchTripsViewModel(FakeTripRepository(), FakeRecentSearchesStore(), waitlistMemory())
+        val vm = SearchTripsViewModel(FakeTripRepository(), FakeRecentSearchesStore(), waitlistMemory(), LastSearch())
         show(vm)
 
         compose.onNodeWithTag(SEARCH_FIELD_TAG).performTextInput("bi\u0000rd\u001Bs")
@@ -100,7 +101,7 @@ class SearchScreenTest {
 
     @Test
     fun `a control character pasted mid-text is dropped where it is and the cursor stays after the paste`() {
-        val vm = SearchTripsViewModel(FakeTripRepository(), FakeRecentSearchesStore(), waitlistMemory())
+        val vm = SearchTripsViewModel(FakeTripRepository(), FakeRecentSearchesStore(), waitlistMemory(), LastSearch())
         show(vm)
         val field = compose.onNodeWithTag(SEARCH_FIELD_TAG)
         field.performTextInput("bird")
@@ -116,7 +117,7 @@ class SearchScreenTest {
 
     @Test
     fun `the field refuses a paste longer than the cap`() {
-        val vm = SearchTripsViewModel(FakeTripRepository(), FakeRecentSearchesStore(), waitlistMemory())
+        val vm = SearchTripsViewModel(FakeTripRepository(), FakeRecentSearchesStore(), waitlistMemory(), LastSearch())
         show(vm)
 
         compose.onNodeWithTag(SEARCH_FIELD_TAG).performTextInput("a".repeat(TripApiService.MAX_QUERY_LENGTH + 1))
@@ -130,7 +131,7 @@ class SearchScreenTest {
 
     @Test
     fun `coming back to search does not take the focus again`() {
-        val vm = SearchTripsViewModel(FakeTripRepository(), FakeRecentSearchesStore(), waitlistMemory())
+        val vm = SearchTripsViewModel(FakeTripRepository(), FakeRecentSearchesStore(), waitlistMemory(), LastSearch())
         var shown by mutableStateOf(true)
         compose.setContent {
             ProvideAppLanguage(AppLanguage.ENGLISH) {
@@ -157,7 +158,7 @@ class SearchScreenTest {
 
     @Test
     fun `as the Search tab it waits for Home's entry to take the focus - with no Back`() {
-        val vm = SearchTripsViewModel(FakeTripRepository(), FakeRecentSearchesStore(), waitlistMemory())
+        val vm = SearchTripsViewModel(FakeTripRepository(), FakeRecentSearchesStore(), waitlistMemory(), LastSearch())
         val requests = Channel<Unit>(Channel.CONFLATED)
         compose.setContent {
             ProvideAppLanguage(AppLanguage.ENGLISH) {

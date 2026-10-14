@@ -18,6 +18,7 @@ import eg.bahr.feature.booking.di.bookingModule
 import eg.bahr.feature.home.di.homeModule
 import eg.bahr.feature.map.di.mapModule
 import eg.bahr.feature.mytrips.di.myTripsModule
+import eg.bahr.feature.notifications.di.notificationsModule
 import eg.bahr.feature.settings.di.settingsModule
 import eg.bahr.feature.trips.di.tripsModule
 import kotlinx.coroutines.CoroutineScope
@@ -70,6 +71,14 @@ fun appModule(
         )
     }
 
+    // Light, dark or the phone's (M3-M0b): one value for every Compose root and iOS's tab bar.
+    single {
+        AppAppearanceState(
+            stored = get<AppSettingsStore>().appearance,
+            scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
+        )
+    }
+
     /**
      * Reads the stored language on each request rather than caching it, so a
      * language switch changes the very next call's `Accept-Language`.
@@ -112,6 +121,7 @@ fun appModules(
         // Sign-in and the account, and the My trips tab (M3-M0).
         authModule,
         myTripsModule,
+        notificationsModule,
     )
 
 fun initKoin(

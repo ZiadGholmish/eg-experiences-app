@@ -12,8 +12,8 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * M4-M8's tab rules, as both bars follow them: switching, re-taps, the bar on tab roots only, Home's
- * search entry. The NavHosts and the bars only report to and read from this state.
+ * M4-M8's tab rules, as the bar follows them: switching, re-taps, the bar on tab roots only. The
+ * NavHosts and the bar only report to and read from this state.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class AppTabsStateTest {
@@ -45,14 +45,14 @@ class AppTabsStateTest {
     @Test
     fun `a tap on the selected tab is a re-tap for that tab - and keeps it selected`() =
         runTest {
-            val tabs = AppTabsState(initial = AppTab.Search, splashDone = true)
+            val tabs = AppTabsState(initial = AppTab.MyTrips, splashDone = true)
             val reselected = mutableListOf<AppTab>()
             backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { tabs.reselected.toList(reselected) }
 
-            tabs.onTabTapped(AppTab.Search)
+            tabs.onTabTapped(AppTab.MyTrips)
 
-            assertEquals(listOf(AppTab.Search), reselected)
-            assertEquals(AppTab.Search, tabs.selected)
+            assertEquals(listOf(AppTab.MyTrips), reselected)
+            assertEquals(AppTab.MyTrips, tabs.selected)
         }
 
     @Test
@@ -84,44 +84,22 @@ class AppTabsStateTest {
     fun `a tab not shown yet counts as on its root - so its first visit shows the bar`() {
         val tabs = AppTabsState(splashDone = true)
 
-        tabs.select(AppTab.Settings)
+        tabs.select(AppTab.Profile)
 
         assertTrue(tabs.state.value.barVisible)
     }
-
-    @Test
-    fun `Home's search entry switches to Search and asks for the focus once - even before Search exists`() =
-        runTest {
-            val tabs = AppTabsState(splashDone = true)
-
-            tabs.openSearch()
-            assertEquals(AppTab.Search, tabs.selected)
-
-            // The Search tab's NavHost composes only now (first visit): the request waited for it.
-            val requests = mutableListOf<Unit>()
-            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { tabs.searchFocusRequests().toList(requests) }
-            assertEquals(1, requests.size)
-
-            // Taken: switching tabs in the bar asks for nothing more.
-            tabs.onTabTapped(AppTab.Home)
-            tabs.onTabTapped(AppTab.Search)
-            assertEquals(1, requests.size)
-
-            tabs.openSearch()
-            assertEquals(2, requests.size)
-        }
 
     @Test
     fun `Back goes Home from another tab's root only`() {
         val tabs = AppTabsState(splashDone = true)
         assertFalse(tabs.state.value.backGoesHome, "Home's root: Back leaves the app")
 
-        tabs.select(AppTab.Settings)
+        tabs.select(AppTab.Profile)
         assertTrue(tabs.state.value.backGoesHome)
 
-        // A pushed screen in Search: Back is that tab's own (it pops).
-        tabs.select(AppTab.Search)
-        tabs.reportAtRoot(AppTab.Search, false)
+        // A pushed screen in My trips: Back is that tab's own (it pops).
+        tabs.select(AppTab.MyTrips)
+        tabs.reportAtRoot(AppTab.MyTrips, false)
         assertFalse(tabs.state.value.backGoesHome)
     }
 

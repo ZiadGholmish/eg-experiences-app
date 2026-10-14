@@ -5,10 +5,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
@@ -129,6 +131,31 @@ class TripMapScreenshotTest {
         assertEquals(listOf("burullus-dawn"), opened)
     }
 
+    /** Not a golden (M3-M0b): the header's search button opens search; without [onSearch] there is none. */
+    @Test
+    fun theHeaderSearchButtonOpensSearch() {
+        var searches = 0
+        val withSearch = mutableStateOf(true)
+        setContent(AppLanguage.ENGLISH) {
+            TripMapScreen(
+                onBack = null,
+                onTripClick = {},
+                onList = {},
+                onSearch = if (withSearch.value) ({ searches++ }) else null,
+                viewModel = viewModel(AppLanguage.ENGLISH),
+                map = stubMap,
+            )
+        }
+        settle()
+
+        compose.onNodeWithTag(MAP_SEARCH_TAG).performClick()
+        assertEquals(1, searches)
+
+        compose.runOnIdle { withSearch.value = false }
+        settle()
+        compose.onNodeWithTag(MAP_SEARCH_TAG).assertDoesNotExist()
+    }
+
     // ---------- Plumbing ----------
 
     private fun viewModel(language: AppLanguage) =
@@ -143,8 +170,9 @@ class TripMapScreenshotTest {
         vm: TripMapViewModel,
         act: (() -> Unit)? = null,
     ) {
-        // As the app ships it since M4-M8: the Map tab's root, with no Back.
-        setContent(language) { TripMapScreen(onBack = null, onTripClick = {}, viewModel = vm, map = stubMap) }
+        // As the app ships it: the Map tab's root, with no Back (M4-M8), "List" and, since M3-M0b, the
+        // header's search button.
+        setContent(language) { TripMapScreen(onBack = null, onTripClick = {}, onList = {}, onSearch = {}, viewModel = vm, map = stubMap) }
         settle()
         act?.let {
             compose.runOnIdle(it)

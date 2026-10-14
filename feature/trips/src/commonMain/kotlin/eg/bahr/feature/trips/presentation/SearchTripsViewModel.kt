@@ -22,6 +22,7 @@ import eg.bahr.core.catalog.presentation.collectWaitlistTags
 import eg.bahr.core.catalog.presentation.distinctTrips
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.datastore.RecentSearchesStore
+import eg.bahr.feature.trips.data.LastSearch
 import eg.bahr.feature.trips.data.TripApiService
 import eg.bahr.feature.trips.data.TripRepository
 import kotlinx.coroutines.CancellationException
@@ -111,12 +112,19 @@ internal class SearchTripsViewModel(
     private val repository: TripRepository,
     private val recentSearches: RecentSearchesStore,
     waitlists: WaitlistMemory,
+    private val last: LastSearch,
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(SearchTripsUiState())
+    // Reopened (M3-M0b, user decision 2026-10-14): the last search comes back, searched at once.
+    private val _uiState =
+        MutableStateFlow(
+            searchable(last.text).let { query ->
+                SearchTripsUiState(text = last.text, query = query, filter = last.filter.takeIf { query != null })
+            },
+        )
     val uiState: StateFlow<SearchTripsUiState> = _uiState.asStateFlow()
 
     /** The typed text, debounced into [SearchTripsUiState.query]. */
-    private val typed = MutableStateFlow("")
+    private val typed = MutableStateFlow(last.text)
 
     /** Bumped by [retry]: the failed first page loads again. */
     private val attempts = MutableStateFlow(0)
@@ -162,6 +170,7 @@ internal class SearchTripsViewModel(
         if (text.length > TripApiService.MAX_QUERY_LENGTH) return
         _uiState.update { it.copy(text = text) }
         typed.value = text
+        last.text = text
     }
 
     /** The keyboard's search key: search what is typed now, and remember it. */
@@ -176,6 +185,7 @@ internal class SearchTripsViewModel(
         val query = searchable(recent) ?: return
         _uiState.update { it.copy(text = recent) }
         typed.value = recent
+        last.text = recent
         setQuery(query)
         remember(query)
     }
@@ -208,6 +218,7 @@ internal class SearchTripsViewModel(
             // The count belongs to the search; the chips stay (with their old counts) until it answers.
             if (filter == state.filter) state else state.copy(filter = filter, totalItems = null)
         }
+        last.filter = _uiState.value.filter
     }
 
     /**
@@ -218,7 +229,14 @@ internal class SearchTripsViewModel(
         _uiState.update { state ->
             when {
                 state.query == query -> state
-                query == null -> state.copy(query = null, filter = null, facets = emptyList(), totalItems = null)
+                query == null ->
+                    state
+                        .copy(
+                            query = null,
+                            filter = null,
+                            facets = emptyList(),
+                            totalItems = null,
+                        ).also { last.filter = null }
                 else -> state.copy(query = query, totalItems = null)
             }
         }

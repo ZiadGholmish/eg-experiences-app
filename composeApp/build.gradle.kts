@@ -66,6 +66,7 @@ kotlin {
             implementation(projects.feature.settings)
             implementation(projects.feature.auth)
             implementation(projects.feature.mytrips)
+            implementation(projects.feature.notifications)
 
             implementation(projects.core.common)
             implementation(projects.core.network)

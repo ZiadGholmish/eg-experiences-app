@@ -1,72 +1,61 @@
 package eg.bahr.navigation
 
-import eg.bahr.core.designsystem.components.BahrBadge
 import eg.bahr.core.designsystem.icon.BahrIcons
 import eg.bahr.core.localization.generated.resources.Res
+import eg.bahr.core.localization.generated.resources.tab_alerts
 import eg.bahr.core.localization.generated.resources.tab_home
 import eg.bahr.core.localization.generated.resources.tab_map
 import eg.bahr.core.localization.generated.resources.tab_my_trips
-import eg.bahr.core.localization.generated.resources.tab_search
-import eg.bahr.core.localization.generated.resources.tab_settings
+import eg.bahr.core.localization.generated.resources.tab_profile
 import org.jetbrains.compose.resources.StringResource
 
 /**
- * The bottom bar's tabs (M4-M8, user decisions 2026-10-11), in reading order: the bar is a row, so in
- * Arabic Home sits at the right without anyone reversing the list. Each tab is its own back stack with
- * its own root: Home (feature:home), Search (feature:trips' search), Map (feature:map), My trips
- * (feature:mytrips, M3-M0, user decision 2026-10-12) and Settings (feature:settings).
+ * The bottom bar's tabs, in reading order: the bar is a row, so in Arabic Home sits at the right without
+ * anyone reversing the list. Each tab is its own back stack with its own root.
  *
- * Public because Swift names the tabs: iOS draws the bar itself (SwiftUI `TabView`) and asks for one
- * Compose root per tab (`TabViewController(tab:)`).
+ * M3-M0b (user, 2026-10-14; handoff §1, option 1b): Home (feature:home) · Map (feature:map) · My trips
+ * (feature:mytrips) · Alerts (feature:notifications) · Profile (feature:settings, which was the Settings
+ * tab). The Search tab went: search opens full screen from Home's search field and the Map header, in
+ * that tab's own stack. Android draws the bar in Compose ([AppTabs]); iOS keeps its native SwiftUI
+ * `TabView` (user decision 2026-10-14), fed from here.
+ *
+ * Public because Swift names the tabs: it asks for one Compose root per tab (`TabViewController(tab:)`).
  */
 enum class AppTab {
     Home,
-    Search,
     Map,
     MyTrips,
-    Settings,
+    Alerts,
+    Profile,
 }
 
-/** The tab's label, from core:localization; iOS gets the resolved strings from the shared code too. */
+/** The tab's label, from core:localization. */
 internal val AppTab.title: StringResource
     get() =
         when (this) {
             AppTab.Home -> Res.string.tab_home
-            AppTab.Search -> Res.string.tab_search
             AppTab.Map -> Res.string.tab_map
             AppTab.MyTrips -> Res.string.tab_my_trips
-            AppTab.Settings -> Res.string.tab_settings
+            AppTab.Alerts -> Res.string.tab_alerts
+            AppTab.Profile -> Res.string.tab_profile
         }
 
-/** The Android bar's icon (Material Symbols, filled when selected). iOS uses SF Symbols in Swift. */
+/** The bar's icon (Material Symbols, filled when selected): the handoff's `NAVDEF`. */
 internal val AppTab.icon: BahrIcons
     get() =
         when (this) {
             AppTab.Home -> BahrIcons.Home
-            AppTab.Search -> BahrIcons.Search
             AppTab.Map -> BahrIcons.Map
-            // A day pack: what you take on a trip (Material Symbols `backpack`; iOS draws `suitcase`).
-            AppTab.MyTrips -> BahrIcons.Backpack
-            AppTab.Settings -> BahrIcons.Settings
+            AppTab.MyTrips -> BahrIcons.ConfirmationNumber
+            AppTab.Alerts -> BahrIcons.Notifications
+            AppTab.Profile -> BahrIcons.Person
         }
 
 /**
- * The tab's own colour when selected (user request 2026-10-11: colour in the bar), from the badge tone
- * palette: Home teal (primary), Search gold (secondary), Map green (success), My trips coral
- * (tertiary, the palette's one tone left: as a badge tone it is the light coral container with its dark
- * text, as the hold countdown and sold-out notice use it, not the bright coral of primary actions),
- * Settings magenta (quaternary). Selected, the icon and label take the tone's content colour (on its container pill on
- * Android; as the bar's tint on iOS).
+ * The unread count on [this] tab's item, for both bars: none until M3-B9 brings
+ * `GET /me/notifications/unread-count` for Alerts.
  */
-internal val AppTab.tone: BahrBadge.Tone
-    get() =
-        when (this) {
-            AppTab.Home -> BahrBadge.Tone.Primary
-            AppTab.Search -> BahrBadge.Tone.Secondary
-            AppTab.Map -> BahrBadge.Tone.Success
-            AppTab.MyTrips -> BahrBadge.Tone.Tertiary
-            AppTab.Settings -> BahrBadge.Tone.Quaternary
-        }
+internal val AppTab.badgeCount: Int? get() = null
 
-/** For tests and UI automation: the Android bar's item for [this] tab. */
+/** For tests and UI automation: the bar's item for [this] tab. */
 internal val AppTab.testTag: String get() = "tab_${name.lowercase()}"

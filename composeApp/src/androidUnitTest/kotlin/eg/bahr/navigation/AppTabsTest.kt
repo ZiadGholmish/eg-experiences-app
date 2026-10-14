@@ -86,8 +86,8 @@ class AppTabsTest {
         compose.waitForIdle()
 
         // The bar is hidden on the pushed page; a deep link or Home's pill switches tabs the same way.
-        compose.runOnUiThread { tabs.select(AppTab.Settings) }
-        compose.onNodeWithText("Settings root").assertIsDisplayed()
+        compose.runOnUiThread { tabs.select(AppTab.Profile) }
+        compose.onNodeWithText("Profile root").assertIsDisplayed()
         compose.runOnUiThread { tabs.select(AppTab.Home) }
 
         compose.onNodeWithText("Home detail").assertIsDisplayed()
@@ -96,15 +96,15 @@ class AppTabsTest {
     @Test
     fun `each tab keeps its scroll position while another tab shows`() {
         setContent()
-        compose.onNodeWithTag(AppTab.Search.testTag).performClick()
-        compose.onNodeWithTag(listTag(AppTab.Search)).performScrollToIndex(ROW_FAR_DOWN)
-        compose.onNodeWithText("Search row $ROW_FAR_DOWN").assertIsDisplayed()
+        compose.onNodeWithTag(AppTab.MyTrips.testTag).performClick()
+        compose.onNodeWithTag(listTag(AppTab.MyTrips)).performScrollToIndex(ROW_FAR_DOWN)
+        compose.onNodeWithText("MyTrips row $ROW_FAR_DOWN").assertIsDisplayed()
 
         compose.onNodeWithTag(AppTab.Map.testTag).performClick()
-        compose.onNodeWithTag(AppTab.Search.testTag).performClick()
+        compose.onNodeWithTag(AppTab.MyTrips.testTag).performClick()
 
-        compose.onNodeWithText("Search row $ROW_FAR_DOWN").assertIsDisplayed()
-        compose.onNodeWithText("Search row 0").assertDoesNotExist()
+        compose.onNodeWithText("MyTrips row $ROW_FAR_DOWN").assertIsDisplayed()
+        compose.onNodeWithText("MyTrips row 0").assertDoesNotExist()
     }
 
     @Test
@@ -137,7 +137,7 @@ class AppTabsTest {
     @Test
     fun `Back on another tab's root goes Home - Back on Home's root is left to the system`() {
         setContent()
-        compose.onNodeWithTag(AppTab.Settings.testTag).performClick()
+        compose.onNodeWithTag(AppTab.Profile.testTag).performClick()
         compose.waitForIdle()
 
         backPress()
@@ -171,7 +171,7 @@ class AppTabsTest {
         compose.setContent {
             ProvideAppLanguage(language) {
                 BahrTheme(locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English) {
-                    AppTabs(tabs = tabs, appVersion = "0.1") { tab -> StandInTab(tab) }
+                    AppTabs(tabs = tabs, appVersion = "0.1", content = { tab -> StandInTab(tab) }, overlay = {})
                 }
             }
         }

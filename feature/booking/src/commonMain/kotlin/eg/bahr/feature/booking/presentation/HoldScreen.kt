@@ -11,25 +11,21 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.BasicAlertDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
+import eg.bahr.core.designsystem.components.BahrBottomSheet
+import eg.bahr.core.designsystem.components.BahrBottomSheetContent
 import eg.bahr.core.designsystem.components.BahrCard
 import eg.bahr.core.designsystem.components.BahrPrimaryButton
 import eg.bahr.core.designsystem.components.HoldCountdown
@@ -151,7 +147,7 @@ internal fun HoldScreen(
     }
 
     if (state.isLeaveConfirmVisible) {
-        LeaveDialog(
+        LeaveSheet(
             state = state,
             onConfirm = viewModel::confirmLeave,
             onLeaveAnyway = viewModel::leaveWithoutRelease,
@@ -306,63 +302,81 @@ private fun PayBar(state: HoldUiState) {
 }
 
 /**
- * "Leave and release your seats?" Neither action is coral (coral is the step forward): releasing is
- * error-coloured, keeping the seats is the primary text button. If the release fails, the dialog says
- * the seats free themselves at the deadline and offers to leave anyway.
+ * "Leave and release your seats?", a bottom sheet since M3-M0b (user decision 2026-10-14: sheets instead
+ * of dialogs). Neither action is coral (coral is the step forward): releasing is the destructive fill,
+ * keeping the seats is the way out, last, with the default focus. If the release fails, the sheet says the
+ * seats free themselves at the deadline and offers to leave anyway.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun LeaveDialog(
+private fun LeaveSheet(
     state: HoldUiState,
     onConfirm: () -> Unit,
     onLeaveAnyway: () -> Unit,
     onDismiss: () -> Unit,
 ) {
+    BahrBottomSheet(props = leaveProps(state, onConfirm, onLeaveAnyway, onDismiss)) { LeaveBody(state) }
+}
+
+/** The leave sheet's inside, for the screenshot tests (a sheet is a second window they cannot draw). */
+@Composable
+internal fun LeaveSheetContent(state: HoldUiState) {
+    BahrBottomSheetContent(leaveProps(state, {}, {}, {})) { LeaveBody(state) }
+}
+
+@Composable
+private fun leaveProps(
+    state: HoldUiState,
+    onConfirm: () -> Unit,
+    onLeaveAnyway: () -> Unit,
+    onDismiss: () -> Unit,
+): BahrBottomSheet.Props {
     val failed = state.releaseError != null
-    // The dialog is its own window, which on Android takes its layout direction from the platform
-    // locale rather than the app's chosen language, so the app's direction is carried in by hand.
-    val direction = LocalLayoutDirection.current
-    BasicAlertDialog(onDismissRequest = onDismiss) {
-        CompositionLocalProvider(LocalLayoutDirection provides direction) {
-            Column(
-                modifier =
-                    Modifier
-                        .padding(horizontal = BahrSpacing.gutter)
-                        .clip(BahrTheme.shapes.card)
-                        .background(MaterialTheme.colorScheme.surface)
-                        .padding(BahrSpacing.xl),
-                verticalArrangement = Arrangement.spacedBy(BahrSpacing.md),
-            ) {
-                Text(stringResource(Res.string.booking_leave_title), style = MaterialTheme.typography.titleLarge)
-                Text(
-                    stringResource(Res.string.booking_leave_body),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                // One message for every failure (no connection, server error, payment already started):
-                // whatever the cause, the way out is the same.
-                if (failed) {
-                    Text(
-                        stringResource(Res.string.booking_leave_failed),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm, Alignment.End)) {
-                    TextButton(onClick = onDismiss, enabled = !state.isReleasing) {
-                        Text(stringResource(Res.string.booking_leave_stay))
-                    }
-                    TextButton(onClick = if (failed) onLeaveAnyway else onConfirm, enabled = !state.isReleasing) {
-                        Text(
-                            text = stringResource(if (failed) Res.string.booking_leave_anyway else Res.string.booking_leave_confirm),
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    }
-                }
-            }
-        }
+    return BahrBottomSheet.Props(
+        title = stringResource(Res.string.booking_leave_title),
+        onDismiss = onDismiss,
+        // Stays up while releasing, so a failed release can say "leave anyway" in it (review R4-2).
+        dismissible = !state.isReleasing,
+        actions =
+            listOf(
+                BahrBottomSheet.Action(
+                    text = stringResource(if (failed) Res.string.booking_leave_anyway else Res.string.booking_leave_confirm),
+                    style = BahrBottomSheet.Action.Style.Destructive,
+                    onClick = if (failed) onLeaveAnyway else onConfirm,
+                    loading = state.isReleasing,
+                    testTag = LEAVE_CONFIRM_TAG,
+                ),
+            ),
+        cancel =
+            BahrBottomSheet.Action(
+                text = stringResource(Res.string.booking_leave_stay),
+                onClick = onDismiss,
+                enabled = !state.isReleasing,
+                testTag = LEAVE_STAY_TAG,
+            ),
+    )
+}
+
+@Composable
+private fun LeaveBody(state: HoldUiState) {
+    Text(
+        stringResource(Res.string.booking_leave_body),
+        style = MaterialTheme.typography.bodyLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    // One message for every failure (no connection, server error, payment already started): whatever
+    // the cause, the way out is the same.
+    if (state.releaseError != null) {
+        Text(
+            stringResource(Res.string.booking_leave_failed),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onErrorContainer,
+        )
     }
 }
+
+/** The leave sheet's buttons, for tests. */
+internal const val LEAVE_CONFIRM_TAG = "hold_leave_confirm"
+internal const val LEAVE_STAY_TAG = "hold_leave_stay"
 
 /** The scrolling content, for tests. */
 internal const val HOLD_CONTENT_TAG = "hold_content"

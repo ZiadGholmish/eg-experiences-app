@@ -10,6 +10,7 @@ import eg.bahr.core.network.ApiErrorCodes
 import eg.bahr.core.testing.runViewModelTest
 import eg.bahr.feature.trips.data.FakeRecentSearchesStore
 import eg.bahr.feature.trips.data.FakeTripRepository
+import eg.bahr.feature.trips.data.LastSearch
 import eg.bahr.feature.trips.data.TripApiService
 import eg.bahr.feature.trips.data.TripFixtures.facets
 import eg.bahr.feature.trips.data.TripFixtures.page
@@ -46,7 +47,47 @@ class SearchTripsViewModelTest {
     private fun TestScope.searchVm(
         repository: FakeTripRepository = repository(),
         recents: FakeRecentSearchesStore = FakeRecentSearchesStore(),
-    ) = SearchTripsViewModel(repository, recents, waitlistMemory()).also { runCurrent() }
+        last: LastSearch = LastSearch(),
+    ) = SearchTripsViewModel(repository, recents, waitlistMemory(), last).also { runCurrent() }
+
+    /**
+     * M3-M0b (user decision 2026-10-14): search is a page now, not a tab, and reopening it shows the last
+     * query, its filter and its results, searched at once without waiting for the debounce.
+     */
+    @Test
+    fun `reopening search shows the last search - query and filter and results`() =
+        runViewModelTest {
+            val last = LastSearch()
+            val first = searchVm(last = last)
+            first.onTextChange("felucca")
+            advanceUntilIdle()
+            first.selectFilter("weekend")
+
+            val repository = repository()
+            val reopened = searchVm(repository, last = last)
+
+            assertEquals("felucca", reopened.uiState.value.text)
+            assertEquals("felucca", reopened.uiState.value.query)
+            assertEquals("weekend", reopened.uiState.value.filter)
+            assertEquals(listOf("felucca/weekend"), reopened.trips.asSnapshot().map { it.title })
+        }
+
+    @Test
+    fun `a cleared field is what reopens - nothing searched`() =
+        runViewModelTest {
+            val last = LastSearch()
+            val first = searchVm(last = last)
+            first.onTextChange("felucca")
+            advanceUntilIdle()
+            first.onTextChange("")
+            advanceUntilIdle()
+
+            val reopened = searchVm(last = last)
+
+            assertEquals("", reopened.uiState.value.text)
+            assertNull(reopened.uiState.value.query)
+            assertNull(reopened.uiState.value.filter)
+        }
 
     @Test
     fun `typing is searched once it rests for the debounce - not before`() =

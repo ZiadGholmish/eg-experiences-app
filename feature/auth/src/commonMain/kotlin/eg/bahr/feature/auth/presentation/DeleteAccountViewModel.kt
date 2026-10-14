@@ -40,6 +40,11 @@ internal class DeleteAccountViewModel(
     private val _uiState = MutableStateFlow(DeleteAccountUiState())
     val uiState: StateFlow<DeleteAccountUiState> = _uiState.asStateFlow()
 
+    /** The sheet opened again: a finished or failed deletion from before is not shown. */
+    fun reset() {
+        if (!_uiState.value.deleting) _uiState.value = DeleteAccountUiState()
+    }
+
     fun confirm(appleAvailable: Boolean) {
         val state = _uiState.value
         if (state.deleting || state.done) return

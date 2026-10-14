@@ -2,11 +2,11 @@ package eg.bahr.feature.auth.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import eg.bahr.core.common.phone.PhoneNumbers
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.network.auth.SessionState
 import eg.bahr.feature.auth.data.AuthRepository
+import eg.bahr.feature.auth.data.ProfilePrompt
 import eg.bahr.feature.auth.data.ProviderResult
 import eg.bahr.feature.auth.data.newRawNonce
 import eg.bahr.feature.auth.data.sha256Hex
@@ -14,6 +14,8 @@ import eg.bahr.feature.auth.model.AuthProvider
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -35,26 +37,15 @@ internal data class SignInUiState(
     val busy: AuthProvider? = null,
     val failed: Boolean = false,
     val error: AppError? = null,
-    val name: String = "",
-    val phone: String = "",
-    val saving: Boolean = false,
-    val profileError: AppError? = null,
 ) {
-    enum class Step { Choose, Profile, Done }
-
-    val isNameValid: Boolean get() = name.isNotBlank() && name.trim().length <= NAME_MAX_LENGTH
-    val isPhoneValid: Boolean get() = PhoneNumbers.isValid(phone)
-    val canSave: Boolean get() = !saving && isNameValid && isPhoneValid
-
-    companion object {
-        /** openapi `UpdateAccountRequest.name` `maxLength`. */
-        const val NAME_MAX_LENGTH = 80
-    }
+    enum class Step { Choose, Done }
 }
 
 /**
- * The sign-in sheet (M3-M0): pick Apple or Google, the provider's own UI, then our backend; on a first
- * sign-in (`profileComplete` false) the name and phone, which may be left for later (checkout asks again).
+ * Sign-in with Apple or Google (M3-M0), for the sign-in sheet and, since M3-M0b, the buttons on Profile
+ * and the Alerts tab: the provider's own UI, then our backend. A first sign-in (`profileComplete` false)
+ * is done here too: the repository then asks for the name and phone in the app-wide sheet (M3-M0b,
+ * handoff §2), over whatever screen is showing.
  *
  * Branches on the error code only. A cancelled provider sheet is no error.
  */
@@ -66,15 +57,31 @@ internal class SignInViewModel(
     private val _uiState = MutableStateFlow(initialState())
     val uiState: StateFlow<SignInUiState> = _uiState.asStateFlow()
 
-    /** Opened while already signed in (a second entry point raced the first): finish, or finish the profile. */
+    init {
+        // The buttons on Profile and the Alerts tab keep this view model for as long as their tab: after a
+        // sign-out (or a deleted account) they must offer sign-in again, so a finished sign-in starts over.
+        repository.session
+            .onEach { session ->
+                if (session is SessionState.SignedOut && _uiState.value.step == SignInUiState.Step.Done) {
+                    _uiState.value = SignInUiState()
+                }
+            }.launchIn(viewModelScope)
+    }
+
+    /**
+     * Opened while already signed in (a second entry point raced the first): finish, and ask for the
+     * details still missing.
+     */
     private fun initialState(): SignInUiState =
         when (val session = repository.session.value) {
-            is SessionState.SignedIn ->
-                if (session.profileComplete) {
-                    SignInUiState(step = SignInUiState.Step.Done)
-                } else {
-                    SignInUiState(step = SignInUiState.Step.Profile, name = session.accountName.orEmpty())
+            is SessionState.SignedIn -> {
+                if (!session.profileComplete) {
+                    repository.askForProfile(
+                        ProfilePrompt(session.accountName.orEmpty(), phone = "", provider = session.providers.firstOrNull()),
+                    )
                 }
+                SignInUiState(step = SignInUiState.Step.Done)
+            }
             else -> SignInUiState()
         }
 
@@ -106,41 +113,10 @@ internal class SignInViewModel(
     ) {
         viewModelScope.launch {
             when (val signIn = repository.signIn(request.provider, result.idToken, request.rawNonce, result.fullName)) {
-                is AppResult.Success ->
-                    _uiState.update { state ->
-                        val account = signIn.data
-                        if (account.profileComplete) {
-                            state.copy(busy = null, step = SignInUiState.Step.Done)
-                        } else {
-                            state.copy(
-                                busy = null,
-                                step = SignInUiState.Step.Profile,
-                                name = account.name.orEmpty(),
-                                phone = account.phone.orEmpty(),
-                            )
-                        }
-                    }
+                // An incomplete profile is asked for by the repository's sheet, not here.
+                is AppResult.Success -> _uiState.update { it.copy(busy = null, step = SignInUiState.Step.Done) }
                 is AppResult.Failure -> _uiState.update { it.copy(busy = null, error = signIn.error) }
             }
         }
     }
-
-    fun setName(name: String) = _uiState.update { it.copy(name = name.take(SignInUiState.NAME_MAX_LENGTH), profileError = null) }
-
-    fun setPhone(phone: String) = _uiState.update { it.copy(phone = PhoneNumbers.clean(phone), profileError = null) }
-
-    fun saveProfile() {
-        val state = _uiState.value
-        if (!state.canSave) return
-        _uiState.update { it.copy(saving = true, profileError = null) }
-        viewModelScope.launch {
-            when (val result = repository.updateProfile(state.name.trim(), state.phone)) {
-                is AppResult.Success -> _uiState.update { it.copy(saving = false, step = SignInUiState.Step.Done) }
-                is AppResult.Failure -> _uiState.update { it.copy(saving = false, profileError = result.error) }
-            }
-        }
-    }
-
-    /** "Later": signed in without the details; checkout asks for them again (profileComplete stays false). */
-    fun skipProfile() = _uiState.update { it.copy(step = SignInUiState.Step.Done) }
 }

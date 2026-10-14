@@ -44,6 +44,10 @@ wins.
 | *(not in tokens.json)* see-through states | `BahrAlpha.stale` (a list's old cards while the new ones load, M4-M6), `BahrAlpha.onImageSecondary` (a hero slide's meta line over the scrim, M4-M7) | `theme/BahrShapeElevationMotion.kt` |
 | *(not in tokens.json)* component sizes from the handoff's px | `BahrSize.*`, `BahrBorder.*`, `BahrSpacing.minTouch` | `theme/BahrShapeElevationMotion.kt` |
 | `[data-theme=dusk / highcontrast]` | `BahrTheme(theme = BahrThemeName.Dusk / HighContrast)` | `theme/BahrColors.kt` |
+| `themeOverrides.dark` / `[data-theme=dark]` (Oct 2026) | `BahrThemeName.Dark`, picked by the app root from Profile → Appearance (M3-M0b; Light is the default) | `theme/BahrColors.kt` |
+| `badge, onBadge, errorStrong, navSurface, navIndicator, unread` (Oct 2026) | `BahrTheme.colors.*` (`errorStrong` pairs with `colorScheme.onError`), set per theme because tokens.json aliases them | `theme/BahrColors.kt` |
+| `brand.google.*`, `brand.apple.*` / `--bahr-brand-*` (Oct 2026) | `BahrTheme.colors.brand` (light or dark form, never a Bahr theme), used by `BahrSignInButton` | `theme/BahrColors.kt` |
+| `sys.size.touchTarget / navBar / topBar` (Oct 2026) | `BahrSize.touchTarget / navBar / topBar` | `theme/BahrShapeElevationMotion.kt` |
 | `meta.currency`, `meta.timeFormat` | `BahrFormat` (EGP, 24h, Western digits) | `format/BahrFormat.kt` |
 
 **Page vs surface (M4-M12, user decision 2026-10-12).** tokens.json names no page colour: the prototype
@@ -58,6 +62,16 @@ booking inputs, Settings' unselected language) are `surface` white instead, sinc
 into the page; inside a card, or on a coloured notice, the tints stay as the handoff has them. HighContrast
 keeps its 1dp outline in place of shadows. To feed back into the handoff: a `background` role in
 tokens.json.
+
+**Dark (M3-M0b).** `BahrThemeName.Dark` is `themeOverrides.dark`. Roles tokens.json leaves out of the
+dark overrides are code-side, each keeping its light role's job: the page (`background`) is the darkest
+ground, `surfaceLowest` (`#0b1417`), so `surface` cards and `surfaceLow` groups sit a step lighter on it;
+`secondary`, `onSecondary`, `onTertiary`, `secondaryDim`, `tertiaryHover`, `primaryBright` and
+`primaryDeep` keep their light values; `primaryDim` takes `onSurfaceVariant`; the M3 slots with no
+token (`surfaceContainerHigh/Highest`, `surfaceBright`, the inverse roles) come from the dark ramp so no
+Material baseline colour shows. Profile, the Alerts tab and Edit personal info paint `surface` as their
+page with `surfaceLow` groups, as the account handoff draws them, in both modes. The map's tiles stay
+light. To feed back into the handoff: a `background` role for dark too.
 
 **Code-only sizes.** `BahrSize` holds fixed sizes the handoff draws with but tokens.json does not
 name: the icon sizes (`iconSmall/Medium/Large`, M1-M1a review #9) and component dimensions from the
@@ -101,7 +115,10 @@ no equivalent: `BahrBadge` (tone-driven status pill) and `BahrLoadingView` /
 `BahrErrorView` / `BahrEmptyView`.
 
 Added since: `BahrBackButton` (M4-M1b) and `BahrPillButton` (M4-M2: the app bar's icon + label pill on
-`primaryContainer`, Home's "Map" and the map's "List").
+`primaryContainer`, Home's "Map" and the map's "List"). M3-M0b: `BahrNavigationBar` is the account
+handoff's bar on Android (iOS keeps its SwiftUI `TabView`, fed the same labels, badge and colours) (`navSurface`, a 64x32 `navIndicator`, an unread `badge` read inside the
+item's label), `BahrFormField` (label above, 56dp box, counter, help or announced error; the
+first-sign-in sheet and Edit personal info) and `BahrProviderMark` (the Google "G" / Apple mark).
 
 New components use `interface X { @Immutable data class Props(…) }` +
 `@Composable fun X(modifier, props)`, and enter the design system only once a
@@ -153,6 +170,19 @@ Directional icons mirror by themselves in RTL (`android:autoMirrored`, set by Go
 of `arrow_back` and `arrow_forward`: it exists only because a web icon font cannot mirror.
 
 ## Rules
+
+**Bottom sheets, not dialogs (user decision 2026-10-14).** Every confirm or choice is a modal bottom
+sheet, `BahrBottomSheet` (`core:designsystem`): the drag handle, a title, the body, then the actions
+stacked full width, the step (coral) or the destructive one (`errorStrong`) first and the way out
+(cancel) last, with the default focus on the safe action. No `AlertDialog`, `BasicAlertDialog` or
+`dialog<…>` destination in feature code; a dialog is only the OS's own permission prompt. Screenshot
+tests draw `BahrBottomSheetContent` (a sheet is a second window).
+
+**Appearance (M3-M0b, user decision 2026-10-14).** Light is the default; dark is opt-in. Profile →
+Appearance stores Light, Dark or Same as phone (`AppAppearance`, core:datastore), and the app root
+picks the theme from it on both platforms (Android: AppCompat's night mode as well, for the window and
+system bars; iOS: every Compose root and the SwiftUI tab bar's `preferredColorScheme`). `BahrTheme`'s
+own default is the light theme.
 
 - **No literals in feature code.** No `Color(0x…)`, raw `.dp`/`.sp`, or
   `FontFamily` in `feature/*` or `composeApp`. Screens read `MaterialTheme.*`,

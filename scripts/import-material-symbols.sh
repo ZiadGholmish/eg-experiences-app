@@ -37,6 +37,9 @@ ICONS=(
   favorite flutter_dash format_list_bulleted groups history home info ios_share local_cafe location_on lock
   map more_vert notifications_active palette payments person pin_drop remove restaurant sailing search
   schedule sell settings smartphone star storefront sunny timer translate verified visibility waves
+  # M3-M0b: the bottom bar, Profile and the Alerts tab (docs/design/prototype/Bahr Account - Notifications.dc.html).
+  badge chevron_right confirmation_number delete error hourglass_top how_to_reg lock_person logout
+  notifications person_remove rate_review support_agent travel_explore
 )
 
 TMP="$(mktemp -d)"
@@ -63,7 +66,8 @@ if grep -rlE '@android:|\?attr/|="(Round|Butt|Square|Miter|Bevel|EvenOdd|NonZero
   exit 1
 fi
 
-# Swap in: prune every icon drawable, then copy the fresh set. Other drawables are not touched.
-find "$OUT" -maxdepth 1 -name 'ic_*.xml' -delete
+# Swap in: prune every icon drawable, then copy the fresh set. Other drawables are not touched, nor
+# are the sign-in buttons' brand marks (ic_brand_*, M3-M0), which are not Material Symbols.
+find "$OUT" -maxdepth 1 -name 'ic_*.xml' ! -name 'ic_brand_*' -delete
 cp "$STAGE"/ic_*.xml "$OUT"/
 echo "Imported ${#ICONS[@]} icons into $OUT ($(find "$OUT" -maxdepth 1 -name 'ic_*.xml' | wc -l | tr -d ' ') files)"

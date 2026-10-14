@@ -262,16 +262,13 @@
     <string name="map_card_close">Close</string>
     <string name="map_empty">No trips on the map yet. Check back soon.</string>
 
-    <!-- The bottom bar (M4-M8): one label per tab. The iOS tab bar reads the same strings (handed to Swift by
-         the shared code), so these are the only copies. -->
+    <!-- The bottom bar (M4-M8; since M3-M0b Home · Map · My trips · Alerts · Profile, one Compose bar on
+         both platforms): one label per tab. -->
     <string name="tab_home">Home</string>
-    <string name="tab_search">Search</string>
     <string name="tab_map">Map</string>
-    <string name="tab_settings">Settings</string>
 
-    <!-- Settings (M4-M8). The language names are each written in their own language (the prototype's
+    <!-- Profile's Language and About (Settings in M4-M8). The language names are each written in their own language (the prototype's
          langBtn), so a reader finds theirs whatever the app is showing. -->
-    <string name="settings_title">Settings</string>
     <string name="settings_language">Language</string>
     <string name="settings_language_arabic">العربية</string>
     <string name="settings_language_english">English</string>
@@ -301,25 +298,19 @@
     <string name="auth_close">Close</string>
     <string name="auth_failed">We couldn’t sign you in. Try again.</string>
     <string name="auth_privacy_note">We use your name and number only for your bookings, and so your host can reach you.</string>
-    <string name="auth_profile_title">A few details</string>
-    <string name="auth_profile_body">Your host uses these to reach you on the day. You can change them later.</string>
+    <string name="auth_profile_title">One more step</string>
+    <string name="auth_profile_body">We need your name and mobile number so the host knows who’s coming and can call you on the day.</string>
     <string name="auth_profile_name">Full name</string>
     <string name="auth_profile_phone">Mobile number</string>
-    <string name="auth_profile_phone_invalid">Enter a valid mobile number.</string>
     <string name="auth_profile_save">Save</string>
     <string name="auth_profile_later">Later</string>
     <string name="auth_delete_title">Delete your account?</string>
-    <string name="auth_delete_body">Your account, your sign-in and your waiting lists are removed. Bookings are kept for our records, without your name or number. This can’t be undone.</string>
+    <string name="auth_delete_body">This can’t be undone.</string>
     <string name="auth_delete_confirm">Delete account</string>
-    <string name="auth_delete_cancel">Keep my account</string>
+    <string name="auth_delete_cancel">Keep account</string>
     <string name="auth_delete_host">This account is also a host’s. Contact us to remove it.</string>
 
-    <!-- Settings' account row (M3-M0). -->
-    <string name="settings_account">Account</string>
-    <string name="settings_sign_in">Sign in</string>
-    <string name="settings_sign_in_note">Sign in to see your trips and to pay.</string>
-    <string name="settings_signed_in_as">Signed in as %1$s</string>
-    <string name="settings_signed_in">You’re signed in</string>
+    <!-- Profile's account rows (M3-M0; Settings' then). -->
     <string name="settings_sign_out">Sign out</string>
     <string name="settings_delete_account">Delete account</string>
 
@@ -352,4 +343,65 @@
         <item quantity="other">%1$d people</item>
     </plurals>
     <string name="error_account_unauthorized">You’ve been signed out. Sign in again.</string>
+
+    <!-- M3-M0b (handoff docs/design/HANDOFF-account-notifications.md, prototype "Bahr Account - Notifications"):
+         the bottom bar (option 1b), Profile, Edit personal info, the first-sign-in sheet, the delete dialog
+         and the Alerts tab's empty and signed-out states. -->
+    <string name="tab_alerts">Alerts</string>
+    <string name="tab_profile">Profile</string>
+    <!-- A tab with unread items, as a screen reader says it: %1$s is the tab, %2$s the count. -->
+    <string name="nav_item_unread">%1$s, %2$s unread</string>
+    <!-- What a screen reader says for the 9+ badge. -->
+    <string name="nav_badge_more_than">more than 9</string>
+    <string name="profile_title">Profile</string>
+    <string name="profile_welcome_title">Welcome to Bahr</string>
+    <string name="profile_welcome_body">Sign in to pay and keep your bookings on any phone.</string>
+    <string name="profile_without_account">Without an account you can:</string>
+    <string name="profile_can_browse">Browse trips and the map</string>
+    <string name="profile_can_hold">Hold seats for 15 minutes</string>
+    <string name="profile_can_waitlist">Join a waiting list</string>
+    <string name="profile_about">About</string>
+    <string name="profile_personal_info">Personal info</string>
+    <!-- Personal info's second line: the name, then the mobile number. -->
+    <string name="profile_name_phone">%1$s · %2$s</string>
+    <!-- Under the name: how the account signs in (%1$s, Google or Apple), then its email. -->
+    <string name="profile_provider_email">%1$s · %2$s</string>
+    <string name="profile_provider_hidden">Apple · email hidden by Apple</string>
+    <string name="profile_saved">Saved</string>
+    <string name="edit_intro">Only the host sees your name and number, so they know who’s coming and can call you on the day.</string>
+    <string name="edit_email">Email</string>
+    <!-- %1$s is the sign-in provider, Google or Apple. -->
+    <string name="edit_email_note">From your %1$s account. It can’t be changed here.</string>
+    <string name="edit_email_hidden">Hidden by Apple</string>
+    <string name="edit_email_hidden_note">From your Apple account. Apple hid your real address.</string>
+    <string name="edit_phone_note">We don’t send a code to check it, so make sure it’s right and the host can reach you.</string>
+    <string name="edit_saving">Saving…</string>
+    <string name="account_phone_help">Egyptian mobile, 11 digits, starting 010, 011, 012 or 015</string>
+    <string name="account_phone_empty">Enter your mobile number.</string>
+    <string name="account_phone_short">That’s %1$d digits. It needs 11, starting 010, 011, 012 or 015</string>
+    <string name="account_phone_long">That’s %1$d digits. It needs 11, starting 010, 011, 012 or 015</string>
+    <string name="account_phone_start">It needs to start 010, 011, 012 or 015</string>
+    <!-- The mobile field's counter: digits typed of the 11 needed. -->
+    <string name="account_phone_count">%1$d/%2$d</string>
+    <string name="account_name_invalid">Enter your name, 2 to 60 characters.</string>
+    <!-- %1$s is the sign-in provider, Google or Apple. -->
+    <string name="auth_profile_name_from">From your %1$s account</string>
+    <string name="auth_profile_later_note">We’ll ask again at checkout.</string>
+    <string name="auth_delete_gone">We’ll delete your name, mobile number and sign-in email.</string>
+    <string name="auth_delete_kept">Your bookings stay on record for the host without your name or number, so seat and payment records stay correct.</string>
+    <string name="alerts_title">Notifications</string>
+    <string name="alerts_empty_title">No notifications yet</string>
+    <string name="alerts_empty_body">We’ll tell you here when a booking is confirmed, a seat opens on a trip you’re waiting for, or a host messages you.</string>
+    <string name="alerts_signed_out_title">Sign in to get notifications</string>
+    <string name="alerts_signed_out_body">Notifications are tied to your bookings, so we need to know who you are.</string>
+    <!-- Brand names, written as their owners write them in either language. -->
+    <string name="provider_google">Google</string>
+    <string name="provider_apple">Apple</string>
+    <!-- The mobile field's placeholder: the shape of a number. -->
+    <string name="account_phone_placeholder">01xxxxxxxxx</string>
+    <!-- Profile → Appearance (M3-M0b, user decision 2026-10-14): Light is the default. -->
+    <string name="profile_appearance">Appearance</string>
+    <string name="appearance_light">Light</string>
+    <string name="appearance_dark">Dark</string>
+    <string name="appearance_system">Same as phone</string>
 </resources>

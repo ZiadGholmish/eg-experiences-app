@@ -11,8 +11,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -23,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -34,6 +38,7 @@ import eg.bahr.core.designsystem.components.BahrLoadingView
 import eg.bahr.core.designsystem.components.BahrPillButton
 import eg.bahr.core.designsystem.icon.BahrIcons
 import eg.bahr.core.designsystem.theme.BahrElevation
+import eg.bahr.core.designsystem.theme.BahrSize
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.designsystem.theme.bahrShadow
@@ -42,6 +47,7 @@ import eg.bahr.core.localization.generated.resources.action_retry
 import eg.bahr.core.localization.generated.resources.map_empty
 import eg.bahr.core.localization.generated.resources.map_list
 import eg.bahr.core.localization.generated.resources.map_title
+import eg.bahr.core.localization.generated.resources.search_hint
 import eg.bahr.core.localization.isRetryable
 import eg.bahr.core.localization.localizedMessage
 import eg.bahr.feature.map.presentation.components.MapOverlay
@@ -76,6 +82,9 @@ internal typealias MapContent = @Composable (
  *
  * M4-M8: the map is the Map tab's root, with nothing to go back to: [onBack] null draws no Back, and
  * "List" goes to [onList] (the app switches to the Home tab).
+ *
+ * M3-M0b (handoff §1, option 1b): with the Search tab gone, the header carries a search button
+ * ([onSearch]; null draws none) that opens the full-screen search, as Home's field does.
  */
 @Composable
 internal fun TripMapScreen(
@@ -83,6 +92,7 @@ internal fun TripMapScreen(
     onTripClick: (slug: String) -> Unit,
     modifier: Modifier = Modifier,
     onList: () -> Unit = { onBack?.invoke() },
+    onSearch: (() -> Unit)? = null,
     viewModel: TripMapViewModel = koinViewModel(),
     map: MapContent = { scene, onPin, onMap, padding, mod -> TripMap(scene, onPin, onMap, padding, mod) },
 ) {
@@ -97,7 +107,7 @@ internal fun TripMapScreen(
                 // The note under the panel used to keep it off the gesture area; now the panel does.
                 .windowInsetsPadding(WindowInsets.navigationBars),
     ) {
-        MapTopBar(onBack = onBack, onList = onList)
+        MapTopBar(onBack = onBack, onList = onList, onSearch = onSearch)
         val panelShape = BahrTheme.shapes.hero
         Box(
             modifier =
@@ -181,6 +191,7 @@ private fun MapPanel(
 private fun MapTopBar(
     onBack: (() -> Unit)?,
     onList: () -> Unit,
+    onSearch: (() -> Unit)?,
 ) {
     Row(
         // With no Back (the tab root), the title starts at the page's gutter.
@@ -202,12 +213,26 @@ private fun MapTopBar(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f).semantics { heading() },
         )
+        // Search (M3-M0b): a plain 48dp icon before "List", so the header keeps its one pill.
+        onSearch?.let {
+            IconButton(onClick = it, modifier = Modifier.size(BahrSize.touchTarget).testTag(MAP_SEARCH_TAG)) {
+                Icon(
+                    BahrIcons.Search.outlined(),
+                    contentDescription = stringResource(Res.string.search_hint),
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(BahrSize.iconNav),
+                )
+            }
+        }
         // The prototype's "List": back to Home's list (since M4-M8, the Home tab).
         BahrPillButton(
             props = BahrPillButton.Props(text = stringResource(Res.string.map_list), icon = BahrIcons.FormatListBulleted, onClick = onList),
         )
     }
 }
+
+/** For tests: the header's search button (M3-M0b). */
+internal const val MAP_SEARCH_TAG = "map_search"
 
 /** The legend's entry among the bottom chrome heights (cards are keyed by their pin's slug). */
 private const val LEGEND_KEY = ""

@@ -24,8 +24,8 @@ import eg.bahr.deeplink.DeepLinkParser
 import eg.bahr.deeplink.TripLinkPlacement
 import eg.bahr.deeplink.tripLinkPlacement
 import eg.bahr.di.AppLanguageState
-import eg.bahr.feature.auth.navigation.deleteAccountDialog
-import eg.bahr.feature.auth.navigation.navigateToDeleteAccount
+import eg.bahr.feature.auth.navigation.DeleteAccountSheetSlot
+import eg.bahr.feature.auth.navigation.SignInButtonsSlot
 import eg.bahr.feature.auth.navigation.navigateToSignIn
 import eg.bahr.feature.auth.navigation.signInScreen
 import eg.bahr.feature.booking.navigation.ContinueBookingSlot
@@ -45,17 +45,21 @@ import eg.bahr.feature.map.navigation.TripMapRoute
 import eg.bahr.feature.map.navigation.tripMapScreen
 import eg.bahr.feature.mytrips.navigation.MyTripsRoute
 import eg.bahr.feature.mytrips.navigation.myTripsScreen
-import eg.bahr.feature.settings.navigation.SettingsRoute
-import eg.bahr.feature.settings.navigation.settingsScreen
+import eg.bahr.feature.notifications.navigation.NotificationsRoute
+import eg.bahr.feature.notifications.navigation.notificationsScreen
+import eg.bahr.feature.settings.navigation.ProfileRoute
+import eg.bahr.feature.settings.navigation.editPersonalInfoScreen
+import eg.bahr.feature.settings.navigation.navigateToEditPersonalInfo
+import eg.bahr.feature.settings.navigation.profileScreen
 import eg.bahr.feature.splash.navigation.SplashRoute
 import eg.bahr.feature.splash.navigation.splashScreen
-import eg.bahr.feature.trips.navigation.SearchTripsRoute
 import eg.bahr.feature.trips.navigation.categoryTripsScreen
 import eg.bahr.feature.trips.navigation.hostProfileScreen
 import eg.bahr.feature.trips.navigation.isOpenedFromHome
 import eg.bahr.feature.trips.navigation.navigateToCategoryTrips
 import eg.bahr.feature.trips.navigation.navigateToHostProfile
 import eg.bahr.feature.trips.navigation.navigateToReviews
+import eg.bahr.feature.trips.navigation.navigateToSearchTrips
 import eg.bahr.feature.trips.navigation.navigateToSectionTrips
 import eg.bahr.feature.trips.navigation.navigateToTripDetail
 import eg.bahr.feature.trips.navigation.reviewsScreen
@@ -75,10 +79,11 @@ import org.koin.compose.koinInject
  * after it. Screens stay `internal` to their feature.
  *
  * Every tab has the same graph and its own NavController, so each keeps its own back stack: a trip
- * opened from search stays in the Search tab while Home keeps its scroll. Only the start differs:
- * Home (after splash, once per process), search, the map, My trips, Settings. Android composes the selected
- * tab's NavHost under its bar ([AppTabs]); iOS hosts one per tab, each in its own Compose root under
- * SwiftUI's `TabView`.
+ * opened from the map stays in the Map tab while Home keeps its scroll. Only the start differs: Home
+ * (after splash, once per process), the map, My trips, Alerts, Profile (M3-M0b). Android composes the
+ * selected tab's NavHost under its Compose bar ([AppTabs]); iOS hosts one per tab, each in its own
+ * Compose root under SwiftUI's `TabView`, fed by `IosTabs`. Search is no tab since M3-M0b: it is pushed in
+ * the tab that opened it (Home's field, the Map header), bar hidden, and reopens on the last search.
  *
  * The NavHost reports to [tabs] whether its root is on top, which is what shows or hides the bar, and
  * takes re-taps of its tab from it: off the root, back to the root; on it, back to the top.
@@ -103,13 +108,12 @@ fun AppNavHost(
 
     // The bar shows on this tab's root only.
     val entry by navController.currentBackStackEntryAsState()
-    // A dialog destination (delete account, M3-M0) floats over its screen: the bar follows that screen.
-    val screen = if (entry?.destination?.navigatorName == DIALOG_NAVIGATOR) navController.previousBackStackEntry else entry
-    val atRoot = screen?.destination?.let { tab.isRoot(it) }
+    // No dialog destinations since M3-M0b (sheets instead of dialogs): the bar follows the top entry.
+    val atRoot = entry?.destination?.let { tab.isRoot(it) }
     LaunchedEffect(atRoot) { atRoot?.let { tabs.reportAtRoot(tab, it) } }
 
-    // Re-taps of this tab, and Home's search entry (Search only). Both reach the root's screen through
-    // a conflated channel, which holds a signal until the screen collects it (a first visit).
+    // Re-taps of this tab reach the root's screen through a conflated channel, which holds a signal until
+    // the screen collects it (a first visit).
     val scrollToTop = remember { Channel<Unit>(Channel.CONFLATED) }
     val scrollRequests = remember { scrollToTop.receiveAsFlow() }
     LaunchedEffect(navController, tabs) {
@@ -117,16 +121,6 @@ fun AppNavHost(
             when (AppTabsState.reselectAction(atRoot = navController.isAt(tab))) {
                 AppTabsState.ReselectAction.PopToRoot -> navController.popBackStack(tab.rootRoute, inclusive = false)
                 AppTabsState.ReselectAction.ScrollToTop -> scrollToTop.trySend(Unit)
-            }
-        }
-    }
-    val searchFocus = remember { Channel<Unit>(Channel.CONFLATED) }
-    val searchFocusRequests = remember { searchFocus.receiveAsFlow() }
-    if (tab == AppTab.Search) {
-        LaunchedEffect(navController, tabs) {
-            tabs.searchFocusRequests().collect {
-                navController.popBackStack(tab.rootRoute, inclusive = false)
-                searchFocus.trySend(Unit)
             }
         }
     }
@@ -174,8 +168,8 @@ fun AppNavHost(
                         is HomeAction.OpenSection -> navController.navigateToSectionTrips(action.sectionId, action.title, action.sharedKey)
                     }
                 },
-                // Search and the map are tabs (M4-M8): Home's entry and pill switch to them.
-                onSearch = tabs::openSearch,
+                // Search opens full screen in this tab (M3-M0b); the map is a tab (M4-M8), which the pill switches to.
+                onSearch = { navController.navigateToSearchTrips() },
                 onMap = { tabs.select(AppTab.Map) },
                 // Home slides aside for the pages it opens (M4-M6), all other features' since M4-M1c.
                 opensFromHome = { it.isOpenedFromHome() },
@@ -183,31 +177,43 @@ fun AppNavHost(
                 scrollToTop = scrollRequests,
             )
 
-            // The Map tab's root: no Back; its "List" is Home.
+            // The Map tab's root: no Back; its "List" is Home, its search button the full-screen search.
             tripMapScreen(
                 onBack = null,
                 onList = { tabs.select(AppTab.Home) },
+                onSearch = { navController.navigateToSearchTrips() },
                 onTripClick = navController::navigateToTripDetail,
                 reducedMotion = reducedMotion,
             )
 
-            // The Search tab's root: no Back, and the field takes the focus when Home's entry asks.
+            // Search (M3-M0b: no longer a tab), pushed from Home's field or the Map header; the field takes
+            // the focus as it opens.
             searchTripsScreen(
-                onBack = null,
+                onBack = { navController.popBackStack() },
                 onTripClick = navController::navigateToTripDetail,
                 isHome = { it.isHome() },
                 reducedMotion = reducedMotion,
-                focusOnEntry = false,
-                focusRequests = searchFocusRequests,
+            )
+
+            // The Profile tab's root (M3-M0b; Settings before): feature:auth's sign-in buttons when signed
+            // out, and its delete-account dialog.
+            profileScreen(
+                appVersion = appVersion,
+                signInButtons = { modifier -> SignInButtonsSlot(modifier) },
+                onEditPersonalInfo = navController::navigateToEditPersonalInfo,
+                deleteAccountSheet = { onDismiss -> DeleteAccountSheetSlot(onDismiss) },
                 scrollToTop = scrollRequests,
             )
 
-            settingsScreen(
-                appVersion = appVersion,
+            editPersonalInfoScreen(
+                onBack = { navController.popBackStack() },
+                onSaved = { navController.popBackStack() },
+            )
+
+            // The Alerts tab's root (M3-M0b): the empty or signed-out state until M3-B9 / M3-M6.
+            notificationsScreen(
+                signInButtons = { modifier -> SignInButtonsSlot(modifier) },
                 scrollToTop = scrollRequests,
-                // The account row (M3-M0): both open feature:auth's destinations over Settings.
-                onSignIn = navController::navigateToSignIn,
-                onDeleteAccount = navController::navigateToDeleteAccount,
             )
 
             // The My trips tab's root (M3-M0): signed out it offers the sign-in sheet; a row opens its trip.
@@ -222,11 +228,6 @@ fun AppNavHost(
             signInScreen(
                 onDone = { navController.popBackStack() },
                 onClose = { navController.popBackStack() },
-            )
-
-            deleteAccountDialog(
-                onDone = { navController.popBackStack() },
-                onCancel = { navController.popBackStack() },
             )
 
             categoryTripsScreen(
@@ -279,9 +280,6 @@ fun AppNavHost(
     }
 }
 
-/** navigation-compose's name for the navigator of `dialog<…>` destinations. */
-private const val DIALOG_NAVIGATOR = "dialog"
-
 /** Home starts on splash until splash has run once in this process. */
 internal fun AppTab.startRoute(splashDone: Boolean): Any = if (this == AppTab.Home && !splashDone) SplashRoute else rootRoute
 
@@ -293,20 +291,20 @@ internal val AppTab.rootRoute: Any
     get() =
         when (this) {
             AppTab.Home -> TripListRoute
-            AppTab.Search -> SearchTripsRoute
             AppTab.Map -> TripMapRoute
             AppTab.MyTrips -> MyTripsRoute
-            AppTab.Settings -> SettingsRoute
+            AppTab.Alerts -> NotificationsRoute
+            AppTab.Profile -> ProfileRoute
         }
 
 /** Whether [destination] is [this] tab's root: the bar shows there only. */
 internal fun AppTab.isRoot(destination: NavDestination): Boolean =
     when (this) {
         AppTab.Home -> destination.hasRoute<TripListRoute>()
-        AppTab.Search -> destination.hasRoute<SearchTripsRoute>()
         AppTab.Map -> destination.hasRoute<TripMapRoute>()
         AppTab.MyTrips -> destination.hasRoute<MyTripsRoute>()
-        AppTab.Settings -> destination.hasRoute<SettingsRoute>()
+        AppTab.Alerts -> destination.hasRoute<NotificationsRoute>()
+        AppTab.Profile -> destination.hasRoute<ProfileRoute>()
     }
 
 internal fun NavController.isAt(tab: AppTab): Boolean = currentBackStackEntry?.destination?.let { tab.isRoot(it) } == true

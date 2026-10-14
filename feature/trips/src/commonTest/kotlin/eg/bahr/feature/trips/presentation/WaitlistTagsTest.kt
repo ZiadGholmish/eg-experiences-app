@@ -8,6 +8,7 @@ import eg.bahr.core.testing.runViewModelTest
 import eg.bahr.core.testing.storedJoin
 import eg.bahr.feature.trips.data.FakeRecentSearchesStore
 import eg.bahr.feature.trips.data.FakeTripRepository
+import eg.bahr.feature.trips.data.LastSearch
 import eg.bahr.feature.trips.data.TripFixtures.page
 import eg.bahr.feature.trips.data.TripFixtures.sectionPage
 import eg.bahr.feature.trips.data.TripFixtures.trip
@@ -46,7 +47,7 @@ class WaitlistTagsTest {
 
             val category = CategoryTripsViewModel("birds", null, repository, memory)
             val section = SectionTripsViewModel("s-1", null, repository, memory)
-            val search = SearchTripsViewModel(repository, FakeRecentSearchesStore(), memory)
+            val search = SearchTripsViewModel(repository, FakeRecentSearchesStore(), memory, LastSearch())
             advanceUntilIdle()
 
             listOf(

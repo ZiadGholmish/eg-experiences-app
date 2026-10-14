@@ -21,6 +21,8 @@ kotlin {
             // BahrFormat takes LocalDate / LocalTime (tokens: 24h, Western digits).
             implementation(libs.kotlinx.datetime)
             implementation(libs.kotlinx.coroutines.core)
+            // RefreshesOnReturn (M3-M0b): a screen's resume, shared by My trips and Profile. A library, not a module edge.
+            implementation(libs.androidx.lifecycle.runtimeCompose)
         }
         commonTest.dependencies {
             implementation(projects.core.testing)

@@ -19,8 +19,6 @@ import eg.bahr.feature.trips.presentation.ReviewsScreen
 import eg.bahr.feature.trips.presentation.SearchTripsScreen
 import eg.bahr.feature.trips.presentation.SectionTripsScreen
 import eg.bahr.feature.trips.presentation.TripDetailScreen
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.emptyFlow
 
 /*
  * The trips feature's public surface: destinations for the app's NavHost, and how to reach them.
@@ -194,27 +192,17 @@ fun NavGraphBuilder.sectionTripsScreen(
  * Search (M4-M3). Back is [onBack]; the search and its results are kept while a trip opened from
  * them is on top (the view model lives with this back-stack entry).
  *
- * M4-M8: the Search tab's root. [onBack] null: no Back. [focusOnEntry] false: the field takes the
- * focus on [focusRequests] (Home's search entry) rather than whenever the tab shows. [scrollToTop]: a
- * re-tap of the selected tab.
+ * Since M3-M0b search is no tab: Home's field and the Map header push it in their own tab, its field
+ * takes the focus as it opens, and reopening it shows the last search again (user decision 2026-10-14).
  */
 fun NavGraphBuilder.searchTripsScreen(
-    onBack: (() -> Unit)?,
+    onBack: () -> Unit,
     onTripClick: (slug: String) -> Unit,
     isHome: (NavBackStackEntry) -> Boolean,
     reducedMotion: () -> Boolean = { false },
-    focusOnEntry: Boolean = true,
-    focusRequests: Flow<Unit> = emptyFlow(),
-    scrollToTop: Flow<Unit> = emptyFlow(),
 ) {
     openedFromHome<SearchTripsRoute>(isHome, reducedMotion) {
-        SearchTripsScreen(
-            onBack = onBack,
-            onTripClick = onTripClick,
-            focusOnEntry = focusOnEntry,
-            focusRequests = focusRequests,
-            scrollToTop = scrollToTop,
-        )
+        SearchTripsScreen(onBack = onBack, onTripClick = onTripClick)
     }
 }
 
@@ -244,7 +232,9 @@ private inline fun <reified T : Any> NavGraphBuilder.openedFromHome(
 fun NavBackStackEntry.isOpenedFromHome(): Boolean =
     destination.hasRoute<CategoryTripsRoute>() || destination.hasRoute<SectionTripsRoute>() || destination.hasRoute<SearchTripsRoute>()
 
-fun NavController.navigateToSearchTrips(builder: NavOptionsBuilder.() -> Unit = {}) = navigate(SearchTripsRoute, builder)
+/** Single-top: a quick double tap on Home's field or the Map button opens one search. */
+fun NavController.navigateToSearchTrips(builder: NavOptionsBuilder.() -> Unit = { launchSingleTop = true }) =
+    navigate(SearchTripsRoute, builder)
 
 /** [sharedKey]: the Home element that morphs into the page's header (feature:home's `HomeAction.OpenCategory.sharedKey`). */
 fun NavController.navigateToCategoryTrips(

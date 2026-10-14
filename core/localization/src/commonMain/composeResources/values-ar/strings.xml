@@ -302,13 +302,10 @@
     <!-- The bottom bar (M4-M8): one label per tab. The iOS tab bar reads the same strings (handed to Swift by
          the shared code), so these are the only copies. -->
     <string name="tab_home">الرئيسية</string>
-    <string name="tab_search">بحث</string>
-    <string name="tab_map">خريطة</string>
-    <string name="tab_settings">الإعدادات</string>
+    <string name="tab_map">الخريطة</string>
 
     <!-- Settings (M4-M8). The language names are each written in their own language (the prototype's
          langBtn), so a reader finds theirs whatever the app is showing. -->
-    <string name="settings_title">الإعدادات</string>
     <string name="settings_language">اللغة</string>
     <string name="settings_language_arabic">العربية</string>
     <string name="settings_language_english">English</string>
@@ -318,30 +315,24 @@
     <!-- Sign-in (M3-M0). -->
     <string name="auth_title">سجّل دخولك في بحر</string>
     <string name="auth_body">سجّل دخولك عشان تشوف رحلاتك وتدفع الحجز. التصفح وحجز المقاعد مؤقتًا وقوائم الانتظار شغالين من غير حساب.</string>
-    <string name="auth_continue_apple">متابعة باستخدام Apple</string>
-    <string name="auth_continue_google">متابعة باستخدام Google</string>
+    <string name="auth_continue_apple">المتابعة باستخدام Apple</string>
+    <string name="auth_continue_google">المتابعة باستخدام Google</string>
     <string name="auth_unavailable">تسجيل الدخول مش متاح في النسخة دي.</string>
     <string name="auth_close">اقفل</string>
     <string name="auth_failed">مقدرناش ندخّلك. جرّب تاني.</string>
     <string name="auth_privacy_note">بنستخدم اسمك ورقمك للحجوزات بس، وعشان المضيف يقدر يكلمك.</string>
-    <string name="auth_profile_title">شوية بيانات</string>
-    <string name="auth_profile_body">المضيف بيستخدمهم عشان يوصلك يوم الرحلة. تقدر تغيّرهم بعدين.</string>
+    <string name="auth_profile_title">فاضل خطوة صغيرة</string>
+    <string name="auth_profile_body">محتاجين اسمك ورقم موبايلك عشان المضيف يعرف مين جاي ويكلمك يوم الرحلة.</string>
     <string name="auth_profile_name">الاسم بالكامل</string>
     <string name="auth_profile_phone">رقم الموبايل</string>
-    <string name="auth_profile_phone_invalid">اكتب رقم موبايل صحيح.</string>
     <string name="auth_profile_save">احفظ</string>
     <string name="auth_profile_later">بعدين</string>
     <string name="auth_delete_title">تمسح حسابك؟</string>
-    <string name="auth_delete_body">حسابك وتسجيل دخولك وقوائم الانتظار بتاعتك هيتمسحوا. الحجوزات بتفضل عندنا في السجلات من غير اسمك ولا رقمك. مفيش رجوع في الخطوة دي.</string>
+    <string name="auth_delete_body">الخطوة دي مش بترجع.</string>
     <string name="auth_delete_confirm">امسح الحساب</string>
-    <string name="auth_delete_cancel">سيب حسابي</string>
+    <string name="auth_delete_cancel">لأ، خلّيه</string>
     <string name="auth_delete_host">الحساب ده كمان حساب مضيف. كلّمنا عشان نشيله.</string>
 
-    <string name="settings_account">الحساب</string>
-    <string name="settings_sign_in">تسجيل الدخول</string>
-    <string name="settings_sign_in_note">سجّل دخولك عشان تشوف رحلاتك وتدفع.</string>
-    <string name="settings_signed_in_as">داخل باسم %1$s</string>
-    <string name="settings_signed_in">إنت مسجّل دخولك</string>
     <string name="settings_sign_out">تسجيل الخروج</string>
     <string name="settings_delete_account">امسح الحساب</string>
 
@@ -377,4 +368,55 @@
         <item quantity="other">%1$d فرد</item>
     </plurals>
     <string name="error_account_unauthorized">خرجت من حسابك. سجّل دخولك تاني.</string>
+
+    <!-- M3-M0b: الشريط اللي تحت، حسابي، البيانات الشخصية، شيت أول تسجيل، مسح الحساب، وتبويب الإشعارات. -->
+    <string name="tab_alerts">الإشعارات</string>
+    <string name="tab_profile">حسابي</string>
+    <string name="nav_item_unread">%1$s، %2$s جديدة</string>
+    <string name="nav_badge_more_than">أكتر من 9</string>
+    <string name="profile_title">حسابي</string>
+    <string name="profile_welcome_title">أهلًا بيك في بحر</string>
+    <string name="profile_welcome_body">سجّل دخول عشان تدفع وتتابع حجوزاتك من أي موبايل.</string>
+    <string name="profile_without_account">من غير حساب تقدر:</string>
+    <string name="profile_can_browse">تتفرج على الرحلات والخريطة</string>
+    <string name="profile_can_hold">تحجز أماكن مؤقتًا لمدة 15 دقيقة</string>
+    <string name="profile_can_waitlist">تدخل قائمة الانتظار</string>
+    <string name="profile_about">عن بحر</string>
+    <string name="profile_personal_info">البيانات الشخصية</string>
+    <string name="profile_name_phone">%1$s · %2$s</string>
+    <string name="profile_provider_email">%1$s · %2$s</string>
+    <string name="profile_provider_hidden">Apple · الإيميل مخفي من Apple</string>
+    <string name="profile_saved">اتحفظ</string>
+    <string name="edit_intro">اسمك ورقمك بيوصلوا للمضيف بس، عشان يعرف مين جاي ويكلمك يوم الرحلة.</string>
+    <string name="edit_email">الإيميل</string>
+    <string name="edit_email_note">جاي من حساب %1$s ومش بيتغير من هنا.</string>
+    <string name="edit_email_hidden">مخفي من Apple</string>
+    <string name="edit_email_hidden_note">جاي من حساب Apple، وApple مخبّية إيميلك الحقيقي.</string>
+    <string name="edit_phone_note">مش هنبعتلك كود تأكيد، فاتأكد إن الرقم صح عشان المضيف يعرف يوصلك.</string>
+    <string name="edit_saving">بنحفظ…</string>
+    <string name="account_phone_help">رقم مصري 11 رقم، بيبدأ بـ 010 أو 011 أو 012 أو 015</string>
+    <string name="account_phone_empty">اكتب رقم موبايلك.</string>
+    <string name="account_phone_short">الرقم ناقص. لازم يكون 11 رقم ويبدأ بـ 010 أو 011 أو 012 أو 015</string>
+    <string name="account_phone_long">الرقم زيادة. لازم يكون 11 رقم ويبدأ بـ 010 أو 011 أو 012 أو 015</string>
+    <string name="account_phone_start">لازم الرقم يبدأ بـ 010 أو 011 أو 012 أو 015</string>
+    <string name="account_phone_count">%1$d/%2$d</string>
+    <string name="account_name_invalid">اكتب اسمك، من 2 لـ 60 حرف.</string>
+    <string name="auth_profile_name_from">من حساب %1$s</string>
+    <string name="auth_profile_later_note">هنسألك تاني وإنت بتدفع.</string>
+    <string name="auth_delete_gone">هنمسح اسمك ورقم موبايلك والإيميل اللي داخل بيه.</string>
+    <string name="auth_delete_kept">حجوزاتك هتفضل محفوظة عند المضيف من غير اسم ولا رقم، عشان حساب المقاعد والفلوس.</string>
+    <string name="alerts_title">الإشعارات</string>
+    <string name="alerts_empty_title">مفيش إشعارات لسه</string>
+    <string name="alerts_empty_body">هنقولك هنا لما حجزك يتأكد، أو مكان يفضى في رحلة مستنيها، أو المضيف يبعتلك.</string>
+    <string name="alerts_signed_out_title">سجّل دخول عشان توصلك الإشعارات</string>
+    <string name="alerts_signed_out_body">الإشعارات مربوطة بحجوزاتك، فمحتاجين نعرف إنت مين.</string>
+    <!-- Brand names, written as their owners write them in either language. -->
+    <string name="provider_google">Google</string>
+    <string name="provider_apple">Apple</string>
+    <!-- The mobile field's placeholder: the shape of a number. -->
+    <string name="account_phone_placeholder">01xxxxxxxxx</string>
+    <string name="profile_appearance">المظهر</string>
+    <string name="appearance_light">فاتح</string>
+    <string name="appearance_dark">غامق</string>
+    <string name="appearance_system">زي الموبايل</string>
 </resources>

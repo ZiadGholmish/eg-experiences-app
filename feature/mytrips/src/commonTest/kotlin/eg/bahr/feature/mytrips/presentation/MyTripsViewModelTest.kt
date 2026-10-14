@@ -19,7 +19,8 @@ import kotlin.test.assertTrue
 
 /**
  * My trips (M3-M0): signed out, the device's joins with what the device knows; signed in, the
- * segment's bookings page by page and the waiting list read on sign-in and on each visit to it.
+ * segment's bookings page by page and the waiting list read on sign-in and on each visit to it; since
+ * M3-M0b each return to the screen reads the segment again.
  */
 class MyTripsViewModelTest {
     private val signedIn = SessionState.SignedIn("Sara", profileComplete = true, providers = setOf("google"))
@@ -143,5 +144,41 @@ class MyTripsViewModelTest {
             accountB.complete(AppResult.Success(emptyList()))
             advanceUntilIdle()
             assertEquals(WaitlistLoad.Loaded(emptyList()), vm.uiState.value.waitlist)
+        }
+
+    /** M3-M0 review #11: each return to My trips reads Upcoming / Past again (a hold just placed shows). */
+    @Test
+    fun `a visit reads the segment's bookings again`() =
+        runViewModelTest {
+            val repository = FakeMyTripsRepository(session = signedIn)
+            val vm = MyTripsViewModel(repository)
+            advanceUntilIdle()
+
+            // The list is shown (a snapshot collects it), then the screen comes back.
+            val shown = vm.bookings.asSnapshot { vm.refresh() }
+
+            assertEquals(listOf(BookingList.Upcoming to 0, BookingList.Upcoming to 0), repository.bookingReads)
+            assertEquals(listOf("BRL-7K4M2X9P", "BRL-9Q3R5T7V"), shown.map { it.ref })
+        }
+
+    @Test
+    fun `a visit on the waiting list reads it again - signed out a visit reads nothing`() =
+        runViewModelTest {
+            val repository = FakeMyTripsRepository(session = signedIn)
+            val vm = MyTripsViewModel(repository)
+            advanceUntilIdle()
+            vm.selectSegment(MyTripsSegment.Waitlist)
+            advanceUntilIdle()
+            val reads = repository.waitlistReads
+
+            vm.refresh()
+            advanceUntilIdle()
+            assertEquals(reads + 1, repository.waitlistReads)
+
+            repository.sessionState.value = SessionState.SignedOut
+            advanceUntilIdle()
+            vm.refresh()
+            advanceUntilIdle()
+            assertEquals(reads + 1, repository.waitlistReads)
         }
 }

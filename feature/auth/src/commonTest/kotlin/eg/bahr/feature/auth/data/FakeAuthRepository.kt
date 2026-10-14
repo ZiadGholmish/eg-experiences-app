@@ -19,6 +19,27 @@ internal class FakeAuthRepository(
     val state = MutableStateFlow(initial)
     override val session: StateFlow<SessionState> = state
 
+    /** As the real repository: a sign-in without a complete profile asks for it. */
+    val prompt = MutableStateFlow<ProfilePrompt?>(null)
+    override val profilePrompt: StateFlow<ProfilePrompt?> = prompt
+
+    val draft = MutableStateFlow<ProfileDraft?>(null)
+    override val profileDraft: StateFlow<ProfileDraft?> = draft
+
+    override fun setProfileDraft(draft: ProfileDraft) {
+        if (prompt.value != null) this.draft.value = draft
+    }
+
+    override fun askForProfile(prompt: ProfilePrompt) {
+        draft.value = null
+        this.prompt.value = prompt
+    }
+
+    override fun closeProfilePrompt() {
+        draft.value = null
+        prompt.value = null
+    }
+
     val signIns = mutableListOf<SignInCall>()
     val profiles = mutableListOf<Pair<String, String>>()
     val deletions = mutableListOf<String?>()
@@ -37,7 +58,14 @@ internal class FakeAuthRepository(
         appleName: String?,
     ): AppResult<AccountDto> {
         signIns += SignInCall(provider, idToken, rawNonce, appleName)
-        return signIn.invoke(provider, idToken, rawNonce, appleName)
+        return signIn.invoke(provider, idToken, rawNonce, appleName).also { result ->
+            val account = (result as? AppResult.Success)?.data ?: return@also
+            if (!account.profileComplete) {
+                askForProfile(
+                    ProfilePrompt(account.name.orEmpty(), account.phone.orEmpty(), account.providers.firstOrNull()),
+                )
+            }
+        }
     }
 
     override suspend fun updateProfile(

@@ -10,6 +10,7 @@ import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.testing.runViewModelTest
 import eg.bahr.feature.trips.data.FakeRecentSearchesStore
 import eg.bahr.feature.trips.data.FakeTripRepository
+import eg.bahr.feature.trips.data.LastSearch
 import eg.bahr.feature.trips.data.TripFixtures.facets
 import eg.bahr.feature.trips.data.TripFixtures.page
 import eg.bahr.feature.trips.data.TripFixtures.sectionPage
@@ -41,7 +42,7 @@ class ListRequestThrottlingTest {
     fun `the same search is not sent again - outer spaces or the search key change nothing`() =
         runViewModelTest {
             val repository = FakeTripRepository(listFiltered = { q -> page(listOf(trip(1, title = "${q.q}"))) })
-            val vm = SearchTripsViewModel(repository, FakeRecentSearchesStore(), waitlistMemory())
+            val vm = SearchTripsViewModel(repository, FakeRecentSearchesStore(), waitlistMemory(), LastSearch())
             present(vm.trips)
 
             vm.onTextChange("felucca")
@@ -130,7 +131,7 @@ class ListRequestThrottlingTest {
     fun `a burst of Retry in search is one request`() =
         runViewModelTest {
             val repository = FakeTripRepository(listFiltered = { AppResult.Failure(AppError.Network) })
-            val vm = SearchTripsViewModel(repository, FakeRecentSearchesStore(), waitlistMemory())
+            val vm = SearchTripsViewModel(repository, FakeRecentSearchesStore(), waitlistMemory(), LastSearch())
             present(vm.trips)
             vm.search() // Nothing typed: nothing to search.
             vm.onTextChange("birds")

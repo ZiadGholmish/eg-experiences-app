@@ -18,7 +18,8 @@ data object TripMapRoute
 /**
  * The map feature's public surface. A trip opened from a pin goes to [onTripClick] (the app wires it
  * to the trips feature); Back goes to [onBack] (null: no Back, as the Map tab's root, M4-M8) and the
- * bar's "List" to [onList].
+ * bar's "List" to [onList]. [onSearch] (M3-M0b) is the header's search button: the full-screen search,
+ * feature:trips', wired in :composeApp.
  *
  * M4-M6's transition: the map is only ever opened from Home, so it always comes in with the shared
  * slide + fade and leaves the same way on Back. Home does its half when the app tells `tripListScreen`
@@ -30,12 +31,13 @@ fun NavGraphBuilder.tripMapScreen(
     onTripClick: (slug: String) -> Unit,
     reducedMotion: () -> Boolean = { false },
     onList: () -> Unit = { onBack?.invoke() },
+    onSearch: (() -> Unit)? = null,
 ) {
     composable<TripMapRoute>(
         enterTransition = { bahrForwardEnter(reducedMotion()) },
         popExitTransition = { bahrBackExit(reducedMotion()) },
     ) {
-        TripMapScreen(onBack = onBack, onTripClick = onTripClick, onList = onList)
+        TripMapScreen(onBack = onBack, onTripClick = onTripClick, onList = onList, onSearch = onSearch)
     }
 }
 

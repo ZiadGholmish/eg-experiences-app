@@ -56,6 +56,7 @@ include(":feature:settings")
 include(":feature:auth")
 // The My trips tab (M3-M0).
 include(":feature:mytrips")
+include(":feature:notifications")
 
 // JVM, test-only: ModuleGraphTest (Konsist) enforces the bahr-modularization rules.
 include(":architecture-tests")

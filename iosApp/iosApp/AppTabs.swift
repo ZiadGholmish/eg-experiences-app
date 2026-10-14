@@ -2,45 +2,46 @@ import ComposeApp
 import SwiftUI
 import UIKit
 
-/// The bottom bar's tabs (M4-M8), as Swift names them. The order, and everything about what a tab
+/// The bottom bar's tabs (M4-M8; since M3-M0b Home · Map · My trips · Alerts · Profile), as Swift names them. The order, and everything about what a tab
 /// shows, is the shared code's (`AppTab` in composeApp); this only maps each one to an SF Symbol and a
 /// stable string for the stored selection.
 enum BahrTab: String, CaseIterable {
-    case home, search, map, mytrips, settings
+    case home, map, mytrips, alerts, profile
 
     var kotlin: AppTab {
         switch self {
         case .home: return .home
-        case .search: return .search
         case .map: return .map
         case .mytrips: return .mytrips
-        case .settings: return .settings
+        case .alerts: return .alerts
+        case .profile: return .profile
         }
     }
 
     init(_ tab: AppTab) {
         switch tab {
-        case .search: self = .search
         case .map: self = .map
         case .mytrips: self = .mytrips
-        case .settings: self = .settings
+        case .alerts: self = .alerts
+        case .profile: self = .profile
         default: self = .home
         }
     }
 
-    /// SF Symbols, the iOS counterpart of the Android bar's Material Symbols.
+    /// SF Symbols, the iOS counterpart of the Android bar's Material Symbols (the handoff's `home`, `map`,
+    /// `confirmation_number`, `notifications`, `person`).
     var symbol: String {
         switch self {
         case .home: return "house"
-        case .search: return "magnifyingglass"
         case .map: return "map"
-        case .mytrips: return "suitcase"
-        case .settings: return "gearshape"
+        case .mytrips: return "ticket"
+        case .alerts: return "bell"
+        case .profile: return "person"
         }
     }
 
-    /// Selected: the filled form, as on Android. The magnifying glass has no filled form.
-    var selectedSymbol: String { self == .search ? symbol : symbol + ".fill" }
+    /// Selected: the filled form, as on Android.
+    var selectedSymbol: String { symbol + ".fill" }
 
     /// The order the shared code sends titles in (`AppTab.entries`).
     var index: Int { BahrTab.allCases.firstIndex(of: self) ?? 0 }
@@ -62,8 +63,15 @@ final class TabBarModel: NSObject, ObservableObject, AppTabBar {
     @Published private(set) var titles: [String] = []
     @Published private(set) var languageTag = "ar"
     @Published private(set) var rightToLeft = true
-    /// Each tab's colour when selected, from the shared theme's tab tones. Empty: the system accent.
-    @Published private(set) var tints: [UIColor] = []
+    /// What VoiceOver says for each tab: its name, with the unread count inside (handoff §1).
+    @Published private(set) var spokenLabels: [String] = []
+    /// Each tab's badge ("3", "9+"), "" for none. None until M3-B9 brings the unread count.
+    @Published private(set) var badges: [String] = []
+    /// Profile → Appearance (M3-M0b): light (the default), dark, or nil to follow the phone. The whole
+    /// window takes it, so the bar and every tab's Compose root agree.
+    @Published private(set) var colorScheme: ColorScheme? = .light
+    /// The selected tab's colour, from the shared theme. Nil: the system accent.
+    @Published private(set) var selectedTintColor: UIColor?
     /// Home starts on splash, which is not a tab root.
     @Published private(set) var hiddenOn: Set<BahrTab> = [.home]
 
@@ -88,9 +96,19 @@ final class TabBarModel: NSObject, ObservableObject, AppTabBar {
         return Image(uiImage: symbol)
     }
 
-    /// The bar's accent: the selected tab's own colour. The iOS 26 glass bar tints every selected item
-    /// with one accent (there is no per-item tint), so the colour follows the selection instead.
-    var selectedTint: Color? { tints.indices.contains(selected.index) ? Color(uiColor: tints[selected.index]) : nil }
+    /// The bar's accent for the selected item (one colour for every tab since M3-M0b, as on Android).
+    var selectedTint: Color? { selectedTintColor.map { Color(uiColor: $0) } }
+
+    /// The tab's badge, or nil for none (SwiftUI draws no badge for nil).
+    func badge(_ tab: BahrTab) -> Text? {
+        guard badges.indices.contains(tab.index), !badges[tab.index].isEmpty else { return nil }
+        return Text(badges[tab.index])
+    }
+
+    /// The label VoiceOver reads for [tab]: the badge is not read on its own (handoff §1).
+    func spokenLabel(_ tab: BahrTab) -> String {
+        spokenLabels.indices.contains(tab.index) ? spokenLabels[tab.index] : title(tab)
+    }
 
     func isBarHidden(_ tab: BahrTab) -> Bool { titles.isEmpty || hiddenOn.contains(tab) }
 
@@ -118,7 +136,15 @@ final class TabBarModel: NSObject, ObservableObject, AppTabBar {
 
     // MARK: AppTabBar (called by the shared code)
 
-    func showContent(languageTag: String, rightToLeft: Bool, titles: [String], tints: [UIColor], unselectedTint: UIColor) {
+    func showContent(
+        languageTag: String,
+        rightToLeft: Bool,
+        titles: [String],
+        spokenLabels: [String],
+        badges: [String],
+        selectedTint: UIColor,
+        unselectedTint: UIColor
+    ) {
         // The tabs not selected, muted (as on Android). Their icons are drawn already muted (`icon(_:)`);
         // their labels take the colour from the bar's item appearance. SwiftUI's TabView has no modifier
         // for that, and its UITabBar exists before this first call (hiding the bar does not delay it), so
@@ -130,10 +156,32 @@ final class TabBarModel: NSObject, ObservableObject, AppTabBar {
         if self.languageTag != languageTag { self.languageTag = languageTag }
         if self.rightToLeft != rightToLeft { self.rightToLeft = rightToLeft }
         if self.titles != titles { self.titles = titles }
-        if self.tints != tints { self.tints = tints }
+        if self.spokenLabels != spokenLabels { self.spokenLabels = spokenLabels }
+        if self.badges != badges { self.badges = badges }
+        if self.selectedTintColor != selectedTint { self.selectedTintColor = selectedTint }
     }
 
     func selectTab(tab: AppTab) { show(BahrTab(tab)) }
+
+    /// Profile → Appearance (M3-M0b). Called with the stored value before any tab draws, then on each pick.
+    /// SwiftUI's `preferredColorScheme` alone may keep the window's last forced style when it goes back
+    /// to nil, so the windows' own `overrideUserInterfaceStyle` is set as well, `.unspecified` for "Same
+    /// as phone" (M3-M0b review R4-5): every tab's Compose root reads its trait collection from it.
+    func applyAppearance(appearance: String) {
+        let scheme: ColorScheme? = appearance == "dark" ? .dark : appearance == "light" ? .light : nil
+        if colorScheme != scheme { colorScheme = scheme }
+        Self.applyWindowStyle(scheme)
+    }
+
+    /// The window style for [scheme]; also run when the window first appears (the first call comes
+    /// before SwiftUI has made it).
+    static func applyWindowStyle(_ scheme: ColorScheme?) {
+        let style: UIUserInterfaceStyle = scheme == .dark ? .dark : scheme == .light ? .light : .unspecified
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows)
+            .forEach { $0.overrideUserInterfaceStyle = style }
+    }
 
     /// The muted colour of the tabs not selected (the shared theme's onSurfaceVariant).
     @Published private(set) var unselectedTint: UIColor?

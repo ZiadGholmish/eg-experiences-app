@@ -3,24 +3,36 @@ package eg.bahr.feature.booking.presentation
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeDown
 import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
 import androidx.navigationevent.compose.rememberNavigationEventDispatcherOwner
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.designsystem.theme.BahrLocale
+import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.localization.ProvideAppLanguage
-import eg.bahr.core.testing.captureFullScreen
 import eg.bahr.core.testing.captureScreenshot
 import eg.bahr.feature.booking.data.BookingFixtures
 import eg.bahr.feature.booking.data.FakeActiveHoldStore
 import eg.bahr.feature.booking.data.FakeBookingRepository
 import eg.bahr.feature.booking.navigation.HoldRoute
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.datetime.LocalDate
 import org.junit.After
@@ -32,13 +44,14 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.util.Locale
+import kotlin.test.assertTrue
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
 /**
- * Held seats × {ar, en} × {loading, loaded, checking at 00:00, leave dialog}, through the real view
+ * Held seats × {ar, en} × {loading, loaded, checking at 00:00, the leave sheet}, through the real view
  * model on a fake repository and a clock that only moves when the test moves it, so the countdown in
  * each golden is fixed.
  *
@@ -156,8 +169,51 @@ class HoldScreenshotTest {
         show(language, vm)
         compose.runOnUiThread { vm.requestLeave() }
         compose.waitForIdle()
+        // The leave confirm is a bottom sheet since M3-M0b: let it slide fully up before the shot.
+        repeat(SHEET_FRAMES) { compose.mainClock.advanceTimeByFrame() }
         compose.mainClock.advanceTimeBy(SETTLE_MS)
-        compose.captureFullScreen("hold_leave_${language.tag}")
+        compose.waitForIdle()
+        compose.onNodeWithTag(LEAVE_STAY_TAG, useUnmergedTree = true).assertExists()
+        // The sheet's own window does not reach Robolectric's capture: the shot draws its inside, over
+        // the dimmed page, as the other sheets' goldens do.
+        val state = vm.uiState.value
+        compose.runOnUiThread { vm.dismissLeave() }
+        sheetShot.value = { LeaveSheetContent(state) }
+        compose.waitForIdle()
+        compose.mainClock.advanceTimeByFrame()
+        compose.captureScreenshot("hold_leave_${language.tag}")
+    }
+
+    /**
+     * M3-M0b review R4-2: while the release is under way the sheet cannot be swiped away (Material hides
+     * a sheet before it asks the screen), so a failure that comes back is shown in it, with "Leave anyway".
+     */
+    @Test
+    fun `while releasing a swipe keeps the leave sheet - and a failure then offers to leave anyway`() {
+        val answer = CompletableDeferred<AppResult<Unit>>()
+        val repository = answering(AppLanguage.ENGLISH).apply { releaseHold = { _, _ -> answer.await() } }
+        val vm = HoldViewModel(hold, repository, FakeActiveHoldStore(), clock)
+        show(AppLanguage.ENGLISH, vm)
+        compose.runOnUiThread { vm.requestLeave() }
+        frames()
+        compose.onNodeWithTag(LEAVE_CONFIRM_TAG, useUnmergedTree = true).performClick()
+        frames()
+        assertTrue(vm.uiState.value.isReleasing)
+
+        compose.onNodeWithText("Leave and release your seats?", useUnmergedTree = true).performTouchInput { swipeDown() }
+        frames()
+        compose.onNodeWithTag(LEAVE_STAY_TAG, useUnmergedTree = true).assertIsDisplayed()
+
+        answer.complete(AppResult.Failure(AppError.Network))
+        frames()
+        compose.onNodeWithText("Leave anyway", useUnmergedTree = true).assertIsDisplayed()
+        assertTrue(vm.uiState.value.isLeaveConfirmVisible)
+    }
+
+    private fun frames() {
+        compose.waitForIdle()
+        repeat(SHEET_FRAMES) { compose.mainClock.advanceTimeByFrame() }
+        compose.waitForIdle()
     }
 
     /** The re-read never answers (a slow network): the summary waits, the countdown does not. */
@@ -184,6 +240,9 @@ class HoldScreenshotTest {
         return FakeBookingRepository(heldBooking = { _, _ -> AppResult.Success(booking) })
     }
 
+    /** A sheet's inside drawn over the screen, as the sheet would show it (see [snapLeave]). */
+    private val sheetShot = mutableStateOf<(@Composable () -> Unit)?>(null)
+
     private fun show(
         language: AppLanguage,
         viewModel: HoldViewModel,
@@ -199,6 +258,17 @@ class HoldScreenshotTest {
                     ) {
                         Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
                             HoldScreen(hold = hold, onEnded = {}, alreadyHeldNotice = alreadyHeldNotice, viewModel = viewModel)
+                            sheetShot.value?.let { sheet ->
+                                Box(Modifier.fillMaxSize().background(BahrTheme.colors.scrim), contentAlignment = Alignment.BottomCenter) {
+                                    Box(
+                                        Modifier
+                                            .clip(
+                                                BahrTheme.shapes.sheet,
+                                            ).background(MaterialTheme.colorScheme.surface)
+                                            .padding(top = BahrSpacing.xl),
+                                    ) { sheet() }
+                                }
+                            }
                         }
                     }
                 }
@@ -218,6 +288,7 @@ class HoldScreenshotTest {
     }
 
     private companion object {
+        const val SHEET_FRAMES = 60
         const val SETTLE_MS = 1_000L
 
         /** The day after the held Saturday, 10 Oct: back from a one-night trip. */

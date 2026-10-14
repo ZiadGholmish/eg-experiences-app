@@ -1,6 +1,7 @@
 package eg.bahr.feature.trips.di
 
 import eg.bahr.feature.trips.data.DefaultTripRepository
+import eg.bahr.feature.trips.data.LastSearch
 import eg.bahr.feature.trips.data.TripApiService
 import eg.bahr.feature.trips.data.TripRepository
 import eg.bahr.feature.trips.presentation.CategoryTripsViewModel
@@ -24,7 +25,9 @@ val tripsModule =
         viewModel { (slug: String) -> TripDetailViewModel(slug, get(), get()) }
         viewModel { (category: String, title: String?) -> CategoryTripsViewModel(category, title, get(), get()) }
         viewModel { (sectionId: String, title: String?) -> SectionTripsViewModel(sectionId, title, get(), get()) }
-        viewModel { SearchTripsViewModel(get(), get(), get()) }
+        // One last search for the run of the app (M3-M0b): reopening search shows it again.
+        single { LastSearch() }
+        viewModel { SearchTripsViewModel(get(), get(), get(), get()) }
         viewModel { (slug: String, name: String?, avatar: String?) -> HostProfileViewModel(slug, name, avatar, get(), get()) }
         viewModel { (trip: String?, host: String?, title: String?) -> ReviewsViewModel(trip, host, title, get()) }
     }
