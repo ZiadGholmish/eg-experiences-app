@@ -18,6 +18,7 @@ import eg.bahr.feature.booking.navigation.navigateToBookingConfirmed
 import eg.bahr.feature.booking.navigation.navigateToHold
 import eg.bahr.feature.home.navigation.TripListRoute
 import eg.bahr.feature.map.navigation.TripMapRoute
+import eg.bahr.feature.mytrips.navigation.MyTripsRoute
 import eg.bahr.feature.settings.navigation.SettingsRoute
 import eg.bahr.feature.splash.navigation.SplashRoute
 import eg.bahr.feature.trips.navigation.SearchTripsRoute
@@ -128,6 +129,7 @@ class AppNavHostRootsTest {
                         composable<TripListRoute> {}
                         composable<SearchTripsRoute> {}
                         composable<TripMapRoute> {}
+                        composable<MyTripsRoute> {}
                         composable<SettingsRoute> {}
                         composable<TripDetailRoute> {}
                         composable<BookingRoute> {}

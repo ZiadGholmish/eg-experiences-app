@@ -8,6 +8,8 @@ import eg.bahr.deeplink.AppDeepLinkInbox
 import eg.bahr.di.AppLanguageState
 import eg.bahr.di.AppLinkConfig
 import eg.bahr.di.initKoin
+import eg.bahr.feature.auth.di.AuthConfig
+import eg.bahr.feature.auth.di.NativeSignIn
 import eg.bahr.feature.map.di.TripMapNativeViews
 import eg.bahr.navigation.AppTab
 import eg.bahr.navigation.AppTabsState
@@ -75,6 +77,11 @@ interface AppTabBar {
  *
  * [selectedTab] is the tab Swift restored (it keeps the last one across launches); [tabBar] is Swift's
  * bar, which the shared tab state drives from here on.
+ *
+ * [nativeSignIn] is the Swift bridge to Sign in with Apple and Google Sign-In (M3-M0), named here for
+ * the framework header as [mapViews] is. Swift leaves it out when [allowFakeSignIn] (a Debug build of
+ * the Local configuration with no Google client id): the local backend's fake verifier only takes
+ * made-up tokens, which the app then signs in with instead. Honoured only with [isDebug].
  */
 @Suppress("unused")
 fun startApp(
@@ -82,6 +89,8 @@ fun startApp(
     isDebug: Boolean,
     appLinkHost: String,
     mapViews: TripMapNativeViews?,
+    nativeSignIn: NativeSignIn?,
+    allowFakeSignIn: Boolean,
     tabBar: AppTabBar,
     selectedTab: AppTab,
 ) {
@@ -90,9 +99,14 @@ fun startApp(
         baseUrl = baseUrl,
         isDebug = isDebug,
         appLinks = AppLinkConfig(host = appLinkHost, allowsHttp = false),
+        // iOS's Google client id lives in Info.plist (Google Sign-In reads it), so none is passed here.
+        // Fake sign-in is a debug-build feature whatever the xcconfig says (M3-M0 review #8): a Release build
+        // never makes made-up tokens, even if a private xcconfig asked for them.
+        auth = AuthConfig(googleServerClientId = "", allowFakeSignIn = allowFakeSignIn && isDebug),
         preferencesPath = { documentsPath(APP_PREFERENCES_FILE) },
     ) {
         mapViews?.let { views -> modules(module { single<TripMapNativeViews> { views } }) }
+        nativeSignIn?.let { bridge -> modules(module { single<NativeSignIn> { bridge } }) }
     }
     IosTabs.start(tabBar, selectedTab)
 }

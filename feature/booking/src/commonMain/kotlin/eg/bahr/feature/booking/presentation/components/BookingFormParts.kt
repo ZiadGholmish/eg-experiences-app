@@ -2,7 +2,6 @@ package eg.bahr.feature.booking.presentation.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,17 +11,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -37,22 +33,17 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextDirection
+import eg.bahr.core.designsystem.components.BahrStepper
+import eg.bahr.core.designsystem.components.BahrTextFields
 import eg.bahr.core.designsystem.components.SeatBadge
 import eg.bahr.core.designsystem.format.BahrFormat
-import eg.bahr.core.designsystem.icon.BahrIcons
 import eg.bahr.core.designsystem.theme.BahrBorder
 import eg.bahr.core.designsystem.theme.BahrElevation
 import eg.bahr.core.designsystem.theme.BahrSize
@@ -285,45 +276,19 @@ internal fun PartyStepper(
     val c = MaterialTheme.colorScheme
     Column(verticalArrangement = Arrangement.spacedBy(BahrSpacing.md)) {
         SectionLabel(stringResource(Res.string.booking_party_size))
-        Row(
-            modifier =
-                Modifier
-                    .clip(BahrTheme.shapes.full)
-                    .background(c.surfaceContainer)
-                    .padding(horizontal = BahrSpacing.md, vertical = BahrSpacing.sm),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(BahrSpacing.lg),
-        ) {
-            StepperButton(
-                icon = BahrIcons.Remove.outlined(),
-                description = stringResource(Res.string.booking_party_decrease),
-                enabled = canDecrease,
-                background = c.surface,
-                content = c.onSurface,
-                elevated = true,
-                onClick = onDecrease,
-            )
-            val spoken = pluralStringResource(Res.plurals.booking_party_count, partySize, partySize)
-            Text(
-                text = partySize.toString(),
-                style = MaterialTheme.typography.titleLarge,
-                textAlign = TextAlign.Center,
-                modifier =
-                    Modifier.widthIn(min = BahrSize.stepperValue).semantics {
-                        contentDescription = spoken
-                        liveRegion = LiveRegionMode.Polite
-                    },
-            )
-            StepperButton(
-                icon = BahrIcons.Add.outlined(),
-                description = stringResource(Res.string.booking_party_increase),
-                enabled = canIncrease,
-                background = c.primary,
-                content = c.onPrimary,
-                elevated = false,
-                onClick = onIncrease,
-            )
-        }
+        BahrStepper(
+            props =
+                BahrStepper.Props(
+                    value = partySize,
+                    canDecrease = canDecrease,
+                    canIncrease = canIncrease,
+                    decreaseLabel = stringResource(Res.string.booking_party_decrease),
+                    increaseLabel = stringResource(Res.string.booking_party_increase),
+                    valueDescription = pluralStringResource(Res.plurals.booking_party_count, partySize, partySize),
+                    onDecrease = onDecrease,
+                    onIncrease = onIncrease,
+                ),
+        )
         // The tighter limit is the one worth saying: the date's seats left, else the policy's maximum.
         Text(
             text =
@@ -335,32 +300,6 @@ internal fun PartyStepper(
             style = MaterialTheme.typography.bodyMedium,
             color = c.onSurfaceVariant,
         )
-    }
-}
-
-@Composable
-private fun StepperButton(
-    icon: ImageVector,
-    description: String,
-    enabled: Boolean,
-    background: Color,
-    content: Color,
-    elevated: Boolean,
-    onClick: () -> Unit,
-) {
-    val x = BahrTheme.colors
-    val shape = BahrTheme.shapes.full
-    Box(
-        modifier =
-            Modifier
-                .size(BahrSpacing.minTouch)
-                .then(if (enabled && elevated) Modifier.bahrShadow(BahrElevation.Level1, shape, x) else Modifier)
-                .clip(shape)
-                .background(if (enabled) background else x.track)
-                .clickable(enabled = enabled, role = Role.Button, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(imageVector = icon, contentDescription = description, tint = if (enabled) content else x.onSurfaceDisabled)
     }
 }
 
@@ -388,7 +327,7 @@ internal fun GuestDetails(
             label = { Text(stringResource(Res.string.booking_guest_name)) },
             singleLine = true,
             shape = BahrTheme.shapes.medium,
-            colors = fieldColors(),
+            colors = BahrTextFields.colors(),
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next),
             modifier = Modifier.fillMaxWidth(),
         )
@@ -402,27 +341,13 @@ internal fun GuestDetails(
             // Phone numbers stay left to right inside Arabic, like times.
             textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Ltr),
             shape = BahrTheme.shapes.medium,
-            colors = fieldColors(),
+            colors = BahrTextFields.colors(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { onDone() }),
             modifier = Modifier.fillMaxWidth().testTag(PHONE_FIELD_TAG).onFocusChanged { phoneFocused = it.isFocused },
         )
     }
 }
-
-/**
- * HANDOFF screen 5's inputs with their `outlineVariant` border. The handoff fills them `surfaceLowest`
- * on a white page; on the off-white page (M4-M12) they are `surface` white, as cards are, so a field
- * still reads as a field rather than a hole in the page.
- */
-@Composable
-private fun fieldColors() =
-    OutlinedTextFieldDefaults.colors(
-        focusedContainerColor = MaterialTheme.colorScheme.surface,
-        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-        errorContainerColor = MaterialTheme.colorScheme.surface,
-        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-    )
 
 /**
  * The price panel (white since M4-M12; the handoff's `surfaceLow`): the per-person price and the party, side by side, and a note that

@@ -55,7 +55,14 @@ class TabToneContrastTest {
 
     private companion object {
         /** The tones the bar's tabs use (composeApp's AppTab.tone). */
-        val TAB_TONES = setOf(BahrBadge.Tone.Primary, BahrBadge.Tone.Secondary, BahrBadge.Tone.Success, BahrBadge.Tone.Quaternary)
+        val TAB_TONES =
+            setOf(
+                BahrBadge.Tone.Primary,
+                BahrBadge.Tone.Secondary,
+                BahrBadge.Tone.Success,
+                BahrBadge.Tone.Tertiary,
+                BahrBadge.Tone.Quaternary,
+            )
 
         const val MIN_CONTRAST = 3f
         const val LUMINANCE_OFFSET = 0.05f

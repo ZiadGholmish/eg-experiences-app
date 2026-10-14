@@ -12,9 +12,12 @@ import eg.bahr.core.network.ApiConfig
 import eg.bahr.core.network.LanguageTagProvider
 import eg.bahr.core.network.di.networkModule
 import eg.bahr.deeplink.DeepLinkParser
+import eg.bahr.feature.auth.di.AuthConfig
+import eg.bahr.feature.auth.di.authModule
 import eg.bahr.feature.booking.di.bookingModule
 import eg.bahr.feature.home.di.homeModule
 import eg.bahr.feature.map.di.mapModule
+import eg.bahr.feature.mytrips.di.myTripsModule
 import eg.bahr.feature.settings.di.settingsModule
 import eg.bahr.feature.trips.di.tripsModule
 import kotlinx.coroutines.CoroutineScope
@@ -45,9 +48,12 @@ fun appModule(
     baseUrl: String,
     isDebug: Boolean,
     appLinks: AppLinkConfig,
+    auth: AuthConfig,
     preferencesPath: () -> String,
 ) = module {
     single { ApiConfig(baseUrl = baseUrl, isDebug = isDebug) }
+    // Sign-in client ids and whether fake sign-in is allowed (M3-M0), from the build config.
+    single { auth }
     single { DeepLinkParser(host = appLinks.host, allowsHttp = appLinks.allowsHttp) }
     single<DataStore<Preferences>> { createPreferencesDataStore(preferencesPath) }
 
@@ -89,10 +95,11 @@ fun appModules(
     baseUrl: String,
     isDebug: Boolean,
     appLinks: AppLinkConfig,
+    auth: AuthConfig,
     preferencesPath: () -> String,
 ): List<Module> =
     listOf(
-        appModule(baseUrl, isDebug, appLinks, preferencesPath),
+        appModule(baseUrl, isDebug, appLinks, auth, preferencesPath),
         networkModule,
         dataStoreModule,
         // Shared by Home and the trip lists (M4-M1c): one card cache, one waiting-list memory.
@@ -102,16 +109,20 @@ fun appModules(
         bookingModule,
         mapModule,
         settingsModule,
+        // Sign-in and the account, and the My trips tab (M3-M0).
+        authModule,
+        myTripsModule,
     )
 
 fun initKoin(
     baseUrl: String,
     isDebug: Boolean,
     appLinks: AppLinkConfig,
+    auth: AuthConfig,
     preferencesPath: () -> String,
     appDeclaration: KoinAppDeclaration = {},
 ): KoinApplication =
     startKoin {
         appDeclaration()
-        modules(appModules(baseUrl, isDebug, appLinks, preferencesPath))
+        modules(appModules(baseUrl, isDebug, appLinks, auth, preferencesPath))
     }

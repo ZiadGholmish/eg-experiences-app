@@ -24,6 +24,10 @@ import eg.bahr.deeplink.DeepLinkParser
 import eg.bahr.deeplink.TripLinkPlacement
 import eg.bahr.deeplink.tripLinkPlacement
 import eg.bahr.di.AppLanguageState
+import eg.bahr.feature.auth.navigation.deleteAccountDialog
+import eg.bahr.feature.auth.navigation.navigateToDeleteAccount
+import eg.bahr.feature.auth.navigation.navigateToSignIn
+import eg.bahr.feature.auth.navigation.signInScreen
 import eg.bahr.feature.booking.navigation.ContinueBookingSlot
 import eg.bahr.feature.booking.navigation.bookingConfirmedScreen
 import eg.bahr.feature.booking.navigation.bookingScreen
@@ -39,6 +43,8 @@ import eg.bahr.feature.home.navigation.navigateToTripList
 import eg.bahr.feature.home.navigation.tripListScreen
 import eg.bahr.feature.map.navigation.TripMapRoute
 import eg.bahr.feature.map.navigation.tripMapScreen
+import eg.bahr.feature.mytrips.navigation.MyTripsRoute
+import eg.bahr.feature.mytrips.navigation.myTripsScreen
 import eg.bahr.feature.settings.navigation.SettingsRoute
 import eg.bahr.feature.settings.navigation.settingsScreen
 import eg.bahr.feature.splash.navigation.SplashRoute
@@ -70,7 +76,7 @@ import org.koin.compose.koinInject
  *
  * Every tab has the same graph and its own NavController, so each keeps its own back stack: a trip
  * opened from search stays in the Search tab while Home keeps its scroll. Only the start differs:
- * Home (after splash, once per process), search, the map, Settings. Android composes the selected
+ * Home (after splash, once per process), search, the map, My trips, Settings. Android composes the selected
  * tab's NavHost under its bar ([AppTabs]); iOS hosts one per tab, each in its own Compose root under
  * SwiftUI's `TabView`.
  *
@@ -97,7 +103,9 @@ fun AppNavHost(
 
     // The bar shows on this tab's root only.
     val entry by navController.currentBackStackEntryAsState()
-    val atRoot = entry?.destination?.let { tab.isRoot(it) }
+    // A dialog destination (delete account, M3-M0) floats over its screen: the bar follows that screen.
+    val screen = if (entry?.destination?.navigatorName == DIALOG_NAVIGATOR) navController.previousBackStackEntry else entry
+    val atRoot = screen?.destination?.let { tab.isRoot(it) }
     LaunchedEffect(atRoot) { atRoot?.let { tabs.reportAtRoot(tab, it) } }
 
     // Re-taps of this tab, and Home's search entry (Search only). Both reach the root's screen through
@@ -194,7 +202,32 @@ fun AppNavHost(
                 scrollToTop = scrollRequests,
             )
 
-            settingsScreen(appVersion = appVersion, scrollToTop = scrollRequests)
+            settingsScreen(
+                appVersion = appVersion,
+                scrollToTop = scrollRequests,
+                // The account row (M3-M0): both open feature:auth's destinations over Settings.
+                onSignIn = navController::navigateToSignIn,
+                onDeleteAccount = navController::navigateToDeleteAccount,
+            )
+
+            // The My trips tab's root (M3-M0): signed out it offers the sign-in sheet; a row opens its trip.
+            myTripsScreen(
+                onSignIn = navController::navigateToSignIn,
+                onTripClick = navController::navigateToTripDetail,
+                scrollToTop = scrollRequests,
+            )
+
+            // The sign-in sheet, pushed in whichever tab asked (bar hidden); closing or finishing goes back
+            // there, which reads the new session itself.
+            signInScreen(
+                onDone = { navController.popBackStack() },
+                onClose = { navController.popBackStack() },
+            )
+
+            deleteAccountDialog(
+                onDone = { navController.popBackStack() },
+                onCancel = { navController.popBackStack() },
+            )
 
             categoryTripsScreen(
                 onBack = { navController.popBackStack() },
@@ -246,6 +279,9 @@ fun AppNavHost(
     }
 }
 
+/** navigation-compose's name for the navigator of `dialog<…>` destinations. */
+private const val DIALOG_NAVIGATOR = "dialog"
+
 /** Home starts on splash until splash has run once in this process. */
 internal fun AppTab.startRoute(splashDone: Boolean): Any = if (this == AppTab.Home && !splashDone) SplashRoute else rootRoute
 
@@ -259,6 +295,7 @@ internal val AppTab.rootRoute: Any
             AppTab.Home -> TripListRoute
             AppTab.Search -> SearchTripsRoute
             AppTab.Map -> TripMapRoute
+            AppTab.MyTrips -> MyTripsRoute
             AppTab.Settings -> SettingsRoute
         }
 
@@ -268,6 +305,7 @@ internal fun AppTab.isRoot(destination: NavDestination): Boolean =
         AppTab.Home -> destination.hasRoute<TripListRoute>()
         AppTab.Search -> destination.hasRoute<SearchTripsRoute>()
         AppTab.Map -> destination.hasRoute<TripMapRoute>()
+        AppTab.MyTrips -> destination.hasRoute<MyTripsRoute>()
         AppTab.Settings -> destination.hasRoute<SettingsRoute>()
     }
 

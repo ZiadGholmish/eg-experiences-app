@@ -77,6 +77,17 @@
     <string name="trip_waitlist_email">الإيميل</string>
     <string name="trip_waitlist_email_invalid">اكتب إيميل صحيح.</string>
     <string name="trip_waitlist_submit">ضيفني للقائمة</string>
+    <string name="trip_waitlist_party_size">عدد الأفراد</string>
+    <string name="trip_waitlist_party_decrease">قلّل العدد</string>
+    <string name="trip_waitlist_party_increase">زوّد العدد</string>
+    <plurals name="trip_waitlist_party_count">
+        <item quantity="zero">%1$d فرد</item>
+        <item quantity="one">فرد واحد</item>
+        <item quantity="two">فردان</item>
+        <item quantity="few">%1$d أفراد</item>
+        <item quantity="many">%1$d فردًا</item>
+        <item quantity="other">%1$d فرد</item>
+    </plurals>
     <string name="trip_waitlist_joined_title">إنت في قائمة الانتظار</string>
     <string name="trip_waitlist_joined_body">لو فضي مكان يوم %1$s هنبعتلك إيميل على %2$s.</string>
     <string name="trip_waitlist_full">قائمة الانتظار لليوم ده اكتملت.</string>
@@ -304,4 +315,66 @@
     <string name="settings_about_line">بحر بيحجزلك رحلات في كل مصر، بكراسي حقيقية ومواعيد قيام حقيقية. صفحات الرحلات والأسعار بتظهر باللغة اللي تختارها هنا.</string>
     <!-- The version as the build names it (e.g. 0.1), kept left to right inside Arabic. -->
     <string name="settings_version">الإصدار %1$s</string>
+    <!-- Sign-in (M3-M0). -->
+    <string name="auth_title">سجّل دخولك في بحر</string>
+    <string name="auth_body">سجّل دخولك عشان تشوف رحلاتك وتدفع الحجز. التصفح وحجز المقاعد مؤقتًا وقوائم الانتظار شغالين من غير حساب.</string>
+    <string name="auth_continue_apple">متابعة باستخدام Apple</string>
+    <string name="auth_continue_google">متابعة باستخدام Google</string>
+    <string name="auth_unavailable">تسجيل الدخول مش متاح في النسخة دي.</string>
+    <string name="auth_close">اقفل</string>
+    <string name="auth_failed">مقدرناش ندخّلك. جرّب تاني.</string>
+    <string name="auth_privacy_note">بنستخدم اسمك ورقمك للحجوزات بس، وعشان المضيف يقدر يكلمك.</string>
+    <string name="auth_profile_title">شوية بيانات</string>
+    <string name="auth_profile_body">المضيف بيستخدمهم عشان يوصلك يوم الرحلة. تقدر تغيّرهم بعدين.</string>
+    <string name="auth_profile_name">الاسم بالكامل</string>
+    <string name="auth_profile_phone">رقم الموبايل</string>
+    <string name="auth_profile_phone_invalid">اكتب رقم موبايل صحيح.</string>
+    <string name="auth_profile_save">احفظ</string>
+    <string name="auth_profile_later">بعدين</string>
+    <string name="auth_delete_title">تمسح حسابك؟</string>
+    <string name="auth_delete_body">حسابك وتسجيل دخولك وقوائم الانتظار بتاعتك هيتمسحوا. الحجوزات بتفضل عندنا في السجلات من غير اسمك ولا رقمك. مفيش رجوع في الخطوة دي.</string>
+    <string name="auth_delete_confirm">امسح الحساب</string>
+    <string name="auth_delete_cancel">سيب حسابي</string>
+    <string name="auth_delete_host">الحساب ده كمان حساب مضيف. كلّمنا عشان نشيله.</string>
+
+    <string name="settings_account">الحساب</string>
+    <string name="settings_sign_in">تسجيل الدخول</string>
+    <string name="settings_sign_in_note">سجّل دخولك عشان تشوف رحلاتك وتدفع.</string>
+    <string name="settings_signed_in_as">داخل باسم %1$s</string>
+    <string name="settings_signed_in">إنت مسجّل دخولك</string>
+    <string name="settings_sign_out">تسجيل الخروج</string>
+    <string name="settings_delete_account">امسح الحساب</string>
+
+    <string name="tab_my_trips">رحلاتي</string>
+    <string name="mytrips_title">رحلاتي</string>
+    <string name="mytrips_segment_upcoming">الجاية</string>
+    <string name="mytrips_segment_waitlist">قائمة الانتظار</string>
+    <string name="mytrips_segment_past">اللي فاتت</string>
+    <string name="mytrips_signed_out_title">سجّل دخولك عشان تشوف رحلاتك</string>
+    <string name="mytrips_signed_out_body">حجوزاتك وقوائم الانتظار بتاعتك، على أي موبايل تسجّل منه.</string>
+    <string name="mytrips_sign_in">تسجيل الدخول</string>
+    <string name="mytrips_device_waitlists">قوائم الانتظار على الموبايل ده</string>
+    <string name="mytrips_device_waitlists_note">هتتنقل لحسابك لما تسجّل دخولك.</string>
+    <string name="mytrips_empty_upcoming">مفيش رحلات جاية لسه.</string>
+    <string name="mytrips_empty_past">مفيش رحلات فاتت لسه.</string>
+    <string name="mytrips_empty_waitlist">إنت مش في أي قائمة انتظار.</string>
+    <string name="mytrips_status_held">مقاعد محجوزة مؤقتًا</string>
+    <string name="mytrips_status_paying">جاري الدفع</string>
+    <string name="mytrips_status_confirmed">محجوز</string>
+    <string name="mytrips_status_completed">خلصت</string>
+    <string name="mytrips_status_cancelled">اتلغت</string>
+    <string name="mytrips_status_expired">انتهى</string>
+    <string name="mytrips_place_opened">فضي مكان. احجز دلوقتي</string>
+    <string name="mytrips_still_full">لسه كامل</string>
+    <string name="mytrips_date_closed">مبقاش ينفع يتحجز</string>
+    <string name="mytrips_trip_fallback">رحلة</string>
+    <plurals name="mytrips_party_count">
+        <item quantity="zero">%1$d فرد</item>
+        <item quantity="one">فرد واحد</item>
+        <item quantity="two">فردان</item>
+        <item quantity="few">%1$d أفراد</item>
+        <item quantity="many">%1$d فردًا</item>
+        <item quantity="other">%1$d فرد</item>
+    </plurals>
+    <string name="error_account_unauthorized">خرجت من حسابك. سجّل دخولك تاني.</string>
 </resources>

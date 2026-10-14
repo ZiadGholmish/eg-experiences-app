@@ -3,6 +3,7 @@ package eg.bahr.feature.settings.data
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
+import eg.bahr.core.network.auth.SessionState
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filterNotNull
@@ -14,7 +15,20 @@ import kotlinx.coroutines.flow.filterNotNull
 internal class FakeSettingsRepository(
     initial: AppLanguage? = AppLanguage.ARABIC,
     var failWith: AppError? = null,
+    account: SessionState = SessionState.SignedOut,
 ) : SettingsRepository {
+    val sessionState = MutableStateFlow(account)
+    var signOuts = 0
+
+    override val session: Flow<SessionState> = sessionState
+
+    override suspend fun loadSession() = Unit
+
+    override suspend fun signOut() {
+        signOuts++
+        sessionState.value = SessionState.SignedOut
+    }
+
     val stored = MutableStateFlow(initial)
     val writes = mutableListOf<AppLanguage>()
 

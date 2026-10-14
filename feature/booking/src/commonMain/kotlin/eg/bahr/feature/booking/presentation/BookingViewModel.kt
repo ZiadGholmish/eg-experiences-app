@@ -3,6 +3,7 @@ package eg.bahr.feature.booking.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import co.touchlab.kermit.Logger
+import eg.bahr.core.common.phone.PhoneNumbers
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.datastore.ActiveHoldStore
@@ -89,7 +90,7 @@ internal data class BookingUiState(
 
     /** The contract's `Phone` pattern, so a typo is caught before it costs a seat-hold attempt. */
     val isPhoneValid: Boolean
-        get() = PHONE_PATTERN.matches(guestPhone)
+        get() = PhoneNumbers.isValid(guestPhone)
 
     /**
      * The server checks all of this again and stays the authority; checking here is about not
@@ -114,12 +115,6 @@ internal data class BookingUiState(
 
         /** `PlaceHoldRequest.guest.name` `maxLength`. */
         const val NAME_MAX_LENGTH = 80
-
-        /** The longest value the `Phone` pattern accepts: a `+` and 15 digits. */
-        const val PHONE_MAX_LENGTH = 16
-
-        /** openapi `Phone`. */
-        val PHONE_PATTERN = Regex("""^\+?[0-9]{7,15}$""")
     }
 }
 
@@ -183,9 +178,7 @@ internal class BookingViewModel(
      * contract's `Phone` pattern accepts. The server compares phones by their digits.
      */
     fun setGuestPhone(phone: String) {
-        val digits = phone.filter { it.isDigit() }
-        val cleaned = (if (phone.trimStart().startsWith('+')) "+$digits" else digits).take(BookingUiState.PHONE_MAX_LENGTH)
-        _uiState.update { it.copy(guestPhone = cleaned, holdError = null) }
+        _uiState.update { it.copy(guestPhone = PhoneNumbers.clean(phone), holdError = null) }
     }
 
     fun placeHold() {

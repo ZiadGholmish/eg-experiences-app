@@ -30,6 +30,8 @@ import eg.bahr.core.designsystem.components.BahrBadge
 import eg.bahr.core.designsystem.components.BahrCard
 import eg.bahr.core.designsystem.components.BahrNavigationBar
 import eg.bahr.core.designsystem.components.BahrPrimaryButton
+import eg.bahr.core.designsystem.components.BahrSignInButton
+import eg.bahr.core.designsystem.components.BahrStepper
 import eg.bahr.core.designsystem.components.HoldCountdown
 import eg.bahr.core.designsystem.components.SeatBadge
 import eg.bahr.core.designsystem.error.BahrErrorSnackbar
@@ -43,11 +45,14 @@ import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.designsystem.theme.BahrThemeName
 import eg.bahr.core.designsystem.theme.bahrShadow
 import eg.bahr.core.localization.ProvideAppLanguage
+import eg.bahr.core.localization.generated.resources.auth_continue_apple
+import eg.bahr.core.localization.generated.resources.auth_continue_google
 import eg.bahr.core.localization.generated.resources.booking_confirm
 import eg.bahr.core.localization.generated.resources.booking_hold_label
 import eg.bahr.core.localization.generated.resources.error_no_seats_available
 import eg.bahr.core.localization.generated.resources.tab_home
 import eg.bahr.core.localization.generated.resources.tab_map
+import eg.bahr.core.localization.generated.resources.tab_my_trips
 import eg.bahr.core.localization.generated.resources.tab_search
 import eg.bahr.core.localization.generated.resources.tab_settings
 import eg.bahr.core.testing.captureScreenshot
@@ -105,6 +110,43 @@ class DesignSystemScreenshotTest {
             )
         }
 
+    /**
+     * M3-M0: the stepper on the page (raised − on the grey track) and on a tint (white track, flat −),
+     * at its lower bound (− disabled) and its upper bound (+ disabled). In RTL − sits at the start (right).
+     */
+    @Test
+    fun stepper() =
+        snapEach(perLanguage("stepper")) {
+            fun props(
+                value: Int,
+                ground: BahrStepper.Ground,
+            ) = BahrStepper.Props(
+                value = value,
+                canDecrease = value > 1,
+                canIncrease = value < STEPPER_MAX,
+                decreaseLabel = "−",
+                increaseLabel = "+",
+                valueDescription = "$value",
+                ground = ground,
+            )
+            BahrStepper(props = props(1, BahrStepper.Ground.Page))
+            BahrStepper(props = props(3, BahrStepper.Ground.Page))
+            Box(Modifier.background(MaterialTheme.colorScheme.tertiaryContainer).padding(BahrSpacing.md)) {
+                BahrStepper(props = props(STEPPER_MAX, BahrStepper.Ground.Tint))
+            }
+        }
+
+    /** M3-M0: Apple's and Google's buttons by their own guidelines, idle and busy, with the app's copy. */
+    @Test
+    fun signInButtons() =
+        snapEach(perLanguage("sign_in_buttons")) {
+            val apple = stringResource(L10n.string.auth_continue_apple)
+            val google = stringResource(L10n.string.auth_continue_google)
+            BahrSignInButton(props = BahrSignInButton.Props(BahrSignInButton.Provider.Apple, apple))
+            BahrSignInButton(props = BahrSignInButton.Props(BahrSignInButton.Provider.Google, google))
+            BahrSignInButton(props = BahrSignInButton.Props(BahrSignInButton.Provider.Google, google, loading = true))
+        }
+
     /** 12 = available, 3 = few, 0 = sold out. Not 1: "1 seats left" is the known plural gap (M1-M1). */
     @Test
     fun seatBadge() =
@@ -153,6 +195,8 @@ class DesignSystemScreenshotTest {
                     Triple(BahrIcons.Home, stringResource(L10n.string.tab_home), BahrBadge.Tone.Primary),
                     Triple(BahrIcons.Search, stringResource(L10n.string.tab_search), BahrBadge.Tone.Secondary),
                     Triple(BahrIcons.Map, stringResource(L10n.string.tab_map), BahrBadge.Tone.Success),
+                    // The fifth tab (M3-M0): five labels must still fit the bar in both languages.
+                    Triple(BahrIcons.Backpack, stringResource(L10n.string.tab_my_trips), BahrBadge.Tone.Tertiary),
                     Triple(BahrIcons.Settings, stringResource(L10n.string.tab_settings), BahrBadge.Tone.Quaternary),
                 )
             // Each tab selected in turn: its own tone on its own pill, the others muted.
@@ -253,5 +297,6 @@ class DesignSystemScreenshotTest {
 
     private companion object {
         const val LARGE_FONT_SCALE = 2f
+        const val STEPPER_MAX = 6
     }
 }

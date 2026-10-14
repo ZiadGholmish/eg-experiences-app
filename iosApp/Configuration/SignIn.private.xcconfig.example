@@ -1,0 +1,7 @@
+// Copy to SignIn.private.xcconfig (gitignored) and fill in to try real Google Sign-In on iOS (M3-M0).
+// The iOS OAuth client id from the Google Cloud console, and the same id reversed, which is the URL
+// scheme Google Sign-In returns to. The backend must list the client id in AUTH_GOOGLE_CLIENT_IDS.
+GOOGLE_IOS_CLIENT_ID = 123456789012-abcdefghijklmnopqrstuvwxyz012345.apps.googleusercontent.com
+GOOGLE_IOS_REVERSED_CLIENT_ID = com.googleusercontent.apps.123456789012-abcdefghijklmnopqrstuvwxyz012345
+// With a client id here, the Local build signs in with Apple and Google for real instead of with fake
+// tokens; run the local api with AUTH_VERIFICATION=jwks and AUTH_*_CLIENT_IDS then. Don't set FAKE_SIGN_IN here.

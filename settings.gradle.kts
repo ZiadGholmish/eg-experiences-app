@@ -52,6 +52,10 @@ include(":feature:booking")
 include(":feature:map")
 // The Settings tab (M4-M8, user decision 2026-10-11).
 include(":feature:settings")
+// Sign-in with Apple or Google, the account (M3-M0).
+include(":feature:auth")
+// The My trips tab (M3-M0).
+include(":feature:mytrips")
 
 // JVM, test-only: ModuleGraphTest (Konsist) enforces the bahr-modularization rules.
 include(":architecture-tests")

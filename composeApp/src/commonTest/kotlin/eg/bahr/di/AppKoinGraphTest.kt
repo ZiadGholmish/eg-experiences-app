@@ -5,6 +5,8 @@ import androidx.datastore.preferences.core.Preferences
 import eg.bahr.core.catalog.data.TripCardCache
 import eg.bahr.core.catalog.data.TripListRepository
 import eg.bahr.core.catalog.data.WaitlistMemory
+import eg.bahr.core.common.auth.DeviceIdSource
+import eg.bahr.core.common.auth.SessionStore
 import eg.bahr.core.common.error.AppErrorController
 import eg.bahr.core.datastore.ActiveHoldStore
 import eg.bahr.core.datastore.AppSettingsStore
@@ -12,9 +14,11 @@ import eg.bahr.core.datastore.RecentSearchesStore
 import eg.bahr.core.datastore.WaitlistJoinsStore
 import eg.bahr.core.network.ApiConfig
 import eg.bahr.core.network.LanguageTagProvider
+import eg.bahr.core.network.auth.AuthSession
 import eg.bahr.core.testing.TEST_BASE_URL
 import eg.bahr.core.testing.runKoinGraphTest
 import eg.bahr.deeplink.DeepLinkParser
+import eg.bahr.feature.auth.di.AuthConfig
 import io.ktor.client.HttpClient
 import org.koin.core.Koin
 import org.koin.core.error.DefinitionOverrideException
@@ -43,6 +47,7 @@ class AppKoinGraphTest {
             baseUrl = TEST_BASE_URL,
             isDebug = false,
             appLinks = AppLinkConfig(host = "bahr.eg", allowsHttp = false),
+            auth = AuthConfig(googleServerClientId = "", allowFakeSignIn = false),
             // Never opened: nothing here reads the store.
             preferencesPath = { "app-koin-graph-test.preferences_pb" },
         )
@@ -53,6 +58,7 @@ class AppKoinGraphTest {
             koin.resolvesAppBindings()
             assertSame(koin.get<TripCardCache>(), koin.get<TripCardCache>(), "one card cache for Home and the trip page")
             assertSame(koin.get<WaitlistMemory>(), koin.get<WaitlistMemory>(), "one waiting-list memory for every list")
+            assertSame(koin.get<AuthSession>(), koin.get<AuthSession>(), "one sign-in for every request and screen (M3-M0)")
             koin.get<HttpClient>().close()
         }
 
@@ -75,5 +81,10 @@ class AppKoinGraphTest {
         get<RecentSearchesStore>()
         get<WaitlistJoinsStore>()
         get<TripListRepository>()
+        // The sign-in (M3-M0): constructed only; nothing reads the secure store here.
+        get<AuthConfig>()
+        get<SessionStore>()
+        get<DeviceIdSource>()
+        get<AuthSession>()
     }
 }

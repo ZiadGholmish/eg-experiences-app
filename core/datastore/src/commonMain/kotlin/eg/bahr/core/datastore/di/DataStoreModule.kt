@@ -1,12 +1,16 @@
 package eg.bahr.core.datastore.di
 
+import eg.bahr.core.common.auth.DeviceIdSource
+import eg.bahr.core.common.auth.SessionStore
 import eg.bahr.core.datastore.ActiveHoldStore
 import eg.bahr.core.datastore.AppSettingsStore
 import eg.bahr.core.datastore.PreferencesActiveHoldStore
+import eg.bahr.core.datastore.PreferencesDeviceIdStore
 import eg.bahr.core.datastore.PreferencesRecentSearchesStore
 import eg.bahr.core.datastore.PreferencesWaitlistJoinsStore
 import eg.bahr.core.datastore.RecentSearchesStore
 import eg.bahr.core.datastore.WaitlistJoinsStore
+import eg.bahr.core.datastore.secureSessionStore
 import org.koin.dsl.module
 
 /**
@@ -19,4 +23,7 @@ val dataStoreModule =
         single<ActiveHoldStore> { PreferencesActiveHoldStore(get()) }
         single<RecentSearchesStore> { PreferencesRecentSearchesStore(get()) }
         single<WaitlistJoinsStore> { PreferencesWaitlistJoinsStore(get()) }
+        // The sign-in (M3-M0): secure storage per platform; and the per-install `X-Device-Id`.
+        single<SessionStore> { secureSessionStore(get()) }
+        single<DeviceIdSource> { PreferencesDeviceIdStore(get()) }
     }

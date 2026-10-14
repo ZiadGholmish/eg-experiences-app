@@ -20,5 +20,11 @@ BASE_URL = http:/$()/localhost:8084/api/v1/
 // by a personal team. See README → Deep links.
 APP_LINK_HOST = localhost
 
+// The local api runs the `local` profile: its fake verifier takes only made-up ID tokens (M3-B1), so the
+// local build signs in with those instead of Apple or Google (M3-M0). Only in a Debug build, and only
+// while no Google client id is configured (SignIn.private.xcconfig): with one, Local signs in for real
+// (run the api with AUTH_VERIFICATION=jwks then). Never set in Config.xcconfig or a private file.
+FAKE_SIGN_IN = YES
+
 PRODUCT_BUNDLE_IDENTIFIER = eg.bahr.app.local
 DISPLAY_NAME = Bahr Local

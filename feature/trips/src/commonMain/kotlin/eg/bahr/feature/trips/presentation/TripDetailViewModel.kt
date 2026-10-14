@@ -336,7 +336,11 @@ internal class TripDetailViewModel(
             } else {
                 reread.copy(
                     waitlist = reread.waitlist?.takeUnless { it.departureId == departureId },
-                    waitlistOutcome = WaitlistOutcome(departureId, date, kind),
+                    // Only while the date joined from is still the one picked (checked before the
+                    // re-read, which may drop a now-closed selection): a late answer must not bring
+                    // the old date's message back after the user moved to another (M2-M3 review #8).
+                    waitlistOutcome =
+                        if (state.selectedDepartureId == departureId) WaitlistOutcome(departureId, date, kind) else reread.waitlistOutcome,
                 )
             }
         }

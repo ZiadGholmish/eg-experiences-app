@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.CircularProgressIndicator
@@ -18,7 +17,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -44,9 +42,10 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import eg.bahr.core.common.result.AppError
+import eg.bahr.core.designsystem.components.BahrStepper
+import eg.bahr.core.designsystem.components.BahrTextFields
 import eg.bahr.core.designsystem.format.BahrFormat
 import eg.bahr.core.designsystem.icon.BahrIcons
 import eg.bahr.core.designsystem.theme.BahrBorder
@@ -57,10 +56,6 @@ import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.designsystem.theme.bahrShadow
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.a11y_busy
-import eg.bahr.core.localization.generated.resources.booking_party_count
-import eg.bahr.core.localization.generated.resources.booking_party_decrease
-import eg.bahr.core.localization.generated.resources.booking_party_increase
-import eg.bahr.core.localization.generated.resources.booking_party_size
 import eg.bahr.core.localization.generated.resources.trip_waitlist_date_closed
 import eg.bahr.core.localization.generated.resources.trip_waitlist_email
 import eg.bahr.core.localization.generated.resources.trip_waitlist_email_invalid
@@ -69,6 +64,10 @@ import eg.bahr.core.localization.generated.resources.trip_waitlist_full
 import eg.bahr.core.localization.generated.resources.trip_waitlist_join
 import eg.bahr.core.localization.generated.resources.trip_waitlist_joined_body
 import eg.bahr.core.localization.generated.resources.trip_waitlist_joined_title
+import eg.bahr.core.localization.generated.resources.trip_waitlist_party_count
+import eg.bahr.core.localization.generated.resources.trip_waitlist_party_decrease
+import eg.bahr.core.localization.generated.resources.trip_waitlist_party_increase
+import eg.bahr.core.localization.generated.resources.trip_waitlist_party_size
 import eg.bahr.core.localization.generated.resources.trip_waitlist_seats_opened
 import eg.bahr.core.localization.generated.resources.trip_waitlist_submit
 import eg.bahr.core.localization.localizedMessage
@@ -158,7 +157,8 @@ private fun WaitlistFormFields(
             // Addresses stay left to right inside Arabic, like times.
             textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Ltr),
             shape = BahrTheme.shapes.medium,
-            colors = fieldColors(),
+            // On the coral notice, the handoff's near-white fill already reads as a field.
+            colors = BahrTextFields.colors(BahrTextFields.Ground.Tint),
             keyboardOptions =
                 KeyboardOptions(
                     capitalization = KeyboardCapitalization.None,
@@ -208,85 +208,26 @@ private fun PartyRow(
     val c = MaterialTheme.colorScheme
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(BahrSpacing.md)) {
         Text(
-            text = stringResource(Res.string.booking_party_size),
+            text = stringResource(Res.string.trip_waitlist_party_size),
             style = MaterialTheme.typography.labelLarge,
             color = c.onTertiaryContainer,
             modifier = Modifier.weight(1f),
         )
-        Row(
-            modifier =
-                Modifier
-                    .clip(BahrTheme.shapes.full)
-                    .background(c.surface)
-                    .padding(horizontal = BahrSpacing.xs, vertical = BahrSpacing.xs),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm),
-        ) {
-            StepperButton(
-                icon = BahrIcons.Remove.outlined(),
-                description = stringResource(Res.string.booking_party_decrease),
-                enabled = partySize > TripDetailUiState.MIN_PARTY_SIZE,
-                filled = false,
-                onClick = panel.onDecrease,
-            )
-            val spoken = pluralStringResource(Res.plurals.booking_party_count, partySize, partySize)
-            Text(
-                text = partySize.toString(),
-                style = MaterialTheme.typography.titleMedium,
-                textAlign = TextAlign.Center,
-                modifier =
-                    Modifier.widthIn(min = BahrSize.stepperValue).semantics {
-                        contentDescription = spoken
-                        liveRegion = LiveRegionMode.Polite
-                    },
-            )
-            StepperButton(
-                icon = BahrIcons.Add.outlined(),
-                description = stringResource(Res.string.booking_party_increase),
-                enabled = partySize < panel.maxPartySize,
-                filled = true,
-                onClick = panel.onIncrease,
-            )
-        }
-    }
-}
-
-@Composable
-private fun StepperButton(
-    icon: ImageVector,
-    description: String,
-    enabled: Boolean,
-    filled: Boolean,
-    onClick: () -> Unit,
-) {
-    val c = MaterialTheme.colorScheme
-    val x = BahrTheme.colors
-    val background =
-        if (!enabled) {
-            x.track
-        } else if (filled) {
-            c.primary
-        } else {
-            c.surfaceContainer
-        }
-    val content =
-        if (!enabled) {
-            x.onSurfaceDisabled
-        } else if (filled) {
-            c.onPrimary
-        } else {
-            c.onSurface
-        }
-    Box(
-        modifier =
-            Modifier
-                .size(BahrSpacing.minTouch)
-                .clip(BahrTheme.shapes.full)
-                .background(background)
-                .clickable(enabled = enabled, role = Role.Button, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(imageVector = icon, contentDescription = description, tint = content)
+        BahrStepper(
+            props =
+                BahrStepper.Props(
+                    value = partySize,
+                    canDecrease = partySize > TripDetailUiState.MIN_PARTY_SIZE,
+                    canIncrease = partySize < panel.maxPartySize,
+                    decreaseLabel = stringResource(Res.string.trip_waitlist_party_decrease),
+                    increaseLabel = stringResource(Res.string.trip_waitlist_party_increase),
+                    valueDescription = pluralStringResource(Res.plurals.trip_waitlist_party_count, partySize, partySize),
+                    // On the coral notice: a white track, a flat − button.
+                    ground = BahrStepper.Ground.Tint,
+                    onDecrease = panel.onDecrease,
+                    onIncrease = panel.onIncrease,
+                ),
+        )
     }
 }
 
@@ -417,20 +358,6 @@ private fun OutcomeRow(
         Text(text = text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
     }
 }
-
-/**
- * HANDOFF screen 5's inputs: `surfaceLowest` with an `outlineVariant` border. Not white as date +
- * party's are since M4-M12 (those sit on the off-white page): these sit on the coral notice, where
- * the handoff's near-white fill already reads as a field.
- */
-@Composable
-private fun fieldColors() =
-    OutlinedTextFieldDefaults.colors(
-        focusedContainerColor = BahrTheme.colors.surfaceLowest,
-        unfocusedContainerColor = BahrTheme.colors.surfaceLowest,
-        errorContainerColor = BahrTheme.colors.surfaceLowest,
-        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-    )
 
 /** For tests: the open form and its email field. */
 internal const val WAITLIST_FORM_TAG = "waitlist_form"

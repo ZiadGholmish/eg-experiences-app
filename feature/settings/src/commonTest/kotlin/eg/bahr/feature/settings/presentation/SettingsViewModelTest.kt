@@ -3,6 +3,7 @@ package eg.bahr.feature.settings.presentation
 import eg.bahr.core.common.error.AppErrorController
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.common.result.AppError
+import eg.bahr.core.network.auth.SessionState
 import eg.bahr.core.testing.runViewModelTest
 import eg.bahr.feature.settings.data.FakeSettingsRepository
 import kotlinx.coroutines.flow.first
@@ -68,5 +69,35 @@ class SettingsViewModelTest {
 
             assertEquals(AppLanguage.ARABIC, vm.uiState.value.language)
             assertEquals(AppError.Unknown("disk full"), errors.current.first()?.error)
+        }
+
+    @Test
+    fun `the account row follows the session - and sign-out signs out once`() =
+        runViewModelTest {
+            val repository =
+                FakeSettingsRepository(account = SessionState.SignedIn("Sara", profileComplete = true, providers = setOf("google")))
+            val vm = SettingsViewModel(repository, AppErrorController())
+            advanceUntilIdle()
+            assertEquals("Sara", (vm.uiState.value.account as SessionState.SignedIn).accountName)
+
+            vm.signOut()
+            vm.signOut()
+            advanceUntilIdle()
+
+            assertEquals(1, repository.signOuts)
+            assertEquals(SessionState.SignedOut, vm.uiState.value.account)
+        }
+
+    @Test
+    fun `signed out - sign-out does nothing`() =
+        runViewModelTest {
+            val repository = FakeSettingsRepository(account = SessionState.SignedOut)
+            val vm = SettingsViewModel(repository, AppErrorController())
+            advanceUntilIdle()
+
+            vm.signOut()
+            advanceUntilIdle()
+
+            assertEquals(0, repository.signOuts)
         }
 }

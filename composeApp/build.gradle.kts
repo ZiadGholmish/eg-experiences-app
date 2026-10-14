@@ -37,6 +37,12 @@ fun mapsKey(name: String): String =
         .ifEmpty { System.getenv(name).orEmpty() }
 
 val androidMapsKey: String = mapsKey("MAPS_API_KEY_ANDROID")
+
+// Sign in with Google (M3-M0): the Google "web" (server) OAuth client id Credential Manager puts in the ID
+// token's `aud`, the same value the backend lists in AUTH_GOOGLE_CLIENT_IDS. From local.properties or the
+// environment, like the Maps keys. Empty: the local flavor signs in with fake tokens (the local backend's
+// fake verifier), other flavors offer no sign-in.
+val googleServerClientId: String = mapsKey("GOOGLE_SERVER_CLIENT_ID")
 if (androidMapsKey.isEmpty()) logger.warn("MAPS_API_KEY_ANDROID is not set: the Android map shows pins on a plain ground.")
 
 kotlin {
@@ -58,6 +64,8 @@ kotlin {
             implementation(projects.feature.booking)
             implementation(projects.feature.map)
             implementation(projects.feature.settings)
+            implementation(projects.feature.auth)
+            implementation(projects.feature.mytrips)
 
             implementation(projects.core.common)
             implementation(projects.core.network)
@@ -130,6 +138,9 @@ android {
         // AndroidManifest.xml → com.google.android.geo.API_KEY. Restrict the key to this app's package
         // names and signing SHA-1 in the Google Cloud console.
         manifestPlaceholders["mapsApiKey"] = androidMapsKey
+        buildConfigField("String", "GOOGLE_SERVER_CLIENT_ID", "\"$googleServerClientId\"")
+        // Fake sign-in only where the backend can verify it: the local flavor (see "local" below).
+        buildConfigField("boolean", "ALLOW_FAKE_SIGN_IN", "false")
     }
 
     flavorDimensions += "environment"
@@ -145,6 +156,8 @@ android {
             versionNameSuffix = "-local"
             buildConfigField("String", "BASE_URL", "\"$localBaseUrl\"")
             appLinks(host = localAppLinkHost, allowsHttp = true)
+            // The local api runs the `local` profile, whose fake verifier takes made-up ID tokens (M3-B1).
+            buildConfigField("boolean", "ALLOW_FAKE_SIGN_IN", "true")
         }
         create("dev") {
             dimension = "environment"

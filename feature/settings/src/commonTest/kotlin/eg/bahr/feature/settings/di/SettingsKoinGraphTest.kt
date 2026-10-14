@@ -3,9 +3,12 @@ package eg.bahr.feature.settings.di
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.emptyPreferences
+import eg.bahr.core.common.auth.SessionStore
+import eg.bahr.core.common.auth.StoredSession
 import eg.bahr.core.common.error.AppErrorController
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.datastore.AppSettingsStore
+import eg.bahr.core.network.auth.AuthSession
 import eg.bahr.core.testing.runKoinGraphTest
 import eg.bahr.feature.settings.data.SettingsRepository
 import eg.bahr.feature.settings.presentation.SettingsViewModel
@@ -29,6 +32,8 @@ class SettingsKoinGraphTest {
                     single<DataStore<Preferences>> { InMemoryPreferences() }
                     single { AppSettingsStore(get()) }
                     single { AppErrorController() }
+                    // The sign-in the account row reads (M3-M0), over a store in memory.
+                    single { AuthSession(NoSessionStore) }
                 },
             ),
         ) { koin ->
@@ -37,6 +42,12 @@ class SettingsKoinGraphTest {
             repository.setLanguage(AppLanguage.ENGLISH)
             assertEquals(AppLanguage.ENGLISH, koin.get<AppSettingsStore>().language.first())
         }
+}
+
+private object NoSessionStore : SessionStore {
+    override suspend fun read(): StoredSession? = null
+
+    override suspend fun write(session: StoredSession?) = Unit
 }
 
 /** A DataStore without a file, so the test runs the same on the JVM and on iOS. */

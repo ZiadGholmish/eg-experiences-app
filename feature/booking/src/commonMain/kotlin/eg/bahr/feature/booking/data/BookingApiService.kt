@@ -1,6 +1,7 @@
 package eg.bahr.feature.booking.data
 
 import eg.bahr.core.common.result.AppResult
+import eg.bahr.core.network.auth.withDeviceId
 import eg.bahr.core.network.callApi
 import eg.bahr.feature.booking.model.BookingDepartureDto
 import eg.bahr.feature.booking.model.BookingDto
@@ -37,7 +38,11 @@ internal class BookingApiService(
      */
     suspend fun placeHold(request: PlaceHoldRequest): AppResult<HeldSeatsDto> =
         callApi {
-            client.post("bookings") { setBody(request) }
+            client.post("bookings") {
+                // So a signed-in account can claim this device's anonymous hold (M3-B1).
+                withDeviceId()
+                setBody(request)
+            }
         }
 
     /**

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import eg.bahr.core.common.error.AppErrorController
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.common.result.onFailure
+import eg.bahr.core.network.auth.SessionState
 import eg.bahr.feature.settings.data.SettingsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,6 +21,9 @@ import kotlinx.coroutines.launch
  */
 internal data class SettingsUiState(
     val language: AppLanguage? = null,
+    /** The account row (M3-M0): sign in, or the signed-in name with sign out and delete. */
+    val account: SessionState = SessionState.Unknown,
+    val signingOut: Boolean = false,
 )
 
 /**
@@ -38,6 +42,20 @@ internal class SettingsViewModel(
         repository.language
             .onEach { language -> _uiState.update { it.copy(language = language) } }
             .launchIn(viewModelScope)
+        repository.session
+            .onEach { session -> _uiState.update { it.copy(account = session) } }
+            .launchIn(viewModelScope)
+        viewModelScope.launch { repository.loadSession() }
+    }
+
+    /** Sign-out always succeeds on the device (the server is told when it can be reached). */
+    fun signOut() {
+        if (_uiState.value.signingOut || _uiState.value.account !is SessionState.SignedIn) return
+        _uiState.update { it.copy(signingOut = true) }
+        viewModelScope.launch {
+            repository.signOut()
+            _uiState.update { it.copy(signingOut = false) }
+        }
     }
 
     fun selectLanguage(language: AppLanguage) {

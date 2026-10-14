@@ -80,6 +80,15 @@
     <string name="trip_waitlist_email">Email</string>
     <string name="trip_waitlist_email_invalid">Enter a valid email address.</string>
     <string name="trip_waitlist_submit">Add me to the list</string>
+    <!-- The form's party stepper. Its own keys (M3-M0, M2-M3 review #6), so a booking copy change
+         cannot change the trip page; the wording matches date + party's today. -->
+    <string name="trip_waitlist_party_size">How many people</string>
+    <string name="trip_waitlist_party_decrease">Fewer people</string>
+    <string name="trip_waitlist_party_increase">More people</string>
+    <plurals name="trip_waitlist_party_count">
+        <item quantity="one">%1$d person</item>
+        <item quantity="other">%1$d people</item>
+    </plurals>
     <string name="trip_waitlist_joined_title">You’re on the waiting list</string>
     <string name="trip_waitlist_joined_body">If a place opens up on %1$s, we’ll email you at %2$s.</string>
     <string name="trip_waitlist_full">The waiting list for this date is full.</string>
@@ -282,4 +291,65 @@
     <!-- Screen-reader state of a button whose action is in flight. -->
     <string name="a11y_busy">Loading</string>
     <string name="action_retry">Try again</string>
+    <!-- Sign-in (M3-M0, user decisions 2026-10-12): Apple or Google, only when needed. Not in the handoff;
+         copy written for this step. The provider button labels follow Apple's and Google's own wording. -->
+    <string name="auth_title">Sign in to Bahr</string>
+    <string name="auth_body">Sign in to see your trips and to pay for a booking. Browsing, holding seats and waiting lists work without an account.</string>
+    <string name="auth_continue_apple">Continue with Apple</string>
+    <string name="auth_continue_google">Continue with Google</string>
+    <string name="auth_unavailable">Sign-in isn’t set up in this build.</string>
+    <string name="auth_close">Close</string>
+    <string name="auth_failed">We couldn’t sign you in. Try again.</string>
+    <string name="auth_privacy_note">We use your name and number only for your bookings, and so your host can reach you.</string>
+    <string name="auth_profile_title">A few details</string>
+    <string name="auth_profile_body">Your host uses these to reach you on the day. You can change them later.</string>
+    <string name="auth_profile_name">Full name</string>
+    <string name="auth_profile_phone">Mobile number</string>
+    <string name="auth_profile_phone_invalid">Enter a valid mobile number.</string>
+    <string name="auth_profile_save">Save</string>
+    <string name="auth_profile_later">Later</string>
+    <string name="auth_delete_title">Delete your account?</string>
+    <string name="auth_delete_body">Your account, your sign-in and your waiting lists are removed. Bookings are kept for our records, without your name or number. This can’t be undone.</string>
+    <string name="auth_delete_confirm">Delete account</string>
+    <string name="auth_delete_cancel">Keep my account</string>
+    <string name="auth_delete_host">This account is also a host’s. Contact us to remove it.</string>
+
+    <!-- Settings' account row (M3-M0). -->
+    <string name="settings_account">Account</string>
+    <string name="settings_sign_in">Sign in</string>
+    <string name="settings_sign_in_note">Sign in to see your trips and to pay.</string>
+    <string name="settings_signed_in_as">Signed in as %1$s</string>
+    <string name="settings_signed_in">You’re signed in</string>
+    <string name="settings_sign_out">Sign out</string>
+    <string name="settings_delete_account">Delete account</string>
+
+    <!-- My trips (M3-M0): the fifth tab. -->
+    <string name="tab_my_trips">My trips</string>
+    <string name="mytrips_title">My trips</string>
+    <string name="mytrips_segment_upcoming">Upcoming</string>
+    <string name="mytrips_segment_waitlist">Waiting list</string>
+    <string name="mytrips_segment_past">Past</string>
+    <string name="mytrips_signed_out_title">Sign in to see your trips</string>
+    <string name="mytrips_signed_out_body">Your bookings and waiting lists, on any phone you sign in on.</string>
+    <string name="mytrips_sign_in">Sign in</string>
+    <string name="mytrips_device_waitlists">Waiting lists on this phone</string>
+    <string name="mytrips_device_waitlists_note">They move to your account when you sign in.</string>
+    <string name="mytrips_empty_upcoming">No upcoming trips yet.</string>
+    <string name="mytrips_empty_past">No past trips yet.</string>
+    <string name="mytrips_empty_waitlist">You’re not on any waiting list.</string>
+    <string name="mytrips_status_held">Seats held</string>
+    <string name="mytrips_status_paying">Paying</string>
+    <string name="mytrips_status_confirmed">Booked</string>
+    <string name="mytrips_status_completed">Done</string>
+    <string name="mytrips_status_cancelled">Cancelled</string>
+    <string name="mytrips_status_expired">Expired</string>
+    <string name="mytrips_place_opened">A place opened. Book now</string>
+    <string name="mytrips_still_full">Still full</string>
+    <string name="mytrips_date_closed">Can’t be booked any more</string>
+    <string name="mytrips_trip_fallback">A trip</string>
+    <plurals name="mytrips_party_count">
+        <item quantity="one">%1$d person</item>
+        <item quantity="other">%1$d people</item>
+    </plurals>
+    <string name="error_account_unauthorized">You’ve been signed out. Sign in again.</string>
 </resources>

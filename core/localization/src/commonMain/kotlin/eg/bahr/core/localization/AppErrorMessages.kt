@@ -3,6 +3,7 @@ package eg.bahr.core.localization
 import androidx.compose.runtime.Composable
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.localization.generated.resources.Res
+import eg.bahr.core.localization.generated.resources.error_account_unauthorized
 import eg.bahr.core.localization.generated.resources.error_departure_not_open
 import eg.bahr.core.localization.generated.resources.error_generic
 import eg.bahr.core.localization.generated.resources.error_hold_expired
@@ -40,6 +41,8 @@ fun AppError.messageRes(): StringResource =
                 DEPARTURE_NOT_OPEN -> Res.string.error_departure_not_open
                 VALIDATION_FAILED -> Res.string.error_validation
                 RATE_LIMITED -> Res.string.error_rate_limited
+                // A signed-in request the session could not keep alive (M3-M0): the tokens are dropped.
+                UNAUTHORIZED -> Res.string.error_account_unauthorized
                 else -> Res.string.error_generic
             }
         is AppError.Serialization -> Res.string.error_generic
@@ -53,6 +56,7 @@ private const val NO_SEATS_AVAILABLE = "NO_SEATS_AVAILABLE"
 private const val DEPARTURE_NOT_OPEN = "DEPARTURE_NOT_OPEN"
 private const val VALIDATION_FAILED = "VALIDATION_FAILED"
 private const val RATE_LIMITED = "RATE_LIMITED"
+private const val UNAUTHORIZED = "UNAUTHORIZED"
 
 /** [messageRes], resolved in the composition's language. */
 @Composable

@@ -2,6 +2,7 @@ package eg.bahr.feature.trips.data
 
 import eg.bahr.core.catalog.data.TRIP_PAGE_SIZE
 import eg.bahr.core.common.result.AppResult
+import eg.bahr.core.network.auth.withDeviceId
 import eg.bahr.core.network.callApi
 import eg.bahr.feature.trips.model.DepartureDto
 import eg.bahr.feature.trips.model.HostProfileDto
@@ -100,7 +101,11 @@ internal class TripApiService(
         request: WaitlistRequest,
     ): AppResult<Unit> =
         callApi {
-            client.post("departures/$departureId/waitlist") { setBody(request) }
+            client.post("departures/$departureId/waitlist") {
+                // So a signed-in account can claim this device's anonymous entry (M3-B1).
+                withDeviceId()
+                setBody(request)
+            }
         }
 
     companion object {

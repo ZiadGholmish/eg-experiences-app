@@ -249,6 +249,34 @@ class TripDetailWaitlistTest {
         }
 
     @Test
+    fun `a late refusal after another date was picked does not bring the old date's message back`() =
+        runViewModelTest {
+            // M2-M3 review #8: join a sold-out date, pick another while the request is in flight.
+            val answer = CompletableDeferred<AppResult<Unit>>()
+            var reopened = false
+            val repository =
+                FakeTripRepository(
+                    tripBySlug = { AppResult.Success(detail()) },
+                    departuresFor = { AppResult.Success(if (reopened) saturdays().map { it.reopened() } else saturdays()) },
+                    joinWaitlist = { _, _ -> answer.await() },
+                )
+            val vm = soldOutPicked(repository)
+            vm.openWaitlist()
+            vm.setWaitlistEmail("sara@example.com")
+
+            vm.joinWaitlist()
+            advanceUntilIdle()
+            vm.selectDeparture("dep-2")
+            reopened = true
+            answer.complete(refused(ApiErrorCodes.CONFLICT))
+            advanceUntilIdle()
+
+            val state = vm.uiState.value
+            assertEquals("dep-2", state.selectedDepartureId, "the new pick stays")
+            assertNull(state.waitlistOutcome, "the old date's outcome is not shown under the new one")
+        }
+
+    @Test
     fun `DEPARTURE_NOT_OPEN means the date closed - the dates are read again and the selection dropped`() =
         runViewModelTest {
             var cancelled = false

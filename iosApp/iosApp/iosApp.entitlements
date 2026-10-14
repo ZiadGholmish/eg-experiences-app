@@ -9,5 +9,11 @@
 	<array>
 		<string>applinks:$(APP_LINK_HOST)</string>
 	</array>
+	<!-- Sign in with Apple (M3-M0). Dev and Prod only, like the line above: the capability needs a paid
+	     team, and the Local build signs in with fake tokens (FAKE_SIGN_IN). -->
+	<key>com.apple.developer.applesignin</key>
+	<array>
+		<string>Default</string>
+	</array>
 </dict>
 </plist>

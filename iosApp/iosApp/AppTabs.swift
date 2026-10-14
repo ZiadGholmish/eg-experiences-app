@@ -6,13 +6,14 @@ import UIKit
 /// shows, is the shared code's (`AppTab` in composeApp); this only maps each one to an SF Symbol and a
 /// stable string for the stored selection.
 enum BahrTab: String, CaseIterable {
-    case home, search, map, settings
+    case home, search, map, mytrips, settings
 
     var kotlin: AppTab {
         switch self {
         case .home: return .home
         case .search: return .search
         case .map: return .map
+        case .mytrips: return .mytrips
         case .settings: return .settings
         }
     }
@@ -21,6 +22,7 @@ enum BahrTab: String, CaseIterable {
         switch tab {
         case .search: self = .search
         case .map: self = .map
+        case .mytrips: self = .mytrips
         case .settings: self = .settings
         default: self = .home
         }
@@ -32,6 +34,7 @@ enum BahrTab: String, CaseIterable {
         case .home: return "house"
         case .search: return "magnifyingglass"
         case .map: return "map"
+        case .mytrips: return "suitcase"
         case .settings: return "gearshape"
         }
     }

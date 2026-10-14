@@ -5,6 +5,7 @@ import eg.bahr.core.designsystem.icon.BahrIcons
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.tab_home
 import eg.bahr.core.localization.generated.resources.tab_map
+import eg.bahr.core.localization.generated.resources.tab_my_trips
 import eg.bahr.core.localization.generated.resources.tab_search
 import eg.bahr.core.localization.generated.resources.tab_settings
 import org.jetbrains.compose.resources.StringResource
@@ -12,8 +13,8 @@ import org.jetbrains.compose.resources.StringResource
 /**
  * The bottom bar's tabs (M4-M8, user decisions 2026-10-11), in reading order: the bar is a row, so in
  * Arabic Home sits at the right without anyone reversing the list. Each tab is its own back stack with
- * its own root: Home (feature:home), Search (feature:trips' search), Map (feature:map) and Settings
- * (feature:settings).
+ * its own root: Home (feature:home), Search (feature:trips' search), Map (feature:map), My trips
+ * (feature:mytrips, M3-M0, user decision 2026-10-12) and Settings (feature:settings).
  *
  * Public because Swift names the tabs: iOS draws the bar itself (SwiftUI `TabView`) and asks for one
  * Compose root per tab (`TabViewController(tab:)`).
@@ -22,6 +23,7 @@ enum class AppTab {
     Home,
     Search,
     Map,
+    MyTrips,
     Settings,
 }
 
@@ -32,6 +34,7 @@ internal val AppTab.title: StringResource
             AppTab.Home -> Res.string.tab_home
             AppTab.Search -> Res.string.tab_search
             AppTab.Map -> Res.string.tab_map
+            AppTab.MyTrips -> Res.string.tab_my_trips
             AppTab.Settings -> Res.string.tab_settings
         }
 
@@ -42,13 +45,17 @@ internal val AppTab.icon: BahrIcons
             AppTab.Home -> BahrIcons.Home
             AppTab.Search -> BahrIcons.Search
             AppTab.Map -> BahrIcons.Map
+            // A day pack: what you take on a trip (Material Symbols `backpack`; iOS draws `suitcase`).
+            AppTab.MyTrips -> BahrIcons.Backpack
             AppTab.Settings -> BahrIcons.Settings
         }
 
 /**
  * The tab's own colour when selected (user request 2026-10-11: colour in the bar), from the badge tone
- * palette: Home teal (primary), Search gold (secondary), Map green (success), Settings magenta
- * (quaternary). Selected, the icon and label take the tone's content colour (on its container pill on
+ * palette: Home teal (primary), Search gold (secondary), Map green (success), My trips coral
+ * (tertiary, the palette's one tone left: as a badge tone it is the light coral container with its dark
+ * text, as the hold countdown and sold-out notice use it, not the bright coral of primary actions),
+ * Settings magenta (quaternary). Selected, the icon and label take the tone's content colour (on its container pill on
  * Android; as the bar's tint on iOS).
  */
 internal val AppTab.tone: BahrBadge.Tone
@@ -57,6 +64,7 @@ internal val AppTab.tone: BahrBadge.Tone
             AppTab.Home -> BahrBadge.Tone.Primary
             AppTab.Search -> BahrBadge.Tone.Secondary
             AppTab.Map -> BahrBadge.Tone.Success
+            AppTab.MyTrips -> BahrBadge.Tone.Tertiary
             AppTab.Settings -> BahrBadge.Tone.Quaternary
         }
 

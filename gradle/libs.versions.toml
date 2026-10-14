@@ -37,6 +37,12 @@ paging = "3.5.2"
 # androidx Compose 1.10.0 Compose Multiplatform 1.10 maps to; 8.x raises it, 8.4+ also needs Kotlin 2.4.
 googleMapsCompose = "7.0.0"
 
+# Sign in with Google on Android (M3-M0): AndroidX Credential Manager and Google's ID-token credential.
+# Android only: Google publishes no KMP artifact for either; iOS uses Google Sign-In for iOS (Swift
+# Package Manager in iosApp/) and AuthenticationServices for Apple, behind a Swift bridge.
+androidxCredentials = "1.5.0"
+googleId = "1.1.1"
+
 # Image loading
 coil = "3.3.0"
 
@@ -116,6 +122,11 @@ androidx-navigation-testing = { module = "androidx.navigation:navigation-testing
 androidx-paging-common = { module = "androidx.paging:paging-common", version.ref = "paging" }
 androidx-paging-compose = { module = "androidx.paging:paging-compose", version.ref = "paging" }
 androidx-paging-testing = { module = "androidx.paging:paging-testing", version.ref = "paging" }
+
+# Sign-in (Android)
+androidx-credentials = { module = "androidx.credentials:credentials", version.ref = "androidxCredentials" }
+androidx-credentials-playServicesAuth = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "androidxCredentials" }
+google-identity-googleid = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleId" }
 
 # Coil
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }

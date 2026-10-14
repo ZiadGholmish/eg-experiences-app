@@ -17,3 +17,11 @@ MARKETING_VERSION = 0.1
 // Maps.private.xcconfig.example. The `?` makes the include optional.
 MAPS_API_KEY_IOS =
 #include? "Maps.private.xcconfig"
+
+// Sign-in (M3-M0). Google Sign-In for iOS reads GIDClientID from Info.plist; its URL scheme is the reversed
+// client id. Both empty by default: the app then offers Apple only (and Apple needs the Sign in with Apple
+// capability, see iosApp.entitlements). Real values go in the gitignored SignIn.private.xcconfig (see its
+// .example). FAKE_SIGN_IN is set by Local.xcconfig only (see there); the app ignores it in Release builds.
+GOOGLE_IOS_CLIENT_ID =
+GOOGLE_IOS_REVERSED_CLIENT_ID =
+#include? "SignIn.private.xcconfig"

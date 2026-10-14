@@ -10,11 +10,13 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import eg.bahr.core.common.error.AppErrorController
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.designsystem.theme.BahrLocale
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.localization.ProvideAppLanguage
+import eg.bahr.core.network.auth.SessionState
 import eg.bahr.core.testing.captureScreenshot
 import eg.bahr.feature.settings.data.FakeSettingsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -49,6 +51,48 @@ class SettingsScreenshotTest {
     private fun loaded(language: AppLanguage) {
         val repository = FakeSettingsRepository(initial = language)
         shoot("settings_loaded", MutableStateFlow(language), SettingsViewModel(repository, AppErrorController()))
+    }
+
+    /** M3-M0: signed in, the account row shows the name, sign out and delete account. */
+    @Test
+    fun signedInArabic() = signedIn(AppLanguage.ARABIC)
+
+    @Test
+    fun signedInEnglish() = signedIn(AppLanguage.ENGLISH)
+
+    private fun signedIn(language: AppLanguage) {
+        val account = SessionState.SignedIn(accountName = "سارة علي", profileComplete = true, providers = setOf("google"))
+        val repository = FakeSettingsRepository(initial = language, account = account)
+        shoot("settings_signed_in", MutableStateFlow(language), SettingsViewModel(repository, AppErrorController()))
+    }
+
+    @Test
+    fun `the account rows call back - sign in when signed out, delete when signed in`() {
+        var signIns = 0
+        var deletes = 0
+        val signedOut = SettingsViewModel(FakeSettingsRepository(initial = AppLanguage.ENGLISH), AppErrorController())
+        val signedIn =
+            SettingsViewModel(
+                FakeSettingsRepository(initial = AppLanguage.ENGLISH, account = SessionState.SignedIn("Sara", true, setOf("google"))),
+                AppErrorController(),
+            )
+        val showing = MutableStateFlow(signedOut)
+        compose.setContent {
+            BahrTheme(locale = BahrLocale.English) {
+                SettingsScreen(
+                    appVersion = APP_VERSION,
+                    viewModel = showing.collectAsState().value,
+                    onSignIn = { signIns++ },
+                    onDeleteAccount = { deletes++ },
+                )
+            }
+        }
+        compose.onNodeWithTag(ACCOUNT_SIGN_IN_TAG).performScrollTo().performClick()
+        compose.runOnUiThread { showing.value = signedIn }
+        compose.onNodeWithTag(ACCOUNT_DELETE_TAG).performScrollTo().performClick()
+
+        assertEquals(1, signIns)
+        assertEquals(1, deletes)
     }
 
     /** The store has not answered: neither language is picked (no guess that could flip). */

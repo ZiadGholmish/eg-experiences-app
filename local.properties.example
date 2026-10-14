@@ -26,3 +26,10 @@ LOCAL_APP_LINK_HOST=localhost
 # app still builds and the map screen shows its pins on a plain ground.
 MAPS_API_KEY_ANDROID=
 MAPS_API_KEY_IOS=
+
+# Sign in with Google on Android (M3-M0): the Google "web" (server) OAuth client id, the one Credential
+# Manager puts in the ID token's `aud`; the backend lists the same value in AUTH_GOOGLE_CLIENT_IDS. The
+# Android OAuth client (package + signing SHA-1) must also exist in the same Google Cloud project. Empty:
+# the `local` flavor signs in with fake tokens (the local api's fake verifier), other flavors offer no
+# sign-in. iOS's Google client id goes in iosApp/Configuration/SignIn.private.xcconfig instead.
+GOOGLE_SERVER_CLIENT_ID=

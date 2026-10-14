@@ -25,6 +25,9 @@ enum SharedApp {
             isDebug: isDebug,
             appLinkHost: appLinkHost,
             mapViews: GoogleMapsSetup.bridge(),
+            // Sign in with Apple and Google (M3-M0), or nil when the build signs in with fake tokens.
+            nativeSignIn: NativeSignInBridge.bridge(),
+            allowFakeSignIn: NativeSignInBridge.fakeSignIn,
             tabBar: tabs,
             selectedTab: tabs.selected.kotlin
         )
@@ -68,6 +71,8 @@ struct ContentView: View {
         // Universal Links (https://<APP_LINK_HOST>/t/{slug}). SwiftUI may deliver one through either
         // callback; the shared code parses it and opens the trip in the Home tab, so both hand it over.
         .onOpenURL { url in
+            // Google Sign-In's return to the app (its URL scheme) is not a deep link.
+            if NativeSignInBridge.handle(url) { return }
             tabs.showHomeForLink()
             MainViewControllerKt.onDeepLink(url: url.absoluteString)
         }

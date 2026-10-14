@@ -1,6 +1,10 @@
 package eg.bahr.core.network
 
 import co.touchlab.kermit.Logger
+import eg.bahr.core.common.auth.DeviceIdSource
+import eg.bahr.core.network.auth.AuthSession
+import eg.bahr.core.network.auth.HttpSessionRemote
+import eg.bahr.core.network.auth.bahrAuth
 import io.ktor.client.HttpClient
 import io.ktor.client.HttpClientConfig
 import io.ktor.client.engine.HttpClientEngine
@@ -35,22 +39,39 @@ internal object HttpClientFactory {
             explicitNulls = false
         }
 
+    /**
+     * The app's client, signed in through [session] (bearer token, refresh, `X-Device-Id`). The session
+     * reaches the server through its own lazy link to this client (see `networkModule`), so sign-out and
+     * refresh never depend on whether this client has been built yet (M3-M0 review #1).
+     */
     fun create(
         config: ApiConfig,
         languageTagProvider: LanguageTagProvider,
-    ): HttpClient = HttpClient { configure(config, languageTagProvider) }
+        session: AuthSession,
+        deviceIds: DeviceIdSource,
+    ): HttpClient = HttpClient { configure(config, languageTagProvider, session, deviceIds) }
 
     fun create(
         engine: HttpClientEngine,
         config: ApiConfig,
         languageTagProvider: LanguageTagProvider,
-    ): HttpClient = HttpClient(engine) { configure(config, languageTagProvider) }
+        session: AuthSession?,
+        deviceIds: DeviceIdSource?,
+    ): HttpClient =
+        HttpClient(engine) { configure(config, languageTagProvider, session, deviceIds) }
+            // Tests build the client directly; it is the session's way to the server then.
+            .also { client -> session?.remote = HttpSessionRemote { client } }
 
     private fun HttpClientConfig<*>.configure(
         config: ApiConfig,
         languageTagProvider: LanguageTagProvider,
+        session: AuthSession?,
+        deviceIds: DeviceIdSource?,
     ) {
         expectSuccess = false
+
+        // Signed-in requests (M3-M0). Without a session (most ApiService tests) requests go anonymous.
+        if (session != null) install(bahrAuth(session, deviceIds ?: DeviceIdSource { error("no device id source") }))
 
         install(ContentNegotiation) {
             json(json)
@@ -89,10 +110,13 @@ internal object HttpClientFactory {
  *
  * For feature tests: an ApiService test runs against a Ktor `MockEngine` through this, so it decodes
  * with exactly the production `Json` (unknown keys ignored, absent nulls allowed) and sends the
- * production headers, instead of a hand-copied configuration that could drift.
+ * production headers (and, given a [session], the production sign-in plugin), instead of a hand-copied configuration that could drift.
  */
 fun apiHttpClient(
     engine: HttpClientEngine,
     config: ApiConfig,
+    session: AuthSession? = null,
+    deviceIds: DeviceIdSource? = null,
+    // Last, so the tests' trailing `{ "ar" }` still means the language.
     languageTagProvider: LanguageTagProvider,
-): HttpClient = HttpClientFactory.create(engine, config, languageTagProvider)
+): HttpClient = HttpClientFactory.create(engine, config, languageTagProvider, session, deviceIds)
