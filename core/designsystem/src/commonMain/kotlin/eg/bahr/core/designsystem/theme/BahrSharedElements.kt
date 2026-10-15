@@ -4,7 +4,6 @@ import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
@@ -18,7 +17,7 @@ import androidx.compose.ui.Modifier
  * `compose.animation` common code, so the same morph runs on Android and iOS.
  *
  * The app wraps its NavHost in [BahrSharedTransitions]; each destination hands its own
- * AnimatedVisibilityScope down with [ProvideBahrNavScope]. Both scopes travel as CompositionLocals so
+ * AnimatedVisibilityScope down with [BahrDestination]. Both scopes travel as CompositionLocals so
  * a screen deep in a feature can mark an element with [bahrSharedBounds] without its callers knowing.
  * Outside them (tests, previews) the modifier does nothing.
  */
@@ -26,24 +25,22 @@ import androidx.compose.ui.Modifier
 @OptIn(ExperimentalSharedTransitionApi::class)
 private val LocalSharedTransitionScope = staticCompositionLocalOf<SharedTransitionScope?> { null }
 
-private val LocalNavVisibilityScope = staticCompositionLocalOf<AnimatedVisibilityScope?> { null }
+internal val LocalNavVisibilityScope = staticCompositionLocalOf<AnimatedVisibilityScope?> { null }
 
-/** Around the NavHost: every destination under it can share elements with the others. */
+/**
+ * Around the NavHost: every destination under it can share elements with the others. [backSwipe] says
+ * whether a back swipe is driving the pop under way (M3-M12), which the destinations' dim follows
+ * ([BahrDestination]); the NavHost's pop transitions get the same answer.
+ */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-fun BahrSharedTransitions(content: @Composable () -> Unit) {
-    SharedTransitionLayout {
-        CompositionLocalProvider(LocalSharedTransitionScope provides this) { content() }
-    }
-}
-
-/** Inside one destination: [scope] is the destination's enter/exit, which a shared element follows. */
-@Composable
-fun ProvideBahrNavScope(
-    scope: AnimatedVisibilityScope,
+fun BahrSharedTransitions(
+    backSwipe: () -> BahrBackSwipe = { BahrBackSwipe.None },
     content: @Composable () -> Unit,
 ) {
-    CompositionLocalProvider(LocalNavVisibilityScope provides scope, content = content)
+    SharedTransitionLayout {
+        CompositionLocalProvider(LocalSharedTransitionScope provides this, LocalBackSwipe provides backSwipe) { content() }
+    }
 }
 
 /**
@@ -61,10 +58,10 @@ fun Modifier.bahrSharedBounds(key: String?): Modifier {
         this@bahrSharedBounds.sharedBounds(
             sharedContentState = rememberSharedContentState(key),
             animatedVisibilityScope = destination,
-            enter = fadeIn(tween(BahrMotion.Medium, easing = BahrMotion.Standard)),
-            exit = fadeOut(tween(BahrMotion.Medium, easing = BahrMotion.Standard)),
             // The same duration and easing as the screen transition around it, so they land together.
-            boundsTransform = { _, _ -> tween(BahrMotion.Medium, easing = BahrMotion.Standard) },
+            enter = fadeIn(screenTransitionSpec()),
+            exit = fadeOut(screenTransitionSpec()),
+            boundsTransform = { _, _ -> screenTransitionSpec() },
         )
     }
 }

@@ -7,6 +7,7 @@ import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import eg.bahr.core.designsystem.theme.BahrDestination
 import eg.bahr.feature.booking.presentation.BookingConfirmedScreen
 import eg.bahr.feature.booking.presentation.BookingScreen
 import eg.bahr.feature.booking.presentation.HoldScreen
@@ -26,14 +27,16 @@ fun NavGraphBuilder.bookingScreen(
         val route = entry.toRoute<BookingRoute>()
         // Set by [returnToDateSelection] when the held seats above this entry end.
         val holdEnded by entry.savedStateHandle.getStateFlow<String?>(HOLD_ENDED_KEY, null).collectAsStateWithLifecycle()
-        BookingScreen(
-            slug = route.slug,
-            departureId = route.departureId,
-            onBack = onBack,
-            onHeld = onHeld,
-            holdEnded = holdEnded?.let { it == HOLD_ENDED_EXPIRED },
-            onHoldEndedHandled = { entry.savedStateHandle[HOLD_ENDED_KEY] = null },
-        )
+        BahrDestination(this) {
+            BookingScreen(
+                slug = route.slug,
+                departureId = route.departureId,
+                onBack = onBack,
+                onHeld = onHeld,
+                holdEnded = holdEnded?.let { it == HOLD_ENDED_EXPIRED },
+                onHoldEndedHandled = { entry.savedStateHandle[HOLD_ENDED_KEY] = null },
+            )
+        }
     }
 }
 
@@ -45,18 +48,20 @@ fun NavGraphBuilder.holdScreen(onEnded: (holdExpired: Boolean) -> Unit) {
     composable<HoldRoute> { entry ->
         // Set by [navigateToBooking] when Continue elsewhere was turned back to this hold.
         val alreadyHeld by entry.savedStateHandle.getStateFlow(ALREADY_HELD_KEY, false).collectAsStateWithLifecycle()
-        HoldScreen(
-            hold = entry.toRoute<HoldRoute>(),
-            onEnded = onEnded,
-            alreadyHeldNotice = alreadyHeld,
-            onAlreadyHeldNoticeSeen = { entry.savedStateHandle[ALREADY_HELD_KEY] = false },
-        )
+        BahrDestination(this) {
+            HoldScreen(
+                hold = entry.toRoute<HoldRoute>(),
+                onEnded = onEnded,
+                alreadyHeldNotice = alreadyHeld,
+                onAlreadyHeldNoticeSeen = { entry.savedStateHandle[ALREADY_HELD_KEY] = false },
+            )
+        }
     }
 }
 
 fun NavGraphBuilder.bookingConfirmedScreen(onDone: () -> Unit) {
     composable<BookingConfirmedRoute> { entry ->
-        BookingConfirmedScreen(ref = entry.toRoute<BookingConfirmedRoute>().ref, onDone = onDone)
+        BahrDestination(this) { BookingConfirmedScreen(ref = entry.toRoute<BookingConfirmedRoute>().ref, onDone = onDone) }
     }
 }
 

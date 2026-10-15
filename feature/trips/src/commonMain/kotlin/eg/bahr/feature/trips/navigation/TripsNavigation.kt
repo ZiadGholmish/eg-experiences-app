@@ -3,16 +3,11 @@ package eg.bahr.feature.trips.navigation
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
-import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavOptionsBuilder
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
-import eg.bahr.core.designsystem.theme.ProvideBahrNavScope
-import eg.bahr.core.designsystem.theme.bahrBackEnter
-import eg.bahr.core.designsystem.theme.bahrBackExit
-import eg.bahr.core.designsystem.theme.bahrForwardEnter
-import eg.bahr.core.designsystem.theme.bahrForwardExit
+import eg.bahr.core.designsystem.theme.BahrDestination
 import eg.bahr.feature.trips.presentation.CategoryTripsScreen
 import eg.bahr.feature.trips.presentation.HostProfileScreen
 import eg.bahr.feature.trips.presentation.ReviewsScreen
@@ -25,10 +20,8 @@ import eg.bahr.feature.trips.presentation.TripDetailScreen
  * What happens *after* a trips screen (booking) is the caller's lambda, so this feature never
  * imports another feature. Home is feature:home's (M4-M1c).
  *
- * M4-M6: the category page, a row's "See all" and search slide in with the shared slide + fade when
- * opened from Home, and leave the same way on Back to it. This feature cannot name Home's route, so
- * each takes `isHome`, which the app answers with feature:home's `isHome()`; Home in turn asks
- * `isOpenedFromHome` which of its destinations get that transition.
+ * M3-M12: every page here moves with the app's one screen transition, which the NavHost sets; each draws
+ * on an opaque page ([BahrDestination]), which also hands its scope down for the header morphs.
  */
 
 /**
@@ -36,31 +29,21 @@ import eg.bahr.feature.trips.presentation.TripDetailScreen
  * called for a bookable date.
  *
  * M4-M10: [onHostClick] opens the host's page from the host card (only when the server sent the host's
- * slug), usually [navigateToHostProfile]. Between the trip page and the host page the pages slide with
- * the M4-M6 transition and the card's row grows into the page's header; to and from anything else
- * (booking, a list) the NavHost's own transition applies, as before.
+ * slug), usually [navigateToHostProfile]. Between the trip page and the host page the card's row
+ * grows into the page's header.
  *
  * M4-M11: [onSeeAllReviews] opens every review of the trip from "See all reviews" under the previews
- * (shown only when the trip counts more reviews than it previews), usually [navigateToReviews]. It
- * slides like the host page.
+ * (shown only when the trip counts more reviews than it previews), usually [navigateToReviews].
  */
 fun NavGraphBuilder.tripDetailScreen(
     onBack: () -> Unit,
     onContinue: (slug: String, departureId: String) -> Unit,
     onHostClick: ((HostLink) -> Unit)? = null,
     onSeeAllReviews: ((ReviewsRoute) -> Unit)? = null,
-    reducedMotion: () -> Boolean = { false },
 ) {
-    composable<TripDetailRoute>(
-        // To the host page or the reviews and back.
-        exitTransition = { if (targetState.isHostProfile() || targetState.isReviews()) bahrForwardExit(reducedMotion()) else null },
-        popEnterTransition = { if (initialState.isHostProfile() || initialState.isReviews()) bahrBackEnter(reducedMotion()) else null },
-        // A trip opened from the host page's list, and Back to it.
-        enterTransition = { if (initialState.isHostProfile()) bahrForwardEnter(reducedMotion()) else null },
-        popExitTransition = { if (targetState.isHostProfile()) bahrBackExit(reducedMotion()) else null },
-    ) { entry ->
+    composable<TripDetailRoute> { entry ->
         val slug = entry.toRoute<TripDetailRoute>().slug
-        ProvideBahrNavScope(this) {
+        BahrDestination(this) {
             TripDetailScreen(
                 slug = slug,
                 onBack = onBack,
@@ -79,7 +62,6 @@ fun NavGraphBuilder.tripDetailScreen(
 
 /**
  * The host page (M4-M10): the host's profile, rating and reviews, then their trips ([onTripClick]).
- * Opened from a trip page, it slides in from the end side and leaves the same way on Back (M4-M6).
  *
  * M4-M11: [onSeeAllReviews] opens every review of the host's trips (usually [navigateToReviews]), from
  * "See all reviews" under the previews, shown only under a full preview when the summary counts more.
@@ -88,17 +70,10 @@ fun NavGraphBuilder.hostProfileScreen(
     onBack: () -> Unit,
     onTripClick: (slug: String) -> Unit,
     onSeeAllReviews: ((ReviewsRoute) -> Unit)? = null,
-    reducedMotion: () -> Boolean = { false },
 ) {
-    composable<HostProfileRoute>(
-        enterTransition = { if (initialState.isTripDetail()) bahrForwardEnter(reducedMotion()) else null },
-        popExitTransition = { if (targetState.isTripDetail()) bahrBackExit(reducedMotion()) else null },
-        // A trip or the reviews opened from the host page: the host page steps aside the same way, and comes back on Back.
-        exitTransition = { if (targetState.isTripDetail() || targetState.isReviews()) bahrForwardExit(reducedMotion()) else null },
-        popEnterTransition = { if (initialState.isTripDetail() || initialState.isReviews()) bahrBackEnter(reducedMotion()) else null },
-    ) { entry ->
+    composable<HostProfileRoute> { entry ->
         val route = entry.toRoute<HostProfileRoute>()
-        ProvideBahrNavScope(this) {
+        BahrDestination(this) {
             HostProfileScreen(
                 slug = route.slug,
                 name = route.name,
@@ -113,19 +88,12 @@ fun NavGraphBuilder.hostProfileScreen(
 
 /**
  * "See all reviews" (M4-M11): a trip's or a host's reviews, paged, with sort, star and (a host's) Trip
- * filters. Opened from the trip page or the host page, it slides in from the end side and leaves the
- * same way on Back (M4-M6). It opens nothing else.
+ * filters, opened from the trip page or the host page. It opens nothing else.
  */
-fun NavGraphBuilder.reviewsScreen(
-    onBack: () -> Unit,
-    reducedMotion: () -> Boolean = { false },
-) {
-    composable<ReviewsRoute>(
-        enterTransition = { if (initialState.opensReviews()) bahrForwardEnter(reducedMotion()) else null },
-        popExitTransition = { if (targetState.opensReviews()) bahrBackExit(reducedMotion()) else null },
-    ) { entry ->
+fun NavGraphBuilder.reviewsScreen(onBack: () -> Unit) {
+    composable<ReviewsRoute> { entry ->
         val route = entry.toRoute<ReviewsRoute>()
-        ProvideBahrNavScope(this) {
+        BahrDestination(this) {
             ReviewsScreen(trip = route.trip, host = route.host, title = route.title, onBack = onBack)
         }
     }
@@ -138,15 +106,6 @@ data class HostLink(
     val avatar: String? = null,
 )
 
-private fun NavBackStackEntry.isHostProfile(): Boolean = destination.hasRoute<HostProfileRoute>()
-
-private fun NavBackStackEntry.isTripDetail(): Boolean = destination.hasRoute<TripDetailRoute>()
-
-private fun NavBackStackEntry.isReviews(): Boolean = destination.hasRoute<ReviewsRoute>()
-
-/** The pages with "See all reviews": the reviews page slides to and from them. */
-private fun NavBackStackEntry.opensReviews(): Boolean = isTripDetail() || isHostProfile()
-
 /**
  * The category page (M4-M1b). Back is [onBack]; Home under it keeps its scroll position, because its
  * list state is saved with its back-stack entry.
@@ -154,10 +113,8 @@ private fun NavBackStackEntry.opensReviews(): Boolean = isTripDetail() || isHost
 fun NavGraphBuilder.categoryTripsScreen(
     onBack: () -> Unit,
     onTripClick: (slug: String) -> Unit,
-    isHome: (NavBackStackEntry) -> Boolean,
-    reducedMotion: () -> Boolean = { false },
 ) {
-    openedFromHome<CategoryTripsRoute>(isHome, reducedMotion) { entry ->
+    pageWithHeaderMorph<CategoryTripsRoute> { entry ->
         val route = entry.toRoute<CategoryTripsRoute>()
         CategoryTripsScreen(
             category = route.category,
@@ -173,10 +130,8 @@ fun NavGraphBuilder.categoryTripsScreen(
 fun NavGraphBuilder.sectionTripsScreen(
     onBack: () -> Unit,
     onTripClick: (slug: String) -> Unit,
-    isHome: (NavBackStackEntry) -> Boolean,
-    reducedMotion: () -> Boolean = { false },
 ) {
-    openedFromHome<SectionTripsRoute>(isHome, reducedMotion) { entry ->
+    pageWithHeaderMorph<SectionTripsRoute> { entry ->
         val route = entry.toRoute<SectionTripsRoute>()
         SectionTripsScreen(
             sectionId = route.sectionId,
@@ -198,39 +153,21 @@ fun NavGraphBuilder.sectionTripsScreen(
 fun NavGraphBuilder.searchTripsScreen(
     onBack: () -> Unit,
     onTripClick: (slug: String) -> Unit,
-    isHome: (NavBackStackEntry) -> Boolean,
-    reducedMotion: () -> Boolean = { false },
 ) {
-    openedFromHome<SearchTripsRoute>(isHome, reducedMotion) {
+    pageWithHeaderMorph<SearchTripsRoute> {
         SearchTripsScreen(onBack = onBack, onTripClick = onTripClick)
     }
 }
 
 /**
- * A page opened from Home (M4-M6): it slides in from the end side with a fade, and leaves the same way
- * on Back to Home ([isHome]). To and from any other page (a trip it opens) the NavHost's own transition applies,
- * so the trip page and booking flow are unchanged. Its AnimatedVisibilityScope is handed down for the
- * header morph (`bahrSharedBounds`).
+ * A page Home opens (M4-M6): its AnimatedVisibilityScope is handed down for the header morph
+ * (`bahrSharedBounds`), on an opaque page ([BahrDestination], M3-M12).
  */
-private inline fun <reified T : Any> NavGraphBuilder.openedFromHome(
-    noinline isHome: (NavBackStackEntry) -> Boolean,
-    noinline reducedMotion: () -> Boolean,
-    noinline content: @Composable (NavBackStackEntry) -> Unit,
-) {
-    composable<T>(
-        enterTransition = { if (isHome(initialState)) bahrForwardEnter(reducedMotion()) else null },
-        popExitTransition = { if (isHome(targetState)) bahrBackExit(reducedMotion()) else null },
-    ) { entry ->
-        ProvideBahrNavScope(this) { content(entry) }
+private inline fun <reified T : Any> NavGraphBuilder.pageWithHeaderMorph(noinline content: @Composable (NavBackStackEntry) -> Unit) {
+    composable<T> { entry ->
+        BahrDestination(this) { content(entry) }
     }
 }
-
-/**
- * The pages of this feature Home opens with the shared transition: the category page, a row's "See
- * all" and search. The app hands it to Home's `opensFromHome` (M4-M1c: Home cannot name these routes).
- */
-fun NavBackStackEntry.isOpenedFromHome(): Boolean =
-    destination.hasRoute<CategoryTripsRoute>() || destination.hasRoute<SectionTripsRoute>() || destination.hasRoute<SearchTripsRoute>()
 
 /** Single-top: a quick double tap on Home's field or the Map button opens one search. */
 fun NavController.navigateToSearchTrips(builder: NavOptionsBuilder.() -> Unit = { launchSingleTop = true }) =

@@ -2,15 +2,11 @@ package eg.bahr.feature.home.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
-import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavOptionsBuilder
 import androidx.navigation.compose.composable
-import eg.bahr.core.designsystem.theme.ProvideBahrNavScope
-import eg.bahr.core.designsystem.theme.bahrBackEnter
-import eg.bahr.core.designsystem.theme.bahrForwardExit
+import eg.bahr.core.designsystem.theme.BahrDestination
 import eg.bahr.feature.home.presentation.TripListScreen
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -33,30 +29,22 @@ import kotlinx.coroutines.flow.emptyFlow
  * [onMap] (M4-M2) puts the "Map" pill beside the title; the app opens another feature's screen with
  * it.
  *
- * M4-M6: Home steps aside with the shared slide + fade for the pages it opens, and comes back the same
- * way on Back; other destinations keep the NavHost's transition. Those pages are other features', so
- * [opensFromHome] names them (feature:trips' category page, "See all" and search, feature:map's map).
- * [reducedMotion] is read when a transition starts (the platform setting can change while the app
- * runs); with it on the screens change at once.
+ * M3-M12: Home moves aside for whatever it opens with the app's one screen transition, which the
+ * NavHost sets (M4-M6's own slide + fade for its pages is gone).
  *
  * M4-M8: Home is the Home tab's root; [onSearch] and [onMap] switch to the Search and Map tabs (the
  * app decides). [scrollToTop] fires on a re-tap of the selected Home tab.
  */
 fun NavGraphBuilder.tripListScreen(
     onTripClick: (slug: String) -> Unit,
-    opensFromHome: (NavBackStackEntry) -> Boolean,
     header: @Composable (gap: Modifier) -> Unit = {},
     onHomeAction: (HomeAction) -> Unit = {},
     onSearch: () -> Unit = {},
     onMap: (() -> Unit)? = null,
-    reducedMotion: () -> Boolean = { false },
     scrollToTop: Flow<Unit> = emptyFlow(),
 ) {
-    composable<TripListRoute>(
-        exitTransition = { if (opensFromHome(targetState)) bahrForwardExit(reducedMotion()) else null },
-        popEnterTransition = { if (opensFromHome(initialState)) bahrBackEnter(reducedMotion()) else null },
-    ) {
-        ProvideBahrNavScope(this) {
+    composable<TripListRoute> {
+        BahrDestination(this) {
             TripListScreen(
                 onTripClick = onTripClick,
                 header = header,
@@ -68,8 +56,5 @@ fun NavGraphBuilder.tripListScreen(
         }
     }
 }
-
-/** Home: the other features' pages opened from it slide in only when it is what they leave (M4-M6). */
-fun NavBackStackEntry.isHome(): Boolean = destination.hasRoute<TripListRoute>()
 
 fun NavController.navigateToTripList(builder: NavOptionsBuilder.() -> Unit = {}) = navigate(TripListRoute, builder)

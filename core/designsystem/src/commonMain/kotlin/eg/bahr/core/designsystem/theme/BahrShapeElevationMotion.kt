@@ -147,12 +147,39 @@ object BahrMotion {
      */
     const val PagerDotPassScale = .6f
 
-    /**
-     * How far a screen opened from Home (a category, "See all", search) slides in, as a share of its
-     * width, while it fades in (M4-M6). A partial slide reads as "forward" without the whole page
-     * sweeping across.
+    /*
+     * Screen transitions (M3-M12): every push and pop in a tab's NavHost, per platform
+     * (BahrScreenTransitions.kt). Not in tokens.json: the platforms' own navigation motion, measured
+     * from them, so a Bahr screen change feels like any other app's on the same phone.
      */
-    const val ScreenSlideFraction = .25f
+
+    /**
+     * iOS push and pop (UINavigationController): about half a second, on [IosNavigation]. The same
+     * numbers navigation-compose 2.10 uses for its iOS default.
+     */
+    const val ScreenIos = 500
+
+    /**
+     * iOS's navigation curve: fast off the mark, a long soft landing. Its control points are those of
+     * navigation-compose 2.10's iOS default.
+     */
+    val IosNavigation = CubicBezierEasing(.2833f, .99f, .31833f, .99f)
+
+    /** How far the iOS screen underneath shifts toward the start while one is pushed over it (UIKit's 30%). */
+    const val ScreenUnderlayShift = .3f
+
+    /** How dark the iOS screen underneath gets at the end of a push: UIKit's dimming view, black at 10%. */
+    const val ScreenUnderlayDim = .1f
+
+    /**
+     * Android push and pop: Android 14's activity transition (450ms, `fast_out_extra_slow_in`, which
+     * [Emphasized] stands in for). The opened screen slides [ScreenSlideFraction] in from the end while
+     * it fades in over [Short]; the one underneath slides the same distance toward the start, opaque.
+     */
+    const val ScreenAndroid = 450
+
+    /** How far an Android screen slides as it opens or closes, as a share of its width (Android 14: 10%). */
+    const val ScreenSlideFraction = .1f
 
     /**
      * How far a list's new cards slide in after a filter-chip switch, as a share of the card's width,

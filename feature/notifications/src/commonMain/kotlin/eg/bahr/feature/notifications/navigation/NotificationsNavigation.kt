@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
+import eg.bahr.core.designsystem.theme.BahrDestination
 import eg.bahr.feature.notifications.presentation.NotificationsScreen
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -22,6 +23,6 @@ fun NavGraphBuilder.notificationsScreen(
     scrollToTop: Flow<Unit> = emptyFlow(),
 ) {
     composable<NotificationsRoute> {
-        NotificationsScreen(signInButtons = signInButtons, scrollToTop = scrollToTop)
+        BahrDestination(this) { NotificationsScreen(signInButtons = signInButtons, scrollToTop = scrollToTop) }
     }
 }

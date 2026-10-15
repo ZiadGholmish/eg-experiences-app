@@ -2,6 +2,7 @@ package eg.bahr
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.window.ComposeUIViewController
+import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.datastore.APP_PREFERENCES_FILE
 import eg.bahr.deeplink.AppDeepLinkInbox
 import eg.bahr.di.AppAppearanceState
@@ -26,7 +27,10 @@ import platform.Foundation.NSFileManager
 import platform.Foundation.NSURL
 import platform.Foundation.NSUserDomainMask
 import platform.UIKit.UIColor
+import platform.UIKit.UITraitEnvironmentLayoutDirectionLeftToRight
+import platform.UIKit.UITraitEnvironmentLayoutDirectionRightToLeft
 import platform.UIKit.UIViewController
+import platform.UIKit.traitOverrides
 
 /**
  * The SwiftUI `TabView` in `iosApp` (M4-M8; kept by the user's decision of 2026-10-14 over M3-M0b's
@@ -127,12 +131,14 @@ fun startApp(
 /**
  * Swift entry point, one per tab: `MainViewControllerKt.TabViewController(tab:)`. One Compose root
  * and NavHost per tab, over the graph [startApp] started.
+ *
+ * Its UIKit layout direction follows the app language (M3-M12; [IosTabs.followLanguage]).
  */
 @Suppress("FunctionName", "unused")
 fun TabViewController(tab: AppTab): UIViewController =
     ComposeUIViewController {
         App(tab = tab, tabs = IosTabs.state, appVersion = appVersion(), onBarContent = IosTabs::showContent)
-    }
+    }.also(IosTabs::followLanguage)
 
 /** Swift entry point for a tap on the bar, the selected tab included (a re-tap). */
 @Suppress("unused")
@@ -190,6 +196,31 @@ internal object IosTabs {
         scope.launch { appearance.appearance.drop(1).collect { tabBar.applyAppearance(it.tag) } }
         // A link from outside opens in the Home tab's stack: show Home so its NavHost can open it.
         scope.launch { AppDeepLinkInbox.pending.filterNotNull().collect { state.select(AppTab.Home) } }
+    }
+
+    /**
+     * Gives [controller] the app language's layout direction as its UIKit trait (M3-M12), now and on each
+     * switch. Compose Multiplatform puts its back swipe on the leading edge of the UIKit direction, not of
+     * the app's: SwiftUI hosts every tab left to right (ContentView keeps it out of SwiftUI's mirroring),
+     * so without this the Arabic app took Back from the left edge, while its pages leave to the left. The
+     * trait changes no Compose layout: BahrTheme sets the direction from the language.
+     *
+     * Compose Multiplatform 1.10 reads the direction when the tab appears, so a switch reaches the tab
+     * it is made in the next time that tab is shown; 1.12 also follows a trait change at once.
+     */
+    fun followLanguage(controller: UIViewController) {
+        val languages: AppLanguageState = KoinPlatform.getKoin().get()
+        // At once, before the tab first appears (launching would land a run-loop pass later); then every
+        // value, the first included: the stored language may land between the two, and a second set of
+        // the same direction is harmless.
+        controller.applyDirection(languages.language.value)
+        scope.launch { languages.language.collect { controller.applyDirection(it) } }
+    }
+
+    private fun UIViewController.applyDirection(language: AppLanguage) {
+        traitOverrides.setLayoutDirection(
+            if (language.isRtl) UITraitEnvironmentLayoutDirectionRightToLeft else UITraitEnvironmentLayoutDirectionLeftToRight,
+        )
     }
 
     fun showContent(content: IosBarContent) {

@@ -13,9 +13,20 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigationevent.NavigationEvent
+import androidx.navigationevent.NavigationEventDispatcher
+import androidx.navigationevent.NavigationEventTransitionState
+import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
 import eg.bahr.core.common.locale.AppLanguage
+import eg.bahr.core.designsystem.theme.BahrBackSwipe
 import eg.bahr.core.designsystem.theme.BahrSharedTransitions
 import eg.bahr.core.designsystem.theme.BahrTheme
+import eg.bahr.core.designsystem.theme.bahrPopEnter
+import eg.bahr.core.designsystem.theme.bahrPopExit
+import eg.bahr.core.designsystem.theme.bahrPushEnter
+import eg.bahr.core.designsystem.theme.bahrPushExit
+import eg.bahr.core.designsystem.theme.bahrReplaceEnter
+import eg.bahr.core.designsystem.theme.bahrReplaceExit
 import eg.bahr.core.designsystem.theme.reducedMotion
 import eg.bahr.deeplink.AppDeepLinkInbox
 import eg.bahr.deeplink.DeepLinkDestinations
@@ -38,7 +49,6 @@ import eg.bahr.feature.booking.navigation.navigateToHold
 import eg.bahr.feature.booking.navigation.returnToDateSelection
 import eg.bahr.feature.home.navigation.HomeAction
 import eg.bahr.feature.home.navigation.TripListRoute
-import eg.bahr.feature.home.navigation.isHome
 import eg.bahr.feature.home.navigation.navigateToTripList
 import eg.bahr.feature.home.navigation.tripListScreen
 import eg.bahr.feature.map.navigation.TripMapRoute
@@ -55,7 +65,6 @@ import eg.bahr.feature.splash.navigation.SplashRoute
 import eg.bahr.feature.splash.navigation.splashScreen
 import eg.bahr.feature.trips.navigation.categoryTripsScreen
 import eg.bahr.feature.trips.navigation.hostProfileScreen
-import eg.bahr.feature.trips.navigation.isOpenedFromHome
 import eg.bahr.feature.trips.navigation.navigateToCategoryTrips
 import eg.bahr.feature.trips.navigation.navigateToHostProfile
 import eg.bahr.feature.trips.navigation.navigateToReviews
@@ -103,6 +112,12 @@ fun AppNavHost(
     val reduced by rememberUpdatedState(BahrTheme.reducedMotion)
     val reducedMotion = remember { { reduced } }
 
+    // Whether a back swipe is driving the pop that is starting, and from which edge (M3-M12): navigation
+    // 2.9 runs a swipe through the same pop transitions as the Back button, so they ask. Read from the
+    // dispatcher's state when a transition starts, never in composition.
+    val navigationEvents = LocalNavigationEventDispatcherOwner.current?.navigationEventDispatcher
+    val backSwipe = remember(navigationEvents) { { navigationEvents.backSwipe() } }
+
     // Splash runs once per process; a NavHost rebuilt later (a language switch) starts on Home itself.
     val start: Any = remember(tab) { tab.startRoute(splashDone = tabs.splashDone) }
 
@@ -143,8 +158,21 @@ fun AppNavHost(
     }
 
     // Shared elements (M4-M6): a Home chip or row title morphs into the page it opens.
-    BahrSharedTransitions {
-        NavHost(navController = navController, startDestination = start) {
+    BahrSharedTransitions(backSwipe = backSwipe) {
+        // One screen transition for every push and pop, in the platform's style (M3-M12); destinations set
+        // none. Splash is replaced by Home rather than covered by it.
+        NavHost(
+            navController = navController,
+            startDestination = start,
+            enterTransition = {
+                if (initialState.destination.hasRoute<SplashRoute>()) bahrReplaceEnter(reducedMotion()) else bahrPushEnter(reducedMotion())
+            },
+            exitTransition = {
+                if (initialState.destination.hasRoute<SplashRoute>()) bahrReplaceExit(reducedMotion()) else bahrPushExit(reducedMotion())
+            },
+            popEnterTransition = { bahrPopEnter(reducedMotion(), backSwipe()) },
+            popExitTransition = { bahrPopExit(reducedMotion(), backSwipe()) },
+        ) {
             splashScreen(
                 onReady = {
                     tabs.markSplashDone()
@@ -171,9 +199,6 @@ fun AppNavHost(
                 // Search opens full screen in this tab (M3-M0b); the map is a tab (M4-M8), which the pill switches to.
                 onSearch = { navController.navigateToSearchTrips() },
                 onMap = { tabs.select(AppTab.Map) },
-                // Home slides aside for the pages it opens (M4-M6), all other features' since M4-M1c.
-                opensFromHome = { it.isOpenedFromHome() },
-                reducedMotion = reducedMotion,
                 scrollToTop = scrollRequests,
             )
 
@@ -183,7 +208,6 @@ fun AppNavHost(
                 onList = { tabs.select(AppTab.Home) },
                 onSearch = { navController.navigateToSearchTrips() },
                 onTripClick = navController::navigateToTripDetail,
-                reducedMotion = reducedMotion,
             )
 
             // Search (M3-M0b: no longer a tab), pushed from Home's field or the Map header; the field takes
@@ -191,8 +215,6 @@ fun AppNavHost(
             searchTripsScreen(
                 onBack = { navController.popBackStack() },
                 onTripClick = navController::navigateToTripDetail,
-                isHome = { it.isHome() },
-                reducedMotion = reducedMotion,
             )
 
             // The Profile tab's root (M3-M0b; Settings before): feature:auth's sign-in buttons when signed
@@ -233,15 +255,11 @@ fun AppNavHost(
             categoryTripsScreen(
                 onBack = { navController.popBackStack() },
                 onTripClick = navController::navigateToTripDetail,
-                isHome = { it.isHome() },
-                reducedMotion = reducedMotion,
             )
 
             sectionTripsScreen(
                 onBack = { navController.popBackStack() },
                 onTripClick = navController::navigateToTripDetail,
-                isHome = { it.isHome() },
-                reducedMotion = reducedMotion,
             )
 
             tripDetailScreen(
@@ -251,20 +269,15 @@ fun AppNavHost(
                 onHostClick = navController::navigateToHostProfile,
                 // "See all reviews" (M4-M11), in this tab's stack, bar hidden.
                 onSeeAllReviews = navController::navigateToReviews,
-                reducedMotion = reducedMotion,
             )
 
             hostProfileScreen(
                 onBack = { navController.popBackStack() },
                 onTripClick = navController::navigateToTripDetail,
                 onSeeAllReviews = navController::navigateToReviews,
-                reducedMotion = reducedMotion,
             )
 
-            reviewsScreen(
-                onBack = { navController.popBackStack() },
-                reducedMotion = reducedMotion,
-            )
+            reviewsScreen(onBack = { navController.popBackStack() })
 
             bookingScreen(
                 onBack = { navController.popBackStack() },
@@ -313,6 +326,21 @@ internal fun NavController.isAt(tab: AppTab): Boolean = currentBackStackEntry?.d
 internal fun NavController.popToRoot(tab: AppTab) {
     if (!popBackStack(tab.rootRoute, inclusive = false) && !isAt(tab)) {
         navigate(tab.rootRoute) { popUpTo(graph.id) { inclusive = true } }
+    }
+}
+
+/**
+ * The back swipe in progress, if any (M3-M12): iOS's edge swipe and Android's predictive back both reach
+ * the NavHost through this dispatcher, whose state carries the edge the finger started from. Internal
+ * for BackSwipeTest.
+ */
+internal fun NavigationEventDispatcher?.backSwipe(): BahrBackSwipe {
+    val swipe = (this?.transitionState?.value as? NavigationEventTransitionState.InProgress)?.latestEvent ?: return BahrBackSwipe.None
+    return when (swipe.swipeEdge) {
+        NavigationEvent.EDGE_LEFT -> BahrBackSwipe.FromLeftEdge
+        NavigationEvent.EDGE_RIGHT -> BahrBackSwipe.FromRightEdge
+        // No edge: not a swipe (a key, a button), so the ordinary pop.
+        else -> BahrBackSwipe.None
     }
 }
 

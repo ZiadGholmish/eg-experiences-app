@@ -2,6 +2,7 @@ package eg.bahr.feature.mytrips.navigation
 
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
+import eg.bahr.core.designsystem.theme.BahrDestination
 import eg.bahr.feature.mytrips.presentation.MyTripsScreen
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -21,6 +22,6 @@ fun NavGraphBuilder.myTripsScreen(
     scrollToTop: Flow<Unit> = emptyFlow(),
 ) {
     composable<MyTripsRoute> {
-        MyTripsScreen(onSignIn = onSignIn, onTripClick = onTripClick, scrollToTop = scrollToTop)
+        BahrDestination(this) { MyTripsScreen(onSignIn = onSignIn, onTripClick = onTripClick, scrollToTop = scrollToTop) }
     }
 }

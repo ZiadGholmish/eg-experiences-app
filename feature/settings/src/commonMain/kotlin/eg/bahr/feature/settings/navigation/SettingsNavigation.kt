@@ -5,6 +5,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
+import eg.bahr.core.designsystem.theme.BahrDestination
 import eg.bahr.feature.settings.presentation.EditPersonalInfoScreen
 import eg.bahr.feature.settings.presentation.ProfileScreen
 import kotlinx.coroutines.flow.Flow
@@ -33,13 +34,15 @@ fun NavGraphBuilder.profileScreen(
     scrollToTop: Flow<Unit> = emptyFlow(),
 ) {
     composable<ProfileRoute> {
-        ProfileScreen(
-            appVersion = appVersion,
-            signInButtons = signInButtons,
-            onEditPersonalInfo = onEditPersonalInfo,
-            deleteAccountSheet = deleteAccountSheet,
-            scrollToTop = scrollToTop,
-        )
+        BahrDestination(this) {
+            ProfileScreen(
+                appVersion = appVersion,
+                signInButtons = signInButtons,
+                onEditPersonalInfo = onEditPersonalInfo,
+                deleteAccountSheet = deleteAccountSheet,
+                scrollToTop = scrollToTop,
+            )
+        }
     }
 }
 
@@ -48,7 +51,9 @@ fun NavGraphBuilder.editPersonalInfoScreen(
     onBack: () -> Unit,
     onSaved: () -> Unit,
 ) {
-    composable<EditPersonalInfoRoute> { EditPersonalInfoScreen(onBack = onBack, onSaved = onSaved) }
+    composable<EditPersonalInfoRoute> {
+        BahrDestination(this) { EditPersonalInfoScreen(onBack = onBack, onSaved = onSaved) }
+    }
 }
 
 fun NavController.navigateToEditPersonalInfo() = navigate(EditPersonalInfoRoute) { launchSingleTop = true }
