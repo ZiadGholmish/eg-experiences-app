@@ -207,8 +207,10 @@ internal fun ProfileContent(
             Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.surface)
-                .verticalScroll(scroll)
+                // Below the status bar and clipped there, as Home is (M4-M1a; M3-M11, Compose audit M4):
+                // inside the scroll, the inset scrolled away and the rows passed under the clock.
                 .windowInsetsPadding(WindowInsets.statusBars)
+                .verticalScroll(scroll)
                 .padding(horizontal = BahrSpacing.gutter, vertical = BahrSpacing.md),
         verticalArrangement = Arrangement.spacedBy(BahrSpacing.md),
     ) {

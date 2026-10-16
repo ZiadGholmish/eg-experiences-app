@@ -64,7 +64,7 @@ internal fun SectionTripsScreen(
             contentPadding = PaddingValues(bottom = bottom),
             verticalArrangement = Arrangement.spacedBy(BahrSpacing.lg),
         ) {
-            item(key = KEY_HEADER) {
+            item(key = KEY_HEADER, contentType = KEY_HEADER) {
                 ListHeading(
                     label = state.title?.takeIf { it.isNotBlank() } ?: stringResource(Res.string.trips_title),
                     totalItems = state.totalItems,
@@ -86,4 +86,5 @@ internal fun SectionTripsScreen(
     }
 }
 
+// Keys of the single items, each also its item's content type (one drawing each, M3-M11).
 private const val KEY_HEADER = "header"

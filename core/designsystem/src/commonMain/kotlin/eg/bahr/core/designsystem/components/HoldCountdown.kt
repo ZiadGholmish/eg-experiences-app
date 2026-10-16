@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -113,7 +112,8 @@ fun HoldCountdown(
             Modifier
         }
     val alertColor by animateColorAsState(if (urgent) c.error else c.onTertiaryContainer, bahrTween())
-    val barColor by animateColorAsState(if (urgent) c.error else c.tertiary, bahrTween())
+    // A State, not `by`: it is read only where the bar draws (below).
+    val barColor = animateColorAsState(if (urgent) c.error else c.tertiary, bahrTween())
     Row(
         modifier
             .fillMaxWidth()
@@ -141,24 +141,40 @@ fun HoldCountdown(
         }
         if (progress != null) {
             // Ticks come every ~500 ms; a short ease between them makes the bar drain rather than step.
-            val shown by animateFloatAsState(progress.coerceIn(0f, 1f), bahrTween())
+            // Kept as a State and read only in the layout phase (M3-M11, Compose audit M2): read in
+            // composition, the ease re-ran this whole panel on about half of all frames for the whole
+            // hold, here and in Home's "Continue your booking" card.
+            val shown = animateFloatAsState(progress.coerceIn(0f, 1f), bahrTween())
             Box(
                 Modifier
                     .size(width = HOLD_BAR_WIDTH.dp, height = HOLD_BAR_HEIGHT.dp)
                     .clip(BahrTheme.shapes.full)
                     .background(c.tertiary.copy(alpha = HOLD_BAR_TRACK_ALPHA)),
             ) {
+                // The same clipped fill box as before, sized in the layout phase and coloured in the
+                // draw phase, so it draws pixel for pixel what `fillMaxWidth(shown)` + `background` did.
                 Box(
                     Modifier
-                        .fillMaxHeight()
-                        .fillMaxWidth(shown)
+                        .barFill { shown.value }
                         .clip(BahrTheme.shapes.full)
-                        .background(barColor),
+                        .drawBehind { drawRect(barColor.value) },
                 )
             }
         }
     }
 }
+
+/**
+ * The bar's fill: the track's full height and [fraction] of its width, from its start edge (the
+ * right in Arabic; the parent box places it). Rounded to whole pixels, as `fillMaxWidth` rounds.
+ * [fraction] is read here, in the layout phase, never in composition.
+ */
+private fun Modifier.barFill(fraction: () -> Float): Modifier =
+    layout { measurable, constraints ->
+        val width = (constraints.maxWidth * fraction()).roundToInt().coerceIn(0, constraints.maxWidth)
+        val placeable = measurable.measure(Constraints.fixed(width, constraints.maxHeight))
+        layout(placeable.width, placeable.height) { placeable.place(0, 0) }
+    }
 
 /**
  * The coral circle with the timer icon. While [pulsing] it swells to [BahrMotion.CountdownPulseScale]
@@ -233,19 +249,26 @@ private fun RollingTime(
         BoxWithConstraints {
             val measurer = rememberTextMeasurer()
             val density = LocalDensity.current
+            // Measured once per length, not once a second (M3-M11, Compose audit L17): the type's
+            // tabular digits (`tnum`) give every time of a length the same width and column edges as
+            // its template (HoldCountdownTabularTest checks the real fonts).
+            val template = countdownTemplate(time)
             val fitted =
                 remember(
-                    time,
+                    template,
                     style,
                     measurer,
                     constraints.maxWidth,
                     density,
-                ) { measurer.fitStyle(time, style, constraints.maxWidth, density) }
-            val line = remember(time, fitted, measurer) { measurer.measure(time, fitted, softWrap = false, maxLines = 1) }
+                ) { measurer.fitStyle(template, style, constraints.maxWidth, density) }
+            val line = remember(template, fitted, measurer) { measurer.measure(template, fitted, softWrap = false, maxLines = 1) }
             RollingSlots(time, line, fitted, color, reduced, spoken)
         }
     }
 }
+
+/** [time] with every digit a 0: the line every time of its length lays out like. */
+internal fun countdownTemplate(time: String): String = buildString(time.length) { time.forEach { append(if (it.isDigit()) '0' else it) } }
 
 /**
  * [style], shrunk just enough for [time] to fit [maxWidth] on one line when it would not: at a large
@@ -272,7 +295,7 @@ private fun TextMeasurer.fitStyle(
     return fitted
 }
 
-/** The slots of [RollingTime], one per character of [time], laid out along [line] (which is [time] in [style]). */
+/** The slots of [RollingTime], one per character of [time], laid out along [line] ([time]'s template in [style]). */
 @Composable
 private fun RollingSlots(
     time: String,

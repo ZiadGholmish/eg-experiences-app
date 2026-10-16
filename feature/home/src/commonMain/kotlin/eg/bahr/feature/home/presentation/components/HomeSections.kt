@@ -127,6 +127,20 @@ internal fun HomeSection(
 }
 
 /**
+ * A section's content type in Home's list (M3-M11, Compose audit M1): one per drawing, so the list
+ * reuses a scrolled-away section's composition only for one drawn the same way. A banner carousel
+ * (a pager) and a banner row (a scrolling row) share nothing but their title.
+ */
+internal fun homeSectionContentType(section: HomeSectionDto): String =
+    when (section) {
+        is BannersSectionDto -> if (section.layout == LAYOUT_ROW) "section-banner-row" else "section-banner-carousel"
+        is TripsSectionDto -> "section-trips"
+        is CategoriesSectionDto -> "section-categories"
+        is NoteSectionDto -> "section-note"
+        is SkippedSectionDto -> "section-skipped"
+    }
+
+/**
  * A section under its title. [seeAll], when there is one, is a "See all" link at the end of the
  * title line (primary, not coral: coral is for the screen's primary action only). [titleSharedKey]
  * lets the title morph into the opened page's heading (M4-M6).
@@ -200,7 +214,7 @@ private fun BannerSection(
             contentPadding = PaddingValues(horizontal = BahrSpacing.gutter),
             horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm),
         ) {
-            items(section.items, key = { it.id }) { banner ->
+            items(section.items, key = { it.id }, contentType = { CONTENT_BANNER }) { banner ->
                 Banner(banner, ratio, onAction, Modifier.fillParentMaxWidth(ROW_ITEM_WIDTH_FRACTION))
             }
         }
@@ -461,7 +475,7 @@ private fun TripRow(
         contentPadding = PaddingValues(horizontal = BahrSpacing.gutter, vertical = BahrSpacing.sm),
         horizontalArrangement = Arrangement.spacedBy(BahrSpacing.md),
     ) {
-        items(section.items, key = { it.slug }) { trip ->
+        items(section.items, key = { it.slug }, contentType = { CONTENT_TRIP }) { trip ->
             TripCard(
                 trip = trip,
                 perPersonLabel = perPersonLabel,
@@ -489,7 +503,7 @@ private fun CategoryTiles(
         contentPadding = PaddingValues(horizontal = BahrSpacing.gutter),
         horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm),
     ) {
-        items(section.items, key = { it.key }) { category ->
+        items(section.items, key = { it.key }, contentType = { CONTENT_CATEGORY }) { category ->
             val sharedKey = categoryTileSharedKey(section.id, category.key)
             Column(
                 modifier =
@@ -529,6 +543,11 @@ private fun HomeBannerDto.imageRatio(): Float =
     if (image.width > 0 && image.height > 0) image.width.toFloat() / image.height else FALLBACK_BANNER_RATIO
 
 private const val LAYOUT_ROW = "row"
+
+// Each row holds one kind of item; named for clarity, as every lazy list here names its types.
+private const val CONTENT_BANNER = "banner"
+private const val CONTENT_TRIP = "trip"
+private const val CONTENT_CATEGORY = "category"
 
 /** For tests: Home's banner carousel (the pager). */
 internal const val HOME_CAROUSEL_TAG = "home_carousel"

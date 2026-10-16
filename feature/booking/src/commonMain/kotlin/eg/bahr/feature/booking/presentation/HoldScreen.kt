@@ -141,9 +141,10 @@ internal fun HoldScreen(
                 )
             }
             TripSummary(state.booking)
-            TotalPanel(state)
+            // The fields each reads, not the whole state: those skip the 500 ms ticks (Compose audit L15).
+            TotalPanel(partySize = state.booking?.partySize, totalAmount = state.totalAmount, totalCurrency = state.totalCurrency)
         }
-        PayBar(state)
+        PayBar(totalAmount = state.totalAmount, totalCurrency = state.totalCurrency)
     }
 
     if (state.isLeaveConfirmVisible) {
@@ -241,7 +242,11 @@ private fun SkeletonLine(widthFraction: Float) {
 
 /** The server's total (from the hold), and the party once the booking is re-read. No client arithmetic. */
 @Composable
-private fun TotalPanel(state: HoldUiState) {
+private fun TotalPanel(
+    partySize: Int?,
+    totalAmount: Long,
+    totalCurrency: String,
+) {
     Column(
         modifier =
             Modifier
@@ -252,10 +257,10 @@ private fun TotalPanel(state: HoldUiState) {
                 .padding(BahrSpacing.lg),
         verticalArrangement = Arrangement.spacedBy(BahrSpacing.sm),
     ) {
-        state.booking?.let {
+        partySize?.let {
             SummaryRow(
                 label = stringResource(Res.string.booking_summary_party),
-                value = pluralStringResource(Res.plurals.booking_party_count, it.partySize, it.partySize),
+                value = pluralStringResource(Res.plurals.booking_party_count, it, it),
             )
         }
         Row(modifier = Modifier.fillMaxWidth()) {
@@ -265,7 +270,7 @@ private fun TotalPanel(state: HoldUiState) {
                 modifier = Modifier.weight(1f),
             )
             Text(
-                text = BahrFormat.money(state.totalAmount, state.totalCurrency, BahrTheme.locale.isArabic),
+                text = BahrFormat.money(totalAmount, totalCurrency, BahrTheme.locale.isArabic),
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.primary,
             )
@@ -278,14 +283,17 @@ private fun TotalPanel(state: HoldUiState) {
  * hidden so the step reads as the handoff's "Payment" screen and the total sits where it will.
  */
 @Composable
-private fun PayBar(state: HoldUiState) {
+private fun PayBar(
+    totalAmount: Long,
+    totalCurrency: String,
+) {
     StickyActionBar {
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(BahrSpacing.sm)) {
             BahrPrimaryButton(
                 text =
                     stringResource(
                         Res.string.booking_pay_cta,
-                        BahrFormat.money(state.totalAmount, state.totalCurrency, BahrTheme.locale.isArabic),
+                        BahrFormat.money(totalAmount, totalCurrency, BahrTheme.locale.isArabic),
                     ),
                 onClick = {},
                 enabled = false,

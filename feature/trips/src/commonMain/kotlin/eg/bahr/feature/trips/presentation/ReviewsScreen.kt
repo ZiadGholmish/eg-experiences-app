@@ -37,6 +37,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.itemContentType
 import eg.bahr.core.catalog.data.appError
 import eg.bahr.core.catalog.presentation.components.ListMotion
 import eg.bahr.core.catalog.presentation.components.PagedListStatus
@@ -145,17 +146,17 @@ private fun ReviewsList(
         contentPadding = PaddingValues(bottom = bottom),
         verticalArrangement = Arrangement.spacedBy(LIST_GAP),
     ) {
-        item(key = KEY_HEADING) {
+        item(key = KEY_HEADING, contentType = KEY_HEADING) {
             // With no chips yet (the first page is still out), the refresh bar has nowhere else to go.
             RefreshBarBelow(visible = refreshing && rating == null, gap = LIST_GAP) { ReviewsHeading(state.subtitle, padded) }
         }
         // The summary and the chips wait for the first answer: the star chips count from its summary.
         if (rating != null) {
-            item(key = KEY_RATING) { RatingHeader(rating, padded) }
+            item(key = KEY_RATING, contentType = KEY_RATING) { RatingHeader(rating, padded) }
             if (state.tripFilter.isNotEmpty()) {
-                item(key = KEY_TRIP_FILTER) { TripFilter(state, viewModel::selectTrip) }
+                item(key = KEY_TRIP_FILTER, contentType = KEY_TRIP_FILTER) { TripFilter(state, viewModel::selectTrip) }
             }
-            item(key = KEY_CHIPS) {
+            item(key = KEY_CHIPS, contentType = KEY_CHIPS) {
                 RefreshBarBelow(visible = refreshing, gap = LIST_GAP) {
                     ReviewChips(state, rating, viewModel::selectSort, viewModel::selectStars)
                 }
@@ -232,14 +233,14 @@ private fun TripFilter(
         contentPadding = PaddingValues(horizontal = BahrSpacing.gutter),
         horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm),
     ) {
-        item(key = KEY_ALL_TRIPS) {
+        item(key = KEY_ALL_TRIPS, contentType = CONTENT_TRIP_CHIP) {
             BahrFilterChip(
                 label = stringResource(Res.string.reviews_all_trips),
                 selected = state.tripSlug == null,
                 onClick = { onSelect(null) },
             )
         }
-        items(state.tripFilter, key = { it.slug }) { trip ->
+        items(state.tripFilter, key = { it.slug }, contentType = { CONTENT_TRIP_CHIP }) { trip ->
             BahrFilterChip(label = trip.title, selected = trip.slug == state.tripSlug, onClick = { onSelect(trip.slug) })
         }
     }
@@ -307,10 +308,10 @@ private fun LazyListScope.reviewsBody(
 ) {
     when (status) {
         PagedListStatus.Loading ->
-            item(key = KEY_LIST_LOADING) { BahrLoadingView(bahrAnimateItem().padding(BahrSpacing.xl)) }
+            item(key = KEY_LIST_LOADING, contentType = CONTENT_LOADING) { BahrLoadingView(bahrAnimateItem().padding(BahrSpacing.xl)) }
 
         is PagedListStatus.Failed ->
-            item(key = KEY_LIST_ERROR) {
+            item(key = KEY_LIST_ERROR, contentType = CONTENT_ERROR) {
                 BahrErrorView(
                     message = status.error.localizedMessage(),
                     retryLabel = stringResource(Res.string.action_retry),
@@ -320,7 +321,7 @@ private fun LazyListScope.reviewsBody(
             }
 
         PagedListStatus.Empty ->
-            item(key = KEY_LIST_EMPTY) {
+            item(key = KEY_LIST_EMPTY, contentType = CONTENT_EMPTY) {
                 Text(
                     text = stringResource(emptyMessage),
                     style = MaterialTheme.typography.bodyMedium,
@@ -333,7 +334,12 @@ private fun LazyListScope.reviewsBody(
             val stale = status == PagedListStatus.Refreshing
             // By position: a review has no id in the contract, and its fields can repeat (two rating-only
             // reviews on one day by the same first name), while a repeated key crashes a LazyColumn.
-            items(count = reviews.itemCount, key = { "$KEY_REVIEW$it" }) { index ->
+            // A review id on the shared endpoint would fix this; asked for in M3-M11's report.
+            items(
+                count = reviews.itemCount,
+                key = { "$KEY_REVIEW$it" },
+                contentType = reviews.itemContentType { CONTENT_REVIEW },
+            ) { index ->
                 // Null only for a placeholder, and placeholders are off.
                 val review = reviews[index] ?: return@items
                 Box(
@@ -360,10 +366,10 @@ private fun LazyListScope.appendFooter(
 ) {
     when (val append = reviews.loadState.append) {
         is LoadState.Loading ->
-            item(key = KEY_APPEND_LOADING) { BahrLoadingView(bahrAnimateItem().padding(BahrSpacing.lg)) }
+            item(key = KEY_APPEND_LOADING, contentType = CONTENT_LOADING) { BahrLoadingView(bahrAnimateItem().padding(BahrSpacing.lg)) }
 
         is LoadState.Error ->
-            item(key = KEY_APPEND_ERROR) {
+            item(key = KEY_APPEND_ERROR, contentType = CONTENT_ERROR) {
                 val error = append.error.appError()
                 BahrErrorView(
                     message = error.localizedMessage(),
@@ -400,3 +406,13 @@ private const val KEY_LIST_ERROR = "reviews-error"
 private const val KEY_LIST_EMPTY = "reviews-empty"
 private const val KEY_APPEND_LOADING = "reviews-append-loading"
 private const val KEY_APPEND_ERROR = "reviews-append-error"
+
+/*
+ * Content types (M3-M11, Compose audit M1): a single item's is its key (one drawing each); these are
+ * the ones several items share, so a scrolled-away review is rebuilt as the next review.
+ */
+private const val CONTENT_REVIEW = "review"
+private const val CONTENT_TRIP_CHIP = "trip-chip"
+private const val CONTENT_LOADING = "loading"
+private const val CONTENT_ERROR = "error"
+private const val CONTENT_EMPTY = "empty"

@@ -2,6 +2,7 @@ package eg.bahr.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -115,7 +116,8 @@ fun AppNavHost(
     val entry by navController.currentBackStackEntryAsState()
     // No dialog destinations since M3-M0b (sheets instead of dialogs): the bar follows the top entry.
     val atRoot = entry?.destination?.let { tab.isRoot(it) }
-    LaunchedEffect(atRoot) { atRoot?.let { tabs.reportAtRoot(tab, it) } }
+    // Synchronous, so a keyed SideEffect (Compose 1.12) rather than a coroutine (Compose audit L9).
+    SideEffect(atRoot) { atRoot?.let { tabs.reportAtRoot(tab, it) } }
 
     // Re-taps of this tab reach the root's screen through a conflated channel, which holds a signal until
     // the screen collects it (a first visit).

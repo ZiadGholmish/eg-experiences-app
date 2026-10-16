@@ -14,7 +14,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,7 +66,8 @@ internal fun ContinueBookingCard(
     // The host screen's lifecycle, not this composable's: scrolling the card out of the list and
     // back must not read the booking again (see ContinueBookingViewModel.attach).
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    LaunchedEffect(viewModel, lifecycle) { viewModel.attach(lifecycle) }
+    // Synchronous, so a keyed SideEffect (Compose 1.12) rather than a coroutine (Compose audit L9).
+    SideEffect(viewModel, lifecycle) { viewModel.attach(lifecycle) }
 
     // The route is built at the tap, with the server's clock as of the tap.
     AnimatedContinueBookingCard(state = state, onOpen = { viewModel.routeForTap()?.let(onOpen) }, modifier = modifier)

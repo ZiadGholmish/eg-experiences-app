@@ -11,6 +11,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
@@ -55,7 +56,8 @@ internal fun DeleteAccountSheet(
     viewModel: DeleteAccountViewModel = koinViewModel(),
 ) {
     // The view model lives as long as the screen that places the sheet: each opening starts afresh.
-    LaunchedEffect(viewModel) { viewModel.reset() }
+    // Synchronous, so a keyed SideEffect (Compose 1.12) rather than a coroutine (Compose audit L9).
+    SideEffect(viewModel) { viewModel.reset() }
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val providerSignIn = rememberProviderSignIn()
     RunsProviderRequest(state.request, providerSignIn, viewModel::onProviderResult)

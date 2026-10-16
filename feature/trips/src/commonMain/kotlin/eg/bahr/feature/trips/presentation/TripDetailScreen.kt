@@ -151,7 +151,8 @@ private fun TripPage(
                 modifier = Modifier.fillMaxSize().testTag(TRIP_PAGE_TAG),
                 contentPadding = PaddingValues(bottom = BahrSpacing.xl),
             ) {
-                items(sections, key = { it.name }) { section ->
+                // One content type per section (M3-M11, Compose audit M1): each draws differently.
+                items(sections, key = { it.name }, contentType = { it }) { section ->
                     Section(section, state, header, trip, waitlist, onBack, onSelectDeparture, onHostClick, onSeeAllReviews)
                 }
             }

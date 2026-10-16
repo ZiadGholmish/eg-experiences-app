@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -85,7 +86,9 @@ internal actual fun TripMap(
 
     val applied = remember { Applied() }
     BoxWithConstraints(modifier) {
-        applied.height = maxHeight.value
+        // After a successful composition, not during one that may be discarded (Compose audit L10).
+        val height = maxHeight.value
+        SideEffect(height) { applied.height = height }
         // Created already framed on the pins (M4-M9), in points (the dp of this layout): no world view first.
         val start =
             remember {

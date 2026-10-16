@@ -122,7 +122,7 @@ internal fun TripAvailability(
                     contentPadding = PaddingValues(horizontal = BahrSpacing.gutter, vertical = BahrSpacing.xs),
                     horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm),
                 ) {
-                    items(departures, key = { it.id }) { departure ->
+                    items(departures, key = { it.id }, contentType = { CONTENT_DATE_CARD }) { departure ->
                         DateCard(
                             departure = departure,
                             selected = departure.id == selected?.id,
@@ -374,3 +374,6 @@ internal fun TripStickyBar(
 
 /** Placeholder date cards while the live seat counts load. */
 private const val SKELETON_CARDS = 4
+
+/** The date row holds date cards only; named, as every lazy list here names its content types (M3-M11). */
+private const val CONTENT_DATE_CARD = "date-card"

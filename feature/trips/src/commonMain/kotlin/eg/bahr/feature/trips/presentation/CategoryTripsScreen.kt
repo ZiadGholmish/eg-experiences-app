@@ -89,7 +89,7 @@ internal fun CategoryTripsScreen(
             verticalArrangement = Arrangement.spacedBy(LIST_GAP),
         ) {
             val refreshing = status == PagedListStatus.Refreshing
-            item(key = KEY_HEADER) {
+            item(key = KEY_HEADER, contentType = KEY_HEADER) {
                 // The bar goes under the chips; with none yet, under the header.
                 RefreshBarBelow(visible = refreshing && chips.isEmpty(), gap = LIST_GAP) {
                     CategoryHeader(
@@ -106,7 +106,7 @@ internal fun CategoryTripsScreen(
                 }
             }
             if (chips.isNotEmpty()) {
-                item(key = KEY_CHIPS) {
+                item(key = KEY_CHIPS, contentType = KEY_CHIPS) {
                     RefreshBarBelow(visible = refreshing, gap = LIST_GAP) {
                         FacetFilterChips(chips, isSelected = state::isSelected, onSelect = viewModel::selectFilter)
                     }
@@ -179,5 +179,6 @@ private fun CategoryTitleRow(
 /** The gap between the page's items; the refresh bar is drawn in the middle of the one under the chips. */
 private val LIST_GAP = BahrSpacing.lg
 
+// Keys of the single items, each also its item's content type (one drawing each, M3-M11).
 private const val KEY_HEADER = "header"
 private const val KEY_CHIPS = "chips"

@@ -9,6 +9,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -183,7 +184,7 @@ class AppTabsTest {
         val nav = rememberNavController()
         val entry by nav.currentBackStackEntryAsState()
         val atRoot = entry?.destination?.route?.let { it == ROOT }
-        LaunchedEffect(atRoot) { atRoot?.let { tabs.reportAtRoot(tab, it) } }
+        SideEffect(atRoot) { atRoot?.let { tabs.reportAtRoot(tab, it) } }
         val list = rememberLazyListState()
         LaunchedEffect(nav) {
             tabs.reselected.filter { it == tab }.collect {

@@ -14,7 +14,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -25,6 +25,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.util.fastForEach
 import eg.bahr.core.designsystem.theme.BahrMotion
 import eg.bahr.core.designsystem.theme.BahrSize
 import eg.bahr.core.designsystem.theme.BahrSpacing
@@ -42,7 +43,7 @@ import kotlin.math.min
  * tracks a drag, a fling and the auto-advance rather than jumping when a page settles. How it moves
  * is [pagerDotsFrame]'s; this only lays the dots out and draws the frame.
  *
- * The dots and the pill are drawn in one `drawBehind` on the row, and [page] and [offset] are read
+ * The dots and the pill are drawn in one draw modifier on the row, and [page] and [offset] are read
  * only there, so a scroll redraws the row without recomposing anything. The cells under it are the
  * dots' touch targets and screen-reader tabs, laid out as before (the current page's cell is the
  * pill's width): each sits in a cell as tall as the touch minimum, and Compose widens a target
@@ -67,33 +68,44 @@ internal fun PagerDots(
     val dotColor = BahrTheme.colors.track
 
     fun DrawScope.drawFrame(
+        geometry: PagerDotsGeometry,
         page: Int,
         offset: Float,
     ) {
-        val geometry =
-            PagerDotsGeometry(
-                dot = BahrSize.pagerDot.toPx(),
-                active = BahrSize.pagerDotActive.toPx(),
-                gap = BahrSpacing.xs.toPx(),
-            )
         val frame = pagerDotsFrame(page, offset, count, rtl, geometry, reduced)
-        frame.dots.forEach { drawDot(it, geometry, dotColor) }
-        frame.pills.forEach { drawPill(it, geometry, pillColor) }
+        frame.dots.fastForEach { drawDot(it, geometry, dotColor) }
+        frame.pills.fastForEach { drawPill(it, geometry, pillColor) }
     }
+
+    // The geometry depends on the density only: built once per size, not on every frame of a swipe
+    // (Compose audit L6). The live position is still read only here, in the draw phase.
+    fun Modifier.drawsFrame(
+        framePage: () -> Int,
+        frameOffset: () -> Float,
+    ): Modifier =
+        drawWithCache {
+            val geometry =
+                PagerDotsGeometry(
+                    dot = BahrSize.pagerDot.toPx(),
+                    active = BahrSize.pagerDotActive.toPx(),
+                    gap = BahrSpacing.xs.toPx(),
+                )
+            onDrawBehind { drawFrame(geometry, framePage(), frameOffset()) }
+        }
     Box {
         if (reduced) {
             // Reduce motion: the pill does not travel. It snaps to the current page's dot, which the
             // pager moves on half-way through a swipe, and the two resting rows cross-fade (a fade is
             // not motion). Android's "Remove animations" scales this to nothing as well.
             Crossfade(targetState = current, animationSpec = tween(BahrMotion.Short), modifier = Modifier.matchParentSize()) { shown ->
-                Box(Modifier.fillMaxSize().drawBehind { drawFrame(shown, 0f) })
+                Box(Modifier.fillMaxSize().drawsFrame({ shown }, { 0f }))
             }
         }
         DotCells(
             count = count,
             current = current,
             onSelect = onSelect,
-            modifier = if (reduced) Modifier else Modifier.drawBehind { drawFrame(page(), offset()) },
+            modifier = if (reduced) Modifier else Modifier.drawsFrame(page, offset),
         )
     }
 }
@@ -123,7 +135,7 @@ private fun DotCells(
                         .padding(horizontal = BahrSpacing.xs / 2),
                 contentAlignment = Alignment.Center,
             ) {
-                // Only takes the room: the row's drawBehind draws every dot and the pill.
+                // Only takes the room: the row's draw modifier draws every dot and the pill.
                 Box(Modifier.size(width = if (active) BahrSize.pagerDotActive else BahrSize.pagerDot, height = BahrSize.pagerDot))
             }
         }

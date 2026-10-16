@@ -2,6 +2,7 @@ package eg.bahr.core.localization
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ProvidedValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import eg.bahr.core.common.locale.AppLanguage
 import platform.Foundation.NSUserDefaults
@@ -19,7 +20,9 @@ internal actual object LocalAppLocale {
      */
     @Composable
     actual infix fun provides(value: String): ProvidedValue<*> {
-        NSUserDefaults.standardUserDefaults.setObject(arrayListOf(value), LANG_KEY)
+        // Before the children resolve strings, so in composition; but only when the language changes,
+        // not on every recomposition of each tab root (Compose audit L10).
+        remember(value) { NSUserDefaults.standardUserDefaults.setObject(arrayListOf(value), LANG_KEY) }
         return Local.provides(value)
     }
 }

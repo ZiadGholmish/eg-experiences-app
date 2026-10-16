@@ -6,12 +6,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
@@ -38,6 +36,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -67,6 +66,7 @@ import eg.bahr.core.catalog.presentation.components.rememberQueryStatus
 import eg.bahr.core.catalog.presentation.components.selectedOrder
 import eg.bahr.core.catalog.presentation.rememberThrottled
 import eg.bahr.core.designsystem.components.BahrBackButton
+import eg.bahr.core.designsystem.components.navigationBarsSpacer
 import eg.bahr.core.designsystem.icon.BahrIcons
 import eg.bahr.core.designsystem.theme.BahrSize
 import eg.bahr.core.designsystem.theme.BahrSpacing
@@ -118,7 +118,6 @@ internal fun SearchTripsScreen(
     val listState = rememberLazyListState()
     val perPersonLabel = stringResource(Res.string.trip_per_person)
     val keyboard = LocalSoftwareKeyboardController.current
-    val bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + BahrSpacing.xl
     val status = trips.rememberQueryStatus()
     val chips = state.filterChips
     val motion = rememberListMotion(status, switchKey = state.query to state.filter, order = selectedOrder(chips, state::isSelected))
@@ -171,8 +170,10 @@ internal fun SearchTripsScreen(
         LazyColumn(
             state = listState,
             modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(top = BahrSpacing.sm, bottom = bottom),
-            verticalArrangement = Arrangement.spacedBy(BahrSpacing.lg),
+            // The last item ends xl above whatever of the navigation bar the keyboard or the tab bar
+            // has left: the spacer item carries that inset, after its own LIST_GAP (Compose audit M3, L14).
+            contentPadding = PaddingValues(top = BahrSpacing.sm, bottom = BahrSpacing.xl - LIST_GAP),
+            verticalArrangement = Arrangement.spacedBy(LIST_GAP),
         ) {
             val query = state.query
             if (query == null) {
@@ -185,6 +186,7 @@ internal fun SearchTripsScreen(
                     },
                     onClearAll = viewModel::clearRecents,
                 )
+                navigationBarsSpacer()
                 return@LazyColumn
             }
             // Nothing matches the words at all (no chip to blame): the sentence below says so, and a
@@ -192,7 +194,7 @@ internal fun SearchTripsScreen(
             // chip active they stay, so the search can be widened.
             val nothingMatches = state.filter == null && status == PagedListStatus.Empty
             if (!nothingMatches) {
-                item(key = KEY_COUNT) {
+                item(key = KEY_COUNT, contentType = KEY_COUNT) {
                     ListHeading(
                         label = null,
                         totalItems = state.totalItems,
@@ -202,7 +204,7 @@ internal fun SearchTripsScreen(
                 }
             }
             if (chips.isNotEmpty() && !nothingMatches) {
-                item(key = KEY_CHIPS) {
+                item(key = KEY_CHIPS, contentType = KEY_CHIPS) {
                     FacetFilterChips(chips, isSelected = state::isSelected, onSelect = viewModel::selectFilter)
                 }
             }
@@ -226,6 +228,7 @@ internal fun SearchTripsScreen(
                     onTripClick(slug)
                 },
             )
+            navigationBarsSpacer()
         }
     }
 }
@@ -244,6 +247,8 @@ private fun SearchBar(
     onSearch: () -> Unit,
     onClear: () -> Unit,
 ) {
+    // Only whether there is text, so a keystroke recomposes the bar only when that flips (Compose audit L13).
+    val hasText by remember(field) { derivedStateOf { field.text.isNotEmpty() } }
     Row(
         modifier =
             Modifier
@@ -273,7 +278,7 @@ private fun SearchBar(
                 )
             },
             trailingIcon =
-                if (field.text.isNotEmpty()) {
+                if (hasText) {
                     {
                         IconButton(onClick = onClear) {
                             Icon(
@@ -313,7 +318,7 @@ private fun LazyListScope.recentSearches(
     onClearAll: () -> Unit,
 ) {
     if (recents.isEmpty()) {
-        item(key = KEY_START) {
+        item(key = KEY_START, contentType = KEY_START) {
             Text(
                 text = stringResource(Res.string.search_start),
                 style = MaterialTheme.typography.bodyMedium,
@@ -323,7 +328,7 @@ private fun LazyListScope.recentSearches(
         }
         return
     }
-    item(key = KEY_RECENT_TITLE) {
+    item(key = KEY_RECENT_TITLE, contentType = KEY_RECENT_TITLE) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(start = BahrSpacing.gutter, end = BahrSpacing.sm),
             verticalAlignment = Alignment.CenterVertically,
@@ -343,7 +348,7 @@ private fun LazyListScope.recentSearches(
         }
     }
     // One item, so the rows sit at touch height under each other rather than a card gap apart.
-    item(key = KEY_RECENTS) {
+    item(key = KEY_RECENTS, contentType = KEY_RECENTS) {
         Column {
             recents.forEach { recent ->
                 Row(
@@ -392,6 +397,10 @@ private val StripControlCharacters =
 /** For tests: the search field. */
 internal const val SEARCH_FIELD_TAG = "search_field"
 
+/** The gap between the list's items. */
+private val LIST_GAP = BahrSpacing.lg
+
+// Keys of the single items, each also its item's content type (one drawing each, M3-M11).
 private const val KEY_COUNT = "count"
 private const val KEY_CHIPS = "chips"
 private const val KEY_START = "start"

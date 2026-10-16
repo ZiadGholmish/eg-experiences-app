@@ -34,6 +34,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.itemContentType
+import androidx.paging.compose.itemKey
 import eg.bahr.core.catalog.data.appError
 import eg.bahr.core.designsystem.components.BahrEmptyView
 import eg.bahr.core.designsystem.components.BahrErrorView
@@ -133,7 +135,7 @@ internal fun MyTripsContent(
         contentPadding = PaddingValues(horizontal = BahrSpacing.gutter, vertical = BahrSpacing.lg),
         verticalArrangement = Arrangement.spacedBy(BahrSpacing.md),
     ) {
-        item(key = "title") {
+        item(key = "title", contentType = CONTENT_HEADING) {
             Text(
                 text = stringResource(Res.string.mytrips_title),
                 style = MaterialTheme.typography.headlineSmall,
@@ -142,7 +144,11 @@ internal fun MyTripsContent(
             )
         }
         when (state.session) {
-            SessionState.Unknown -> item(key = "loading") { BahrLoadingView(Modifier.heightIn(min = BahrSpacing.xxl)) }
+            SessionState.Unknown ->
+                item(
+                    key = "loading",
+                    contentType = CONTENT_LOADING,
+                ) { BahrLoadingView(Modifier.heightIn(min = BahrSpacing.xxl)) }
             SessionState.SignedOut -> signedOut(state, actions)
             is SessionState.SignedIn -> signedIn(state, bookings, actions)
         }
@@ -153,9 +159,9 @@ private fun LazyListScope.signedOut(
     state: MyTripsUiState,
     actions: MyTripsActions,
 ) {
-    item(key = "prompt") { SignInCard(actions.onSignIn) }
+    item(key = "prompt", contentType = CONTENT_SIGN_IN) { SignInCard(actions.onSignIn) }
     if (state.deviceJoins.isNotEmpty()) {
-        item(key = "device_title") {
+        item(key = "device_title", contentType = CONTENT_DEVICE_HEADING) {
             Column(Modifier.padding(top = BahrSpacing.md), verticalArrangement = Arrangement.spacedBy(BahrSpacing.xs)) {
                 Text(stringResource(Res.string.mytrips_device_waitlists), style = MaterialTheme.typography.titleMedium)
                 Text(
@@ -165,7 +171,7 @@ private fun LazyListScope.signedOut(
                 )
             }
         }
-        items(state.deviceJoins, key = { "device_${it.departureId}" }) { join ->
+        items(state.deviceJoins, key = { "device_${it.departureId}" }, contentType = { CONTENT_DEVICE_JOIN }) { join ->
             DeviceJoinRow(join, onClick = { actions.onTripClick(join.tripSlug) })
         }
     }
@@ -176,7 +182,7 @@ private fun LazyListScope.signedIn(
     bookings: LazyPagingItems<MyBookingDto>,
     actions: MyTripsActions,
 ) {
-    item(key = "segments") { Segments(state.segment, actions.onSegment) }
+    item(key = "segments", contentType = CONTENT_SEGMENTS) { Segments(state.segment, actions.onSegment) }
     when (state.segment) {
         MyTripsSegment.Upcoming -> bookingList(bookings, Res.string.mytrips_empty_upcoming, actions)
         MyTripsSegment.Past -> bookingList(bookings, Res.string.mytrips_empty_past, actions)
@@ -190,10 +196,15 @@ private fun LazyListScope.bookingList(
     actions: MyTripsActions,
 ) {
     when (val refresh = bookings.loadState.refresh) {
-        is LoadState.Loading -> if (bookings.itemCount == 0) item(key = "bookings_loading") { Centered { BahrLoadingView() } }
+        is LoadState.Loading ->
+            if (bookings.itemCount ==
+                0
+            ) {
+                item(key = "bookings_loading", contentType = CONTENT_LOADING) { Centered { BahrLoadingView() } }
+            }
         is LoadState.Error ->
             if (bookings.itemCount == 0) {
-                item(key = "bookings_error") {
+                item(key = "bookings_error", contentType = CONTENT_ERROR) {
                     val error = refresh.error.appError()
                     Centered {
                         BahrErrorView(
@@ -205,15 +216,24 @@ private fun LazyListScope.bookingList(
                 }
             }
         is LoadState.NotLoading ->
-            if (bookings.itemCount == 0) item(key = "bookings_empty") { Centered { BahrEmptyView(stringResource(empty)) } }
+            if (bookings.itemCount ==
+                0
+            ) {
+                item(key = "bookings_empty", contentType = CONTENT_EMPTY) { Centered { BahrEmptyView(stringResource(empty)) } }
+            }
     }
-    items(count = bookings.itemCount, key = { index -> bookings.peek(index)?.ref ?: "booking_$index" }) { index ->
+    // `ref` is never null (the contract requires it); Paging's itemKey covers the placeholder case.
+    items(
+        count = bookings.itemCount,
+        key = bookings.itemKey { it.ref },
+        contentType = bookings.itemContentType { CONTENT_BOOKING },
+    ) { index ->
         bookings[index]?.let { booking ->
             BookingRow(booking, onClick = { booking.trip?.slug?.let(actions.onTripClick) })
         }
     }
     if (bookings.loadState.append is LoadState.Loading) {
-        item(key = "bookings_more") {
+        item(key = "bookings_more", contentType = CONTENT_LOADING) {
             BahrLoadingView(Modifier.heightIn(min = BahrSpacing.xxl))
         }
     }
@@ -224,9 +244,9 @@ private fun LazyListScope.waitlist(
     actions: MyTripsActions,
 ) {
     when (load) {
-        WaitlistLoad.Loading -> item(key = "waitlist_loading") { Centered { BahrLoadingView() } }
+        WaitlistLoad.Loading -> item(key = "waitlist_loading", contentType = CONTENT_LOADING) { Centered { BahrLoadingView() } }
         is WaitlistLoad.Failed ->
-            item(key = "waitlist_error") {
+            item(key = "waitlist_error", contentType = CONTENT_ERROR) {
                 Centered {
                     BahrErrorView(
                         message = load.error.localizedMessage(),
@@ -237,9 +257,12 @@ private fun LazyListScope.waitlist(
             }
         is WaitlistLoad.Loaded ->
             if (load.entries.isEmpty()) {
-                item(key = "waitlist_empty") { Centered { BahrEmptyView(stringResource(Res.string.mytrips_empty_waitlist)) } }
+                item(
+                    key = "waitlist_empty",
+                    contentType = CONTENT_EMPTY,
+                ) { Centered { BahrEmptyView(stringResource(Res.string.mytrips_empty_waitlist)) } }
             } else {
-                items(load.entries, key = { "waitlist_${it.id}" }) { entry ->
+                items(load.entries, key = { "waitlist_${it.id}" }, contentType = { CONTENT_WAITLIST_ENTRY }) { entry ->
                     WaitlistRow(entry, onClick = { entry.trip?.slug?.let(actions.onTripClick) })
                 }
             }
@@ -335,3 +358,18 @@ internal const val MY_TRIPS_LIST_TAG = "mytrips_list"
 
 /** A state view's band in the list: this many of the largest spacing step. */
 private const val STATE_BAND = 4
+
+/*
+ * Content types (M3-M11, Compose audit M1): the list reuses an item's composition only for an item
+ * drawn the same way, e.g. a booking row for the next booking row, never for a state view.
+ */
+private const val CONTENT_HEADING = "heading"
+private const val CONTENT_LOADING = "loading"
+private const val CONTENT_ERROR = "error"
+private const val CONTENT_EMPTY = "empty"
+private const val CONTENT_SIGN_IN = "sign-in"
+private const val CONTENT_DEVICE_HEADING = "device-heading"
+private const val CONTENT_DEVICE_JOIN = "device-join"
+private const val CONTENT_SEGMENTS = "segments"
+private const val CONTENT_BOOKING = "booking"
+private const val CONTENT_WAITLIST_ENTRY = "waitlist-entry"

@@ -14,7 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -145,18 +145,26 @@ private fun HostPageList(
         contentPadding = PaddingValues(bottom = bottom),
         verticalArrangement = Arrangement.spacedBy(BahrSpacing.lg),
     ) {
-        item(key = KEY_HEADER) { HostHeader(slug, state.name, state.avatar, profile, padded) }
+        item(key = KEY_HEADER, contentType = KEY_HEADER) { HostHeader(slug, state.name, state.avatar, profile, padded) }
         if (profile != null) {
-            item(key = KEY_RATING) { RatingSummary(profile.rating, padded.padding(top = BahrSpacing.sm)) }
-            items(profile.reviews.withIndex().toList(), key = { "$KEY_REVIEW${it.index}" }) { (_, review) ->
+            item(key = KEY_RATING, contentType = KEY_RATING) { RatingSummary(profile.rating, padded.padding(top = BahrSpacing.sm)) }
+            // Keyed by position: a review has no id in the contract (see ReviewsScreen). itemsIndexed
+            // rather than a `withIndex()` copy of the list on every pass (Compose audit L2).
+            itemsIndexed(
+                profile.reviews,
+                key = { index, _ -> "$KEY_REVIEW$index" },
+                contentType = { _, _ -> CONTENT_REVIEW },
+            ) { _, review ->
                 Box(padded) { ReviewCard(review) }
             }
             // M4-M11, M4-M12: only under a full preview, when the summary counts more than it shows.
             if (onSeeAllReviews != null && showsSeeAllReviews(count = profile.rating.count, previewed = profile.reviews.size)) {
-                item(key = KEY_SEE_ALL_REVIEWS) { SeeAllReviewsLink(onClick = { onSeeAllReviews(profile.name) }, modifier = padded) }
+                item(key = KEY_SEE_ALL_REVIEWS, contentType = KEY_SEE_ALL_REVIEWS) {
+                    SeeAllReviewsLink(onClick = { onSeeAllReviews(profile.name) }, modifier = padded)
+                }
             }
         }
-        item(key = KEY_TRIPS_HEADING) {
+        item(key = KEY_TRIPS_HEADING, contentType = KEY_TRIPS_HEADING) {
             ListHeading(
                 label = state.name?.let { stringResource(Res.string.host_trips_heading, it) } ?: stringResource(Res.string.trips_title),
                 totalItems = state.totalTrips,
@@ -187,3 +195,6 @@ private const val KEY_RATING = "host-rating"
 private const val KEY_REVIEW = "host-review:"
 private const val KEY_TRIPS_HEADING = "host-trips-heading"
 private const val KEY_SEE_ALL_REVIEWS = "host-see-all-reviews"
+
+/** The single items' content types are their keys (one drawing each, M3-M11); the reviews share this one. */
+private const val CONTENT_REVIEW = "review"

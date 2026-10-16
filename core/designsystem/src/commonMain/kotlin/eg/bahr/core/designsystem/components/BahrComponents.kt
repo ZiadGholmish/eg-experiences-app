@@ -33,6 +33,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -122,16 +124,20 @@ fun BahrPrimaryButton(
     val src = remember { MutableInteractionSource() }
     val pressed by src.collectIsPressedAsState()
     val scheme = MaterialTheme.colorScheme
-    val bg by animateColorAsState(
-        if (!appearance.filled) {
-            BahrTheme.colors.track
-        } else if (pressed && appearance.clickable) {
-            BahrTheme.colors.tertiaryHover
-        } else {
-            scheme.tertiary
-        },
-        tween(BahrMotion.Short, easing = BahrMotion.Standard),
-    )
+    // Fills are States read only where they draw (Compose audit L4): a press or a toggle eases them
+    // without recomposing the button or chip on each frame. `drawRect` inside the clip is what
+    // `background(color)` drew.
+    val bg =
+        animateColorAsState(
+            if (!appearance.filled) {
+                BahrTheme.colors.track
+            } else if (pressed && appearance.clickable) {
+                BahrTheme.colors.tertiaryHover
+            } else {
+                scheme.tertiary
+            },
+            tween(BahrMotion.Short, easing = BahrMotion.Standard),
+        )
     val shape = BahrTheme.shapes.full
     val busy = stringResource(Res.string.a11y_busy)
     Row(
@@ -139,7 +145,7 @@ fun BahrPrimaryButton(
             .heightIn(min = PRIMARY_BUTTON_MIN_HEIGHT.dp)
             .then(if (appearance.filled) Modifier.bahrShadow(BahrElevation.Cta, shape, BahrTheme.colors) else Modifier)
             .clip(shape)
-            .background(bg)
+            .drawBehind { drawRect(bg.value) }
             .clickable(src, indication = null, enabled = appearance.clickable, role = Role.Button, onClick = onClick)
             // While loading, `clickable` reports the button as disabled; without a state a screen reader
             // would say the same as for an invalid form. This says it is busy (M0-M2 review R2-1).
@@ -186,14 +192,15 @@ fun BahrFilterChip(
     val x = BahrTheme.colors
     val disabled = count == 0 && !selected
     val shape = BahrTheme.shapes.full
-    val bg by animateColorAsState(
-        when {
-            selected -> c.primary
-            disabled -> x.surfaceLowest
-            else -> c.surfaceContainer
-        },
-        bahrTween(BahrMotion.Short),
-    )
+    val bg =
+        animateColorAsState(
+            when {
+                selected -> c.primary
+                disabled -> x.surfaceLowest
+                else -> c.surfaceContainer
+            },
+            bahrTween(BahrMotion.Short),
+        )
     val fg by animateColorAsState(
         when {
             selected -> c.onPrimary
@@ -211,16 +218,17 @@ fun BahrFilterChip(
         bahrTween(BahrMotion.Short),
     )
     val countColor by animateColorAsState(if (selected) c.onPrimary else c.onSurfaceVariant, bahrTween(BahrMotion.Short))
-    val countPill by animateColorAsState(
-        if (selected) c.onPrimary.copy(alpha = CHIP_COUNT_ALPHA) else x.track,
-        bahrTween(BahrMotion.Short),
-    )
+    val countPill =
+        animateColorAsState(
+            if (selected) c.onPrimary.copy(alpha = CHIP_COUNT_ALPHA) else x.track,
+            bahrTween(BahrMotion.Short),
+        )
     Row(
         modifier
             .heightIn(min = BahrSpacing.minTouch)
             .then(if (selected) Modifier.bahrShadow(BahrElevation.Chip, shape, x) else Modifier)
             .clip(shape)
-            .background(bg)
+            .drawBehind { drawRect(bg.value) }
             .clickable(enabled = !disabled, role = Role.Checkbox, onClick = onClick)
             .animateContentSize(bahrTween(BahrMotion.Short))
             .padding(horizontal = BahrSpacing.md),
@@ -239,7 +247,7 @@ fun BahrFilterChip(
                 modifier =
                     Modifier
                         .clip(shape)
-                        .background(countPill)
+                        .drawBehind { drawRect(countPill.value) }
                         .padding(horizontal = CHIP_COUNT_PADDING_H.dp, vertical = CHIP_COUNT_PADDING_V.dp),
             ) { shown ->
                 Text(shown.toString(), style = MaterialTheme.typography.labelMedium, color = countColor)
@@ -321,22 +329,40 @@ fun ImageGround(
     image: @Composable () -> Unit = {},
 ) {
     val ink = BahrTheme.colors.scrimInk
-    Box(modifier.background(BahrTheme.colors.surfaceDim)) {
+    // The scrims are drawn over the image by the ground itself, with their brushes built once per
+    // size, rather than as two extra boxes with a new brush each composition (Compose audit L7).
+    val scrims =
+        if (scrimTop || scrimBottom) {
+            Modifier.drawWithCache {
+                val top =
+                    if (scrimTop) {
+                        Brush.verticalGradient(
+                            0f to ink.copy(alpha = SCRIM_TOP_ALPHA),
+                            SCRIM_TOP_END to ink.copy(alpha = 0f),
+                        )
+                    } else {
+                        null
+                    }
+                val bottom =
+                    if (scrimBottom) {
+                        Brush.verticalGradient(
+                            SCRIM_BOTTOM_START to ink.copy(alpha = 0f),
+                            1f to ink.copy(alpha = SCRIM_BOTTOM_ALPHA),
+                        )
+                    } else {
+                        null
+                    }
+                onDrawWithContent {
+                    drawContent()
+                    top?.let { drawRect(it) }
+                    bottom?.let { drawRect(it) }
+                }
+            }
+        } else {
+            Modifier
+        }
+    Box(modifier.background(BahrTheme.colors.surfaceDim).then(scrims)) {
         image()
-        if (scrimTop) {
-            Box(
-                Modifier.matchParentSize().background(
-                    Brush.verticalGradient(0f to ink.copy(alpha = SCRIM_TOP_ALPHA), SCRIM_TOP_END to ink.copy(alpha = 0f)),
-                ),
-            )
-        }
-        if (scrimBottom) {
-            Box(
-                Modifier.matchParentSize().background(
-                    Brush.verticalGradient(SCRIM_BOTTOM_START to ink.copy(alpha = 0f), 1f to ink.copy(alpha = SCRIM_BOTTOM_ALPHA)),
-                ),
-            )
-        }
     }
 }
 

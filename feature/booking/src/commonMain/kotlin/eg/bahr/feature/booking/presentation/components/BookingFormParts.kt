@@ -28,7 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
@@ -192,23 +192,22 @@ private fun Radio(
                     if (open) {
                         Modifier.border(BahrBorder.selected, ring, shape)
                     } else {
-                        Modifier.drawBehind {
-                            val stroke = BahrBorder.selected.toPx()
-                            drawCircle(
-                                color = c.outline,
-                                radius = (size.minDimension - stroke) / 2,
-                                style =
-                                    Stroke(
-                                        width = stroke,
-                                        pathEffect =
-                                            PathEffect.dashPathEffect(
-                                                floatArrayOf(
-                                                    stroke * DASH,
-                                                    stroke * DASH,
-                                                ),
+                        // The stroke and its dash are built once per size, not on every draw (Compose audit L8).
+                        Modifier.drawWithCache {
+                            val width = BahrBorder.selected.toPx()
+                            val stroke =
+                                Stroke(
+                                    width = width,
+                                    pathEffect =
+                                        PathEffect.dashPathEffect(
+                                            floatArrayOf(
+                                                width * DASH,
+                                                width * DASH,
                                             ),
-                                    ),
-                            )
+                                        ),
+                                )
+                            val radius = (size.minDimension - width) / 2
+                            onDrawBehind { drawCircle(color = c.outline, radius = radius, style = stroke) }
                         }
                     },
                 ).padding(BahrBorder.selected + BahrBorder.selected),

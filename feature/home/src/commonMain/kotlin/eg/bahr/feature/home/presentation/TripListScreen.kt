@@ -9,11 +9,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
@@ -50,6 +48,7 @@ import eg.bahr.core.designsystem.components.BahrEmptyView
 import eg.bahr.core.designsystem.components.BahrErrorView
 import eg.bahr.core.designsystem.components.BahrLoadingView
 import eg.bahr.core.designsystem.components.BahrPillButton
+import eg.bahr.core.designsystem.components.navigationBarsSpacer
 import eg.bahr.core.designsystem.icon.BahrIcons
 import eg.bahr.core.designsystem.theme.BahrBorder
 import eg.bahr.core.designsystem.theme.BahrSize
@@ -70,6 +69,7 @@ import eg.bahr.core.localization.localizedMessage
 import eg.bahr.feature.home.model.key
 import eg.bahr.feature.home.navigation.HomeAction
 import eg.bahr.feature.home.presentation.components.HomeSection
+import eg.bahr.feature.home.presentation.components.homeSectionContentType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import org.jetbrains.compose.resources.stringResource
@@ -125,8 +125,6 @@ internal fun TripListScreen(
     // meant to run full-bleed under the bar.
     val statusBar = WindowInsets.statusBars
     val stateModifier = modifier.windowInsetsPadding(statusBar)
-    // The last card scrolls clear of the gesture bar (M1-M1a review #10).
-    val listBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + BahrSpacing.xl
 
     val sections = state.sections
     // HANDOFF Home: the footer note sits under the last card (user decision 2026-10-11, M4-M7).
@@ -174,11 +172,13 @@ internal fun TripListScreen(
     LazyColumn(
         state = listState,
         modifier = stateModifier.fillMaxSize(),
-        contentPadding = PaddingValues(top = BahrSpacing.lg, bottom = listBottom),
+        // The last item ends xl above whatever of the navigation bar is left (M1-M1a review #10):
+        // the spacer item below carries that inset, after its own LIST_GAP.
+        contentPadding = PaddingValues(top = BahrSpacing.lg, bottom = BahrSpacing.xl - LIST_GAP),
         // The handoff's 16px gap between trip cards.
         verticalArrangement = Arrangement.spacedBy(LIST_GAP),
     ) {
-        item(key = KEY_TOP) {
+        item(key = KEY_TOP, contentType = KEY_TOP) {
             Column(modifier = Modifier.padding(horizontal = BahrSpacing.gutter)) {
                 Column(verticalArrangement = Arrangement.spacedBy(BahrSpacing.lg)) {
                     HomeAppBar(onMap = onMap)
@@ -193,7 +193,7 @@ internal fun TripListScreen(
         // Sections can arrive after the list (the view model caps how long the list waits for them).
         // Every item is keyed, so a user who has scrolled keeps the card they are on: LazyColumn
         // holds its position by the first visible item's key, and the sections go in above it.
-        items(placed.inline, key = { homeSectionKey(it.key) }) { section ->
+        items(placed.inline, key = { homeSectionKey(it.key) }, contentType = ::homeSectionContentType) { section ->
             HomeSection(
                 section = section,
                 perPersonLabel = perPersonLabel,
@@ -212,13 +212,13 @@ internal fun TripListScreen(
         // HANDOFF Home: the filter chips wrap onto a second line rather than scroll; a zero-count chip
         // is dimmed. Only once the server has sent them (an older server sends none).
         if (chips.isNotEmpty() && !nothingOnSaleHere) {
-            item(key = KEY_CHIPS) {
+            item(key = KEY_CHIPS, contentType = KEY_CHIPS) {
                 RefreshBarBelow(visible = refreshing, gap = LIST_GAP) {
                     FacetFilterChips(chips, isSelected = state::isSelected, onSelect = viewModel::selectFilter)
                 }
             }
         }
-        item(key = KEY_ALL_TRIPS) {
+        item(key = KEY_ALL_TRIPS, contentType = KEY_ALL_TRIPS) {
             // HANDOFF Home: "All trips" with its result count at the end of the line (M4-M7).
             ListHeading(
                 label = stringResource(Res.string.trips_all_title),
@@ -245,7 +245,7 @@ internal fun TripListScreen(
         // Under the last card only, as the app's own footer note was: while more pages can load, the
         // notes would sit between them.
         if (status == PagedListStatus.Loaded && trips.loadState.append.endOfPaginationReached) {
-            items(placed.trailing, key = { homeSectionKey(it.key) }) { section ->
+            items(placed.trailing, key = { homeSectionKey(it.key) }, contentType = ::homeSectionContentType) { section ->
                 HomeSection(
                     section = section,
                     perPersonLabel = perPersonLabel,
@@ -255,6 +255,9 @@ internal fun TripListScreen(
                 )
             }
         }
+
+        // Under Android's tab bar this is 0: the bar has already padded for the inset (Compose audit M3).
+        navigationBarsSpacer()
     }
 }
 
@@ -343,6 +346,7 @@ private fun SearchEntry(onClick: () -> Unit) {
 /** The gap between Home's items; the refresh bar is drawn in the middle of the one under the chips. */
 private val LIST_GAP = BahrSpacing.lg
 
+// Keys of the single items, each also its item's content type (one drawing each, M3-M11).
 private const val KEY_TOP = "top"
 private const val KEY_CHIPS = "chips"
 private const val KEY_ALL_TRIPS = "all-trips"

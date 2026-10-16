@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
+import androidx.paging.compose.itemContentType
 import androidx.paging.compose.itemKey
 import eg.bahr.core.catalog.data.appError
 import eg.bahr.core.catalog.model.FacetDto
@@ -274,7 +275,11 @@ internal fun LazyListScope.pagedTripCards(
     motion: ListMotion? = null,
     stale: Boolean = false,
 ) {
-    items(count = trips.itemCount, key = trips.itemKey { "$KEY_TRIP${it.slug}" }) { index ->
+    items(
+        count = trips.itemCount,
+        key = trips.itemKey { "$KEY_TRIP${it.slug}" },
+        contentType = trips.itemContentType { CONTENT_TRIP_CARD },
+    ) { index ->
         // Null only for a placeholder, and placeholders are off; nothing to draw then.
         val trip = trips[index] ?: return@items
         val moving = motion?.let { Modifier.graphicsLayer { with(it) { applyTo() } } } ?: Modifier
@@ -300,10 +305,10 @@ internal fun LazyListScope.pagedTripCards(
     if (stale) return
     when (val append = trips.loadState.append) {
         is LoadState.Loading ->
-            item(key = KEY_APPEND_LOADING) { BahrLoadingView(bahrAnimateItem().padding(BahrSpacing.lg)) }
+            item(key = KEY_APPEND_LOADING, contentType = CONTENT_LOADING) { BahrLoadingView(bahrAnimateItem().padding(BahrSpacing.lg)) }
 
         is LoadState.Error ->
-            item(key = KEY_APPEND_ERROR) {
+            item(key = KEY_APPEND_ERROR, contentType = CONTENT_ERROR) {
                 val error = append.error.appError()
                 BahrErrorView(
                     message = error.localizedMessage(),
@@ -379,10 +384,10 @@ fun LazyListScope.listBody(
 ) {
     when (status) {
         PagedListStatus.Loading ->
-            item(key = KEY_LIST_LOADING) { BahrLoadingView(bahrAnimateItem().padding(BahrSpacing.xl)) }
+            item(key = KEY_LIST_LOADING, contentType = CONTENT_LOADING) { BahrLoadingView(bahrAnimateItem().padding(BahrSpacing.xl)) }
 
         is PagedListStatus.Failed ->
-            item(key = KEY_LIST_ERROR) {
+            item(key = KEY_LIST_ERROR, contentType = CONTENT_ERROR) {
                 BahrErrorView(
                     message = status.error.localizedMessage(),
                     retryLabel = stringResource(Res.string.action_retry),
@@ -392,7 +397,7 @@ fun LazyListScope.listBody(
             }
 
         PagedListStatus.Empty ->
-            item(key = KEY_LIST_EMPTY) {
+            item(key = KEY_LIST_EMPTY, contentType = CONTENT_EMPTY) {
                 Text(
                     text = emptyMessage(),
                     style = MaterialTheme.typography.bodyMedium,
@@ -561,3 +566,12 @@ private const val KEY_APPEND_ERROR = "append-error"
 private const val KEY_LIST_LOADING = "list-loading"
 private const val KEY_LIST_ERROR = "list-error"
 private const val KEY_LIST_EMPTY = "list-empty"
+
+/*
+ * Content types (M3-M11, Compose audit M1): a lazy list reuses an item's composition only for an item
+ * of the same type, so a scrolled-away card is rebuilt as the next card, never as a state view.
+ */
+private const val CONTENT_TRIP_CARD = "trip-card"
+private const val CONTENT_LOADING = "loading"
+private const val CONTENT_ERROR = "error"
+private const val CONTENT_EMPTY = "empty"

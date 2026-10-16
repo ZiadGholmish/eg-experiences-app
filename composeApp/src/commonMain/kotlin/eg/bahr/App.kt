@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -51,7 +52,8 @@ fun App(appVersion: String) {
 
     // A link from outside opens in the Home tab's stack (its NavHost opens it).
     val pendingLink by AppDeepLinkInbox.pending.collectAsStateWithLifecycle()
-    LaunchedEffect(pendingLink) { if (pendingLink != null) tabs.select(AppTab.Home) }
+    // Synchronous, so a keyed SideEffect (Compose 1.12) rather than a coroutine (Compose audit L9).
+    SideEffect(pendingLink) { if (pendingLink != null) tabs.select(AppTab.Home) }
 
     // A language switch starts every tab over at its root (see AppTabsState.resetToRoots).
     val languages: AppLanguageState = koinInject()
