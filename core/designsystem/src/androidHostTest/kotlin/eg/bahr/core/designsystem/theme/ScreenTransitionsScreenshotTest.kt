@@ -133,7 +133,8 @@ class ScreenTransitionsScreenshotTest {
         compose.runOnUiThread { page = if (move == Move.Push) 1 else 0 }
         compose.waitForIdle()
         val duration = if (style == ScreenMotionStyle.Ios) BahrMotion.ScreenIos else BahrMotion.ScreenAndroid
-        compose.mainClock.advanceTimeBy((duration * MIDWAY).toLong())
+        val point = if (style == ScreenMotionStyle.Android && move == Move.Pop) ANDROID_POP_POINT else MIDWAY
+        compose.mainClock.advanceTimeBy((duration * point).toLong())
         compose.captureScreenshot(name)
     }
 
@@ -160,6 +161,13 @@ class ScreenTransitionsScreenshotTest {
     private companion object {
         /** Mid-way, where both pages show and the slide, dim and fade are all part done. */
         const val MIDWAY = .4f
+
+        /**
+         * An Android pop's leaving page fades out over [BahrMotion.Short] (150 ms), sooner than the slide:
+         * at [MIDWAY] (180 ms) it has gone, and the shot could not catch it see-through or leaving the wrong
+         * way (M3-M12 review #1). A quarter in (112 ms) it is still part drawn.
+         */
+        const val ANDROID_POP_POINT = .25f
         val BAR_WIDTH = 160.dp
         val BAR_HEIGHT = 120.dp
     }

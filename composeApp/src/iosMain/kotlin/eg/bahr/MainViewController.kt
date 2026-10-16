@@ -205,8 +205,9 @@ internal object IosTabs {
      * so without this the Arabic app took Back from the left edge, while its pages leave to the left. The
      * trait changes no Compose layout: BahrTheme sets the direction from the language.
      *
-     * Compose Multiplatform 1.10 reads the direction when the tab appears, so a switch reaches the tab
-     * it is made in the next time that tab is shown; 1.12 also follows a trait change at once.
+     * Compose Multiplatform 1.10 read the direction only when the tab appeared, so a switch reached the
+     * tab it was made in the next time that tab was shown. Whether 1.12 follows the trait change at once
+     * is not yet checked on a device (M3-M10); the trait is set either way.
      */
     fun followLanguage(controller: UIViewController) {
         val languages: AppLanguageState = KoinPlatform.getKoin().get()

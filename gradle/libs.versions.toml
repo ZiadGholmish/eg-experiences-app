@@ -1,6 +1,8 @@
 # Versions started at the sibling KMP app's (`../../pet-market-app`). The toolchain (Kotlin, AGP, Gradle in
 # gradle/wrapper) moved ahead of it in M3-M13 (2026-10-15) for Compose Multiplatform 1.12, which needs AGP 9.1+,
-# compileSdk 37 and iOS klibs built with Kotlin 2.4.20+.
+# compileSdk 37 and iOS klibs built with Kotlin 2.4.20+. Since M3-M10 (2026-10-16) the JetBrains Compose group
+# follows Compose Multiplatform 1.12.2's release notes (github.com/JetBrains/compose-multiplatform/releases/tag/v1.12.2,
+# "Libraries" table): every org.jetbrains.compose / org.jetbrains.androidx library below is the version that table lists.
 [versions]
 # The newest AGP Kotlin 2.4.21 lists as supported (kotlinlang.org/docs/gradle-configure-project.html, "Kotlin Gradle
 # plugin data in a compatibility table": AGP 8.5.2-9.3.1). AGP 9.3 needs Gradle 9.5.0+ (AGP 9.3 release notes).
@@ -10,11 +12,14 @@ agp = "9.3.1"
 android-compileSdk = "37"
 android-minSdk = "24"
 android-targetSdk = "36"
-androidx-activity = "1.12.2"
+# 1.13.0: what Compose Multiplatform 1.12.2's Android artifacts resolve activity to anyway (M3-M10).
+androidx-activity = "1.13.0"
 androidx-appcompat = "1.7.1"
-androidx-lifecycle = "2.9.6"
-composeMultiplatform = "1.10.0"
-composeMaterial3 = "1.10.0-alpha05"
+# JetBrains lifecycle 2.11.0: the Lifecycle Compose Multiplatform 1.12.2 lists (androidx Lifecycle 2.11.0).
+androidx-lifecycle = "2.11.0"
+composeMultiplatform = "1.12.2"
+# Material3 has no stable Compose Multiplatform line: 1.12.0-alpha03 is the build 1.12.2 lists (androidx Material3 1.5.0-alpha22).
+composeMaterial3 = "1.12.0-alpha03"
 # 2.4.21 (M3-M13): Compose Multiplatform 1.12's iOS klibs are built with Kotlin 2.4.20. Kotlin 2.4 makes the
 # concurrent mark-sweep GC the Kotlin/Native default; gradle.properties pins the 2.3 one (user decision).
 kotlin = "2.4.21"
@@ -26,13 +31,16 @@ koin = "4.1.1"
 ktor = "3.1.1"
 
 # Navigation
-navigationCompose = "2.9.1"
+# 2.10.0-rc01: the Navigation build Compose Multiplatform 1.12.2 lists (androidx Navigation 2.10.0); JetBrains has no
+# stable 2.10 yet. It hands a back swipe to the NavHost's predictivePop* transitions (AppScreenTransitions, M3-M10).
+navigationCompose = "2.10.0-rc01"
 # AndroidX navigation-testing (TestNavHostController, Android only: no KMP artifact has it), pinned to the
-# androidx navigation-runtime that JetBrains' navigation-compose 2.9.1 resolves to on Android (2.9.4), so
+# androidx navigation-runtime that JetBrains' navigation-compose 2.10.0-rc01 resolves to on Android (2.10.0), so
 # the two never disagree at runtime (M4-M9).
-androidxNavigationTesting = "2.9.4"
-# JetBrains' multiplatform build of androidx navigationevent 1.0.1, the version Compose Multiplatform 1.10 resolves to.
-navigationEvent = "1.0.1"
+androidxNavigationTesting = "2.10.0"
+# JetBrains' multiplatform build of androidx navigationevent, the version Compose Multiplatform 1.12.2 lists (1.1.0).
+# It resolves to androidx navigationevent 1.1.1 on iOS; on Android, androidx navigation-compose 2.10.0 pulls 1.1.2.
+navigationEvent = "1.1.0"
 
 # Paging: the latest stable AndroidX Paging that publishes iosArm64/iosSimulatorArm64 for
 # paging-common, paging-compose and paging-testing (checked on Google Maven, 2026-10-10; M4-M1b).
@@ -40,8 +48,9 @@ paging = "3.5.2"
 
 # Maps (M4-M2, user decision 2026-10-10: Google Maps on both platforms). Android only: Google
 # publishes no KMP maps artifact, so iOS uses the Google Maps SDK for iOS through Swift Package
-# Manager in iosApp/ and a Swift bridge. 7.0.0 is the newest whose compose-bom (2025.12.00) is the
-# androidx Compose 1.10.0 Compose Multiplatform 1.10 maps to; 8.x raises it, 8.4+ also needs Kotlin 2.4.
+# Manager in iosApp/ and a Swift bridge. 7.0.0's compose-bom (2025.12.00) asks for androidx Compose 1.10.0, which
+# Gradle resolves up to the 1.12.1 Compose Multiplatform 1.12.2 maps to on Android. Kept at 7.0.0 in M3-M10 (an
+# upgrade, no behaviour change); a newer maps-compose is its own step.
 googleMapsCompose = "7.0.0"
 
 # Sign in with Google on Android (M3-M0): AndroidX Credential Manager and Google's ID-token credential.
@@ -51,7 +60,9 @@ androidxCredentials = "1.5.0"
 googleId = "1.1.1"
 
 # Image loading
-coil = "3.3.0"
+# 3.6.3 (M3-M10): built against Skiko 0.150.1, the line Compose Multiplatform 1.12.2 ships (0.150.2). 3.3.0 was built
+# against Skiko 0.9.4.2, and on 1.12 the iOS build's Compose compatibility check warned the two were incompatible.
+coil = "3.6.3"
 
 # Serialization
 kotlinxSerialization = "1.8.1"
@@ -78,8 +89,8 @@ okio = "3.9.1"
 roborazzi = "1.76.0"
 robolectric = "4.17"
 junit = "4.13.2"
-# androidx Compose that Compose Multiplatform 1.10.0 maps to on Android; ui-test must match it.
-androidxCompose = "1.10.0"
+# androidx Compose that Compose Multiplatform 1.12.2 maps to on Android (its Libraries table); ui-test must match it.
+androidxCompose = "1.12.1"
 kover = "0.9.11"
 # Module-graph rules in :architecture-tests (0.17.3 is the latest release, 2024-12).
 konsist = "0.17.3"

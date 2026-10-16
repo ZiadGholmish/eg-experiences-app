@@ -9,7 +9,7 @@ import com.github.takahirom.roborazzi.captureScreenRoboImage
 import com.github.takahirom.roborazzi.roborazziSystemPropertyOutputDirectory
 
 /**
- * Captures the whole composition as `<module>/src/androidUnitTest/screenshots/<name>.png`
+ * Captures the whole composition as `<module>/src/androidHostTest/screenshots/<name>.png`
  * (the module's `roborazzi.outputDir`).
  *
  * Names are explicit, not derived from the test method, so one test can capture a series

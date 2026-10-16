@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -18,8 +17,6 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
-import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
-import androidx.navigationevent.compose.rememberNavigationEventDispatcherOwner
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
@@ -251,23 +248,17 @@ class HoldScreenshotTest {
         compose.setContent {
             ProvideAppLanguage(language) {
                 BahrTheme(locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English) {
-                    // The test activity (androidx.activity 1.10) provides no back dispatcher; the app's
-                    // (1.12) does. A root one stands in, so the screen's back handler has one to join.
-                    CompositionLocalProvider(
-                        LocalNavigationEventDispatcherOwner provides rememberNavigationEventDispatcherOwner(parent = null),
-                    ) {
-                        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-                            HoldScreen(hold = hold, onEnded = {}, alreadyHeldNotice = alreadyHeldNotice, viewModel = viewModel)
-                            sheetShot.value?.let { sheet ->
-                                Box(Modifier.fillMaxSize().background(BahrTheme.colors.scrim), contentAlignment = Alignment.BottomCenter) {
-                                    Box(
-                                        Modifier
-                                            .clip(
-                                                BahrTheme.shapes.sheet,
-                                            ).background(MaterialTheme.colorScheme.surface)
-                                            .padding(top = BahrSpacing.xl),
-                                    ) { sheet() }
-                                }
+                    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+                        HoldScreen(hold = hold, onEnded = {}, alreadyHeldNotice = alreadyHeldNotice, viewModel = viewModel)
+                        sheetShot.value?.let { sheet ->
+                            Box(Modifier.fillMaxSize().background(BahrTheme.colors.scrim), contentAlignment = Alignment.BottomCenter) {
+                                Box(
+                                    Modifier
+                                        .clip(
+                                            BahrTheme.shapes.sheet,
+                                        ).background(MaterialTheme.colorScheme.surface)
+                                        .padding(top = BahrSpacing.xl),
+                                ) { sheet() }
                             }
                         }
                     }

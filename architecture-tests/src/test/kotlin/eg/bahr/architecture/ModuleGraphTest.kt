@@ -220,8 +220,9 @@ class ModuleGraphTest {
                 CORE_TESTING to setOf(":core:common", ":core:datastore"),
             )
 
-        // AppTabs: the Android tab host (Scaffold + bottom bar around the selected tab's NavHost, M4-M8). Wiring, not a screen.
-        val allowedAppComposables = setOf("App", "AppNavHost", "AppTabs")
+        // AppTabs: the Android tab host (Scaffold + bottom bar around the selected tab's NavHost, M4-M8). AppScreenNavHost:
+        // the NavHost call with the screen transitions wired in, shared by AppNavHost and its test (M3-M10). Wiring, not screens.
+        val allowedAppComposables = setOf("App", "AppNavHost", "AppScreenNavHost", "AppTabs")
 
         /** The skill's "Inside a feature" layout. */
         val featureLayers = listOf("model", "data", "presentation", "navigation", "di")

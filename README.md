@@ -13,7 +13,7 @@ the plan is `../docs/PLAN.md`.
 | | |
 |---|---|
 | Language | Kotlin 2.4 |
-| UI | Compose Multiplatform 1.10 |
+| UI | Compose Multiplatform 1.12 |
 | Targets | Android (minSdk 24, compileSdk 37, targetSdk 36), iOS (arm64 + simulator arm64) |
 | Build | Gradle 9.7, Android Gradle Plugin 9.3 (KMP modules on `com.android.kotlin.multiplatform.library`) |
 | DI | Koin |

@@ -10,23 +10,12 @@ import androidx.navigation.NavController
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.navigationevent.NavigationEvent
-import androidx.navigationevent.NavigationEventDispatcher
-import androidx.navigationevent.NavigationEventTransitionState
 import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
 import eg.bahr.core.common.locale.AppLanguage
-import eg.bahr.core.designsystem.theme.BahrBackSwipe
 import eg.bahr.core.designsystem.theme.BahrSharedTransitions
 import eg.bahr.core.designsystem.theme.BahrTheme
-import eg.bahr.core.designsystem.theme.bahrPopEnter
-import eg.bahr.core.designsystem.theme.bahrPopExit
-import eg.bahr.core.designsystem.theme.bahrPushEnter
-import eg.bahr.core.designsystem.theme.bahrPushExit
-import eg.bahr.core.designsystem.theme.bahrReplaceEnter
-import eg.bahr.core.designsystem.theme.bahrReplaceExit
 import eg.bahr.core.designsystem.theme.reducedMotion
 import eg.bahr.deeplink.AppDeepLinkInbox
 import eg.bahr.deeplink.DeepLinkDestinations
@@ -112,11 +101,12 @@ fun AppNavHost(
     val reduced by rememberUpdatedState(BahrTheme.reducedMotion)
     val reducedMotion = remember { { reduced } }
 
-    // Whether a back swipe is driving the pop that is starting, and from which edge (M3-M12): navigation
-    // 2.9 runs a swipe through the same pop transitions as the Back button, so they ask. Read from the
-    // dispatcher's state when a transition starts, never in composition.
+    // Whether a back swipe is driving the pop under way, and from which edge (M3-M12): the destinations'
+    // dim asks (navigation 2.10 hands the NavHost's swipe transitions the edge itself, AppScreenTransitions).
+    // Read from the dispatcher's state when a transition starts, never in composition.
     val navigationEvents = LocalNavigationEventDispatcherOwner.current?.navigationEventDispatcher
     val backSwipe = remember(navigationEvents) { { navigationEvents.backSwipe() } }
+    val transitions = remember(backSwipe) { AppScreenTransitions(reducedMotion, backSwipe) }
 
     // Splash runs once per process; a NavHost rebuilt later (a language switch) starts on Home itself.
     val start: Any = remember(tab) { tab.startRoute(splashDone = tabs.splashDone) }
@@ -159,20 +149,8 @@ fun AppNavHost(
 
     // Shared elements (M4-M6): a Home chip or row title morphs into the page it opens.
     BahrSharedTransitions(backSwipe = backSwipe) {
-        // One screen transition for every push and pop, in the platform's style (M3-M12); destinations set
-        // none. Splash is replaced by Home rather than covered by it.
-        NavHost(
-            navController = navController,
-            startDestination = start,
-            enterTransition = {
-                if (initialState.destination.hasRoute<SplashRoute>()) bahrReplaceEnter(reducedMotion()) else bahrPushEnter(reducedMotion())
-            },
-            exitTransition = {
-                if (initialState.destination.hasRoute<SplashRoute>()) bahrReplaceExit(reducedMotion()) else bahrPushExit(reducedMotion())
-            },
-            popEnterTransition = { bahrPopEnter(reducedMotion(), backSwipe()) },
-            popExitTransition = { bahrPopExit(reducedMotion(), backSwipe()) },
-        ) {
+        // One screen transition for every push and pop, in the platform's style (AppScreenTransitions).
+        AppScreenNavHost(navController = navController, startDestination = start, transitions = transitions) {
             splashScreen(
                 onReady = {
                     tabs.markSplashDone()
@@ -326,21 +304,6 @@ internal fun NavController.isAt(tab: AppTab): Boolean = currentBackStackEntry?.d
 internal fun NavController.popToRoot(tab: AppTab) {
     if (!popBackStack(tab.rootRoute, inclusive = false) && !isAt(tab)) {
         navigate(tab.rootRoute) { popUpTo(graph.id) { inclusive = true } }
-    }
-}
-
-/**
- * The back swipe in progress, if any (M3-M12): iOS's edge swipe and Android's predictive back both reach
- * the NavHost through this dispatcher, whose state carries the edge the finger started from. Internal
- * for BackSwipeTest.
- */
-internal fun NavigationEventDispatcher?.backSwipe(): BahrBackSwipe {
-    val swipe = (this?.transitionState?.value as? NavigationEventTransitionState.InProgress)?.latestEvent ?: return BahrBackSwipe.None
-    return when (swipe.swipeEdge) {
-        NavigationEvent.EDGE_LEFT -> BahrBackSwipe.FromLeftEdge
-        NavigationEvent.EDGE_RIGHT -> BahrBackSwipe.FromRightEdge
-        // No edge: not a swipe (a key, a button), so the ordinary pop.
-        else -> BahrBackSwipe.None
     }
 }
 
