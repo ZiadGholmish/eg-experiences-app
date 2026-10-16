@@ -2,7 +2,7 @@ rootProject.name = "Bahr"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {
-    // Convention plugins (bahr.kmp.library, bahr.kmp.feature, bahr.kmp.app, …).
+    // Convention plugins (bahr.kmp.library, bahr.kmp.feature, bahr.kmp.app, bahr.android.app, …).
     includeBuild("build-logic")
     repositories {
         google {
@@ -30,6 +30,9 @@ dependencyResolutionManagement {
     }
 }
 
+// The Android application (M3-M13): AGP 9 keeps `com.android.application` out of Kotlin Multiplatform modules,
+// so the APK is built here around :composeApp (a KMP library; the iOS framework is still built there).
+include(":androidApp")
 include(":composeApp")
 
 // Core modules — no core module may depend on a feature module.

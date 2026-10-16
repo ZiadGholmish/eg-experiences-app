@@ -35,6 +35,10 @@ gradlePlugin {
             id = "bahr.kmp.app"
             implementationClass = "eg.bahr.buildlogic.KmpAppConventionPlugin"
         }
+        register("androidApp") {
+            id = "bahr.android.app"
+            implementationClass = "eg.bahr.buildlogic.AndroidAppConventionPlugin"
+        }
         register("architectureTests") {
             id = "bahr.architecture-tests"
             implementationClass = "eg.bahr.buildlogic.ArchitectureTestsConventionPlugin"

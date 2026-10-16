@@ -1,19 +1,13 @@
 package eg.bahr.buildlogic
 
-import com.android.build.api.dsl.LibraryExtension
-import com.android.build.api.variant.HasUnitTestBuilder
-import com.android.build.api.variant.LibraryAndroidComponentsExtension
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
-import org.gradle.kotlin.dsl.configure
-import org.gradle.kotlin.dsl.dependencies
 import org.gradle.kotlin.dsl.withGroovyBuilder
-import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 
 /**
  * `bahr.kmp.screenshots`: Roborazzi screenshot + Compose UI tests on Robolectric, in the module's
- * `src/androidUnitTest/` (see README → Testing). Goldens are committed next to the tests.
+ * `src/androidHostTest/` (see README → Testing). Goldens are committed next to the tests.
  */
 class ScreenshotTestsConventionPlugin : Plugin<Project> {
     override fun apply(target: Project): Unit =
@@ -21,40 +15,34 @@ class ScreenshotTestsConventionPlugin : Plugin<Project> {
             pluginManager.apply("bahr.kmp.library")
             pluginManager.apply("io.github.takahirom.roborazzi")
 
-            extensions.configure<KotlinMultiplatformExtension> {
-                sourceSets.getByName("androidUnitTest").dependencies {
-                    implementation(libs.library("junit"))
-                    implementation(libs.library("robolectric"))
-                    implementation(libs.library("roborazzi"))
-                    implementation(libs.library("roborazzi-compose"))
-                    implementation(libs.library("androidx-compose-ui-test-junit4"))
-                }
+            configureRobolectricHostTests()
+            kmpSourceSet("androidHostTest") {
+                implementation(libs.library("roborazzi"))
+                implementation(libs.library("roborazzi-compose"))
             }
 
-            extensions.configure<LibraryExtension> {
-                // Robolectric needs the merged assets: compose-resources ships fonts, strings and
-                // drawables as Android assets.
-                testOptions.unitTests.isIncludeAndroidResources = true
-            }
-
-            extensions.configure<LibraryAndroidComponentsExtension> {
-                // Compose UI tests need ui-test-manifest's ComponentActivity, which is debug-only so it
-                // never ships; the release unit-test variant would run the same common tests again
-                // without it.
-                beforeVariants(selector().withBuildType("release")) { variant ->
-                    (variant as HasUnitTestBuilder).enableUnitTest = false
-                }
-            }
-
-            dependencies {
-                // Registers the ComponentActivity that createComposeRule() launches under Robolectric.
-                "debugImplementation"(libs.library("androidx-compose-ui-test-manifest"))
-            }
-
-            // Untyped on purpose: the Roborazzi plugin is built with Kotlin 2.3 metadata, which the
-            // Kotlin that compiles build-logic (Gradle's embedded one) cannot read.
+            // Untyped on purpose: the Roborazzi plugin is built with newer Kotlin metadata than the Kotlin that
+            // compiles build-logic (Gradle's embedded one) can read.
             val roborazzi = extensions.getByName("roborazzi")
             val outputDir = roborazzi.withGroovyBuilder { "getOutputDir"() } as DirectoryProperty
-            outputDir.set(file("src/androidUnitTest/screenshots"))
+            outputDir.set(file("src/androidHostTest/screenshots"))
         }
+}
+
+/**
+ * Compose UI tests on Robolectric in `androidHostTest`: shared by `bahr.kmp.screenshots` and `:composeApp`'s
+ * tab-host tests. The merged Android resources they need are on for every module (configureKmpAndroidLibrary).
+ */
+internal fun Project.configureRobolectricHostTests() {
+    kmpSourceSet("androidHostTest") {
+        listOf(
+            "junit",
+            "robolectric",
+            "androidx-compose-ui-test-junit4",
+            // Registers the ComponentActivity that createComposeRule() launches under Robolectric. On the host
+            // test's classpath only, so the activity never reaches an app's manifest (the KMP library plugin has
+            // no `debugImplementation`).
+            "androidx-compose-ui-test-manifest",
+        ).forEach { implementation(libs.library(it)) }
+    }
 }

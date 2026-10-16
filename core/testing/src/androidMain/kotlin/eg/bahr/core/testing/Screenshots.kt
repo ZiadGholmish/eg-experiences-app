@@ -15,8 +15,8 @@ import com.github.takahirom.roborazzi.roborazziSystemPropertyOutputDirectory
  * Names are explicit, not derived from the test method, so one test can capture a series
  * (`trip_list_loaded_ar`, `trip_list_loaded_en`) and a renamed test does not orphan its golden.
  *
- * Under `testDebugUnitTest` this only writes to the build output; `recordRoborazziDebug`
- * rewrites the goldens and `verifyRoborazziDebug` fails on any pixel difference.
+ * Under `testAndroidHostTest` this only writes to the build output; `recordRoborazziAndroidHostTest`
+ * rewrites the goldens and `verifyRoborazziAndroidHostTest` fails on any pixel difference.
  */
 @OptIn(ExperimentalRoborazziApi::class)
 fun ComposeContentTestRule.captureScreenshot(name: String) {

@@ -51,7 +51,8 @@ private fun Project.configureMergedCoverage() {
     pluginManager.apply("org.jetbrains.kotlinx.kover")
     subprojects
         .filter { it.path.startsWith(":core:") || it.path.startsWith(":feature:") }
-        .forEach { dependencies.add("kover", it) }
+        // By path: a Project as dependency notation is deprecated in Gradle 9 (an error in Gradle 10).
+        .forEach { dependencies.add("kover", dependencyFactory.createProjectDependency(it.path)) }
 
     extensions.configure<KoverProjectExtension> {
         currentProject { createVariant(COVERAGE_VARIANT) {} }

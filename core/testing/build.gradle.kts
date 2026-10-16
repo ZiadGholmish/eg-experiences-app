@@ -15,7 +15,7 @@ kotlin {
             implementation(libs.koin.core)
             implementation(libs.ktor.client.mock)
         }
-        // Screenshot helpers for androidUnitTest source sets (Robolectric + Roborazzi).
+        // Screenshot helpers for androidHostTest source sets (Robolectric + Roborazzi).
         androidMain.dependencies {
             implementation(libs.androidx.compose.ui.test.junit4)
             implementation(libs.roborazzi)

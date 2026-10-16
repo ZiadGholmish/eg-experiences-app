@@ -15,7 +15,7 @@ kotlin {
             api(libs.compose.components.resources)
             implementation(projects.core.common)
         }
-        androidUnitTest.dependencies {
+        getByName("androidHostTest").dependencies {
             implementation(libs.compose.foundation)
         }
     }

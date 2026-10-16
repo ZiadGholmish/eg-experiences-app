@@ -41,7 +41,7 @@ class AppAppearanceState(
 
 /**
  * Reads the stored appearance once and seeds [AppAppearanceState] with it, for the platform entry points
- * to call right after Koin starts and before any Compose root (Android's `EgApplication`, iOS's
+ * to call right after Koin starts and before any Compose root (Android's and iOS's
  * `startApp`). A small DataStore read, once per launch, on purpose blocking: the first frame must not
  * wait for a coroutine. An unreadable store is the default, Light.
  */

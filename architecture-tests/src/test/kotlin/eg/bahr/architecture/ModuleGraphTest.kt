@@ -17,6 +17,9 @@ import kotlin.test.fail
  *
  * Adding a module: put it in [allowedProduction] (core) or rely on the feature / app rules, after
  * the skill graph and PLAN.md name it. A new edge is a plan change.
+ *
+ * `:androidApp` (M3-M13): AGP 9 keeps the Android application out of KMP modules, so the APK is its own
+ * module around `:composeApp`, which it alone depends on.
  */
 class ModuleGraphTest {
     // ---- Dependency graph (Gradle model) ----
@@ -31,7 +34,7 @@ class ModuleGraphTest {
     fun `every module is one the graph knows`() {
         val unknown =
             graph.modules.filterNot {
-                it in allowedProduction || it.isFeature || it == APP || it == ARCHITECTURE_TESTS
+                it in allowedProduction || it.isFeature || it == APP || it == ANDROID_APP || it == ARCHITECTURE_TESTS
             }
         assertNone(unknown, "Modules missing from ModuleGraphTest.allowedProduction (add them with the skill graph)")
     }
@@ -123,6 +126,20 @@ class ModuleGraphTest {
     }
 
     @Test
+    fun `androidApp holds no composable, only the Android entry points`() {
+        // The shell around :composeApp (M3-M13): manifest, BuildConfig, Application and Activity. UI, wiring and
+        // anything that needs a core or feature module stay in :composeApp, the one module it depends on.
+        val composables =
+            androidAppFiles.flatMap { file ->
+                file
+                    .functions(includeNested = true, includeLocal = true)
+                    .filter { it.hasAnnotationWithName("Composable") }
+                    .map { "${file.rel}: ${it.name}" }
+            }
+        assertNone(composables, "@Composable functions in :androidApp (they belong in :composeApp or a feature)")
+    }
+
+    @Test
     fun `feature and core catalog sources hold no design literals`() {
         // core:catalog holds the UI Home, the trip lists and the map share (TripCard, the paged list's
         // parts, CategoryTile, M4-M1c): moved out of feature/*, it stays under mobile rule 3.
@@ -184,6 +201,7 @@ class ModuleGraphTest {
 
     private companion object {
         const val APP = ":composeApp"
+        const val ANDROID_APP = ":androidApp"
         const val ARCHITECTURE_TESTS = ":architecture-tests"
         const val CORE_TESTING = ":core:testing"
 
@@ -243,6 +261,7 @@ class ModuleGraphTest {
         val screenWiring = listOf(Regex("""\bNavGraphBuilder\b"""), Regex("""\bkoinViewModel\b"""), Regex("""\bcomposable<"""))
         val coreFiles by lazy { sourceFiles.filter { it.rel.startsWith("core/") }.nonEmpty("core") }
         val appFiles by lazy { sourceFiles.filter { it.rel.startsWith("composeApp/") }.nonEmpty("composeApp") }
+        val androidAppFiles by lazy { sourceFiles.filter { it.rel.startsWith("androidApp/") }.nonEmpty("androidApp") }
 
         val String.isFeature get() = startsWith(":feature:")
         val String.isCore get() = startsWith(":core:")
@@ -253,6 +272,8 @@ class ModuleGraphTest {
                 from.isCore -> allowedProduction[from].orEmpty()
                 from.isFeature -> core - CORE_TESTING
                 from == APP -> (core - CORE_TESTING) + graph.modules.filter { it.isFeature }
+                // The Android application around the shared module (M3-M13): nothing else.
+                from == ANDROID_APP -> setOf(APP)
                 else -> emptySet()
             }
         }
@@ -340,7 +361,7 @@ private data class Edge(
     val to: String,
     val configuration: String,
 ) {
-    /** `commonTestImplementation`, `androidUnitTestImplementation`, `iosTestImplementation`, `testImplementation`, … */
+    /** `commonTestImplementation`, `androidHostTestImplementation`, `iosTestImplementation`, `testImplementation`, … */
     val isTestOnly: Boolean get() = configuration.startsWith("test") || "Test" in configuration
 
     override fun toString() = "$from → $to ($configuration)"

@@ -23,5 +23,10 @@ class KmpComposeConventionPlugin : Plugin<Project> {
                     }
                 }
             }
+            // The KMP library plugin turns Android resources off by default; compose-resources needs them on to
+            // ship its strings, fonts and drawables (as Android assets) in the Android target.
+            pluginManager.withPlugin("com.android.kotlin.multiplatform.library") {
+                kmpAndroid { androidResources.enable = true }
+            }
         }
 }

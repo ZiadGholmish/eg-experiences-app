@@ -62,7 +62,7 @@ class ArchitectureTestsConventionPlugin : Plugin<Project> {
                 inputs
                     .files(
                         root.fileTree(root.rootDir) {
-                            include("composeApp/src/**/*.kt", "core/*/src/**/*.kt", "feature/*/src/**/*.kt")
+                            include("androidApp/src/**/*.kt", "composeApp/src/**/*.kt", "core/*/src/**/*.kt", "feature/*/src/**/*.kt")
                             exclude("**/build/**")
                         },
                     ).withPropertyName("scannedSources")
@@ -80,7 +80,7 @@ private fun moduleGraph(root: Project): List<String> {
     val moduleLines = modules.map { "module ${it.path}" }
     val edgeLines =
         modules.flatMap { module ->
-            module.configurations.flatMap { configuration ->
+            module.configurations.filterNot { it.name.startsWith(KOTLIN_SWIFT_PM_COPIES) }.flatMap { configuration ->
                 configuration.dependencies
                     .withType(ProjectDependency::class.java)
                     // AGP wires each module's test variants to its own main variant; not an edge.
@@ -90,6 +90,14 @@ private fun moduleGraph(root: Project): List<String> {
         }
     return (moduleLines + edgeLines).distinct().sorted()
 }
+
+/**
+ * Kotlin 2.4's SwiftPM-import lock-file configurations (`swiftPMDependenciesForLockFiles…`, on modules with an
+ * Apple framework): the Kotlin plugin copies every project dependency of every source set, test ones included,
+ * into them. Copies of edges already listed under their real configuration, not edges of their own; read, they
+ * would turn `:composeApp`'s test-only `core:testing` edge into a production one.
+ */
+private const val KOTLIN_SWIFT_PM_COPIES = "swiftPMDependencies"
 
 @CacheableTask
 abstract class WriteModuleGraphTask : DefaultTask() {

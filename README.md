@@ -12,9 +12,10 @@ the plan is `../docs/PLAN.md`.
 
 | | |
 |---|---|
-| Language | Kotlin 2.3 |
+| Language | Kotlin 2.4 |
 | UI | Compose Multiplatform 1.10 |
-| Targets | Android (minSdk 24), iOS (arm64 + simulator arm64) |
+| Targets | Android (minSdk 24, compileSdk 37, targetSdk 36), iOS (arm64 + simulator arm64) |
+| Build | Gradle 9.7, Android Gradle Plugin 9.3 (KMP modules on `com.android.kotlin.multiplatform.library`) |
 | DI | Koin |
 | Networking | Ktor 3 (OkHttp on Android, Darwin on iOS) |
 | Navigation | AndroidX Navigation Compose, type-safe routes |
@@ -26,8 +27,9 @@ the plan is `../docs/PLAN.md`.
 
 ```
 mobile-app/
-├── build-logic/           # Convention plugins: bahr.kmp.library / .feature / .app, …
-├── composeApp/            # The app: entry points, DI wiring, nav graph (no screens)
+├── build-logic/           # Convention plugins: bahr.kmp.library / .feature / .app, bahr.android.app, …
+├── androidApp/            # The Android application: manifest, flavors, BuildConfig, Application/Activity shells
+├── composeApp/            # Shared app (KMP library): entry points, DI wiring, nav graph (no screens); the iOS framework
 ├── core/
 │   ├── common/            # AppResult, AppError, AppLanguage
 │   ├── network/           # ApiEnvelope, MoneyDto, callApi, HttpClient factory
@@ -43,13 +45,16 @@ mobile-app/
 └── docs/design-language.md
 ```
 
-A `core` module never depends on a `feature` module, and a feature never depends
+AGP 9 does not let the Kotlin Multiplatform plugin share a module with
+`com.android.application`, so the APK is built by `:androidApp`, which depends on
+`:composeApp` only and calls its `startApp` / `onDeepLink` (`composeApp/src/androidMain`),
+as Swift calls the iOS ones. A `core` module never depends on a `feature` module, and a feature never depends
 on another feature; `./gradlew :architecture-tests:test` enforces the whole graph
 (see `../.claude/skills/bahr-modularization/SKILL.md`).
 
 ## Getting started
 
-Prerequisites: JDK 17+, Android Studio (Ladybug+), Xcode for iOS.
+Prerequisites: JDK 17+ (Gradle 9 runs on 17+), an Android Studio that supports AGP 9.3, Xcode 26 for iOS.
 
 ```bash
 cp local.properties.example local.properties   # then set sdk.dir
@@ -68,7 +73,7 @@ SECURITY_JWT_SECRET='local-dev-signing-key-at-least-32-bytes!!' ./gradlew :api:b
 Then:
 
 ```bash
-./gradlew :composeApp:installLocalDebug
+./gradlew :androidApp:installLocalDebug
 ```
 
 `10.0.2.2` is the host machine as seen from the Android emulator. On a physical
@@ -140,7 +145,7 @@ Domains entitlement (`applinks:<host>`). The backend proves the app owns the hos
   and a slug that passes the backend's `chk_trip_slug` rule (`^[a-z0-9]+(-[a-z0-9]+)*$`, at most 160
   characters). It reads `?lang=` (`ar`/`en`) but does not switch the app's language. Anything else
   opens the trip list.
-- **Host per environment**: the `appLinks(...)` call per flavor in `composeApp/build.gradle.kts`
+- **Host per environment**: the `appLinks(...)` call per flavor in `androidApp/build.gradle.kts`
   fills both the manifest placeholder and `BuildConfig.APP_LINK_HOST`. On iOS it is `APP_LINK_HOST`
   in `Configuration/*.xcconfig`, which fills both `Info.plist` and `iosApp/iosApp.entitlements`.
 - **Cold and warm start**: `MainActivity` is `singleTask`, so a link tapped while the app runs
@@ -152,7 +157,7 @@ Domains entitlement (`applinks:<host>`). The backend proves the app owns the hos
 With the api running locally (it serves the share page itself at `http://localhost:8084/t/{slug}`):
 
 ```bash
-./gradlew :composeApp:installLocalDebug
+./gradlew :androidApp:installLocalDebug
 # -W waits for the launch to finish; -a/-d are the VIEW action and the link;
 # the trailing package name sends the intent straight to this app, so it works
 # before (and without) App Links verification.
@@ -173,7 +178,7 @@ package. Verification needs three things to match:
 1. **The fingerprint.** Local builds are signed with the debug keystore. Get its SHA-256:
 
    ```bash
-   ./gradlew :composeApp:signingReport   # the `localDebug` variant's "SHA-256" line
+   ./gradlew :androidApp:signingReport   # the `localDebug` variant's "SHA-256" line
    ```
 
    and start the api with it (the package name already defaults to `eg.bahr.app.local` in
@@ -213,8 +218,9 @@ it signable by a personal team. `ContentView` hands every URL from `onOpenURL` /
 | What | Command |
 |---|---|
 | All unit tests, Android JVM + iOS simulator | `./gradlew allTests` |
-| Screenshot check against the committed goldens | `./gradlew verifyRoborazziDebug` |
-| Re-record goldens after an intended UI change | `./gradlew recordRoborazziDebug` (then review the PNG diff before staging) |
+| Screenshot check against the committed goldens | `./gradlew verifyRoborazziAndroidHostTest` |
+| Re-record goldens after an intended UI change | `./gradlew recordRoborazziAndroidHostTest` (then review the PNG diff before staging) |
+| Android app against a local backend | `./gradlew :androidApp:assembleLocalDebug`; lint: `./gradlew :androidApp:lintLocalDebug` |
 | Coverage, `core:*` + view models | `./gradlew koverHtmlReportMobile` → `build/reports/kover/htmlMobile/index.html` |
 | Coverage gate | `./gradlew koverVerifyMobile` (also part of `check`) |
 | String-resource lint (`\'`, bare `%s`/`%d`) | `./gradlew checkStringResources` (every module; also part of `check`) |
@@ -225,11 +231,11 @@ it signable by a personal team. `ContentView` hands every URL from `onOpenURL` /
   at the test scheduler. Template: `feature/trips/.../TripListViewModelTest.kt`
   with `FakeTripRepository`.
 - **Screenshots:** Roborazzi on Robolectric (Android JVM, native graphics), in
-  each module's `src/androidUnitTest/`; goldens are committed in
-  `src/androidUnitTest/screenshots/`. The shots render through
+  each module's `src/androidHostTest/` (AGP 9's name for Android unit tests); goldens are committed in
+  `src/androidHostTest/screenshots/`. The shots render through
   `ProvideAppLanguage` + `BahrTheme` like the app, on an English "device", so the
   Arabic goldens also prove the app language beats the device language and that
-  the real Manrope / IBM Plex Sans Arabic faces load. Plain `testDebugUnitTest`
+  the real Manrope / IBM Plex Sans Arabic faces load. Plain `testAndroidHostTest`
   (part of `build`) renders them without comparing; only `verify…` fails on a
   pixel difference.
 - **Transient errors** (the screen stays usable): inject `AppErrorController`
@@ -250,7 +256,7 @@ it signable by a personal team. `ContentView` hands every URL from `onOpenURL` /
 - **Trip photos 404.** `AssetUrlResolver` builds `/assets/<key>` URLs, but the
   api deployable serves no such route and answers 401, so every card renders an
   empty image box.
-- **Neither app is signable for a store.** The Android release build uses the
+- **Neither app is signable for a store.** The Android release build (`:androidApp`) uses the
   debug keystore, and the iOS target has an empty `AppIcon` asset.
 - **No install referrer.** The Play Store link carries `referrer=slug%3D<slug>`, but the app does not
   read it yet, so a first launch after installing from a share link opens the list, not the trip.

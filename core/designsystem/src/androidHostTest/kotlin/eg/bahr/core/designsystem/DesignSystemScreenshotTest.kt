@@ -1,0 +1,367 @@
+package eg.bahr.core.designsystem
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
+import eg.bahr.core.common.locale.AppLanguage
+import eg.bahr.core.designsystem.components.BahrBottomSheet
+import eg.bahr.core.designsystem.components.BahrBottomSheetContent
+import eg.bahr.core.designsystem.components.BahrCard
+import eg.bahr.core.designsystem.components.BahrNavigationBar
+import eg.bahr.core.designsystem.components.BahrPrimaryButton
+import eg.bahr.core.designsystem.components.BahrProviderMark
+import eg.bahr.core.designsystem.components.BahrSignInButton
+import eg.bahr.core.designsystem.components.BahrStepper
+import eg.bahr.core.designsystem.components.HoldCountdown
+import eg.bahr.core.designsystem.components.SeatBadge
+import eg.bahr.core.designsystem.error.BahrErrorSnackbar
+import eg.bahr.core.designsystem.format.BahrFormat
+import eg.bahr.core.designsystem.icon.BahrIcons
+import eg.bahr.core.designsystem.theme.BahrElevation
+import eg.bahr.core.designsystem.theme.BahrLocale
+import eg.bahr.core.designsystem.theme.BahrSize
+import eg.bahr.core.designsystem.theme.BahrSpacing
+import eg.bahr.core.designsystem.theme.BahrTheme
+import eg.bahr.core.designsystem.theme.BahrThemeName
+import eg.bahr.core.designsystem.theme.bahrShadow
+import eg.bahr.core.localization.ProvideAppLanguage
+import eg.bahr.core.localization.generated.resources.auth_continue_apple
+import eg.bahr.core.localization.generated.resources.auth_continue_google
+import eg.bahr.core.localization.generated.resources.auth_delete_body
+import eg.bahr.core.localization.generated.resources.auth_delete_cancel
+import eg.bahr.core.localization.generated.resources.auth_delete_confirm
+import eg.bahr.core.localization.generated.resources.auth_delete_title
+import eg.bahr.core.localization.generated.resources.booking_confirm
+import eg.bahr.core.localization.generated.resources.booking_hold_label
+import eg.bahr.core.localization.generated.resources.error_no_seats_available
+import eg.bahr.core.localization.generated.resources.tab_alerts
+import eg.bahr.core.localization.generated.resources.tab_home
+import eg.bahr.core.localization.generated.resources.tab_map
+import eg.bahr.core.localization.generated.resources.tab_my_trips
+import eg.bahr.core.localization.generated.resources.tab_profile
+import eg.bahr.core.testing.captureScreenshot
+import org.jetbrains.compose.resources.stringResource
+import org.junit.After
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
+import java.util.Locale
+import eg.bahr.core.localization.generated.resources.Res as L10n
+
+/**
+ * Design-system goldens. Record: `./gradlew recordRoborazziAndroidHostTest`; verify:
+ * `./gradlew verifyRoborazziAndroidHostTest` (see README.md → Testing).
+ *
+ * Every capture goes through [ProvideAppLanguage] + [BahrTheme], the same pair the app root uses,
+ * so the Arabic shots also prove the real Plex Arabic face and RTL reach the screenshot.
+ */
+@RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(qualifiers = "en-w360dp-h640dp-xhdpi")
+class DesignSystemScreenshotTest {
+    @get:Rule
+    val compose = createComposeRule()
+
+    private lateinit var deviceLocale: Locale
+
+    @Before
+    fun freezeClock() {
+        deviceLocale = Locale.getDefault()
+        // Indeterminate spinners animate forever; a paused clock makes the frame deterministic.
+        compose.mainClock.autoAdvance = false
+    }
+
+    @After
+    fun restoreLocale() = Locale.setDefault(deviceLocale)
+
+    @Test
+    fun primaryButton() =
+        snapEach(perLanguage("primary_button")) {
+            val label = stringResource(L10n.string.booking_confirm)
+            BahrPrimaryButton(text = label, onClick = {}, modifier = Modifier.fillMaxWidth())
+            BahrPrimaryButton(text = label, onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth())
+            BahrPrimaryButton(text = label, onClick = {}, loading = true, modifier = Modifier.fillMaxWidth())
+            BahrPrimaryButton(
+                text = label,
+                onClick = {},
+                leadingIcon = BahrIcons.ArrowForward.outlined(),
+                trailing = BahrFormat.money(450, "EGP", BahrTheme.locale.isArabic),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+
+    /**
+     * M3-M0: the stepper on the page (raised − on the grey track) and on a tint (white track, flat −),
+     * at its lower bound (− disabled) and its upper bound (+ disabled). In RTL − sits at the start (right).
+     */
+    @Test
+    fun stepper() =
+        snapEach(perLanguage("stepper")) {
+            fun props(
+                value: Int,
+                ground: BahrStepper.Ground,
+            ) = BahrStepper.Props(
+                value = value,
+                canDecrease = value > 1,
+                canIncrease = value < STEPPER_MAX,
+                decreaseLabel = "−",
+                increaseLabel = "+",
+                valueDescription = "$value",
+                ground = ground,
+            )
+            BahrStepper(props = props(1, BahrStepper.Ground.Page))
+            BahrStepper(props = props(3, BahrStepper.Ground.Page))
+            Box(Modifier.background(MaterialTheme.colorScheme.tertiaryContainer).padding(BahrSpacing.md)) {
+                BahrStepper(props = props(STEPPER_MAX, BahrStepper.Ground.Tint))
+            }
+        }
+
+    /**
+     * M3-M0: Apple's and Google's buttons by their own guidelines, idle and busy, with the app's copy.
+     * M3-M0b: their colours are tokens.json's `brand` values, which have a dark form (Google's dark
+     * button, Apple's white one).
+     */
+    @Test
+    fun signInButtons() = snapEach(perLanguage("sign_in_buttons")) { SignInButtons() }
+
+    @Test
+    fun signInButtonsDark() = snapEach(perLanguage("sign_in_buttons_dark"), theme = BahrThemeName.Dark) { SignInButtons() }
+
+    @Composable
+    private fun SignInButtons() {
+        val apple = stringResource(L10n.string.auth_continue_apple)
+        val google = stringResource(L10n.string.auth_continue_google)
+        BahrSignInButton(props = BahrSignInButton.Props(BahrSignInButton.Provider.Apple, apple))
+        BahrSignInButton(props = BahrSignInButton.Props(BahrSignInButton.Provider.Google, google))
+        BahrSignInButton(props = BahrSignInButton.Props(BahrSignInButton.Provider.Google, google, loading = true))
+        Row(horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm)) {
+            BahrProviderMark(BahrSignInButton.Provider.Google)
+            BahrProviderMark(BahrSignInButton.Provider.Apple)
+        }
+    }
+
+    /** 12 = available, 3 = few, 0 = sold out. Not 1: "1 seats left" is the known plural gap (M1-M1). */
+    @Test
+    fun seatBadge() =
+        snapEach(perLanguage("seat_badge")) {
+            SeatBadge(left = 12)
+            SeatBadge(left = 3)
+            SeatBadge(left = 0)
+        }
+
+    /**
+     * Every [BahrIcons] entry, outlined then filled. In RTL exactly the directional symbols
+     * (arrows, chat, event_upcoming, format_list_bulleted) must mirror; nothing else may.
+     * Also catches an icon whose XML only fails at draw time.
+     */
+    @OptIn(ExperimentalLayoutApi::class)
+    @Test
+    fun iconGallery() =
+        snapEach(listOf(AppLanguage.ENGLISH to "icons_ltr", AppLanguage.ARABIC to "icons_rtl")) {
+            listOf(true, false).forEach { outlined ->
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm),
+                    verticalArrangement = Arrangement.spacedBy(BahrSpacing.sm),
+                ) {
+                    BahrIcons.entries.forEach { icon ->
+                        Icon(
+                            imageVector = if (outlined) icon.outlined() else icon.filled(),
+                            contentDescription = icon.name,
+                            tint = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                }
+            }
+        }
+
+    /**
+     * The bottom bar (M3-M0b, handoff §1, option 1b; both platforms): each tab selected in turn, filled
+     * icon on the `navIndicator` pill and a heavier label, the others outlined and muted; Alerts with a
+     * count (3 on the first bar, 9+ when selected). In Arabic the tabs run from the right (Home first at
+     * the right edge) without the list being reversed, and the badge sits on the icon's top-end corner.
+     */
+    @Test
+    fun navigationBar() = snapEach(perLanguage("navigation_bar")) { NavigationBars() }
+
+    @Test
+    fun navigationBarDark() = snapEach(perLanguage("navigation_bar_dark"), theme = BahrThemeName.Dark) { NavigationBars() }
+
+    @Composable
+    private fun NavigationBars() {
+        val tabs =
+            listOf(
+                BahrIcons.Home to stringResource(L10n.string.tab_home),
+                BahrIcons.Map to stringResource(L10n.string.tab_map),
+                BahrIcons.ConfirmationNumber to stringResource(L10n.string.tab_my_trips),
+                BahrIcons.Notifications to stringResource(L10n.string.tab_alerts),
+                BahrIcons.Person to stringResource(L10n.string.tab_profile),
+            )
+        tabs.indices.forEach { selected ->
+            val badge =
+                when (selected) {
+                    0 -> BADGE_FEW
+                    ALERTS -> BADGE_MANY
+                    else -> null
+                }
+            BahrNavigationBar(
+                props =
+                    BahrNavigationBar.Props(
+                        items =
+                            tabs.mapIndexed { index, (icon, label) ->
+                                BahrNavigationBar.Item(label, icon, index == selected, badgeCount = badge.takeIf { index == ALERTS })
+                            },
+                    ),
+            )
+        }
+    }
+
+    /**
+     * M3-M0b (user decision 2026-10-14: sheets instead of dialogs): the confirm sheet's inside, the
+     * destructive step first and the way out last, and a choice sheet with a coral step.
+     */
+    @Test
+    fun bottomSheet() =
+        snapEach(perLanguage("bottom_sheet")) {
+            BahrBottomSheetContent(
+                BahrBottomSheet.Props(
+                    title = stringResource(L10n.string.auth_delete_title),
+                    onDismiss = {},
+                    actions =
+                        listOf(
+                            BahrBottomSheet.Action(
+                                stringResource(L10n.string.auth_delete_confirm),
+                                BahrBottomSheet.Action.Style.Destructive,
+                            ),
+                        ),
+                    cancel = BahrBottomSheet.Action(stringResource(L10n.string.auth_delete_cancel)),
+                ),
+            ) {
+                Text(stringResource(L10n.string.auth_delete_body), color = MaterialTheme.colorScheme.onErrorContainer)
+            }
+            BahrBottomSheetContent(
+                BahrBottomSheet.Props(
+                    title = stringResource(L10n.string.booking_hold_label),
+                    onDismiss = {},
+                    actions = listOf(BahrBottomSheet.Action(stringResource(L10n.string.booking_confirm), loading = true)),
+                ),
+            )
+        }
+
+    @Test
+    fun errorSnackbar() =
+        snapEach(perLanguage("error_snackbar")) {
+            BahrErrorSnackbar(L10n.string.error_no_seats_available)
+        }
+
+    /**
+     * HighContrast: every `level1..3` surface swaps its shadow for a 1dp ink outline, drawn by
+     * `bahrShadow` itself, so a bare elevated surface gets it as well as a [BahrCard] (M0-M2 review #5).
+     * `raised` keeps its shadow, as in tokens.css.
+     */
+    @Test
+    fun highContrastElevation() =
+        snapEach(listOf(AppLanguage.ENGLISH to "elevation_high_contrast"), theme = BahrThemeName.HighContrast) {
+            val surface = MaterialTheme.colorScheme.surface
+            BahrCard(Modifier.fillMaxWidth().height(BahrSize.dateCard)) {}
+            listOf(BahrElevation.Level1, BahrElevation.Raised).forEach { level ->
+                val shape = BahrTheme.shapes.extraLarge
+                Box(
+                    Modifier
+                        .size(BahrSize.dateCard)
+                        .bahrShadow(level, shape, BahrTheme.colors)
+                        .clip(shape)
+                        .background(surface),
+                )
+            }
+        }
+
+    /**
+     * The hold countdown at twice the font size (M4-M4 review #4): the time shrinks to fit its column
+     * instead of painting into the bar. 260dp wide, so the column is narrower than the time at 2x.
+     */
+    @Test
+    fun holdCountdownLargeFont() =
+        snapEach(perLanguage("hold_countdown_font_2x")) {
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale = LARGE_FONT_SCALE)) {
+                HoldCountdown(
+                    secondsLeft = 14 * 60 + 58,
+                    label = stringResource(L10n.string.booking_hold_label),
+                    progress = .6f,
+                    icon = BahrIcons.Timer.filled(),
+                    modifier = Modifier.width(260.dp),
+                )
+            }
+        }
+
+    /**
+     * One composition per test (a compose rule allows a single `setContent`), re-rendered per
+     * language by flipping the language the same way the app's in-place toggle does.
+     */
+    private fun snapEach(
+        shots: List<Pair<AppLanguage, String>>,
+        theme: BahrThemeName = BahrThemeName.LakeBurullus,
+        content: @Composable () -> Unit,
+    ) {
+        var language by mutableStateOf(shots.first().first)
+        compose.setContent {
+            ProvideAppLanguage(language) {
+                BahrTheme(locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English, theme = theme) {
+                    Column(
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .background(MaterialTheme.colorScheme.background)
+                                .padding(BahrSpacing.gutter),
+                        verticalArrangement = Arrangement.spacedBy(BahrSpacing.md),
+                    ) { content() }
+                }
+            }
+        }
+        shots.forEach { (shotLanguage, name) ->
+            compose.runOnUiThread { language = shotLanguage }
+            // The clock is paused: let the snapshot change apply, then draw exactly one frame.
+            compose.waitForIdle()
+            compose.mainClock.advanceTimeByFrame()
+            compose.captureScreenshot(name)
+        }
+    }
+
+    private fun perLanguage(prefix: String) = AppLanguage.entries.map { it to "${prefix}_${it.tag}" }
+
+    private companion object {
+        const val LARGE_FONT_SCALE = 2f
+        const val ALERTS = 3
+        const val BADGE_FEW = 3
+        const val BADGE_MANY = 12
+        const val STEPPER_MAX = 6
+    }
+}

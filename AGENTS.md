@@ -18,22 +18,23 @@ The Java backend in `../be/` is a superseded, read-only reference.
 ## Build and test
 
 - `./gradlew build` — everything, both platforms.
-- `./gradlew :composeApp:assembleLocalDebug` — Android against a locally running
+- `./gradlew :androidApp:assembleLocalDebug` — Android against a locally running
   backend. Set `LOCAL_BASE_URL` in `local.properties` first (see
   `local.properties.example`); it defaults to `http://10.0.2.2:8084/api/v1/`,
-  which is the host machine as seen from the emulator.
+  which is the host machine as seen from the emulator. Lint: `./gradlew :androidApp:lintLocalDebug`.
 - `./gradlew spotlessApply` before every commit. `./gradlew installGitHooks`
   once after cloning installs a pre-commit hook that enforces it.
 - `./gradlew allTests` — common tests on both targets.
 - `./gradlew :architecture-tests:test` — `ModuleGraphTest` (Konsist): the module
   graph from the `bahr-modularization` skill, read from the real Gradle
   dependencies (`implementation` only, never `api`), plus no feature→feature or
-  core→feature imports, no screens in `:composeApp`, no design literals in
+  core→feature imports, no screens in `:composeApp`, no composables in `:androidApp`, no design literals in
   `feature/*`, the feature package layout, and `internal` outside a feature's
   `navigation/` and `di/`. Part of `build`.
-- `./gradlew verifyRoborazziDebug` — screenshot diffs against the committed
-  goldens; `./gradlew recordRoborazziDebug` re-records them after an intended UI
-  change. `./gradlew koverHtmlReportMobile` — coverage. See README → Testing.
+- `./gradlew verifyRoborazziAndroidHostTest` — screenshot diffs against the committed
+  goldens; `./gradlew recordRoborazziAndroidHostTest` re-records them after an intended UI
+  change (tests and goldens live in each module's `src/androidHostTest/`, AGP 9's name for
+  Android unit tests; not `verifyRoborazzi`, which also runs the iOS variant). `./gradlew koverHtmlReportMobile` — coverage. See README → Testing.
 
 Running the backend locally (in `../bahr-be`, see its `AGENTS.md`):
 
@@ -81,13 +82,16 @@ SECURITY_JWT_SECRET='local-dev-signing-key-at-least-32-bytes!!' ./gradlew :api:b
 - Modules: `core:*` is shared infrastructure, `feature:*` is one area of the
   contract. **A core module never depends on a feature module, and a feature
   never depends on another feature** — cross-feature navigation goes through
-  lambdas wired in `:composeApp`, which holds no screens. The full graph is in
+  lambdas wired in `:composeApp`, which holds no screens. `:androidApp` is the
+  Android application around `:composeApp` (AGP 9, M3-M13): manifest, flavors,
+  BuildConfig and the `Application`/`Activity` shells only, depending on
+  `:composeApp` alone. The full graph is in
   the `bahr-modularization` skill; a new edge is a plan change.
 - **Build files are a few lines.** Shared setup lives in the `build-logic`
   convention plugins: `bahr.kmp.library` (every `core:*`), `bahr.kmp.feature`
   (adds the standard `core:*` edges and libraries), `bahr.kmp.app`
-  (`:composeApp`), `bahr.kmp.compose`, `bahr.kmp.screenshots` (Roborazzi),
-  `bahr.root`. A module's own build file declares only what is specific to it.
+  (`:composeApp`), `bahr.android.app` (`:androidApp`), `bahr.kmp.compose`,
+  `bahr.kmp.screenshots` (Roborazzi), `bahr.root`. A module's own build file declares only what is specific to it.
   Convention plugins never add a `feature:*` edge.
 - Inside a feature: `model/` (wire DTOs), `data/` (api service + repository),
   `presentation/` (screen + view model, `components/` for parts), `navigation/`
