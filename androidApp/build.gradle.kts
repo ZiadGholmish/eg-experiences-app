@@ -76,8 +76,8 @@ android {
             dimension = "environment"
             applicationIdSuffix = ".dev"
             versionNameSuffix = "-dev"
-            buildConfigField("String", "BASE_URL", "\"https://api-dev.example.invalid/api/v1/\"")
-            appLinks(host = "dev.example.invalid", allowsHttp = false)
+            buildConfigField("String", "BASE_URL", "\"https://d1epegbe1ipzwy.cloudfront.net/api/v1/\"")
+            appLinks(host = "d1epegbe1ipzwy.cloudfront.net", allowsHttp = false)
         }
         create("prod") {
             dimension = "environment"
