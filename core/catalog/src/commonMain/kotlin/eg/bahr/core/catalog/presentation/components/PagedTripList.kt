@@ -59,7 +59,7 @@ import eg.bahr.core.catalog.presentation.WaitlistTags
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.designsystem.components.BahrErrorView
 import eg.bahr.core.designsystem.components.BahrFilterChip
-import eg.bahr.core.designsystem.components.BahrLoadingView
+import eg.bahr.core.designsystem.components.BahrSkeleton
 import eg.bahr.core.designsystem.theme.BahrAlpha
 import eg.bahr.core.designsystem.theme.BahrMotion
 import eg.bahr.core.designsystem.theme.BahrSize
@@ -305,7 +305,10 @@ internal fun LazyListScope.pagedTripCards(
     if (stale) return
     when (val append = trips.loadState.append) {
         is LoadState.Loading ->
-            item(key = KEY_APPEND_LOADING, contentType = CONTENT_LOADING) { BahrLoadingView(bahrAnimateItem().padding(BahrSpacing.lg)) }
+            // The next page's first card, still loading (M3-M14), where the spinner used to be.
+            item(key = KEY_APPEND_LOADING, contentType = CONTENT_LOADING) {
+                TripListSkeleton(cards = APPEND_SKELETON_CARDS, modifier = bahrAnimateItem())
+            }
 
         is LoadState.Error ->
             item(key = KEY_APPEND_ERROR, contentType = CONTENT_ERROR) {
@@ -384,7 +387,10 @@ fun LazyListScope.listBody(
 ) {
     when (status) {
         PagedListStatus.Loading ->
-            item(key = KEY_LIST_LOADING, contentType = CONTENT_LOADING) { BahrLoadingView(bahrAnimateItem().padding(BahrSpacing.xl)) }
+            // One item for the whole skeleton: its cards come and go together (M3-M14).
+            item(key = KEY_LIST_LOADING, contentType = CONTENT_LOADING) {
+                TripListSkeleton(cards = FIRST_PAGE_SKELETON_CARDS, modifier = bahrAnimateItem())
+            }
 
         is PagedListStatus.Failed ->
             item(key = KEY_LIST_ERROR, contentType = CONTENT_ERROR) {
@@ -561,6 +567,27 @@ const val REFRESH_SLOT_TAG = "refresh_slot"
 
 /** Prefixed: a LazyColumn key must be unique across headings, chips, states and trips. */
 internal const val KEY_TRIP = "trip:"
+
+/**
+ * A list of trip cards still loading (M3-M14): [cards] [TripCardSkeleton]s in the gutter, at the
+ * list's own gap, read out as one "Loading".
+ */
+@Composable
+fun TripListSkeleton(
+    cards: Int,
+    modifier: Modifier = Modifier,
+) {
+    BahrSkeleton(modifier = modifier.padding(horizontal = BahrSpacing.gutter)) {
+        repeat(cards) { TripCardSkeleton() }
+    }
+}
+
+/** Two cards fill a phone screen under a list's header; a third would only be cut off. */
+private const val FIRST_PAGE_SKELETON_CARDS = 2
+
+/** The next page shows its first card loading, under the last one loaded. */
+private const val APPEND_SKELETON_CARDS = 1
+
 private const val KEY_APPEND_LOADING = "append-loading"
 private const val KEY_APPEND_ERROR = "append-error"
 private const val KEY_LIST_LOADING = "list-loading"

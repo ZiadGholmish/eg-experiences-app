@@ -2,12 +2,10 @@ package eg.bahr.feature.booking.presentation
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -28,11 +26,11 @@ import eg.bahr.core.designsystem.components.BahrBottomSheet
 import eg.bahr.core.designsystem.components.BahrBottomSheetContent
 import eg.bahr.core.designsystem.components.BahrCard
 import eg.bahr.core.designsystem.components.BahrPrimaryButton
+import eg.bahr.core.designsystem.components.BahrSkeletonLine
 import eg.bahr.core.designsystem.components.HoldCountdown
 import eg.bahr.core.designsystem.components.StickyActionBar
 import eg.bahr.core.designsystem.format.BahrFormat
 import eg.bahr.core.designsystem.icon.BahrIcons
-import eg.bahr.core.designsystem.theme.BahrSize
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.localization.generated.resources.Res
@@ -192,8 +190,9 @@ private fun TripSummary(booking: HeldBookingDto?) {
             BookingThumbnail(booking?.trip?.cardImage)
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(BahrSpacing.xs)) {
                 if (booking == null) {
-                    SkeletonLine(widthFraction = TITLE_SKELETON)
-                    SkeletonLine(widthFraction = META_SKELETON)
+                    // Pulsing like every placeholder now (M3-M14); before, these two lines were still.
+                    BahrSkeletonLine(props = BahrSkeletonLine.Props(widthFraction = TITLE_SKELETON))
+                    BahrSkeletonLine(props = BahrSkeletonLine.Props(widthFraction = META_SKELETON))
                 } else {
                     booking.trip?.title?.let { Text(text = it, style = MaterialTheme.typography.titleMedium) }
                     val party = pluralStringResource(Res.plurals.booking_party_count, booking.partySize, booking.partySize)
@@ -226,18 +225,6 @@ private fun departsLine(booking: HeldBookingDto): String? {
 @Composable
 private fun SecondaryLine(text: String) {
     Text(text = text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-}
-
-@Composable
-private fun SkeletonLine(widthFraction: Float) {
-    Box(
-        modifier =
-            Modifier
-                .fillMaxWidth(widthFraction)
-                .height(BahrSize.skeletonLine)
-                .clip(BahrTheme.shapes.full)
-                .background(BahrTheme.colors.surfaceDim),
-    )
 }
 
 /** The server's total (from the hold), and the party once the booking is re-read. No client arithmetic. */

@@ -125,6 +125,12 @@ object BahrMotion {
     const val ShimmerAlphaHigh = .9f
 
     /**
+     * A placeholder's alpha when it does not pulse (reduced motion, M3-M14): the middle of the pulse,
+     * so a still placeholder looks like the pulsing one on average. Not in the handoff.
+     */
+    const val ShimmerAlphaStatic = .7f
+
+    /**
      * How long a carousel slide stays before the next one (HANDOFF: "Home slider idle 4600ms"; the
      * contract's `HomeSection.layout: carousel` says the same).
      */
@@ -319,6 +325,12 @@ object BahrSize {
 
     /** One date card in the availability row. */
     val dateCard = 100.dp
+
+    /**
+     * A form field's box (account handoff §2: 56px); also the height of its skeleton while the form
+     * loads (M3-M14).
+     */
+    val formField = 56.dp
 
     /** A skeleton line while text loads. */
     val skeletonLine = 12.dp

@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -49,7 +50,7 @@ import eg.bahr.core.catalog.presentation.rememberThrottled
 import eg.bahr.core.designsystem.components.BahrEmptyView
 import eg.bahr.core.designsystem.components.BahrErrorView
 import eg.bahr.core.designsystem.components.BahrFilterChip
-import eg.bahr.core.designsystem.components.BahrLoadingView
+import eg.bahr.core.designsystem.components.BahrSkeleton
 import eg.bahr.core.designsystem.icon.BahrIcons
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.bahrTween
@@ -73,6 +74,7 @@ import eg.bahr.feature.trips.model.stars
 import eg.bahr.feature.trips.presentation.components.ListTopBar
 import eg.bahr.feature.trips.presentation.components.RatingSummary
 import eg.bahr.feature.trips.presentation.components.ReviewCard
+import eg.bahr.feature.trips.presentation.components.ReviewCardSkeleton
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
@@ -308,7 +310,8 @@ private fun LazyListScope.reviewsBody(
 ) {
     when (status) {
         PagedListStatus.Loading ->
-            item(key = KEY_LIST_LOADING, contentType = CONTENT_LOADING) { BahrLoadingView(bahrAnimateItem().padding(BahrSpacing.xl)) }
+            // One item for the whole skeleton, so its cards come and go together (M3-M14).
+            item(key = KEY_LIST_LOADING, contentType = CONTENT_LOADING) { ReviewsSkeleton(FIRST_PAGE_SKELETON_CARDS) }
 
         is PagedListStatus.Failed ->
             item(key = KEY_LIST_ERROR, contentType = CONTENT_ERROR) {
@@ -359,14 +362,14 @@ private fun LazyListScope.reviewsBody(
     }
 }
 
-/** The next page's spinner, or its error with a retry (Paging does not retry a failed page by itself). */
+/** The next page's skeleton card, or its error with a retry (Paging does not retry a failed page by itself). */
 private fun LazyListScope.appendFooter(
     reviews: LazyPagingItems<ReviewDto>,
     onAppendRetry: () -> Unit,
 ) {
     when (val append = reviews.loadState.append) {
         is LoadState.Loading ->
-            item(key = KEY_APPEND_LOADING, contentType = CONTENT_LOADING) { BahrLoadingView(bahrAnimateItem().padding(BahrSpacing.lg)) }
+            item(key = KEY_APPEND_LOADING, contentType = CONTENT_LOADING) { ReviewsSkeleton(APPEND_SKELETON_CARDS) }
 
         is LoadState.Error ->
             item(key = KEY_APPEND_ERROR, contentType = CONTENT_ERROR) {
@@ -382,6 +385,23 @@ private fun LazyListScope.appendFooter(
         is LoadState.NotLoading -> Unit
     }
 }
+
+/** [cards] review cards still loading, in the gutter at the list's gap, read out as one "Loading". */
+@Composable
+private fun LazyItemScope.ReviewsSkeleton(cards: Int) {
+    BahrSkeleton(
+        modifier = bahrAnimateItem().padding(horizontal = BahrSpacing.gutter),
+        verticalArrangement = Arrangement.spacedBy(LIST_GAP),
+    ) {
+        repeat(cards) { ReviewCardSkeleton() }
+    }
+}
+
+/** Three short review cards fill the screen under the rating summary and the chips. */
+private const val FIRST_PAGE_SKELETON_CARDS = 3
+
+/** The next page shows its first review loading. */
+private const val APPEND_SKELETON_CARDS = 1
 
 /** For tests: the reviews page's list, its "not available" state, the Trip filter, the empty state and a star chip. */
 internal const val REVIEWS_PAGE_TAG = "reviews_page"

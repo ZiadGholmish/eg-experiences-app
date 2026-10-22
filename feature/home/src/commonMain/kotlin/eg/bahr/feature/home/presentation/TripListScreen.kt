@@ -46,7 +46,6 @@ import eg.bahr.core.catalog.presentation.components.selectedOrder
 import eg.bahr.core.catalog.presentation.rememberThrottled
 import eg.bahr.core.designsystem.components.BahrEmptyView
 import eg.bahr.core.designsystem.components.BahrErrorView
-import eg.bahr.core.designsystem.components.BahrLoadingView
 import eg.bahr.core.designsystem.components.BahrPillButton
 import eg.bahr.core.designsystem.components.navigationBarsSpacer
 import eg.bahr.core.designsystem.icon.BahrIcons
@@ -69,6 +68,7 @@ import eg.bahr.core.localization.localizedMessage
 import eg.bahr.feature.home.model.key
 import eg.bahr.feature.home.navigation.HomeAction
 import eg.bahr.feature.home.presentation.components.HomeSection
+import eg.bahr.feature.home.presentation.components.HomeSkeleton
 import eg.bahr.feature.home.presentation.components.homeSectionContentType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -92,7 +92,7 @@ import org.koin.compose.viewmodel.koinViewModel
  *
  * A filter tap reloads only the list (M4-M6 rules, as on the category page): the cards stay, dimmed,
  * until the new ones slide in from the tapped chip's side, or the error with its retry replaces them.
- * The whole screen is a spinner, an error or "no trips" only until the list has first answered.
+ * The whole screen is a skeleton (M3-M14), an error or "no trips" only until the list has first answered.
  */
 @Composable
 internal fun TripListScreen(
@@ -150,7 +150,7 @@ internal fun TripListScreen(
             }
             val fill = Modifier.weight(1f)
             when {
-                showsLoading -> BahrLoadingView(fill)
+                showsLoading -> HomeSkeleton(fill)
 
                 firstFailure != null -> {
                     val error = firstFailure.error

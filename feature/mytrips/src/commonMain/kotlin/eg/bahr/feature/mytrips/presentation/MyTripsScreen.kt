@@ -39,7 +39,6 @@ import androidx.paging.compose.itemKey
 import eg.bahr.core.catalog.data.appError
 import eg.bahr.core.designsystem.components.BahrEmptyView
 import eg.bahr.core.designsystem.components.BahrErrorView
-import eg.bahr.core.designsystem.components.BahrLoadingView
 import eg.bahr.core.designsystem.components.BahrPrimaryButton
 import eg.bahr.core.designsystem.lifecycle.RefreshesOnReturn
 import eg.bahr.core.designsystem.theme.BahrElevation
@@ -67,6 +66,7 @@ import eg.bahr.core.network.auth.SessionState
 import eg.bahr.feature.mytrips.model.MyBookingDto
 import eg.bahr.feature.mytrips.presentation.components.BookingRow
 import eg.bahr.feature.mytrips.presentation.components.DeviceJoinRow
+import eg.bahr.feature.mytrips.presentation.components.TripRowsSkeleton
 import eg.bahr.feature.mytrips.presentation.components.WaitlistRow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -144,11 +144,9 @@ internal fun MyTripsContent(
             )
         }
         when (state.session) {
-            SessionState.Unknown ->
-                item(
-                    key = "loading",
-                    contentType = CONTENT_LOADING,
-                ) { BahrLoadingView(Modifier.heightIn(min = BahrSpacing.xxl)) }
+            // The stored sign-in is read in a moment; drawing neither state until then keeps the
+            // signed-out prompt or a bookings skeleton from flashing (as the Alerts tab does, M3-M14).
+            SessionState.Unknown -> Unit
             SessionState.SignedOut -> signedOut(state, actions)
             is SessionState.SignedIn -> signedIn(state, bookings, actions)
         }
@@ -197,10 +195,8 @@ private fun LazyListScope.bookingList(
 ) {
     when (val refresh = bookings.loadState.refresh) {
         is LoadState.Loading ->
-            if (bookings.itemCount ==
-                0
-            ) {
-                item(key = "bookings_loading", contentType = CONTENT_LOADING) { Centered { BahrLoadingView() } }
+            if (bookings.itemCount == 0) {
+                item(key = "bookings_loading", contentType = CONTENT_LOADING) { TripRowsSkeleton(FIRST_PAGE_SKELETON_ROWS) }
             }
         is LoadState.Error ->
             if (bookings.itemCount == 0) {
@@ -233,9 +229,7 @@ private fun LazyListScope.bookingList(
         }
     }
     if (bookings.loadState.append is LoadState.Loading) {
-        item(key = "bookings_more", contentType = CONTENT_LOADING) {
-            BahrLoadingView(Modifier.heightIn(min = BahrSpacing.xxl))
-        }
+        item(key = "bookings_more", contentType = CONTENT_LOADING) { TripRowsSkeleton(APPEND_SKELETON_ROWS) }
     }
 }
 
@@ -244,7 +238,7 @@ private fun LazyListScope.waitlist(
     actions: MyTripsActions,
 ) {
     when (load) {
-        WaitlistLoad.Loading -> item(key = "waitlist_loading", contentType = CONTENT_LOADING) { Centered { BahrLoadingView() } }
+        WaitlistLoad.Loading -> item(key = "waitlist_loading", contentType = CONTENT_LOADING) { TripRowsSkeleton(FIRST_PAGE_SKELETON_ROWS) }
         is WaitlistLoad.Failed ->
             item(key = "waitlist_error", contentType = CONTENT_ERROR) {
                 Centered {
@@ -364,6 +358,13 @@ private const val STATE_BAND = 4
  * drawn the same way, e.g. a booking row for the next booking row, never for a state view.
  */
 private const val CONTENT_HEADING = "heading"
+
+/** Rows a first page or the waiting list shows while it loads: about a phone screen's worth. */
+private const val FIRST_PAGE_SKELETON_ROWS = 4
+
+/** The next page shows its first row loading. */
+private const val APPEND_SKELETON_ROWS = 1
+
 private const val CONTENT_LOADING = "loading"
 private const val CONTENT_ERROR = "error"
 private const val CONTENT_EMPTY = "empty"

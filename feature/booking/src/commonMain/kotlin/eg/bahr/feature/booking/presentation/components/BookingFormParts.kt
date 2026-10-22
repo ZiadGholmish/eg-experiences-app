@@ -40,6 +40,9 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextDirection
+import eg.bahr.core.designsystem.components.BahrSkeleton
+import eg.bahr.core.designsystem.components.BahrSkeletonCircle
+import eg.bahr.core.designsystem.components.BahrSkeletonLine
 import eg.bahr.core.designsystem.components.BahrStepper
 import eg.bahr.core.designsystem.components.BahrTextFields
 import eg.bahr.core.designsystem.components.SeatBadge
@@ -399,6 +402,64 @@ internal fun SummaryRow(
         Text(text = value, style = MaterialTheme.typography.labelLarge)
     }
 }
+
+/**
+ * The form while its trip loads (M3-M14), laid out as [DateRows] and the party section are: the
+ * heading's two lines, then "Pick a date" (a fixed label, so text: the text-first rule) over
+ * [DATE_ROW_SKELETONS] date rows on their real ground with the radio, date and times shimmering, and
+ * the party label. The fields below wait for the trip; a skeleton for them would only be grey bars.
+ */
+@Composable
+internal fun BookingFormSkeleton(modifier: Modifier = Modifier) {
+    val c = MaterialTheme.colorScheme
+    val x = BahrTheme.colors
+    val shape = BahrTheme.shapes.extraLarge
+    BahrSkeleton(
+        modifier = modifier.fillMaxWidth().padding(horizontal = BahrSpacing.gutter, vertical = BahrSpacing.sm),
+        verticalArrangement = Arrangement.spacedBy(BahrSpacing.xl),
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(BahrSpacing.sm)) {
+            BahrSkeletonLine(props = BahrSkeletonLine.Props(widthFraction = SKELETON_TITLE_WIDTH))
+            BahrSkeletonLine(props = BahrSkeletonLine.Props(widthFraction = SKELETON_PRICE_WIDTH))
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(BahrSpacing.md)) {
+            SectionLabel(stringResource(Res.string.departures_pick_a_date))
+            Column(verticalArrangement = Arrangement.spacedBy(BahrSpacing.sm)) {
+                repeat(DATE_ROW_SKELETONS) {
+                    Row(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .bahrShadow(BahrElevation.Level1, shape, x)
+                                .clip(shape)
+                                .background(c.surface)
+                                .heightIn(min = BahrSpacing.minTouch)
+                                .padding(horizontal = BahrSpacing.lg, vertical = BahrSpacing.md),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(BahrSpacing.md),
+                    ) {
+                        BahrSkeletonCircle(props = BahrSkeletonCircle.Props(size = BahrSize.radio))
+                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(BahrSpacing.sm)) {
+                            BahrSkeletonLine(props = BahrSkeletonLine.Props(widthFraction = SKELETON_DATE_WIDTH))
+                            BahrSkeletonLine(props = BahrSkeletonLine.Props(widthFraction = SKELETON_TIMES_WIDTH))
+                        }
+                    }
+                }
+            }
+        }
+        SectionLabel(stringResource(Res.string.booking_party_size))
+    }
+}
+
+/** Date rows the skeleton shows: about what fits above the fold before the party stepper. */
+private const val DATE_ROW_SKELETONS = 3
+
+// The skeleton's line lengths, as shares of their column: the trip's title, its price line, a row's
+// date and its times.
+private const val SKELETON_TITLE_WIDTH = .7f
+private const val SKELETON_PRICE_WIDTH = .5f
+private const val SKELETON_DATE_WIDTH = .5f
+private const val SKELETON_TIMES_WIDTH = .35f
 
 @Composable
 private fun SectionLabel(text: String) {

@@ -22,6 +22,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import coil3.compose.AsyncImage
 import eg.bahr.core.catalog.model.ImageDto
 import eg.bahr.core.designsystem.components.BahrBadge
+import eg.bahr.core.designsystem.components.BahrSkeleton
+import eg.bahr.core.designsystem.components.BahrSkeletonBlock
+import eg.bahr.core.designsystem.components.BahrSkeletonLine
 import eg.bahr.core.designsystem.components.ImageGround
 import eg.bahr.core.designsystem.format.BahrFormat
 import eg.bahr.core.designsystem.theme.BahrElevation
@@ -157,6 +160,50 @@ private fun TripRow(
         }
     }
 }
+
+/**
+ * Booking or waiting-list rows still loading (M3-M14): [rows] rows drawn as [TripRow] lays one out (its
+ * ground, radius and shadow, the thumbnail's room, then the title, the date line and the badge), at the
+ * list's gap, read out as one "Loading".
+ */
+@Composable
+internal fun TripRowsSkeleton(
+    rows: Int,
+    modifier: Modifier = Modifier,
+) {
+    val x = BahrTheme.colors
+    val shape = BahrTheme.shapes.extraLarge
+    BahrSkeleton(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(BahrSpacing.md)) {
+        repeat(rows) {
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .bahrShadow(BahrElevation.Level1, shape, x)
+                        .clip(shape)
+                        .background(MaterialTheme.colorScheme.surface)
+                        .padding(BahrSpacing.md),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(BahrSpacing.md),
+            ) {
+                BahrSkeletonBlock(
+                    modifier = Modifier.size(BahrSize.thumbnail),
+                    props = BahrSkeletonBlock.Props(shape = BahrTheme.shapes.medium),
+                )
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(BahrSpacing.sm)) {
+                    BahrSkeletonLine(props = BahrSkeletonLine.Props(widthFraction = SKELETON_TITLE_WIDTH))
+                    BahrSkeletonLine(props = BahrSkeletonLine.Props(widthFraction = SKELETON_WHEN_WIDTH))
+                    BahrSkeletonLine(props = BahrSkeletonLine.Props(widthFraction = SKELETON_BADGE_WIDTH))
+                }
+            }
+        }
+    }
+}
+
+// The skeleton row's lines, as shares of the text column: the title, the date and party, the badge.
+private const val SKELETON_TITLE_WIDTH = .75f
+private const val SKELETON_WHEN_WIDTH = .55f
+private const val SKELETON_BADGE_WIDTH = .3f
 
 /** The trip's card image at the summary-thumbnail size; the LQIP first, the photo over it. */
 @Composable

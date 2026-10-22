@@ -141,7 +141,7 @@ fun BahrFormField(
                         horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm),
                         modifier =
                             Modifier
-                                .heightIn(min = FIELD_HEIGHT.dp)
+                                .heightIn(min = BahrSize.formField)
                                 .clip(shape)
                                 .background(if (props.readOnly) c.surfaceContainer else c.surface)
                                 .border(borderWidth, borderColor, shape)
@@ -214,9 +214,6 @@ private fun BahrFormField.Keyboard.options(ime: ImeAction): KeyboardOptions =
         BahrFormField.Keyboard.Phone -> KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ime)
         BahrFormField.Keyboard.Text -> KeyboardOptions(imeAction = ime)
     }
-
-/** The prototype's 56px field box. */
-private const val FIELD_HEIGHT = 56
 
 /** The prototype's 6px between the label, the box and the line under it. */
 private const val FIELD_GAP = 6

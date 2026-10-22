@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import eg.bahr.core.catalog.model.ImageDto
 import eg.bahr.core.catalog.presentation.components.Photo
+import eg.bahr.core.designsystem.components.BahrSkeletonBlock
 import eg.bahr.core.designsystem.components.ImageGround
 import eg.bahr.core.designsystem.format.BahrFormat
 import eg.bahr.core.designsystem.icon.BahrIcons
@@ -53,7 +54,7 @@ internal fun TripHero(
 ) {
     Box(modifier = modifier.fillMaxWidth().aspectRatio(HeroAspectRatio)) {
         if (loading) {
-            Skeleton(Modifier.fillMaxSize())
+            BahrSkeletonBlock(Modifier.fillMaxSize())
         } else {
             val pager = rememberPagerState { images.size }
             ImageGround(modifier = Modifier.fillMaxSize(), scrimTop = true) {

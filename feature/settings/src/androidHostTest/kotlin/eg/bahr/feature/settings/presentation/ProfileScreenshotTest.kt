@@ -6,8 +6,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,6 +29,7 @@ import eg.bahr.core.designsystem.components.BahrSignInButton
 import eg.bahr.core.designsystem.theme.BahrLocale
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
+import eg.bahr.core.designsystem.theme.BahrThemeName
 import eg.bahr.core.localization.ProvideAppLanguage
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.auth_continue_apple
@@ -299,6 +302,20 @@ class ProfileScreenshotTest {
     fun editUnreadableEnglish() =
         edit("edit_personal_info_unreadable", AppLanguage.ENGLISH, EditPersonalInfoUiState(loading = false, loadError = AppError.Network))
 
+    /** The form while the profile loads (M3-M14): the copy as text, the fields' boxes shimmering. */
+    @Test
+    fun editLoadingArabic() = edit("edit_personal_info_loading", AppLanguage.ARABIC, EditPersonalInfoUiState())
+
+    @Test
+    fun editLoadingEnglish() = edit("edit_personal_info_loading", AppLanguage.ENGLISH, EditPersonalInfoUiState())
+
+    @Test
+    fun editLoadingDarkArabic() = edit("edit_personal_info_loading_dark", AppLanguage.ARABIC, EditPersonalInfoUiState(), BahrThemeName.Dark)
+
+    @Test
+    fun editLoadingDarkEnglish() =
+        edit("edit_personal_info_loading_dark", AppLanguage.ENGLISH, EditPersonalInfoUiState(), BahrThemeName.Dark)
+
     // ---------- Plumbing ----------
 
     private fun profile(
@@ -323,18 +340,27 @@ class ProfileScreenshotTest {
         prefix: String,
         language: AppLanguage,
         state: EditPersonalInfoUiState,
+        theme: BahrThemeName = BahrThemeName.LakeBurullus,
     ) {
-        compose.setContent { Themed(language) { EditPersonalInfoContent(state, EditPersonalInfoActions()) } }
+        compose.setContent { Themed(language, theme) { EditPersonalInfoContent(state, EditPersonalInfoActions()) } }
         compose.captureScreenshot("${prefix}_${language.tag}")
     }
 
     @Composable
     private fun Themed(
         language: AppLanguage,
+        theme: BahrThemeName = BahrThemeName.LakeBurullus,
         content: @Composable () -> Unit,
     ) {
         ProvideAppLanguage(language) {
-            BahrTheme(locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English) { content() }
+            BahrTheme(locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English, theme = theme) {
+                // The app's tab Scaffold sets onBackground as the content colour; a bare test root does not, so dark
+                // shots would draw uncoloured text black on the dark page (light goldens keep their recorded black).
+                CompositionLocalProvider(
+                    LocalContentColor provides
+                        if (theme == BahrThemeName.Dark) MaterialTheme.colorScheme.onBackground else LocalContentColor.current,
+                ) { content() }
+            }
         }
     }
 

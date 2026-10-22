@@ -18,7 +18,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import eg.bahr.core.designsystem.components.BahrErrorView
-import eg.bahr.core.designsystem.components.BahrLoadingView
 import eg.bahr.core.designsystem.components.BahrPrimaryButton
 import eg.bahr.core.designsystem.components.StickyActionBar
 import eg.bahr.core.designsystem.format.BahrFormat
@@ -37,6 +36,7 @@ import eg.bahr.core.localization.isRetryable
 import eg.bahr.core.localization.localizedMessage
 import eg.bahr.feature.booking.model.BookingTripDto
 import eg.bahr.feature.booking.navigation.HoldRoute
+import eg.bahr.feature.booking.presentation.components.BookingFormSkeleton
 import eg.bahr.feature.booking.presentation.components.BookingTopBar
 import eg.bahr.feature.booking.presentation.components.DateRows
 import eg.bahr.feature.booking.presentation.components.GuestDetails
@@ -97,7 +97,7 @@ internal fun BookingScreen(
                         retryLabel = stringResource(Res.string.action_retry),
                         onRetry = if (loadError.isRetryable) viewModel::load else null,
                     )
-                else -> BahrLoadingView()
+                else -> BookingFormSkeleton()
             }
         }
         HoldBar(state, onHold = viewModel::placeHold)

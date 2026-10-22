@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
@@ -36,8 +37,9 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import eg.bahr.core.designsystem.components.BahrErrorView
 import eg.bahr.core.designsystem.components.BahrFormField
-import eg.bahr.core.designsystem.components.BahrLoadingView
 import eg.bahr.core.designsystem.components.BahrPrimaryButton
+import eg.bahr.core.designsystem.components.BahrSkeleton
+import eg.bahr.core.designsystem.components.BahrSkeletonBlock
 import eg.bahr.core.designsystem.components.StickyActionBar
 import eg.bahr.core.designsystem.icon.BahrIcons
 import eg.bahr.core.designsystem.theme.BahrSize
@@ -118,7 +120,7 @@ internal fun EditPersonalInfoContent(
     ) {
         TopBar(actions.onBack)
         when {
-            state.loading -> Box(Modifier.weight(1f)) { BahrLoadingView() }
+            state.loading -> FormSkeleton(Modifier.weight(1f))
             state.loadError != null ->
                 Box(Modifier.weight(1f)) {
                     BahrErrorView(
@@ -247,6 +249,36 @@ private fun Form(
                 color = c.onErrorContainer,
                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive },
             )
+        }
+    }
+}
+
+/**
+ * The form while the profile loads (M3-M14), laid out as [Form]: its intro and the fields' labels are
+ * fixed copy, so they are text (the text-first rule); the fields' boxes shimmer until the values come.
+ */
+@Composable
+private fun FormSkeleton(modifier: Modifier = Modifier) {
+    BahrSkeleton(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(start = BahrSpacing.gutter, end = BahrSpacing.gutter, top = BahrSpacing.xs, bottom = BahrSpacing.lg),
+        verticalArrangement = Arrangement.spacedBy(BahrSpacing.gutter),
+    ) {
+        Text(
+            text = stringResource(Res.string.edit_intro),
+            style = MaterialTheme.typography.bodyLarge,
+            color = BahrTheme.colors.onSurfaceSecondary,
+        )
+        listOf(Res.string.auth_profile_name, Res.string.auth_profile_phone, Res.string.edit_email).forEach { label ->
+            Column(verticalArrangement = Arrangement.spacedBy(BahrSpacing.xs)) {
+                Text(text = stringResource(label), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurface)
+                BahrSkeletonBlock(
+                    modifier = Modifier.fillMaxWidth().height(BahrSize.formField),
+                    props = BahrSkeletonBlock.Props(shape = BahrTheme.shapes.medium),
+                )
+            }
         }
     }
 }

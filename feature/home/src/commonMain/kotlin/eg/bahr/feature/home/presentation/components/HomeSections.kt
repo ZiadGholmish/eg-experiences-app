@@ -559,7 +559,7 @@ internal const val HOME_CAROUSEL_TAG = "home_carousel"
 private const val CAROUSEL_LAPS = 1000
 
 /** A row shows one item and a peek of the next, so it reads as scrollable. */
-private const val ROW_ITEM_WIDTH_FRACTION = .72f
+internal const val ROW_ITEM_WIDTH_FRACTION = .72f
 private const val BANNER_TITLE_LINES = 2
 
 /** A hero slide's meta line and price pill stay on one line each, so the forward circle keeps its place. */
@@ -567,4 +567,4 @@ private const val BANNER_META_LINES = 1
 private const val BANNER_PRICE_LINES = 1
 
 /** The handoff shoots hero slides at 16:10. */
-private const val FALLBACK_BANNER_RATIO = 16f / 10f
+internal const val FALLBACK_BANNER_RATIO = 16f / 10f

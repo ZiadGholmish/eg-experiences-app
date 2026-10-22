@@ -3,8 +3,10 @@ package eg.bahr.feature.booking.presentation
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
 import eg.bahr.core.common.locale.AppLanguage
@@ -12,6 +14,7 @@ import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.designsystem.theme.BahrLocale
 import eg.bahr.core.designsystem.theme.BahrTheme
+import eg.bahr.core.designsystem.theme.BahrThemeName
 import eg.bahr.core.localization.ProvideAppLanguage
 import eg.bahr.core.network.ApiErrorCodes
 import eg.bahr.core.testing.captureScreenshot
@@ -101,10 +104,20 @@ class BookingScreenshotTest {
     fun multiDayEnglish() =
         snapLoaded(AppLanguage.ENGLISH, "A night in the White Desert", "Nada Hassan", prefix = "booking_multi_day", overnight = true)
 
-    private fun snapLoading(language: AppLanguage) {
+    /** The form's skeleton in dark mode (M3-M14). */
+    @Test
+    fun loadingDarkArabic() = snapLoading(AppLanguage.ARABIC, BahrThemeName.Dark)
+
+    @Test
+    fun loadingDarkEnglish() = snapLoading(AppLanguage.ENGLISH, BahrThemeName.Dark)
+
+    private fun snapLoading(
+        language: AppLanguage,
+        theme: BahrThemeName = BahrThemeName.LakeBurullus,
+    ) {
         val repo = FakeBookingRepository(tripBySlug = { awaitCancellation() }, departuresFor = { awaitCancellation() })
-        show(language, BookingViewModel(SLUG, "dep-2", repo, FakeActiveHoldStore()))
-        capture("booking_loading", language)
+        show(language, BookingViewModel(SLUG, "dep-2", repo, FakeActiveHoldStore()), theme)
+        capture(if (theme == BahrThemeName.Dark) "booking_loading_dark" else "booking_loading", language)
     }
 
     private fun snapLoaded(
@@ -193,18 +206,27 @@ class BookingScreenshotTest {
     private fun show(
         language: AppLanguage,
         viewModel: BookingViewModel,
-    ) = setContent(language) {
+        theme: BahrThemeName = BahrThemeName.LakeBurullus,
+    ) = setContent(language, theme) {
         BookingScreen(slug = SLUG, departureId = "dep-2", onBack = {}, onHeld = { _, _ -> }, viewModel = viewModel)
     }
 
     private fun setContent(
         language: AppLanguage,
+        theme: BahrThemeName = BahrThemeName.LakeBurullus,
         content: @Composable () -> Unit,
     ) {
         compose.setContent {
             ProvideAppLanguage(language) {
-                BahrTheme(locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English) {
-                    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) { content() }
+                BahrTheme(locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English, theme = theme) {
+                    // The app's tab Scaffold sets onBackground as the content colour; a bare test root does not, so dark
+                    // shots would draw uncoloured text black on the dark page (light goldens keep their recorded black).
+                    CompositionLocalProvider(
+                        LocalContentColor provides
+                            if (theme == BahrThemeName.Dark) MaterialTheme.colorScheme.onBackground else LocalContentColor.current,
+                    ) {
+                        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) { content() }
+                    }
                 }
             }
         }

@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import eg.bahr.core.catalog.presentation.components.SectionTitle
 import eg.bahr.core.designsystem.components.BahrPrimaryButton
+import eg.bahr.core.designsystem.components.BahrSkeletonBlock
 import eg.bahr.core.designsystem.components.StickyActionBar
 import eg.bahr.core.designsystem.format.BahrFormat
 import eg.bahr.core.designsystem.icon.BahrIcons
@@ -100,11 +101,9 @@ internal fun TripAvailability(
             loading ->
                 Row(gutter, horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm)) {
                     repeat(SKELETON_CARDS) {
-                        Skeleton(
-                            Modifier
-                                .width(BahrSize.dateCard)
-                                .heightIn(min = BahrSize.dateCard)
-                                .clip(BahrTheme.shapes.extraLarge),
+                        BahrSkeletonBlock(
+                            modifier = Modifier.width(BahrSize.dateCard).heightIn(min = BahrSize.dateCard),
+                            props = BahrSkeletonBlock.Props(shape = BahrTheme.shapes.extraLarge),
                         )
                     }
                 }

@@ -24,6 +24,9 @@ import eg.bahr.core.catalog.model.TripCardDto
 import eg.bahr.core.catalog.model.isMultiDay
 import eg.bahr.core.designsystem.components.BahrBadge
 import eg.bahr.core.designsystem.components.BahrCard
+import eg.bahr.core.designsystem.components.BahrSkeletonBlock
+import eg.bahr.core.designsystem.components.BahrSkeletonCard
+import eg.bahr.core.designsystem.components.BahrSkeletonLine
 import eg.bahr.core.designsystem.components.ImageGround
 import eg.bahr.core.designsystem.components.SeatBadge
 import eg.bahr.core.designsystem.format.BahrFormat
@@ -128,6 +131,38 @@ fun TripCard(
 }
 
 private const val TITLE_LINES = 2
+
+/**
+ * A [TripCard] still loading (M3-M14): the card itself, its photo's reserved room and a line where
+ * each of its rows goes (title, schedule, price), at the loaded card's padding and gaps, so the cards
+ * land where their skeletons were. [compact] as on [TripCard]: two title lines, as a Home row's card
+ * always takes. Use it inside a `BahrSkeleton`, which says "Loading" for the whole group.
+ */
+@Composable
+fun TripCardSkeleton(
+    modifier: Modifier = Modifier,
+    compact: Boolean = false,
+) {
+    BahrSkeletonCard(modifier = modifier) {
+        BahrSkeletonBlock(Modifier.fillMaxWidth().aspectRatio(CoverAspectRatio))
+        Column(
+            modifier = Modifier.padding(BahrSpacing.lg),
+            verticalArrangement = Arrangement.spacedBy(BahrSpacing.md),
+        ) {
+            BahrSkeletonLine(props = BahrSkeletonLine.Props(widthFraction = SKELETON_TITLE_WIDTH))
+            if (compact) BahrSkeletonLine(props = BahrSkeletonLine.Props(widthFraction = SKELETON_TITLE_SECOND_WIDTH))
+            BahrSkeletonLine(props = BahrSkeletonLine.Props(widthFraction = SKELETON_SCHEDULE_WIDTH))
+            BahrSkeletonLine(props = BahrSkeletonLine.Props(widthFraction = SKELETON_PRICE_WIDTH))
+        }
+    }
+}
+
+// The skeleton's line lengths, as shares of the card's text width: a title, its wrapped second
+// line, the schedule row and the price.
+private const val SKELETON_TITLE_WIDTH = .8f
+private const val SKELETON_TITLE_SECOND_WIDTH = .5f
+private const val SKELETON_SCHEDULE_WIDTH = .6f
+private const val SKELETON_PRICE_WIDTH = .35f
 
 /**
  * The seats pill ("Sold out" on a full date), and after it the waiting-list tag when [waitlisted].

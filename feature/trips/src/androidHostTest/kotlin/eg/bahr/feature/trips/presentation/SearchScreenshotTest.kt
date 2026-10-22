@@ -3,8 +3,10 @@ package eg.bahr.feature.trips.presentation
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -17,6 +19,7 @@ import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.designsystem.theme.BahrLocale
 import eg.bahr.core.designsystem.theme.BahrMotion
 import eg.bahr.core.designsystem.theme.BahrTheme
+import eg.bahr.core.designsystem.theme.BahrThemeName
 import eg.bahr.core.localization.ProvideAppLanguage
 import eg.bahr.core.testing.captureScreenshot
 import eg.bahr.feature.trips.data.FakeRecentSearchesStore
@@ -101,9 +104,17 @@ class SearchScreenshotTest {
     @Test
     fun loadingEnglish() = loading(AppLanguage.ENGLISH, "felucca")
 
+    /** The results' skeleton in dark mode (M3-M14). */
+    @Test
+    fun loadingDarkArabic() = loading(AppLanguage.ARABIC, "فلوكة", BahrThemeName.Dark)
+
+    @Test
+    fun loadingDarkEnglish() = loading(AppLanguage.ENGLISH, "felucca", BahrThemeName.Dark)
+
     private fun loading(
         language: AppLanguage,
         text: String,
+        theme: BahrThemeName = BahrThemeName.LakeBurullus,
     ) {
         val vm =
             SearchTripsViewModel(
@@ -113,7 +124,7 @@ class SearchScreenshotTest {
                 LastSearch(),
             )
         vm.searchRecent(text)
-        snap("search_loading", language, vm)
+        snap(if (theme == BahrThemeName.Dark) "search_loading_dark" else "search_loading", language, vm, theme)
     }
 
     /** A search with results: the count, the filter chips with the search's counts, the cards best match first. */
@@ -225,7 +236,8 @@ class SearchScreenshotTest {
         prefix: String,
         language: AppLanguage,
         vm: SearchTripsViewModel,
-    ) = shoot(prefix, language) { SearchTripsScreen(onBack = null, onTripClick = {}, viewModel = vm) }
+        theme: BahrThemeName = BahrThemeName.LakeBurullus,
+    ) = shoot(prefix, language, theme = theme) { SearchTripsScreen(onBack = null, onTripClick = {}, viewModel = vm) }
 
     /**
      * [act], when given, runs once the screen has settled (a tap's effect on the view model), and the
@@ -235,13 +247,21 @@ class SearchScreenshotTest {
         prefix: String,
         language: AppLanguage,
         act: (() -> Unit)? = null,
+        theme: BahrThemeName = BahrThemeName.LakeBurullus,
         content: @Composable () -> Unit,
     ) {
         var current by mutableStateOf(language)
         compose.setContent {
             ProvideAppLanguage(current) {
-                BahrTheme(locale = if (current == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English) {
-                    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) { content() }
+                BahrTheme(locale = if (current == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English, theme = theme) {
+                    // The app's tab Scaffold sets onBackground as the content colour; a bare test root does not, so dark
+                    // shots would draw uncoloured text black on the dark page (light goldens keep their recorded black).
+                    CompositionLocalProvider(
+                        LocalContentColor provides
+                            if (theme == BahrThemeName.Dark) MaterialTheme.colorScheme.onBackground else LocalContentColor.current,
+                    ) {
+                        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) { content() }
+                    }
                 }
             }
         }

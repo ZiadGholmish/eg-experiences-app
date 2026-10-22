@@ -7,9 +7,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -33,6 +35,7 @@ import eg.bahr.core.designsystem.components.BahrCard
 import eg.bahr.core.designsystem.theme.BahrLocale
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
+import eg.bahr.core.designsystem.theme.BahrThemeName
 import eg.bahr.core.localization.ProvideAppLanguage
 import eg.bahr.core.network.MoneyDto
 import eg.bahr.core.testing.captureScreenshot
@@ -140,6 +143,10 @@ class TripListScreenshotTest {
 
     @Test
     fun loading() = snapEach("trip_list_loading") { listTrips = { awaitCancellation() } }
+
+    /** The skeleton in dark mode (M3-M14): the placeholders must still read on the dark page. */
+    @Test
+    fun loadingDark() = snapEach("trip_list_loading_dark", theme = BahrThemeName.Dark) { listTrips = { awaitCancellation() } }
 
     // The header slot (M2-M4: booking's "Continue your booking" card, filled by :composeApp). A
     // stand-in card here, since this feature may not import booking; the real card has its own
@@ -637,16 +644,24 @@ class TripListScreenshotTest {
         settle: Boolean = false,
         act: TripListViewModel.() -> Unit = {},
         scrollToKey: Any? = null,
+        theme: BahrThemeName = BahrThemeName.LakeBurullus,
         stub: FakeTripRepository.() -> Unit,
     ) {
         val viewModel = TripListViewModel(FakeTripRepository().apply(stub), waitlistMemory())
         var language by mutableStateOf(languages.first())
         compose.setContent {
             ProvideAppLanguage(language) {
-                BahrTheme(locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English) {
-                    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-                        // onMap: the app always passes it, so Home's goldens show the "Map" pill (M4-M2).
-                        TripListScreen(onTripClick = {}, header = header, onMap = {}, viewModel = viewModel)
+                BahrTheme(locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English, theme = theme) {
+                    // The app's tab Scaffold sets onBackground as the content colour; a bare test root does not, so dark
+                    // shots would draw uncoloured text black on the dark page (light goldens keep their recorded black).
+                    CompositionLocalProvider(
+                        LocalContentColor provides
+                            if (theme == BahrThemeName.Dark) MaterialTheme.colorScheme.onBackground else LocalContentColor.current,
+                    ) {
+                        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+                            // onMap: the app always passes it, so Home's goldens show the "Map" pill (M4-M2).
+                            TripListScreen(onTripClick = {}, header = header, onMap = {}, viewModel = viewModel)
+                        }
                     }
                 }
             }

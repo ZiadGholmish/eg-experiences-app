@@ -3,7 +3,9 @@ package eg.bahr.feature.trips.presentation
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -19,6 +21,7 @@ import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.designsystem.theme.BahrLocale
 import eg.bahr.core.designsystem.theme.BahrTheme
+import eg.bahr.core.designsystem.theme.BahrThemeName
 import eg.bahr.core.localization.ProvideAppLanguage
 import eg.bahr.core.network.ApiErrorCodes
 import eg.bahr.core.testing.FakeWaitlistJoinsStore
@@ -89,6 +92,23 @@ class TripDetailScreenshotTest {
     @Test
     fun loadingEnglish() =
         snap("trip_detail_loading", AppLanguage.ENGLISH) {
+            tripBySlug = { awaitCancellation() }
+            departuresFor = { awaitCancellation() }
+            cards = mapOf(SLUG to card("Dawn on Lake Burullus", "Lake Burullus · Kafr El Sheikh", "Most booked"))
+        }
+
+    /** The same skeleton in dark mode (M3-M14): the placeholders must still read on the dark page. */
+    @Test
+    fun loadingDarkArabic() =
+        snap("trip_detail_loading_dark", AppLanguage.ARABIC, theme = BahrThemeName.Dark) {
+            tripBySlug = { awaitCancellation() }
+            departuresFor = { awaitCancellation() }
+            cards = mapOf(SLUG to card("الفجر على بحيرة البرلس", "بحيرة البرلس · كفر الشيخ", "الأكثر حجزًا"))
+        }
+
+    @Test
+    fun loadingDarkEnglish() =
+        snap("trip_detail_loading_dark", AppLanguage.ENGLISH, theme = BahrThemeName.Dark) {
             tripBySlug = { awaitCancellation() }
             departuresFor = { awaitCancellation() }
             cards = mapOf(SLUG to card("Dawn on Lake Burullus", "Lake Burullus · Kafr El Sheikh", "Most booked"))
@@ -513,18 +533,26 @@ class TripDetailScreenshotTest {
         onHostClick: ((HostDto) -> Unit)? = null,
         onSeeAllReviews: ((String) -> Unit)? = null,
         scrollTo: TripSection? = null,
+        theme: BahrThemeName = BahrThemeName.LakeBurullus,
         stub: FakeTripRepository.() -> Unit,
     ) {
         val viewModel = TripDetailViewModel(SLUG, FakeTripRepository().apply(stub), waitlists)
         compose.setContent {
             ProvideAppLanguage(language) {
-                BahrTheme(locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English) {
-                    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-                        TripDetailScreen(slug = SLUG, onBack = {}, onContinue = {
-                            _,
-                            _,
-                            ->
-                        }, onHostClick = onHostClick, onSeeAllReviews = onSeeAllReviews, viewModel = viewModel)
+                BahrTheme(locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English, theme = theme) {
+                    // The app's tab Scaffold sets onBackground as the content colour; a bare test root does not, so dark
+                    // shots would draw uncoloured text black on the dark page (light goldens keep their recorded black).
+                    CompositionLocalProvider(
+                        LocalContentColor provides
+                            if (theme == BahrThemeName.Dark) MaterialTheme.colorScheme.onBackground else LocalContentColor.current,
+                    ) {
+                        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+                            TripDetailScreen(slug = SLUG, onBack = {}, onContinue = {
+                                _,
+                                _,
+                                ->
+                            }, onHostClick = onHostClick, onSeeAllReviews = onSeeAllReviews, viewModel = viewModel)
+                        }
                     }
                 }
             }

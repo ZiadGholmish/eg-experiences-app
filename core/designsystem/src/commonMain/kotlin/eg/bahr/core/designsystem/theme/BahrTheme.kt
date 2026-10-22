@@ -3,7 +3,9 @@ package eg.bahr.core.designsystem.theme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
@@ -45,6 +47,10 @@ fun BahrTheme(
     val colors = bahrColorTheme(theme)
     val family = bahrFontFamily(locale)
     val shapes = BahrShapes()
+    // One loading-shimmer clock for everything under this theme (M3-M14, BahrShimmer.kt). It asks
+    // for frames only while a placeholder is on screen.
+    val shimmer = remember { BahrShimmerClock() }
+    LaunchedEffect(shimmer, reducedMotion) { shimmer.run(reducedMotion) }
     CompositionLocalProvider(
         LocalBahrLocale provides locale,
         LocalLayoutDirection provides locale.direction,
@@ -52,6 +58,7 @@ fun BahrTheme(
         LocalBahrType provides bahrExtendedType(family, locale.isArabic),
         LocalBahrShapes provides shapes,
         LocalBahrReducedMotion provides reducedMotion,
+        LocalBahrShimmerClock provides shimmer,
     ) {
         MaterialTheme(
             colorScheme = colors.scheme,

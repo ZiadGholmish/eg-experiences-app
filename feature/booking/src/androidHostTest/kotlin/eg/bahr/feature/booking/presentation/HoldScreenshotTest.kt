@@ -4,8 +4,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,6 +25,7 @@ import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.designsystem.theme.BahrLocale
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
+import eg.bahr.core.designsystem.theme.BahrThemeName
 import eg.bahr.core.localization.ProvideAppLanguage
 import eg.bahr.core.testing.captureScreenshot
 import eg.bahr.feature.booking.data.BookingFixtures
@@ -143,9 +146,19 @@ class HoldScreenshotTest {
         capture("hold_already_held", language)
     }
 
-    private fun snapLoading(language: AppLanguage) {
-        show(language, HoldViewModel(hold, neverAnswers(), FakeActiveHoldStore(), clock))
-        capture("hold_loading", language)
+    /** The summary's placeholders in dark mode (M3-M14). */
+    @Test
+    fun loadingDarkArabic() = snapLoading(AppLanguage.ARABIC, BahrThemeName.Dark)
+
+    @Test
+    fun loadingDarkEnglish() = snapLoading(AppLanguage.ENGLISH, BahrThemeName.Dark)
+
+    private fun snapLoading(
+        language: AppLanguage,
+        theme: BahrThemeName = BahrThemeName.LakeBurullus,
+    ) {
+        show(language, HoldViewModel(hold, neverAnswers(), FakeActiveHoldStore(), clock), theme = theme)
+        capture(if (theme == BahrThemeName.Dark) "hold_loading_dark" else "hold_loading", language)
     }
 
     private fun snapLoaded(language: AppLanguage) {
@@ -244,21 +257,29 @@ class HoldScreenshotTest {
         language: AppLanguage,
         viewModel: HoldViewModel,
         alreadyHeldNotice: Boolean = false,
+        theme: BahrThemeName = BahrThemeName.LakeBurullus,
     ) {
         compose.setContent {
             ProvideAppLanguage(language) {
-                BahrTheme(locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English) {
-                    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-                        HoldScreen(hold = hold, onEnded = {}, alreadyHeldNotice = alreadyHeldNotice, viewModel = viewModel)
-                        sheetShot.value?.let { sheet ->
-                            Box(Modifier.fillMaxSize().background(BahrTheme.colors.scrim), contentAlignment = Alignment.BottomCenter) {
-                                Box(
-                                    Modifier
-                                        .clip(
-                                            BahrTheme.shapes.sheet,
-                                        ).background(MaterialTheme.colorScheme.surface)
-                                        .padding(top = BahrSpacing.xl),
-                                ) { sheet() }
+                BahrTheme(locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English, theme = theme) {
+                    // The app's tab Scaffold sets onBackground as the content colour; a bare test root does not, so dark
+                    // shots would draw uncoloured text black on the dark page (light goldens keep their recorded black).
+                    CompositionLocalProvider(
+                        LocalContentColor provides
+                            if (theme == BahrThemeName.Dark) MaterialTheme.colorScheme.onBackground else LocalContentColor.current,
+                    ) {
+                        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+                            HoldScreen(hold = hold, onEnded = {}, alreadyHeldNotice = alreadyHeldNotice, viewModel = viewModel)
+                            sheetShot.value?.let { sheet ->
+                                Box(Modifier.fillMaxSize().background(BahrTheme.colors.scrim), contentAlignment = Alignment.BottomCenter) {
+                                    Box(
+                                        Modifier
+                                            .clip(
+                                                BahrTheme.shapes.sheet,
+                                            ).background(MaterialTheme.colorScheme.surface)
+                                            .padding(top = BahrSpacing.xl),
+                                    ) { sheet() }
+                                }
                             }
                         }
                     }

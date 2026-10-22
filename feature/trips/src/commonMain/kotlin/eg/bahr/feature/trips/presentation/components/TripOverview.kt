@@ -24,6 +24,8 @@ import eg.bahr.core.catalog.model.RatingDto
 import eg.bahr.core.catalog.presentation.components.SectionTitle
 import eg.bahr.core.catalog.presentation.components.Tint
 import eg.bahr.core.catalog.presentation.components.colors
+import eg.bahr.core.designsystem.components.BahrSkeletonBlock
+import eg.bahr.core.designsystem.components.BahrSkeletonLine
 import eg.bahr.core.designsystem.format.BahrFormat
 import eg.bahr.core.designsystem.icon.BahrIcons
 import eg.bahr.core.designsystem.theme.BahrSize
@@ -262,11 +264,9 @@ internal fun TripFactsSkeleton(modifier: Modifier = Modifier) {
         repeat(2) {
             Row(horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm)) {
                 repeat(2) {
-                    Skeleton(
-                        Modifier
-                            .weight(1f)
-                            .aspectRatio(FactSkeletonRatio)
-                            .clip(BahrTheme.shapes.extraLarge),
+                    BahrSkeletonBlock(
+                        modifier = Modifier.weight(1f).aspectRatio(FactSkeletonRatio),
+                        props = BahrSkeletonBlock.Props(shape = BahrTheme.shapes.extraLarge),
                     )
                 }
             }
@@ -316,12 +316,7 @@ internal fun TextSkeleton(
         repeat(lines) { line ->
             // The last line is shorter, as a paragraph's is.
             val width = if (line == lines - 1) LAST_LINE_FRACTION else 1f
-            Skeleton(
-                Modifier
-                    .fillMaxWidth(width)
-                    .height(BahrSize.skeletonLine)
-                    .clip(BahrTheme.shapes.extraSmall),
-            )
+            BahrSkeletonLine(props = BahrSkeletonLine.Props(widthFraction = width))
         }
     }
 }

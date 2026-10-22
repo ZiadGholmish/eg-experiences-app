@@ -4,7 +4,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
@@ -14,7 +13,6 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.filter
 import androidx.compose.ui.test.hasContentDescription
-import androidx.compose.ui.test.hasProgressBarRangeInfo
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onFirst
@@ -32,6 +30,7 @@ import eg.bahr.core.catalog.presentation.components.tripRowTag
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
+import eg.bahr.core.designsystem.components.BAHR_SKELETON_TAG
 import eg.bahr.core.designsystem.theme.BahrLocale
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.localization.ProvideAppLanguage
@@ -121,7 +120,8 @@ class CategoryFilterSwitchTest {
         compose.waitForIdle()
         // After an error, its retry is a plain load: the cards from before the error do not come back.
         compose.onNodeWithText(ALL_CARD).assertDoesNotExist()
-        compose.onNode(hasProgressBarRangeInfo(ProgressBarRangeInfo.Indeterminate)).assertExists()
+        // The first page's skeleton (M3-M14), where a spinner used to be.
+        compose.onNodeWithTag(BAHR_SKELETON_TAG).assertExists()
         compose.onNodeWithTag(REFRESH_BAR_TAG).assertDoesNotExist()
 
         compose.runOnIdle { answers[1].complete(page(listOf(trip(2, title = WEEKEND_CARD)), facets = facets(filter = "weekend"))) }

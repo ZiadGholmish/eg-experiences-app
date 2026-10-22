@@ -3,8 +3,10 @@ package eg.bahr.feature.mytrips.presentation
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -17,6 +19,7 @@ import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.designsystem.theme.BahrLocale
 import eg.bahr.core.designsystem.theme.BahrTheme
+import eg.bahr.core.designsystem.theme.BahrThemeName
 import eg.bahr.core.localization.ProvideAppLanguage
 import eg.bahr.core.network.auth.SessionState
 import eg.bahr.core.testing.captureScreenshot
@@ -71,6 +74,24 @@ class MyTripsScreenshotTest {
 
     @Test
     fun loadingEnglish() = shoot("mytrips_loading", AppLanguage.ENGLISH, MyTripsUiState(session = signedIn), emptyList(), loading)
+
+    /** The rows' skeleton in dark mode (M3-M14). */
+    @Test
+    fun loadingDarkArabic() =
+        shoot("mytrips_loading_dark", AppLanguage.ARABIC, MyTripsUiState(session = signedIn), emptyList(), loading, BahrThemeName.Dark)
+
+    @Test
+    fun loadingDarkEnglish() =
+        shoot("mytrips_loading_dark", AppLanguage.ENGLISH, MyTripsUiState(session = signedIn), emptyList(), loading, BahrThemeName.Dark)
+
+    /** The waiting list's first read: the same skeleton rows under the segments (M3-M14). */
+    @Test
+    fun waitlistLoadingArabic() = shoot("mytrips_waitlist_loading", AppLanguage.ARABIC, waitlistLoading, emptyList())
+
+    @Test
+    fun waitlistLoadingEnglish() = shoot("mytrips_waitlist_loading", AppLanguage.ENGLISH, waitlistLoading, emptyList())
+
+    private val waitlistLoading = MyTripsUiState(session = signedIn, segment = MyTripsSegment.Waitlist, waitlist = WaitlistLoad.Loading)
 
     @Test
     fun upcomingArabic() = shoot("mytrips_upcoming", AppLanguage.ARABIC, MyTripsUiState(session = signedIn), MyTripsFixtures.upcoming())
@@ -143,9 +164,10 @@ class MyTripsScreenshotTest {
         state: MyTripsUiState,
         bookings: List<MyBookingDto>,
         loadStates: LoadStates = loaded,
+        theme: BahrThemeName = BahrThemeName.LakeBurullus,
     ) {
         compose.setContent {
-            Themed(language) {
+            Themed(language, theme) {
                 MyTripsContent(
                     state = state,
                     bookings = flowOf(PagingData.from(bookings, loadStates)).collectAsLazyPagingItems(),
@@ -159,11 +181,19 @@ class MyTripsScreenshotTest {
     @Composable
     private fun Themed(
         language: AppLanguage,
+        theme: BahrThemeName = BahrThemeName.LakeBurullus,
         content: @Composable () -> Unit,
     ) {
         ProvideAppLanguage(language) {
-            BahrTheme(locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English) {
-                Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) { content() }
+            BahrTheme(locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English, theme = theme) {
+                // The app's tab Scaffold sets onBackground as the content colour; a bare test root does not, so dark
+                // shots would draw uncoloured text black on the dark page (light goldens keep their recorded black).
+                CompositionLocalProvider(
+                    LocalContentColor provides
+                        if (theme == BahrThemeName.Dark) MaterialTheme.colorScheme.onBackground else LocalContentColor.current,
+                ) {
+                    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) { content() }
+                }
             }
         }
     }

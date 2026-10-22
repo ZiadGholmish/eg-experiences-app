@@ -14,8 +14,9 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import eg.bahr.core.designsystem.components.BahrBadge
 import eg.bahr.core.designsystem.components.BahrErrorView
-import eg.bahr.core.designsystem.components.BahrLoadingView
 import eg.bahr.core.designsystem.components.BahrPrimaryButton
+import eg.bahr.core.designsystem.components.BahrSkeleton
+import eg.bahr.core.designsystem.components.BahrSkeletonLine
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.localization.generated.resources.Res
@@ -41,7 +42,7 @@ internal fun BookingConfirmedScreen(
     val booking = state.booking
 
     when {
-        state.isLoading -> BahrLoadingView(modifier)
+        state.isLoading -> ConfirmedSkeleton(modifier)
 
         booking == null ->
             BahrErrorView(
@@ -90,3 +91,34 @@ internal fun BookingConfirmedScreen(
             }
     }
 }
+
+/**
+ * While the booking is read (M3-M14): the page's fixed copy as text ("Booking confirmed", "Your
+ * reference"), and a line where the status, the reference, the trip and the meeting point go.
+ */
+@Composable
+private fun ConfirmedSkeleton(modifier: Modifier) {
+    BahrSkeleton(
+        modifier = modifier.fillMaxSize().padding(BahrSpacing.gutter),
+        verticalArrangement = Arrangement.spacedBy(BahrSpacing.xl),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        BahrSkeletonLine(props = BahrSkeletonLine.Props(widthFraction = SKELETON_STATUS_WIDTH))
+        Text(text = stringResource(Res.string.booking_confirmed), style = MaterialTheme.typography.headlineMedium)
+        Text(
+            text = stringResource(Res.string.booking_your_ref),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        BahrSkeletonLine(props = BahrSkeletonLine.Props(widthFraction = SKELETON_REF_WIDTH))
+        BahrSkeletonLine(props = BahrSkeletonLine.Props(widthFraction = SKELETON_TRIP_WIDTH))
+        BahrSkeletonLine(props = BahrSkeletonLine.Props(widthFraction = SKELETON_MEETING_WIDTH))
+    }
+}
+
+// The skeleton's line lengths, as shares of the page width: the status pill, the reference, the
+// trip's title and the meeting point.
+private const val SKELETON_STATUS_WIDTH = .25f
+private const val SKELETON_REF_WIDTH = .5f
+private const val SKELETON_TRIP_WIDTH = .7f
+private const val SKELETON_MEETING_WIDTH = .6f
