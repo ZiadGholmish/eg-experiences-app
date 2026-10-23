@@ -9,6 +9,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollToKey
@@ -20,6 +21,7 @@ import eg.bahr.core.catalog.presentation.components.SEE_ALL_REVIEWS_TAG
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
+import eg.bahr.core.designsystem.components.BAHR_LOTTIE_READY_TAG
 import eg.bahr.core.designsystem.theme.BahrLocale
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.designsystem.theme.BahrThemeName
@@ -245,20 +247,40 @@ class TripDetailScreenshotTest {
             joinWaitlist = { _, _ -> AppResult.Failure(AppError.Api(ApiErrorCodes.RATE_LIMITED, "full", 429)) }
         }
 
-    /** Joined: the confirmation, with the date and the email (left to right in Arabic too). */
+    /**
+     * Joined: the confirmation, with the date and the email (left to right in Arabic too). Its tick
+     * (BahrLottie's success check, M3-M8b) is shot still under reduced motion, in light and dark.
+     */
     @Test
-    fun waitlistJoinedArabic() =
-        snap("trip_detail_waitlist_joined", AppLanguage.ARABIC, select = SOLD_OUT_ID, act = ::fillAndJoin) {
-            serve(TripDetailPayloads.arabic, TripDetailPayloads.arabicDepartures)
-            joinWaitlist = { _, _ -> AppResult.Success(Unit) }
-        }
+    fun waitlistJoinedArabic() = waitlistJoined(AppLanguage.ARABIC)
 
     @Test
-    fun waitlistJoinedEnglish() =
-        snap("trip_detail_waitlist_joined", AppLanguage.ENGLISH, select = SOLD_OUT_ID, act = ::fillAndJoin) {
-            serve(TripDetailPayloads.english, TripDetailPayloads.englishDepartures)
-            joinWaitlist = { _, _ -> AppResult.Success(Unit) }
-        }
+    fun waitlistJoinedEnglish() = waitlistJoined(AppLanguage.ENGLISH)
+
+    @Test
+    fun waitlistJoinedDarkArabic() = waitlistJoined(AppLanguage.ARABIC, BahrThemeName.Dark)
+
+    @Test
+    fun waitlistJoinedDarkEnglish() = waitlistJoined(AppLanguage.ENGLISH, BahrThemeName.Dark)
+
+    private fun waitlistJoined(
+        language: AppLanguage,
+        theme: BahrThemeName = BahrThemeName.LakeBurullus,
+    ) = snap(
+        if (theme == BahrThemeName.Dark) "trip_detail_waitlist_joined_dark" else "trip_detail_waitlist_joined",
+        language,
+        select = SOLD_OUT_ID,
+        act = ::fillAndJoin,
+        theme = theme,
+        lottie = true,
+    ) {
+        val arabic = language == AppLanguage.ARABIC
+        serve(
+            if (arabic) TripDetailPayloads.arabic else TripDetailPayloads.english,
+            if (arabic) TripDetailPayloads.arabicDepartures else TripDetailPayloads.englishDepartures,
+        )
+        joinWaitlist = { _, _ -> AppResult.Success(Unit) }
+    }
 
     /**
      * M4-M5: the device joined this sold-out date's list on an earlier visit (a restart: a new view
@@ -267,13 +289,13 @@ class TripDetailScreenshotTest {
      */
     @Test
     fun waitlistRememberedArabic() =
-        snap("trip_detail_waitlist_remembered", AppLanguage.ARABIC, select = SOLD_OUT_ID, waitlists = rememberedJoin()) {
+        snap("trip_detail_waitlist_remembered", AppLanguage.ARABIC, select = SOLD_OUT_ID, waitlists = rememberedJoin(), lottie = true) {
             serve(TripDetailPayloads.arabic, TripDetailPayloads.arabicDepartures)
         }
 
     @Test
     fun waitlistRememberedEnglish() =
-        snap("trip_detail_waitlist_remembered", AppLanguage.ENGLISH, select = SOLD_OUT_ID, waitlists = rememberedJoin()) {
+        snap("trip_detail_waitlist_remembered", AppLanguage.ENGLISH, select = SOLD_OUT_ID, waitlists = rememberedJoin(), lottie = true) {
             serve(TripDetailPayloads.english, TripDetailPayloads.englishDepartures)
         }
 
@@ -534,12 +556,18 @@ class TripDetailScreenshotTest {
         onSeeAllReviews: ((String) -> Unit)? = null,
         scrollTo: TripSection? = null,
         theme: BahrThemeName = BahrThemeName.LakeBurullus,
+        // The shot holds a BahrLottie (the joined tick): drawn still under reduced motion, once its file has loaded.
+        lottie: Boolean = false,
         stub: FakeTripDetailRepository.() -> Unit,
     ) {
         val viewModel = TripDetailViewModel(SLUG, FakeTripDetailRepository().apply(stub), waitlists)
         compose.setContent {
             ProvideAppLanguage(language) {
-                BahrTheme(locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English, theme = theme) {
+                BahrTheme(
+                    locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English,
+                    theme = theme,
+                    reducedMotion = lottie,
+                ) {
                     // The app's tab Scaffold sets onBackground as the content colour; a bare test root does not, so dark
                     // shots would draw uncoloured text black on the dark page (light goldens keep their recorded black).
                     CompositionLocalProvider(
@@ -575,6 +603,15 @@ class TripDetailScreenshotTest {
             compose.waitForIdle()
             compose.mainClock.advanceTimeBy(SETTLE_MS)
         }
+        if (lottie) {
+            // Read off the main thread; with the clock paused, frames carry the parsed file in.
+            compose.waitUntil(LOTTIE_LOAD_TIMEOUT_MS) {
+                compose.mainClock.advanceTimeByFrame()
+                // Unmerged: the joined note merges its children into one announcement.
+                compose.onAllNodesWithTag(BAHR_LOTTIE_READY_TAG, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+            }
+            compose.waitForIdle()
+        }
         if (scrollTo != null) {
             compose.onNodeWithTag(TRIP_PAGE_TAG).performScrollToKey(scrollTo.name)
             compose.waitForIdle()
@@ -591,6 +628,7 @@ class TripDetailScreenshotTest {
     private companion object {
         const val SLUG = "burullus-dawn"
         const val SETTLE_MS = 1_000L
+        const val LOTTIE_LOAD_TIMEOUT_MS = 10_000L
         val UNREACHABLE_PHOTOS = (1..3).map { ImageDto(url = "http://127.0.0.1:9/photo-$it.png", width = 900, height = 560) }
         const val SOLD_OUT_ID = "0199c3a0-5eed-7000-8000-000000000603"
         const val OPEN_ID = "0199c3a0-5eed-7000-8000-000000000601"

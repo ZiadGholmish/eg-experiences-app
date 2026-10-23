@@ -67,27 +67,27 @@ class MyTripsScreenshotTest {
 
     /*
      * Signed out (M3-M8): the sign-in card's sailing-boat hero (BahrLottie) over this phone's waiting lists,
-     * which must stay in view under it. The hero is shot at rest (reduced motion: the frame it stops on).
+     * which must stay in view under it. The hero loops since M3-M8b (never idle), so it is shot still under
+     * reduced motion.
      */
     @Test
-    fun signedOutArabic() = shootSignedOut("mytrips_signed_out", AppLanguage.ARABIC, signedOutState)
+    fun signedOutArabic() = shootStill("mytrips_signed_out", AppLanguage.ARABIC, signedOutState)
 
     @Test
-    fun signedOutEnglish() = shootSignedOut("mytrips_signed_out", AppLanguage.ENGLISH, signedOutState)
+    fun signedOutEnglish() = shootStill("mytrips_signed_out", AppLanguage.ENGLISH, signedOutState)
 
     @Test
-    fun signedOutDarkArabic() = shootSignedOut("mytrips_signed_out_dark", AppLanguage.ARABIC, signedOutState, BahrThemeName.Dark)
+    fun signedOutDarkArabic() = shootStill("mytrips_signed_out_dark", AppLanguage.ARABIC, signedOutState, BahrThemeName.Dark)
 
     @Test
-    fun signedOutDarkEnglish() = shootSignedOut("mytrips_signed_out_dark", AppLanguage.ENGLISH, signedOutState, BahrThemeName.Dark)
+    fun signedOutDarkEnglish() = shootStill("mytrips_signed_out_dark", AppLanguage.ENGLISH, signedOutState, BahrThemeName.Dark)
 
     /** No waiting list joined on this phone: the card alone. */
     @Test
-    fun signedOutNoJoinsArabic() = shootSignedOut("mytrips_signed_out_no_joins", AppLanguage.ARABIC, MyTripsUiState(SessionState.SignedOut))
+    fun signedOutNoJoinsArabic() = shootStill("mytrips_signed_out_no_joins", AppLanguage.ARABIC, MyTripsUiState(SessionState.SignedOut))
 
     @Test
-    fun signedOutNoJoinsEnglish() =
-        shootSignedOut("mytrips_signed_out_no_joins", AppLanguage.ENGLISH, MyTripsUiState(SessionState.SignedOut))
+    fun signedOutNoJoinsEnglish() = shootStill("mytrips_signed_out_no_joins", AppLanguage.ENGLISH, MyTripsUiState(SessionState.SignedOut))
 
     @Test
     fun loadingArabic() = shoot("mytrips_loading", AppLanguage.ARABIC, MyTripsUiState(session = signedIn), emptyList(), loading)
@@ -130,11 +130,26 @@ class MyTripsScreenshotTest {
 
     private val pastEmpty = MyTripsUiState(session = signedIn, segment = MyTripsSegment.Past)
 
+    // Signed in, no trips (M3-M8b): the looping suitcase over the line, shot still under reduced motion.
     @Test
-    fun pastEmptyArabic() = shoot("mytrips_past_empty", AppLanguage.ARABIC, pastEmpty, emptyList())
+    fun pastEmptyArabic() = shootStill("mytrips_past_empty", AppLanguage.ARABIC, pastEmpty)
 
     @Test
-    fun pastEmptyEnglish() = shoot("mytrips_past_empty", AppLanguage.ENGLISH, pastEmpty, emptyList())
+    fun pastEmptyEnglish() = shootStill("mytrips_past_empty", AppLanguage.ENGLISH, pastEmpty)
+
+    private val upcomingEmpty = MyTripsUiState(session = signedIn)
+
+    @Test
+    fun upcomingEmptyArabic() = shootStill("mytrips_upcoming_empty", AppLanguage.ARABIC, upcomingEmpty)
+
+    @Test
+    fun upcomingEmptyEnglish() = shootStill("mytrips_upcoming_empty", AppLanguage.ENGLISH, upcomingEmpty)
+
+    @Test
+    fun upcomingEmptyDarkArabic() = shootStill("mytrips_upcoming_empty_dark", AppLanguage.ARABIC, upcomingEmpty, BahrThemeName.Dark)
+
+    @Test
+    fun upcomingEmptyDarkEnglish() = shootStill("mytrips_upcoming_empty_dark", AppLanguage.ENGLISH, upcomingEmpty, BahrThemeName.Dark)
 
     private val waitlistFailed =
         MyTripsUiState(session = signedIn, segment = MyTripsSegment.Waitlist, waitlist = WaitlistLoad.Failed(AppError.Network))
@@ -178,7 +193,8 @@ class MyTripsScreenshotTest {
         assertEquals(listOf(MyTripsSegment.Waitlist), picked)
     }
 
-    private fun shootSignedOut(
+    /** A shot holding a BahrLottie: still under reduced motion, once its file has loaded. */
+    private fun shootStill(
         prefix: String,
         language: AppLanguage,
         state: MyTripsUiState,
@@ -193,7 +209,7 @@ class MyTripsScreenshotTest {
                 )
             }
         }
-        // The hero's file is read off the main thread: idle alone would shoot its empty box.
+        // The animation's file is read off the main thread: idle alone would shoot its empty box.
         compose.waitUntil(LOTTIE_LOAD_TIMEOUT_MS) { compose.onAllNodesWithTag(BAHR_LOTTIE_READY_TAG).fetchSemanticsNodes().isNotEmpty() }
         compose.captureScreenshot("${prefix}_${language.tag}")
     }

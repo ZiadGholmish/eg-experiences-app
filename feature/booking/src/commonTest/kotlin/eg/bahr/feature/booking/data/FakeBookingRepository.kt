@@ -24,6 +24,7 @@ internal class FakeBookingRepository(
     var placeHold: suspend (request: PlaceHoldRequest) -> AppResult<HeldSeatsDto> = { unset() },
     var heldBooking: suspend (ref: String, phone: String) -> AppResult<HeldBookingDto> = { _, _ -> unset() },
     var releaseHold: suspend (ref: String, phone: String) -> AppResult<Unit> = { _, _ -> unset() },
+    var bookingByRef: suspend (ref: String) -> AppResult<BookingDto> = { unset() },
 ) : BookingRepository {
     val holdRequests = mutableListOf<PlaceHoldRequest>()
 
@@ -48,7 +49,7 @@ internal class FakeBookingRepository(
     override suspend fun bookingByRef(
         ref: String,
         phone: String?,
-    ): AppResult<BookingDto> = unset()
+    ): AppResult<BookingDto> = bookingByRef.invoke(ref)
 
     override suspend fun heldBooking(
         ref: String,

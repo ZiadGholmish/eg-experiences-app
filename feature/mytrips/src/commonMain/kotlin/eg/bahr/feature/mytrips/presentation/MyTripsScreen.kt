@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
@@ -219,7 +220,18 @@ private fun LazyListScope.bookingList(
             if (bookings.itemCount ==
                 0
             ) {
-                item(key = "bookings_empty", contentType = CONTENT_EMPTY) { Centered { BahrEmptyView(stringResource(empty)) } }
+                item(key = "bookings_empty", contentType = CONTENT_EMPTY) {
+                    // No trips yet (M3-M8b): a suitcase packing and unpacking itself while on screen. Decorative:
+                    // the line under it says it.
+                    Centered {
+                        BahrEmptyView(stringResource(empty)) {
+                            BahrLottie(
+                                modifier = Modifier.width(BahrSize.lottieState),
+                                props = BahrLottie.Props(BahrLottie.Animation.Suitcase, playback = BahrLottie.Playback.Loop),
+                            )
+                        }
+                    }
+                }
             }
     }
     // `ref` is never null (the contract requires it); Paging's itemKey covers the placeholder case.
@@ -315,12 +327,13 @@ private fun SignInCard(onSignIn: () -> Unit) {
                 .padding(BahrSpacing.lg),
         verticalArrangement = Arrangement.spacedBy(BahrSpacing.md),
     ) {
-        // The card's hero (M3-M8): a boat on the lake, sailed once and then still. Its water is drawn in
+        // The card's hero (M3-M8): a boat on the lake, rocking for as long as it is on screen (M3-M8b, the
+        // user's call); still off screen, in the background and under reduced motion. Its water is drawn in
         // `surface`, the card's own ground. Decorative: the title says what the card is for. Kept to a
         // modest height so this phone's waiting lists stay in view under the card.
         BahrLottie(
             modifier = Modifier.align(Alignment.CenterHorizontally).height(BahrSize.lottieHero),
-            props = BahrLottie.Props(BahrLottie.Animation.Sailboat),
+            props = BahrLottie.Props(BahrLottie.Animation.Sailboat, playback = BahrLottie.Playback.Loop),
         )
         Text(stringResource(Res.string.mytrips_signed_out_title), style = MaterialTheme.typography.titleMedium)
         Text(

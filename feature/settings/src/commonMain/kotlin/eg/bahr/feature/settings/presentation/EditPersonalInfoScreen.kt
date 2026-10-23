@@ -156,6 +156,9 @@ private fun TopBar(onBack: () -> Unit) {
             Icon(
                 BahrIcons.ArrowBack.outlined(),
                 contentDescription = stringResource(Res.string.action_back),
+                // Set, not inherited: iOS roots have no Scaffold to provide a content colour, so dark
+                // would draw it black on the dark page (M3-M6a review).
+                tint = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.size(BahrSize.iconNav),
             )
         }

@@ -22,10 +22,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import eg.bahr.core.designsystem.components.BahrLottie
 import eg.bahr.core.designsystem.icon.BahrIcons
 import eg.bahr.core.designsystem.theme.BahrSize
 import eg.bahr.core.designsystem.theme.BahrSpacing
@@ -111,8 +113,21 @@ internal fun SignInContent(
         verticalArrangement = Arrangement.spacedBy(BahrSpacing.md),
     ) {
         IconButton(onClick = actions.onClose, modifier = Modifier.size(BahrSize.touchTarget)) {
-            Icon(BahrIcons.Close.outlined(), contentDescription = stringResource(Res.string.auth_close))
+            Icon(
+                BahrIcons.Close.outlined(),
+                contentDescription = stringResource(Res.string.auth_close),
+                // Set, not inherited: iOS roots have no Scaffold to provide a content colour, so dark would
+                // draw it black on the dark page (as the Edit personal info Back, M3-M6a review).
+                tint = MaterialTheme.colorScheme.onSurface,
+            )
         }
+        // The welcome (M3-M8b): the boat from My trips' sign-in card, sailed once and then still. Decorative:
+        // the title under it says what this is.
+        BahrLottie(
+            modifier = Modifier.align(Alignment.CenterHorizontally).height(BahrSize.lottieHero),
+            // Its water band takes the page's colour here: this sheet is drawn on `background`.
+            props = BahrLottie.Props(BahrLottie.Animation.Sailboat, ground = BahrLottie.Ground.Background),
+        )
         Text(
             text = stringResource(Res.string.auth_title),
             style = MaterialTheme.typography.headlineSmall,

@@ -3,13 +3,13 @@ package eg.bahr.feature.tripdetails.presentation.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.CircularProgressIndicator
@@ -44,6 +44,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDirection
 import eg.bahr.core.common.result.AppError
+import eg.bahr.core.designsystem.components.BahrLottie
 import eg.bahr.core.designsystem.components.BahrStepper
 import eg.bahr.core.designsystem.components.BahrTextFields
 import eg.bahr.core.designsystem.format.BahrFormat
@@ -279,7 +280,6 @@ private fun JoinedNote(
     email: String,
 ) {
     val c = MaterialTheme.colorScheme
-    val x = BahrTheme.colors
     Row(
         modifier =
             Modifier
@@ -290,12 +290,12 @@ private fun JoinedNote(
                 .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
         horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm),
     ) {
-        Box(
-            modifier = Modifier.size(BahrSize.avatarSmall).clip(BahrTheme.shapes.full).background(x.successContainer),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(BahrIcons.Check.outlined(), contentDescription = null, tint = x.success, modifier = Modifier.size(BahrSize.iconMedium))
-        }
+        // The tick is drawn in once (M3-M8b): the join just went through, or it is the date's note on a later
+        // visit. Decorative: the title beside it says it.
+        BahrLottie(
+            modifier = Modifier.width(BahrSize.lottieInline),
+            props = BahrLottie.Props(BahrLottie.Animation.SuccessCheck),
+        )
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(BahrSpacing.xs)) {
             Text(
                 text = stringResource(Res.string.trip_waitlist_joined_title),

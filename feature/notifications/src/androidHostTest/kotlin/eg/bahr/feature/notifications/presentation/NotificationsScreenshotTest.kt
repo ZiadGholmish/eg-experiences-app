@@ -29,8 +29,8 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * The notifications page (M3-M0b, handoff §3's states; pushed from Home's bell with a Back since M3-M6a) × {ar, en} × {light, dark} × {signed in: empty, signed
- * out: the sign-in buttons, the stored sign-in not read yet}. The empty state's bell (BahrLottie, M3-M8) is
- * shot at rest: reduced motion shows the frame a played-once animation stops on, so the shot is fixed.
+ * out: the sign-in buttons, the stored sign-in not read yet}. The empty state's bell (BahrLottie, M3-M8; a loop
+ * since M3-M8b, which never idles) is shot still: reduced motion shows its fixed still frame.
  *
  * Record: `./gradlew :feature:notifications:recordRoborazziAndroidHostTest`; verify: `verifyRoborazziAndroidHostTest`.
  */

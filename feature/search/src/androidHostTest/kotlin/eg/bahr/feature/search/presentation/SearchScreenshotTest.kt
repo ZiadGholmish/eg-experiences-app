@@ -12,10 +12,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import eg.bahr.core.catalog.model.NextDepartureDto
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
+import eg.bahr.core.designsystem.components.BAHR_LOTTIE_READY_TAG
 import eg.bahr.core.designsystem.theme.BahrLocale
 import eg.bahr.core.designsystem.theme.BahrMotion
 import eg.bahr.core.designsystem.theme.BahrTheme
@@ -148,23 +150,33 @@ class SearchScreenshotTest {
         snap("search_results", language, vm)
     }
 
-    /** Nothing matches: the chips at zero (dimmed) and the sentence naming what was typed. */
+    /**
+     * Nothing matches: the looping magnifier (M3-M8b, shot still under reduced motion) over the sentence
+     * naming what was typed; the zero-count chips are left out (M4-M3 review S1).
+     */
     @Test
     fun noResultsArabic() = noResults(AppLanguage.ARABIC, "غطس")
 
     @Test
     fun noResultsEnglish() = noResults(AppLanguage.ENGLISH, "scuba")
 
+    @Test
+    fun noResultsDarkArabic() = noResults(AppLanguage.ARABIC, "غطس", BahrThemeName.Dark)
+
+    @Test
+    fun noResultsDarkEnglish() = noResults(AppLanguage.ENGLISH, "scuba", BahrThemeName.Dark)
+
     private fun noResults(
         language: AppLanguage,
         text: String,
+        theme: BahrThemeName = BahrThemeName.LakeBurullus,
     ) {
         val arabic = language == AppLanguage.ARABIC
         val zero = facets(arabic = arabic).map { it.copy(count = 0) }
         val repository = FakeTripListRepository(listFiltered = { page(emptyList(), facets = zero, totalItems = 0, totalPages = 0) })
         val vm = SearchTripsViewModel(repository, FakeRecentSearchesStore(), waitlistMemory(), LastSearch())
         vm.searchRecent(text)
-        snap("search_no_results", language, vm)
+        snap(if (theme == BahrThemeName.Dark) "search_no_results_dark" else "search_no_results", language, vm, theme, lottie = true)
     }
 
     /**
@@ -237,23 +249,30 @@ class SearchScreenshotTest {
         language: AppLanguage,
         vm: SearchTripsViewModel,
         theme: BahrThemeName = BahrThemeName.LakeBurullus,
-    ) = shoot(prefix, language, theme = theme) { SearchTripsScreen(onBack = null, onTripClick = {}, viewModel = vm) }
+        lottie: Boolean = false,
+    ) = shoot(prefix, language, theme = theme, lottie = lottie) { SearchTripsScreen(onBack = null, onTripClick = {}, viewModel = vm) }
 
     /**
      * [act], when given, runs once the screen has settled (a tap's effect on the view model), and the
-     * clock then runs through the longest animation so the shot is the state it settles in.
+     * clock then runs through the longest animation so the shot is the state it settles in. [lottie]: the
+     * shot holds a BahrLottie, drawn still under reduced motion once its file has loaded.
      */
     private fun shoot(
         prefix: String,
         language: AppLanguage,
         act: (() -> Unit)? = null,
         theme: BahrThemeName = BahrThemeName.LakeBurullus,
+        lottie: Boolean = false,
         content: @Composable () -> Unit,
     ) {
         var current by mutableStateOf(language)
         compose.setContent {
             ProvideAppLanguage(current) {
-                BahrTheme(locale = if (current == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English, theme = theme) {
+                BahrTheme(
+                    locale = if (current == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English,
+                    theme = theme,
+                    reducedMotion = lottie,
+                ) {
                     // The app's tab Scaffold sets onBackground as the content colour; a bare test root does not, so dark
                     // shots would draw uncoloured text black on the dark page (light goldens keep their recorded black).
                     CompositionLocalProvider(
@@ -279,6 +298,14 @@ class SearchScreenshotTest {
             compose.runOnIdle(it)
             settleAnimations()
         }
+        if (lottie) {
+            // Read off the main thread; with the clock paused, frames carry the parsed file in.
+            compose.waitUntil(LOTTIE_LOAD_TIMEOUT_MS) {
+                compose.mainClock.advanceTimeByFrame()
+                compose.onAllNodesWithTag(BAHR_LOTTIE_READY_TAG).fetchSemanticsNodes().isNotEmpty()
+            }
+            compose.waitForIdle()
+        }
         compose.captureScreenshot("${prefix}_${language.tag}")
     }
 
@@ -301,6 +328,7 @@ class SearchScreenshotTest {
 
     private companion object {
         const val SETTLE_FRAMES = 2
+        const val LOTTIE_LOAD_TIMEOUT_MS = 10_000L
         val FRIDAY = LocalDate(2026, 10, 16)
         val SATURDAY = LocalDate(2026, 10, 17)
     }

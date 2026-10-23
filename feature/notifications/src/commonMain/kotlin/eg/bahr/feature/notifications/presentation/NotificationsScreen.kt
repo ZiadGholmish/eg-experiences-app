@@ -144,14 +144,14 @@ private fun StateFor(
                 title = stringResource(Res.string.alerts_signed_out_title),
                 body = stringResource(Res.string.alerts_signed_out_body),
             ) { signInButtons(Modifier.padding(top = BahrSpacing.md)) }
-        // The empty state rings its bell once (M3-M8): the same disc and bell as the still state's, in
-        // motion. Decorative: the title says it.
+        // The empty state rings its bell (M3-M8), over and over while on screen (M3-M8b, the user's call):
+        // the same disc and bell as the still state's, in motion. Decorative: the title says it.
         is SessionState.SignedIn ->
             StateMessage(
                 art = {
                     BahrLottie(
                         modifier = Modifier.width(BahrSize.lottieState),
-                        props = BahrLottie.Props(BahrLottie.Animation.Bell),
+                        props = BahrLottie.Props(BahrLottie.Animation.Bell, playback = BahrLottie.Playback.Loop),
                     )
                 },
                 title = stringResource(Res.string.alerts_empty_title),

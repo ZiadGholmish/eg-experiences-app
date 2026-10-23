@@ -32,9 +32,10 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * BahrLottie (M3-M8): each shipped animation re-tinted for {light, dark, HighContrast}, on a fixed frame:
- *  - at rest (reduced motion: the last whole frame, which is also where a played-once animation stops),
- *    in ar and en (the animation itself is not mirrored);
- *  - mid-animation, to show the moving parts' colours (the bell's rings, the boat between two rocks).
+ *  - still (reduced motion: the last whole frame, where a played-once animation stops, or the frame the
+ *    animation names, the suitcase's), in ar and en (the animation itself is not mirrored);
+ *  - mid-animation, to show the moving parts' colours (the bell's rings, the boat between two rocks, the
+ *    check's halo, the suitcase growing).
  *
  * Record: `./gradlew :core:designsystem:recordRoborazziAndroidHostTest`.
  */
@@ -80,7 +81,7 @@ class BahrLottieScreenshotTest {
         compose.captureScreenshot("${prefix}_${language.tag}")
     }
 
-    /** Each animation on the ground it is drawn on in the app: the page's `surface` (Alerts) and a card's. */
+    /** Each animation on a `surface` ground: Alerts' page, the sign-in card, the sheets. */
     @Composable
     private fun Sample(
         language: AppLanguage,
@@ -102,6 +103,12 @@ class BahrLottieScreenshotTest {
                         BahrLottie(Modifier.width(BahrSize.lottieState), BahrLottie.Props(BahrLottie.Animation.Bell), progress)
                         BahrLottie(Modifier.height(BahrSize.lottieHero), BahrLottie.Props(BahrLottie.Animation.Sailboat), progress)
                     }
+                    // M3-M8b: the done moment's check, and the empty states' suitcase and magnifier.
+                    Row(horizontalArrangement = Arrangement.spacedBy(BahrSpacing.md), verticalAlignment = Alignment.CenterVertically) {
+                        BahrLottie(Modifier.width(BahrSize.lottieMoment), BahrLottie.Props(BahrLottie.Animation.SuccessCheck), progress)
+                        BahrLottie(Modifier.width(BahrSize.lottieMoment), BahrLottie.Props(BahrLottie.Animation.Suitcase), progress)
+                        BahrLottie(Modifier.width(BahrSize.lottieMoment), BahrLottie.Props(BahrLottie.Animation.Magnifier), progress)
+                    }
                     Text(
                         text = if (language == AppLanguage.ARABIC) "مفيش إشعارات لسه" else "No notifications yet",
                         style = MaterialTheme.typography.titleLarge,
@@ -113,7 +120,7 @@ class BahrLottieScreenshotTest {
     }
 
     private companion object {
-        /** A third in: the bell swinging with its rings out, the boat mid-rock. */
+        /** A third in: the bell swinging with its rings out, the boat mid-rock, the check's halo out. */
         const val MID_PROGRESS = .3f
     }
 }

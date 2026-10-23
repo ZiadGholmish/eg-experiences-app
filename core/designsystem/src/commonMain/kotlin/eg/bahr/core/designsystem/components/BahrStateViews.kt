@@ -67,16 +67,21 @@ fun BahrErrorView(
     }
 }
 
+/**
+ * Nothing to show, said in one line; [art] (M3-M8b: a looping [BahrLottie]) goes above it, when given.
+ */
 @Composable
 fun BahrEmptyView(
     message: String,
     modifier: Modifier = Modifier,
+    art: (@Composable () -> Unit)? = null,
 ) {
     Column(
         modifier = modifier.fillMaxSize().padding(BahrSpacing.xl),
-        verticalArrangement = Arrangement.Center,
+        verticalArrangement = Arrangement.spacedBy(BahrSpacing.md, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        art?.invoke()
         Text(
             text = message,
             style = MaterialTheme.typography.bodyLarge,

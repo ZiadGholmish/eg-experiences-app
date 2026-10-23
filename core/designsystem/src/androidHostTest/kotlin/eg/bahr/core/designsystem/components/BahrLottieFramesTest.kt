@@ -45,28 +45,46 @@ class BahrLottieFramesTest {
     fun playedOnceStopsAskingForFramesAtRest() {
         show(BahrLottie.Playback.Once)
         assertTrue(asksForFrames(), "it plays")
-        compose.mainClock.advanceTimeBy(LONGER_THAN_EITHER_ANIMATION_MS)
+        compose.mainClock.advanceTimeBy(LONGER_THAN_ANY_ANIMATION_MS)
         assertFalse(asksForFrames(), "at rest, no more frames")
     }
 
+    /** M3-M8b: the done moments' check, the longest file, rests too. */
+    @Test
+    fun successCheckStopsAskingForFramesAtRest() {
+        show(BahrLottie.Playback.Once, animation = BahrLottie.Animation.SuccessCheck)
+        assertTrue(asksForFrames(), "it plays")
+        compose.mainClock.advanceTimeBy(LONGER_THAN_ANY_ANIMATION_MS)
+        assertFalse(asksForFrames(), "at rest, no more frames")
+    }
+
+    /** M3-M8b, the user's call: a loop keeps going round, past the end of its file, while on screen. */
     @Test
     fun loopPlaysWhileOnScreen() {
         show(BahrLottie.Playback.Loop)
-        compose.mainClock.advanceTimeBy(LONGER_THAN_EITHER_ANIMATION_MS)
+        compose.mainClock.advanceTimeBy(LONGER_THAN_ANY_ANIMATION_MS)
         assertTrue(asksForFrames())
+    }
+
+    /** The empty states' loops (M3-M8b) pause out of view like the bell. */
+    @Test
+    fun suitcaseLoopOutOfViewAsksForNoFrames() {
+        show(BahrLottie.Playback.Loop, offScreen = true, animation = BahrLottie.Animation.Suitcase)
+        compose.mainClock.advanceTimeBy(LONGER_THAN_ANY_ANIMATION_MS)
+        assertFalse(asksForFrames())
     }
 
     @Test
     fun loopOutOfViewAsksForNoFrames() {
         show(BahrLottie.Playback.Loop, offScreen = true)
-        compose.mainClock.advanceTimeBy(LONGER_THAN_EITHER_ANIMATION_MS)
+        compose.mainClock.advanceTimeBy(LONGER_THAN_ANY_ANIMATION_MS)
         assertFalse(asksForFrames())
     }
 
     @Test
     fun reducedMotionAsksForNoFrames() {
         show(BahrLottie.Playback.Loop, reducedMotion = true)
-        compose.mainClock.advanceTimeBy(LONGER_THAN_EITHER_ANIMATION_MS)
+        compose.mainClock.advanceTimeBy(LONGER_THAN_ANY_ANIMATION_MS)
         assertFalse(asksForFrames())
     }
 
@@ -76,7 +94,7 @@ class BahrLottieFramesTest {
         val owner = TestLifecycleOwner()
         show(BahrLottie.Playback.Loop, lifecycleOwner = owner)
         compose.runOnUiThread { owner.registry.currentState = Lifecycle.State.CREATED }
-        compose.mainClock.advanceTimeBy(LONGER_THAN_EITHER_ANIMATION_MS)
+        compose.mainClock.advanceTimeBy(LONGER_THAN_ANY_ANIMATION_MS)
         assertFalse(asksForFrames(), "paused in the background")
         compose.runOnUiThread { owner.registry.currentState = Lifecycle.State.RESUMED }
         compose.mainClock.advanceTimeByFrame()
@@ -89,13 +107,16 @@ class BahrLottieFramesTest {
         offScreen: Boolean = false,
         reducedMotion: Boolean = false,
         lifecycleOwner: LifecycleOwner? = null,
+        animation: BahrLottie.Animation = BahrLottie.Animation.Bell,
     ) {
         compose.mainClock.autoAdvance = false
         compose.setContent {
             if (lifecycleOwner == null) {
-                Sample(playback, offScreen, reducedMotion)
+                Sample(playback, offScreen, reducedMotion, animation)
             } else {
-                CompositionLocalProvider(LocalLifecycleOwner provides lifecycleOwner) { Sample(playback, offScreen, reducedMotion) }
+                CompositionLocalProvider(
+                    LocalLifecycleOwner provides lifecycleOwner,
+                ) { Sample(playback, offScreen, reducedMotion, animation) }
             }
         }
         // The file loads off the main thread; frames carry its result into the composition.
@@ -111,12 +132,13 @@ class BahrLottieFramesTest {
         playback: BahrLottie.Playback,
         offScreen: Boolean,
         reducedMotion: Boolean,
+        animation: BahrLottie.Animation,
     ) {
         BahrTheme(locale = BahrLocale.English, reducedMotion = reducedMotion) {
             Box(Modifier.fillMaxSize()) {
                 BahrLottie(
                     modifier = Modifier.offset(y = if (offScreen) OFF_SCREEN else 0.dp).width(BahrSize.lottieState),
-                    props = BahrLottie.Props(BahrLottie.Animation.Bell, playback = playback),
+                    props = BahrLottie.Props(animation, playback = playback),
                 )
             }
         }
@@ -131,7 +153,8 @@ class BahrLottieFramesTest {
     private fun asksForFrames(): Boolean = Recomposer.runningRecomposers.value.any { it.hasPendingWork }
 
     private companion object {
-        const val LONGER_THAN_EITHER_ANIMATION_MS = 5_000L
+        /** The longest shipped file is the success check's, 4.6 s (M3-M8b). */
+        const val LONGER_THAN_ANY_ANIMATION_MS = 6_000L
         const val LOAD_TIMEOUT_MS = 10_000L
 
         /** Well below the 640dp test screen. */

@@ -46,6 +46,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.paging.LoadState
@@ -373,6 +374,7 @@ fun RefreshBar(
  * [status] comes from [rememberQueryStatus]. The refresh bar is the screen's: under the field in
  * search, in the gap under the chips on the category page ([RefreshBarBelow]), so the list holds no
  * extra item and the cards sit where they did before M4-M6. [onRetry] reloads the first page (the view model's, throttled); [onAppendRetry] a failed next page.
+ * [emptyArt] (M3-M8b, search's "no results": a looping BahrLottie) goes above the empty line, which is then centred under it.
  */
 fun LazyListScope.listBody(
     trips: LazyPagingItems<TripCardDto>,
@@ -381,6 +383,7 @@ fun LazyListScope.listBody(
     perPersonLabel: String,
     waitlistTags: WaitlistTags,
     emptyMessage: @Composable () -> String,
+    emptyArt: (@Composable () -> Unit)? = null,
     onRetry: () -> Unit,
     onAppendRetry: () -> Unit,
     onTripClick: (slug: String) -> Unit,
@@ -404,12 +407,28 @@ fun LazyListScope.listBody(
 
         PagedListStatus.Empty ->
             item(key = KEY_LIST_EMPTY, contentType = CONTENT_EMPTY) {
-                Text(
-                    text = emptyMessage(),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = bahrAnimateItem().padding(horizontal = BahrSpacing.gutter),
-                )
+                if (emptyArt == null) {
+                    Text(
+                        text = emptyMessage(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = bahrAnimateItem().padding(horizontal = BahrSpacing.gutter),
+                    )
+                } else {
+                    Column(
+                        modifier = bahrAnimateItem().fillMaxWidth().padding(horizontal = BahrSpacing.gutter, vertical = BahrSpacing.xl),
+                        verticalArrangement = Arrangement.spacedBy(BahrSpacing.md),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        emptyArt()
+                        Text(
+                            text = emptyMessage(),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                }
             }
 
         PagedListStatus.Loaded, PagedListStatus.Refreshing ->

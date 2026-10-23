@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
@@ -66,6 +67,7 @@ import eg.bahr.core.catalog.presentation.components.rememberQueryStatus
 import eg.bahr.core.catalog.presentation.components.selectedOrder
 import eg.bahr.core.catalog.presentation.rememberThrottled
 import eg.bahr.core.designsystem.components.BahrBackButton
+import eg.bahr.core.designsystem.components.BahrLottie
 import eg.bahr.core.designsystem.components.navigationBarsSpacer
 import eg.bahr.core.designsystem.icon.BahrIcons
 import eg.bahr.core.designsystem.theme.BahrSize
@@ -223,6 +225,19 @@ internal fun SearchTripsScreen(
                         stringResource(Res.string.search_no_results, query)
                     }
                 },
+                // Nothing matches the words at all (M3-M8b): a magnifier looking about while on screen. Not with a
+                // chip active: there the line asks to widen the filter, and the list above stays.
+                emptyArt =
+                    if (nothingMatches) {
+                        {
+                            BahrLottie(
+                                modifier = Modifier.width(BahrSize.lottieState),
+                                props = BahrLottie.Props(BahrLottie.Animation.Magnifier, playback = BahrLottie.Playback.Loop),
+                            )
+                        }
+                    } else {
+                        null
+                    },
                 onTripClick = { slug ->
                     viewModel.onResultOpened()
                     onTripClick(slug)

@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -14,9 +15,11 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import eg.bahr.core.designsystem.components.BahrBadge
 import eg.bahr.core.designsystem.components.BahrErrorView
+import eg.bahr.core.designsystem.components.BahrLottie
 import eg.bahr.core.designsystem.components.BahrPrimaryButton
 import eg.bahr.core.designsystem.components.BahrSkeleton
 import eg.bahr.core.designsystem.components.BahrSkeletonLine
+import eg.bahr.core.designsystem.theme.BahrSize
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.localization.generated.resources.Res
@@ -58,6 +61,13 @@ internal fun BookingConfirmedScreen(
                 verticalArrangement = Arrangement.spacedBy(BahrSpacing.xl),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
+                // The handoff's check circle, drawn in once (M3-M8b): the moment the trip is booked. Decorative:
+                // the title under it says it.
+                BahrLottie(
+                    modifier = Modifier.width(BahrSize.lottieMoment),
+                    // On the page's `background`: the gap round the disc and the tick take its colour.
+                    props = BahrLottie.Props(BahrLottie.Animation.SuccessCheck, ground = BahrLottie.Ground.Background),
+                )
                 BahrBadge(props = BahrBadge.Props(text = booking.status, tone = BahrBadge.Tone.Success))
                 Text(
                     text = stringResource(Res.string.booking_confirmed),

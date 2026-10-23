@@ -20,6 +20,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.currentStateAsState
 import eg.bahr.core.designsystem.generated.resources.Res
+import eg.bahr.core.designsystem.theme.BahrExtendedColors
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.designsystem.theme.reducedMotion
 import io.github.alexzhirkevich.compottie.Compottie
@@ -37,9 +38,11 @@ import kotlin.math.ceil
  *
  * - Its box keeps the animation's aspect ratio from the first frame, before the file has loaded, so
  *   nothing moves when it appears. Give it one dimension (a width or a height) in [modifier].
- * - Plays once and rests on its last frame, or loops ([Props.playback]); prefer once. It plays only
- *   while on screen with the app in the foreground, and asks for no frames once it rests.
- * - Under reduced motion (BahrTheme.reducedMotion) it does not play: it shows that resting frame.
+ * - Plays once and rests on its last frame (a moment: booking confirmed, joined), or loops ([Props.playback];
+ *   an empty state, M3-M8b, the user's call). Either way it plays only while on screen with the app in the
+ *   foreground; a played-once animation asks for no frames once it rests, a loop none while paused.
+ * - Under reduced motion (BahrTheme.reducedMotion) it does not play: it shows its still frame, the last
+ *   one unless [Animation] names another (a loop whose last frame is empty).
  * - Decorative unless [Props.contentDescription] is given: most sit next to a title that already says it.
  *
  * Use sparingly, where motion adds meaning (PLAN M3-M8): an empty state, a hero.
@@ -53,20 +56,45 @@ interface BahrLottie {
         internal val path: String,
         /** Width / height of the file's canvas, reserved before it loads. */
         internal val aspectRatio: Float,
+        /**
+         * The frame shown still (reduced motion), as progress 0..1; null: the last whole frame, where a
+         * played-once animation stops anyway.
+         */
+        internal val stillProgress: Float? = null,
     ) {
         /** A bell in a disc, rung once with two rings going out (624 x 663). */
         Bell("files/lottie/bell.json", BELL_WIDTH / BELL_HEIGHT),
 
         /** A line-drawn sailing boat rocking on waves, on a `surface` ground (348 x 240). */
         Sailboat("files/lottie/sailboat.json", SAILBOAT_WIDTH / SAILBOAT_HEIGHT),
+
+        /** A tick drawn into a `success` disc, a ring and a halo going out, then still (square). */
+        SuccessCheck("files/lottie/success_check.json", SQUARE),
+
+        /**
+         * A line-drawn suitcase that grows from a dot, shows its handle and shrinks back to the dot
+         * (square). Its still frame is the whole suitcase: the loop starts and ends on the dot.
+         */
+        Suitcase("files/lottie/suitcase.json", SQUARE, stillProgress = SUITCASE_STILL),
+
+        /** A magnifying glass with a sad face that changes its mind now and then (square). */
+        Magnifier("files/lottie/magnifier.json", SQUARE),
     }
 
     enum class Playback { Once, Loop }
+
+    /**
+     * What the animation is drawn on (M3-M8b). The files paint their ground-coloured parts (the boat's
+     * water band, the check's gap and tick) in the `surface` role; on the page's `background` (the
+     * sign-in sheet, booking confirmed) they take that colour instead, or they would show as a box.
+     */
+    enum class Ground { Surface, Background }
 
     @Immutable
     data class Props(
         val animation: Animation,
         val playback: Playback = Playback.Once,
+        val ground: Ground = Ground.Surface,
         /** For screen readers; null when the animation is decoration (the usual case). */
         val contentDescription: String? = null,
     )
@@ -89,7 +117,12 @@ internal fun BahrLottie(
     fixedProgress: Float?,
 ) {
     val scheme = MaterialTheme.colorScheme
-    val spec = remember(props.animation, scheme) { TintedLottieSpec(props.animation, scheme.lottieRoles()) }
+    val extended = BahrTheme.colors
+    // Keyed on both colour sets: a theme switch re-tints (the success roles are the extended set's).
+    val spec =
+        remember(props.animation, props.ground, scheme, extended) {
+            TintedLottieSpec(props.animation, lottieRoles(scheme, extended, props.ground))
+        }
     val composition by rememberLottieComposition(spec)
     val reduced = BahrTheme.reducedMotion
     var onScreen by remember { mutableStateOf(false) }
@@ -97,7 +130,7 @@ internal fun BahrLottie(
         if (fixedProgress != null) {
             { fixedProgress }
         } else if (reduced) {
-            { composition?.restingProgress() ?: 0f }
+            { composition?.let { props.animation.stillProgress ?: it.restingProgress() } ?: 0f }
         } else {
             // Frames only while someone can see it (the iPhone ran hot, M3-M8): paused while the app is in
             // the background or the box is scrolled out of view, and picked up where it stopped (no restart).
@@ -140,13 +173,23 @@ internal fun BahrLottie(
 /** For tests: a [BahrLottie] whose animation has loaded and draws (screenshots wait for it). */
 const val BAHR_LOTTIE_READY_TAG = "bahr_lottie_ready"
 
-/** The roles the shipped files name (`bahr.<role>`), from the current theme. */
-private fun ColorScheme.lottieRoles(): Map<String, Color> =
+/**
+ * The roles the shipped files name (`bahr.<role>`), from the current theme. Never `tertiary`: coral is
+ * the action colour only.
+ */
+private fun lottieRoles(
+    scheme: ColorScheme,
+    extended: BahrExtendedColors,
+    ground: BahrLottie.Ground,
+): Map<String, Color> =
     mapOf(
-        "primary" to primary,
-        "primaryContainer" to primaryContainer,
-        "onPrimaryContainer" to onPrimaryContainer,
-        "surface" to surface,
+        "primary" to scheme.primary,
+        "primaryContainer" to scheme.primaryContainer,
+        "onPrimaryContainer" to scheme.onPrimaryContainer,
+        "secondary" to scheme.secondary,
+        "surface" to if (ground == BahrLottie.Ground.Background) scheme.background else scheme.surface,
+        "success" to extended.success,
+        "successContainer" to extended.successContainer,
     )
 
 /**
@@ -179,3 +222,9 @@ private const val BELL_WIDTH = 624f
 private const val BELL_HEIGHT = 663f
 private const val SAILBOAT_WIDTH = 348f
 private const val SAILBOAT_HEIGHT = 240f
+
+/** The success check, suitcase and magnifier files have square canvases. */
+private const val SQUARE = 1f
+
+/** Mid-loop, between growing and shrinking: the whole suitcase with its handle. */
+private const val SUITCASE_STILL = .5f

@@ -303,6 +303,18 @@ object BahrSize {
     /** A hero animation's height (M3-M8, BahrLottie's Sailboat on My trips' sign-in card). */
     val lottieHero = 112.dp
 
+    /**
+     * A done moment's animation box (M3-M8b, BahrLottie's SuccessCheck: booking confirmed, seats held,
+     * profile saved). Its disc and ring fill about 70% of the canvas, so the disc reads near [stateDisc].
+     */
+    val lottieMoment = 96.dp
+
+    /**
+     * The success check in front of a line (M3-M8b, "You're on the waiting list"): its disc draws about
+     * the size of the [avatarSmall] disc it replaced, with room for the halo.
+     */
+    val lottieInline = 44.dp
+
     /** Profile's initials avatar (account handoff §2: 60px). */
     val avatarProfile = 60.dp
 

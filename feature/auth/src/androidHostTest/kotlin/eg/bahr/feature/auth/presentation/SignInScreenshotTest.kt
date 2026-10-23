@@ -15,14 +15,17 @@ import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.common.result.AppError
+import eg.bahr.core.designsystem.components.BAHR_LOTTIE_READY_TAG
 import eg.bahr.core.designsystem.theme.BahrLocale
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
+import eg.bahr.core.designsystem.theme.BahrThemeName
 import eg.bahr.core.localization.ProvideAppLanguage
 import eg.bahr.core.network.ApiErrorCodes
 import eg.bahr.core.testing.captureScreenshot
@@ -40,7 +43,8 @@ import kotlin.test.assertEquals
  * M3-M0: the sign-in sheet × {ar, en} × {iOS's Apple + Google, Android's Google with a refused sign-in
  * in progress again, no provider configured}. M3-M0b: the "Complete your profile" sheet (prefilled, the
  * errors after Save, saving) and the delete-account sheet (M3-M0b: sheets instead of dialogs) (default,
- * a host's account refused, deleting). Drawn from the stateless content, as the screens draw it.
+ * a host's account refused, deleting). Drawn from the stateless content, as the screens draw it. M3-M8b: the
+ * sign-in sheet's welcome boat (BahrLottie, played once) is shot still under reduced motion, also in dark.
  *
  * Record: `./gradlew :feature:auth:recordRoborazziAndroidHostTest`; verify: `verifyRoborazziAndroidHostTest`.
  */
@@ -54,33 +58,48 @@ class SignInScreenshotTest {
     private val both = listOf(AuthProvider.Apple, AuthProvider.Google)
 
     @Test
-    fun chooseArabic() = shoot("sign_in_choose", AppLanguage.ARABIC) { SignInContent(SignInUiState(), both, SignInActions()) }
+    fun chooseArabic() =
+        shoot("sign_in_choose", AppLanguage.ARABIC, lottie = true) { SignInContent(SignInUiState(), both, SignInActions()) }
 
     @Test
-    fun chooseEnglish() = shoot("sign_in_choose", AppLanguage.ENGLISH) { SignInContent(SignInUiState(), both, SignInActions()) }
+    fun chooseEnglish() =
+        shoot("sign_in_choose", AppLanguage.ENGLISH, lottie = true) { SignInContent(SignInUiState(), both, SignInActions()) }
+
+    /** M3-M8b: the welcome boat (and the close button, tinted) on the dark page. */
+    @Test
+    fun chooseDarkArabic() =
+        shoot("sign_in_choose_dark", AppLanguage.ARABIC, lottie = true, theme = BahrThemeName.Dark) {
+            SignInContent(SignInUiState(), both, SignInActions())
+        }
+
+    @Test
+    fun chooseDarkEnglish() =
+        shoot("sign_in_choose_dark", AppLanguage.ENGLISH, lottie = true, theme = BahrThemeName.Dark) {
+            SignInContent(SignInUiState(), both, SignInActions())
+        }
 
     /** Android (Google only): a refused token's message, and Google busy again. */
     private val refused = SignInUiState(busy = AuthProvider.Google, error = AppError.Api(ApiErrorCodes.UNAUTHORIZED, "x", 401))
 
     @Test
     fun refusedArabic() =
-        shoot("sign_in_refused_busy", AppLanguage.ARABIC) {
+        shoot("sign_in_refused_busy", AppLanguage.ARABIC, lottie = true) {
             SignInContent(refused, listOf(AuthProvider.Google), SignInActions())
         }
 
     @Test
     fun refusedEnglish() =
-        shoot("sign_in_refused_busy", AppLanguage.ENGLISH) {
+        shoot("sign_in_refused_busy", AppLanguage.ENGLISH, lottie = true) {
             SignInContent(refused, listOf(AuthProvider.Google), SignInActions())
         }
 
     @Test
     fun unavailableArabic() =
-        shoot("sign_in_unavailable", AppLanguage.ARABIC) { SignInContent(SignInUiState(), emptyList(), SignInActions()) }
+        shoot("sign_in_unavailable", AppLanguage.ARABIC, lottie = true) { SignInContent(SignInUiState(), emptyList(), SignInActions()) }
 
     @Test
     fun unavailableEnglish() =
-        shoot("sign_in_unavailable", AppLanguage.ENGLISH) {
+        shoot("sign_in_unavailable", AppLanguage.ENGLISH, lottie = true) {
             SignInContent(SignInUiState(), emptyList(), SignInActions())
         }
 
@@ -217,17 +236,30 @@ class SignInScreenshotTest {
         }
     }
 
+    /** [lottie]: the shot holds a BahrLottie (the sign-in welcome), drawn still under reduced motion once loaded. */
     private fun shoot(
         prefix: String,
         language: AppLanguage,
+        lottie: Boolean = false,
+        theme: BahrThemeName = BahrThemeName.LakeBurullus,
         content: @Composable () -> Unit,
     ) {
         compose.setContent {
             ProvideAppLanguage(language) {
-                BahrTheme(locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English) {
+                BahrTheme(
+                    locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English,
+                    theme = theme,
+                    reducedMotion = lottie,
+                ) {
                     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) { content() }
                 }
             }
+        }
+        if (lottie) {
+            // The file is read off the main thread: idle alone would shoot its empty box.
+            compose.waitUntil(
+                LOTTIE_LOAD_TIMEOUT_MS,
+            ) { compose.onAllNodesWithTag(BAHR_LOTTIE_READY_TAG).fetchSemanticsNodes().isNotEmpty() }
         }
         compose.captureScreenshot("${prefix}_${language.tag}")
     }
@@ -238,3 +270,5 @@ class SignInScreenshotTest {
         override fun requestInputMode(inputMode: InputMode): Boolean = inputMode == InputMode.Keyboard
     }
 }
+
+private const val LOTTIE_LOAD_TIMEOUT_MS = 10_000L
