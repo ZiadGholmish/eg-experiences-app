@@ -6,7 +6,7 @@ import eg.bahr.core.common.result.AppResult
 
 /**
  * The `GET /trips` read a [TripListPagingSource] pages through. Each feature's repository extends it
- * (feature:home's for "All trips", feature:trips' for the category page and search), so a view model
+ * (feature:home's for "All trips", feature:trip-listing's, feature:host's and feature:reviews'; search reads it directly), so a view model
  * keeps one repository and its tests one fake.
  */
 interface TripListRepository {
@@ -44,7 +44,7 @@ internal class DefaultTripListRepository(
  * The list cards loaded so far (Home rows, "All trips", category, search and "See all" lists), by
  * slug. The trip page shows a card's title and price while the full trip loads (HANDOFF: the loading
  * state is text-first), whichever feature loaded the card: one instance for the app (M4-M1c), so a
- * trip opened from Home is text-first on feature:trips' page. It is the seam where real caching goes.
+ * trip opened from Home is text-first on feature:trip-details' page. It is the seam where real caching goes.
  *
  * Only touched from view-model coroutines, which run on the main dispatcher, so it needs no lock.
  */

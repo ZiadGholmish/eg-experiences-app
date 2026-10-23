@@ -228,7 +228,7 @@ it signable by a personal team. `ContentView` hands every URL from `onOpenURL` /
 
 - **View models:** `commonTest`, hand-written fake repositories, and
   `runViewModelTest { … }` from `core:testing`, which points `Dispatchers.Main`
-  at the test scheduler. Template: `feature/trips/.../TripListViewModelTest.kt`
+  at the test scheduler. Template: `feature/trip-listing/.../CategoryTripsViewModelTest.kt`
   with `FakeTripRepository`.
 - **Screenshots:** Roborazzi on Robolectric (Android JVM, native graphics), in
   each module's `src/androidHostTest/` (AGP 9's name for Android unit tests); goldens are committed in

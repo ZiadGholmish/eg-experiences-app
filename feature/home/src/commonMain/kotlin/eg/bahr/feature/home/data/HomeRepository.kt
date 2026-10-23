@@ -18,7 +18,7 @@ internal interface HomeRepository : TripListRepository {
 /**
  * [api] for the sections, [lists] for "All trips". A Home row's cards go into the app's one [cards]
  * cache (core:catalog), as the list's do, so a trip opened from a row is text-first on the trip page
- * (feature:trips) like one from the list.
+ * (feature:trip-details) like one from the list.
  */
 internal class DefaultHomeRepository(
     private val api: HomeApiService,

@@ -1,5 +1,6 @@
 // What the trip-listing screens share (M4-M1c): Home (feature:home), the category page, "See all" and
-// search (feature:trips), and the map (feature:map). No screens: wire shapes, the `GET /trips` read,
+// search (feature:trip-listing, feature:search), the map (feature:map), and since M3-M16 the
+// review, host and page pieces two or more of feature:trip-details, feature:host and feature:reviews share. No screens: wire shapes, the `GET /trips` read,
 // the paged list's parts, the trip card and the waiting-list memory. bahr-modularization graph:
 // core:catalog → core:common, core:network, core:datastore, core:localization, core:designsystem.
 plugins {

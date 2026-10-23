@@ -25,7 +25,7 @@ import kotlin.test.assertTrue
 /**
  * M4-M1b on the wire: `GET /trips` with `category` / `filter` and its facets (M4-B1), through the app's
  * real client on a MockEngine. Bodies follow openapi `TripPage` and `Facet`. A row's "See all"
- * (`listHomeSectionTrips`) is tested in feature:trips, which owns it (M4-M1c split this file).
+ * (`listHomeSectionTrips`) is tested in feature:trip-listing, which owns it (M4-M1c split this file).
  */
 class TripFacetsApiServiceTest {
     private val requests = mutableListOf<HttpRequestData>()

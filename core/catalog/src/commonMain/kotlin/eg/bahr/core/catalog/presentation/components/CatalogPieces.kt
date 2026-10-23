@@ -14,7 +14,7 @@ import eg.bahr.core.designsystem.icon.BahrIcons
 import eg.bahr.core.designsystem.theme.BahrTheme
 
 /*
- * Small parts the trip page (feature:trips), Home (feature:home) and the map (feature:map) share
+ * Small parts the trip page (feature:trip-details), Home (feature:home) and the map (feature:map) share
  * (M4-M1c): the section heading, the contract's `Tone` as a tint, a server icon name as one of the
  * design's icons, and a photo over its LQIP. Here rather than in core:designsystem because they read contract values (`Tone`,
  * Material Symbols names), which the design system does not know.
@@ -101,7 +101,7 @@ fun knownSymbolIcon(name: String?): BahrIcons? =
 
 /**
  * LQIP first, then the photo over it; the ground is already painted, so nothing shifts. Shared by the trip
- * page's hero (feature:trips) and Home's banners (feature:home).
+ * page's hero (feature:trip-details) and Home's banners (feature:home).
  */
 @Composable
 fun Photo(image: ImageDto) {

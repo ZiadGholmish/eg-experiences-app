@@ -50,7 +50,13 @@ include(":core:testing")
 // Feature modules — one per area of the `/api/v1/**` contract.
 include(":feature:splash")
 include(":feature:home")
-include(":feature:trips")
+// The trip area, split from feature:trips (M3-M16, user decision 2026-10-23): the trip page, the category and
+// "See all" lists, search, a host's page and "See all reviews". What two of them share is core:catalog's.
+include(":feature:trip-details")
+include(":feature:trip-listing")
+include(":feature:search")
+include(":feature:host")
+include(":feature:reviews")
 include(":feature:booking")
 include(":feature:map")
 // The Settings tab (M4-M8, user decision 2026-10-11).

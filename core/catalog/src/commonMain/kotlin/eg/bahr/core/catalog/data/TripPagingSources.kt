@@ -10,7 +10,7 @@ import eg.bahr.core.common.result.AppResult
 
 /*
  * One PagingSource per list endpoint (M4-M1b): `GET /trips` here (Home's "All trips", the category page
- * and search), and feature:trips' `SectionTripsPagingSource` for `GET /home/sections/{id}/trips` (a
+ * and search), and feature:trip-listing's `SectionTripsPagingSource` for `GET /home/sections/{id}/trips` (a
  * row's "See all"). Keys are the server's page numbers, from 0.
  *
  * Every page is read at the one size the ApiService sends (`TripListApiService.PAGE_SIZE`), so the source
@@ -74,7 +74,7 @@ class TripListPagingSource(
 }
 
 /**
- * A loaded page, for every trip list's PagingSource (this one and feature:trips' "See all"). Lists
+ * A loaded page, for every trip list's PagingSource (this one and feature:trip-listing's "See all"). Lists
  * always start at page 0 (a refresh re-reads from the top, `getRefreshKey` is null), so nothing is
  * ever prepended. There is no next page past [totalPages], and none after an
  * empty page either, so a wrong total cannot keep the list asking.

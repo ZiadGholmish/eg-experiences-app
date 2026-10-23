@@ -12,7 +12,7 @@ import kotlin.test.assertTrue
 /**
  * When a card shows the "Waiting list" tag (M4-M5). Moved here from feature:trips (M4-M7 / M4-M1c
  * review #6); that every list reads the stored joins stays with the lists' view models, in
- * feature:trips' `WaitlistTagsTest` and feature:home's `WaitlistTagsHomeTest`.
+ * feature:trip-listing's `WaitlistTagsTest`, feature:search's `WaitlistTagsSearchTest` and feature:home's `WaitlistTagsHomeTest`.
  */
 class WaitlistTagsTest {
     private val saturday = LocalDate.parse("2026-10-24")

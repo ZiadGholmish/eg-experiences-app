@@ -10,7 +10,7 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 
 /*
- * The waiting-list fakes core:catalog's, feature:home's and feature:trips' tests share (M4-M7, M4-M1c
+ * The waiting-list fakes core:catalog's, feature:home's and the trip-area features' tests share (M4-M7, M4-M1c
  * review #7), over core:datastore's store (the approved test-only edge core:testing → core:datastore).
  * The `WaitlistMemory` built over them is core:catalog's, which this module cannot see, so each test
  * module keeps its own one-line `waitlistMemory()` helper.
@@ -63,7 +63,7 @@ class FixedClock(
 }
 
 /**
- * Morning of Sat 10 Oct 2026 in Cairo: the first Saturday of the trip fixtures (feature:trips'
+ * Morning of Sat 10 Oct 2026 in Cairo: the first Saturday of the trip fixtures (feature:trip-details'
  * `TripFixtures.saturdays`, feature:home's copy), so every fixture date is today or later and a stored
  * join is not pruned as passed. Fixed, so the tests do not start failing once the real calendar
  * passes those dates.

@@ -8,7 +8,7 @@ import eg.bahr.core.catalog.data.WaitlistMemory
 import org.koin.dsl.module
 
 /**
- * What feature:home and feature:trips share at run time, bound once: one card cache (a card loaded on
+ * What feature:home and the trip-area features (M3-M16) share at run time, bound once: one card cache (a card loaded on
  * Home makes the trip page text-first), one `GET /trips` read and one waiting-list memory. Started by
  * the app next to `networkModule` and `dataStoreModule`, whose client and store these take.
  */

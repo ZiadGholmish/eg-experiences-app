@@ -73,7 +73,7 @@ class ArchitectureTestsConventionPlugin : Plugin<Project> {
 
 /**
  * `module <path>` for every module with a build file, then one line per declared edge:
- * `edge <from> <to> <configuration>`, e.g. `edge :feature:trips :core:common commonMainImplementation`.
+ * `edge <from> <to> <configuration>`, e.g. `edge :feature:trip-details :core:common commonMainImplementation`.
  */
 private fun moduleGraph(root: Project): List<String> {
     val modules = root.subprojects.filter { it.buildFile.exists() }

@@ -25,7 +25,12 @@ kotlin {
         commonMain.dependencies {
             implementation(projects.feature.splash)
             implementation(projects.feature.home)
-            implementation(projects.feature.trips)
+            // The trip area (split from feature:trips, M3-M16).
+            implementation(projects.feature.tripDetails)
+            implementation(projects.feature.tripListing)
+            implementation(projects.feature.search)
+            implementation(projects.feature.host)
+            implementation(projects.feature.reviews)
             implementation(projects.feature.booking)
             implementation(projects.feature.map)
             implementation(projects.feature.settings)

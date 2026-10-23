@@ -36,7 +36,7 @@ import eg.bahr.core.designsystem.theme.bahrShadow
  * a `primary` + button. Each end disables itself at its bound; the count is announced when it changes.
  *
  * Promoted in M3-M0 from two private copies that had drifted (M2-M3 review #3): date + party
- * (feature:booking) and the waiting-list form on the trip page (feature:trips). The copy is the
+ * (feature:booking) and the waiting-list form on the trip page (feature:trip-details). The copy is the
  * caller's, so the component knows nothing about people or seats.
  */
 interface BahrStepper {

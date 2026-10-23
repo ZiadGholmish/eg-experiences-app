@@ -82,7 +82,7 @@ class ModuleGraphTest {
     fun `feature sources import no other feature`() {
         val violations =
             featureFiles.flatMap { file ->
-                val own = "eg.bahr.feature.${file.module.substringAfterLast(':')}."
+                val own = "${file.featurePackage}."
                 file.imports
                     .map { it.name }
                     .filter {
@@ -178,7 +178,7 @@ class ModuleGraphTest {
             featureFiles
                 .filter { it.isMain }
                 .filterNot { file ->
-                    val featurePackage = "eg.bahr.feature.${file.module.substringAfterLast(':')}"
+                    val featurePackage = file.featurePackage
                     featureLayers.any { layer ->
                         file.packageName.let {
                             it == "$featurePackage.$layer" ||
@@ -353,8 +353,14 @@ private class SourceFile(
         return classes + interfaces + objects + functions + properties
     }
 
-    /** `feature/trips/src/...` → `:feature:trips`. */
+    /** `feature/home/src/...` → `:feature:home`. */
     val module: String get() = ":" + rel.split('/').take(2).joinToString(":")
+
+    /**
+     * The feature's root package: `:feature:home` → `eg.bahr.feature.home`, `:feature:trip-details` →
+     * `eg.bahr.feature.tripdetails` (a package name holds no hyphen; the Android namespace drops it the same way, M3-M16).
+     */
+    val featurePackage: String get() = "eg.bahr.feature." + module.substringAfterLast(':').replace("-", "")
 }
 
 private data class Edge(

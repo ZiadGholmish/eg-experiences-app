@@ -246,7 +246,7 @@ fun rememberListMotion(
 
 /**
  * `animateItem` with the design system's timing: an item fades in and out and slides to its new
- * place when the list around it changes. Instant under reduce motion. Public for feature:trips' reviews
+ * place when the list around it changes. Instant under reduce motion. Public for feature:reviews'
  * list (M4-M11), the second paged list whose items are not trip cards.
  */
 @Composable

@@ -20,7 +20,7 @@ import kotlin.test.assertTrue
  * The booking feature's navigation functions on a real back stack (a NavHost with empty
  * destinations): a trip opened by a link over a live hold, Continue from it, and the way back to
  * date + party when a hold ends. The trip and list routes are stand-ins, as this feature may not
- * import `feature:trips`; `:composeApp` pushes the linked trip the same way (no `popUpTo`).
+ * import `feature:trip-details`; `:composeApp` pushes the linked trip the same way (no `popUpTo`).
  */
 @RunWith(RobolectricTestRunner::class)
 class BookingNavigationTest {

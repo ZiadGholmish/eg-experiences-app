@@ -41,30 +41,30 @@ import eg.bahr.feature.home.navigation.HomeAction
 import eg.bahr.feature.home.navigation.TripListRoute
 import eg.bahr.feature.home.navigation.navigateToTripList
 import eg.bahr.feature.home.navigation.tripListScreen
+import eg.bahr.feature.host.navigation.hostProfileScreen
+import eg.bahr.feature.host.navigation.navigateToHostProfile
 import eg.bahr.feature.map.navigation.TripMapRoute
 import eg.bahr.feature.map.navigation.tripMapScreen
 import eg.bahr.feature.mytrips.navigation.MyTripsRoute
 import eg.bahr.feature.mytrips.navigation.myTripsScreen
 import eg.bahr.feature.notifications.navigation.NotificationsRoute
 import eg.bahr.feature.notifications.navigation.notificationsScreen
+import eg.bahr.feature.reviews.navigation.navigateToReviews
+import eg.bahr.feature.reviews.navigation.reviewsScreen
+import eg.bahr.feature.search.navigation.navigateToSearchTrips
+import eg.bahr.feature.search.navigation.searchTripsScreen
 import eg.bahr.feature.settings.navigation.ProfileRoute
 import eg.bahr.feature.settings.navigation.editPersonalInfoScreen
 import eg.bahr.feature.settings.navigation.navigateToEditPersonalInfo
 import eg.bahr.feature.settings.navigation.profileScreen
 import eg.bahr.feature.splash.navigation.SplashRoute
 import eg.bahr.feature.splash.navigation.splashScreen
-import eg.bahr.feature.trips.navigation.categoryTripsScreen
-import eg.bahr.feature.trips.navigation.hostProfileScreen
-import eg.bahr.feature.trips.navigation.navigateToCategoryTrips
-import eg.bahr.feature.trips.navigation.navigateToHostProfile
-import eg.bahr.feature.trips.navigation.navigateToReviews
-import eg.bahr.feature.trips.navigation.navigateToSearchTrips
-import eg.bahr.feature.trips.navigation.navigateToSectionTrips
-import eg.bahr.feature.trips.navigation.navigateToTripDetail
-import eg.bahr.feature.trips.navigation.reviewsScreen
-import eg.bahr.feature.trips.navigation.searchTripsScreen
-import eg.bahr.feature.trips.navigation.sectionTripsScreen
-import eg.bahr.feature.trips.navigation.tripDetailScreen
+import eg.bahr.feature.tripdetails.navigation.navigateToTripDetail
+import eg.bahr.feature.tripdetails.navigation.tripDetailScreen
+import eg.bahr.feature.triplisting.navigation.categoryTripsScreen
+import eg.bahr.feature.triplisting.navigation.navigateToCategoryTrips
+import eg.bahr.feature.triplisting.navigation.navigateToSectionTrips
+import eg.bahr.feature.triplisting.navigation.sectionTripsScreen
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -246,15 +246,15 @@ fun AppNavHost(
                 onBack = { navController.popBackStack() },
                 onContinue = navController::navigateToBooking,
                 // The host card opens the host's page (M4-M10), in this tab's stack, bar hidden.
-                onHostClick = navController::navigateToHostProfile,
+                onHostClick = { host -> navController.navigateToHostProfile(host.slug, host.name, host.avatar) },
                 // "See all reviews" (M4-M11), in this tab's stack, bar hidden.
-                onSeeAllReviews = navController::navigateToReviews,
+                onSeeAllReviews = { slug, title -> navController.navigateToReviews(trip = slug, title = title) },
             )
 
             hostProfileScreen(
                 onBack = { navController.popBackStack() },
                 onTripClick = navController::navigateToTripDetail,
-                onSeeAllReviews = navController::navigateToReviews,
+                onSeeAllReviews = { host, name -> navController.navigateToReviews(host = host, title = name) },
             )
 
             reviewsScreen(onBack = { navController.popBackStack() })

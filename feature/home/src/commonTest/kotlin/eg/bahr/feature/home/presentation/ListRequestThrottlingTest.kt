@@ -25,7 +25,7 @@ import kotlin.test.assertEquals
  * M4-M6 (3) on Home: what reaches the server when the user taps chips or Retry quickly. The clock is
  * the test scheduler's virtual one (the retry throttle is a `delay` on it). A presenter stays attached
  * the whole time, as the screen's would, so every query the view model starts really loads. The
- * category page's, search's and "See all"'s are feature:trips' (M4-M1c split this file).
+ * category page's, search's and "See all"'s are feature:trip-listing's and feature:search's (M4-M1c, M3-M16 split this file).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ListRequestThrottlingTest {

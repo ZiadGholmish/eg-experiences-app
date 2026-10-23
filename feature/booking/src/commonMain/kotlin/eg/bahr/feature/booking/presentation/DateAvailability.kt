@@ -8,7 +8,7 @@ import eg.bahr.feature.booking.model.BookingDepartureDto
  * waitlist live on the trip page (M2-M3).
  *
  * Read from the contract's `unavailableReason`, never from `soldOut`: a cancelled date that was also
- * full has `soldOut: true` but reads [Cancelled]. `feature:trips` has its own copy of this mapping
+ * full has `soldOut: true` but reads [Cancelled]. `feature:trip-details` has its own copy of this mapping
  * because features do not share code; it is four lines on a wire string, not a type worth a core module.
  */
 internal enum class DateAvailability { Open, SoldOut, Cancelled, Closed }

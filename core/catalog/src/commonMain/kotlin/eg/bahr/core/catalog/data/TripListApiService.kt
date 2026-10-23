@@ -9,7 +9,7 @@ import io.ktor.client.request.parameter
 
 /**
  * `GET /trips`, the public catalogue list, read by Home's "All trips" (feature:home), the category
- * page and search (feature:trips). One owner here, so the two features do not each send it (M4-M1c).
+ * page and search (feature:trip-listing, feature:search). One owner here, so the two features do not each send it (M4-M1c).
  * No token: a trip link dropped into a social post is opened cold by someone with no account.
  */
 internal class TripListApiService(
@@ -53,7 +53,7 @@ internal class TripListApiService(
 
 /**
  * Matches the backend's `@PageableDefault(size = 20)`, inside both list endpoints' 1..50. Every page of
- * every trip list (here, and feature:trips' "See all") is read at this one size, so page numbers line
+ * every trip list (here, and feature:trip-listing's "See all") is read at this one size, so page numbers line
  * up (see `TripPagingSources`).
  */
 const val TRIP_PAGE_SIZE = 20

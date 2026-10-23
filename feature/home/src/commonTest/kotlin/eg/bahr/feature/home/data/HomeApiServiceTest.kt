@@ -255,7 +255,7 @@ class HomeApiServiceTest {
     @Test
     fun `the repository remembers row cards - so a trip opened from a row is text-first`() =
         runTest {
-            // The app's one card cache (core:catalog), which the trip page (feature:trips) reads (M4-M1c).
+            // The app's one card cache (core:catalog), which the trip page (feature:trip-details) reads (M4-M1c).
             val cards = TripCardCache()
             val repository = DefaultHomeRepository(service(HomePayloads.ENGLISH), lists = FakeTripRepository(), cards = cards)
 

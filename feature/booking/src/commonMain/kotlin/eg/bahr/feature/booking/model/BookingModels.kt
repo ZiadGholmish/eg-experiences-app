@@ -7,7 +7,7 @@ import kotlinx.serialization.Serializable
 /*
  * Wire shapes for the date + party screen, field for field with `../docs/api/openapi.yaml`.
  *
- * This feature reads the trip and its dates itself rather than taking them from `feature:trips`:
+ * This feature reads the trip and its dates itself rather than taking them from `feature:trip-details`:
  * features do not depend on each other, and only the slug and the picked departure id travel through
  * navigation (bahr-modularization: "pass ids, let each feature fetch its own").
  *

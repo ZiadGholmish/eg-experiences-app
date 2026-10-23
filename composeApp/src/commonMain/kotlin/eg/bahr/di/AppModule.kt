@@ -16,11 +16,15 @@ import eg.bahr.feature.auth.di.AuthConfig
 import eg.bahr.feature.auth.di.authModule
 import eg.bahr.feature.booking.di.bookingModule
 import eg.bahr.feature.home.di.homeModule
+import eg.bahr.feature.host.di.hostModule
 import eg.bahr.feature.map.di.mapModule
 import eg.bahr.feature.mytrips.di.myTripsModule
 import eg.bahr.feature.notifications.di.notificationsModule
+import eg.bahr.feature.reviews.di.reviewsModule
+import eg.bahr.feature.search.di.searchModule
 import eg.bahr.feature.settings.di.settingsModule
-import eg.bahr.feature.trips.di.tripsModule
+import eg.bahr.feature.tripdetails.di.tripDetailsModule
+import eg.bahr.feature.triplisting.di.tripListingModule
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -114,7 +118,12 @@ fun appModules(
         // Shared by Home and the trip lists (M4-M1c): one card cache, one waiting-list memory.
         catalogModule,
         homeModule,
-        tripsModule,
+        // The trip area (split from feature:trips, M3-M16).
+        tripDetailsModule,
+        tripListingModule,
+        searchModule,
+        hostModule,
+        reviewsModule,
         bookingModule,
         mapModule,
         settingsModule,

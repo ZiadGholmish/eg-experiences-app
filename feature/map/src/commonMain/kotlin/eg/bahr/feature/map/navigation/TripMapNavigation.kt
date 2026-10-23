@@ -16,7 +16,7 @@ data object TripMapRoute
  * The map feature's public surface. A trip opened from a pin goes to [onTripClick] (the app wires it
  * to the trips feature); Back goes to [onBack] (null: no Back, as the Map tab's root, M4-M8) and the
  * bar's "List" to [onList]. [onSearch] (M3-M0b) is the header's search button: the full-screen search,
- * feature:trips', wired in :composeApp.
+ * feature:search's, wired in :composeApp.
  *
  * M3-M12: it moves with the app's one screen transition, which the NavHost sets, on an opaque page.
  */

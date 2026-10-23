@@ -52,6 +52,9 @@ internal fun Project.configureAndroidApplication(android: ApplicationExtension) 
     dependencies.add("coreLibraryDesugaring", libs.library("desugar-jdk-libs"))
 }
 
-/** `:core:common` → `eg.bahr.core.common`; also the package of each module's generated Android classes. */
+/**
+ * `:core:common` → `eg.bahr.core.common`; also the package of each module's generated Android classes. A hyphen is
+ * dropped (`:feature:trip-details` → `eg.bahr.feature.tripdetails`, M3-M16): a package name cannot hold one.
+ */
 internal val Project.bahrNamespace: String
-    get() = "eg.bahr" + path.replace(':', '.')
+    get() = "eg.bahr" + path.replace(':', '.').replace("-", "")
