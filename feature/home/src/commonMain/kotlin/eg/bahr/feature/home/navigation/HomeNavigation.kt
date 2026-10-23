@@ -7,8 +7,10 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavOptionsBuilder
 import androidx.navigation.compose.composable
 import eg.bahr.core.designsystem.theme.BahrDestination
+import eg.bahr.feature.home.presentation.NoUnreadAlerts
 import eg.bahr.feature.home.presentation.TripListScreen
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.emptyFlow
 
 /**
@@ -32,6 +34,10 @@ import kotlinx.coroutines.flow.emptyFlow
  * M3-M12: Home moves aside for whatever it opens with the app's one screen transition, which the
  * NavHost sets (M4-M6's own slide + fade for its pages is gone).
  *
+ * [onAlerts] (M3-M6a) puts the Alerts bell at the end of the app bar, after the Map pill; the app opens
+ * the notifications page with it. [unreadAlerts] is the count on the bell (null or 0: none): a
+ * StateFlow, so a new count reaches Home without rebuilding the graph and Home's first frame has it.
+ *
  * M4-M8: Home is the Home tab's root; [onSearch] and [onMap] switch to the Search and Map tabs (the
  * app decides). [scrollToTop] fires on a re-tap of the selected Home tab.
  */
@@ -41,6 +47,8 @@ fun NavGraphBuilder.tripListScreen(
     onHomeAction: (HomeAction) -> Unit = {},
     onSearch: () -> Unit = {},
     onMap: (() -> Unit)? = null,
+    onAlerts: (() -> Unit)? = null,
+    unreadAlerts: StateFlow<Int?> = NoUnreadAlerts,
     scrollToTop: Flow<Unit> = emptyFlow(),
 ) {
     composable<TripListRoute> {
@@ -51,6 +59,8 @@ fun NavGraphBuilder.tripListScreen(
                 onAction = onHomeAction,
                 onSearch = onSearch,
                 onMap = onMap,
+                onAlerts = onAlerts,
+                unreadAlerts = unreadAlerts,
                 scrollToTop = scrollToTop,
             )
         }

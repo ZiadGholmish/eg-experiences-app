@@ -54,6 +54,16 @@ class AppTabsTest {
 
     private val tabs = AppTabsState(splashDone = true)
 
+    /** M3-M6a (user, 2026-10-23): Alerts left the bar for a bell on Home; four tabs, in reading order. */
+    @Test
+    fun `the bar is Home - Map - My trips - Profile`() {
+        setContent()
+
+        assertEquals(listOf(AppTab.Home, AppTab.Map, AppTab.MyTrips, AppTab.Profile), AppTab.entries)
+        AppTab.entries.forEach { compose.onNodeWithTag(it.testTag).assertIsDisplayed() }
+        compose.onNodeWithTag("tab_alerts").assertDoesNotExist()
+    }
+
     @Test
     fun `a tap in the bar switches tabs`() {
         setContent()

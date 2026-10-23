@@ -222,7 +222,7 @@ enum class BahrIcons(
     /** Profile's "Sign out" (M3-M0b); auto-mirrored upstream. */
     Logout(Res.drawable.ic_logout, Res.drawable.ic_logout),
 
-    /** The Alerts tab (M3-M0b). */
+    /** Alerts: the tab (M3-M0b), then Home's bell (M3-M6a). */
     Notifications(Res.drawable.ic_notifications, Res.drawable.ic_notifications_filled),
     PersonRemove(Res.drawable.ic_person_remove, Res.drawable.ic_person_remove_filled),
     RateReview(Res.drawable.ic_rate_review, Res.drawable.ic_rate_review_filled),

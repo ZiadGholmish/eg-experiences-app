@@ -20,6 +20,7 @@ import eg.bahr.feature.home.navigation.TripListRoute
 import eg.bahr.feature.map.navigation.TripMapRoute
 import eg.bahr.feature.mytrips.navigation.MyTripsRoute
 import eg.bahr.feature.notifications.navigation.NotificationsRoute
+import eg.bahr.feature.notifications.navigation.navigateToNotifications
 import eg.bahr.feature.search.navigation.SearchTripsRoute
 import eg.bahr.feature.search.navigation.navigateToSearchTrips
 import eg.bahr.feature.settings.navigation.EditPersonalInfoRoute
@@ -107,6 +108,24 @@ class AppNavHostRootsTest {
             onUi { nav.popBackStack() }
             assertTrue(nav.isAt(tab), "${tab.name}: back on its root")
         }
+    }
+
+    /**
+     * M3-M6a: Alerts is no tab. Home's bell pushes the notifications page over Home (bar hidden: not a
+     * root of any tab), a second tap while it is on top adds no copy, and Back returns to Home's root.
+     */
+    @Test
+    fun `the bell pushes the notifications page over Home - not a root - and Back returns`() {
+        show(start = TripListRoute)
+
+        onUi { nav.navigateToNotifications() }
+        assertFalse(nav.isAt(AppTab.Home), "the page hides the bar")
+        AppTab.entries.forEach { assertFalse(nav.isAt(it), "no tab's root: ${it.name}") }
+        onUi { nav.navigateToNotifications() }
+        assertEquals(listOf(TripListRoute::class.simpleName, NotificationsRoute::class.simpleName), screens())
+
+        onUi { nav.popBackStack() }
+        assertTrue(nav.isAt(AppTab.Home))
     }
 
     @Test

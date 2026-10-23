@@ -6,7 +6,7 @@ import eg.bahr.feature.notifications.presentation.NotificationsViewModel
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
-/** The Alerts tab (M3-M0b). `AuthSession` comes from core:network. */
+/** The notifications page (M3-M0b; pushed from Home's bell since M3-M6a). `AuthSession` comes from core:network. */
 val notificationsModule =
     module {
         single<NotificationsRepository> { DefaultNotificationsRepository(get()) }

@@ -19,9 +19,11 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -29,7 +31,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -44,9 +48,11 @@ import eg.bahr.core.catalog.presentation.components.rememberListMotion
 import eg.bahr.core.catalog.presentation.components.rememberQueryStatus
 import eg.bahr.core.catalog.presentation.components.selectedOrder
 import eg.bahr.core.catalog.presentation.rememberThrottled
+import eg.bahr.core.designsystem.components.BahrCountBadge
 import eg.bahr.core.designsystem.components.BahrEmptyView
 import eg.bahr.core.designsystem.components.BahrErrorView
 import eg.bahr.core.designsystem.components.BahrPillButton
+import eg.bahr.core.designsystem.components.bahrNavigationSpokenLabel
 import eg.bahr.core.designsystem.components.navigationBarsSpacer
 import eg.bahr.core.designsystem.icon.BahrIcons
 import eg.bahr.core.designsystem.theme.BahrBorder
@@ -56,6 +62,7 @@ import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.designsystem.theme.reducedMotion
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.action_retry
+import eg.bahr.core.localization.generated.resources.alerts_title
 import eg.bahr.core.localization.generated.resources.home_wordmark
 import eg.bahr.core.localization.generated.resources.map_open
 import eg.bahr.core.localization.generated.resources.search_hint
@@ -71,6 +78,8 @@ import eg.bahr.feature.home.presentation.components.HomeSection
 import eg.bahr.feature.home.presentation.components.HomeSkeleton
 import eg.bahr.feature.home.presentation.components.homeSectionContentType
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -84,7 +93,7 @@ import org.koin.compose.viewmodel.koinViewModel
  * the list kept would make everything below jump at the end of an exit. With nothing to show it
  * must draw nothing at all, gap included.
  *
- * Top to bottom (HANDOFF Home, M4-M1): the app bar (logo, wordmark, the Map pill), the search entry
+ * Top to bottom (HANDOFF Home, M4-M1): the app bar (logo, wordmark, the Map pill, the Alerts bell), the search entry
  * (M4-M3, not in the handoff), the header, Home's server-driven sections in the server's order
  * (M4-M1a), the filter chips (wrapping, with live counts), "All trips" with its count at the end of the
  * line, the cards, and once the last page is in, Home's trailing notes (see [HomePlacement], M4-M7). A banner tap goes to [onAction]; a trip card in a row to
@@ -102,10 +111,14 @@ internal fun TripListScreen(
     onAction: (HomeAction) -> Unit = {},
     onSearch: () -> Unit = {},
     onMap: (() -> Unit)? = null,
+    onAlerts: (() -> Unit)? = null,
+    unreadAlerts: StateFlow<Int?> = NoUnreadAlerts,
     scrollToTop: Flow<Unit> = emptyFlow(),
     viewModel: TripListViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    // A StateFlow, so the bell has its count on the first frame (a language switch rebuilds Home).
+    val unread by unreadAlerts.collectAsStateWithLifecycle()
     val trips = viewModel.trips.collectAsLazyPagingItems()
     val listState = rememberLazyListState()
     // A re-tap of the selected Home tab (M4-M8). At once when the system asks for less motion.
@@ -142,7 +155,7 @@ internal fun TripListScreen(
             // review #10).
             Column(modifier = Modifier.padding(start = BahrSpacing.gutter, top = BahrSpacing.lg, end = BahrSpacing.gutter)) {
                 Column(verticalArrangement = Arrangement.spacedBy(BahrSpacing.lg)) {
-                    HomeAppBar(onMap = onMap)
+                    HomeAppBar(onMap = onMap, onAlerts = onAlerts, unreadAlerts = unread)
                     SearchEntry(onClick = onSearch)
                 }
                 // The gap above the header is the header's, so it comes and goes with it.
@@ -181,7 +194,7 @@ internal fun TripListScreen(
         item(key = KEY_TOP, contentType = KEY_TOP) {
             Column(modifier = Modifier.padding(horizontal = BahrSpacing.gutter)) {
                 Column(verticalArrangement = Arrangement.spacedBy(BahrSpacing.lg)) {
-                    HomeAppBar(onMap = onMap)
+                    HomeAppBar(onMap = onMap, onAlerts = onAlerts, unreadAlerts = unread)
                     SearchEntry(onClick = onSearch)
                 }
                 // The header grows and shrinks inside this item (M4-M4), and the items below follow
@@ -263,10 +276,16 @@ internal fun TripListScreen(
 
 /**
  * HANDOFF Home app bar: the teal logo tile with the `sailing` icon, the "bahr" wordmark in primary,
- * and the Map pill at the end. The wordmark is the screen's heading for screen readers.
+ * and the Map pill at the end; then, outermost, the Alerts bell (M3-M6a, user 2026-10-23: top right in
+ * English, top left in Arabic; the row mirrors, nothing is reversed). The wordmark is the screen's
+ * heading for screen readers.
  */
 @Composable
-private fun HomeAppBar(onMap: (() -> Unit)?) {
+private fun HomeAppBar(
+    onMap: (() -> Unit)?,
+    onAlerts: (() -> Unit)?,
+    unreadAlerts: Int?,
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -296,8 +315,64 @@ private fun HomeAppBar(onMap: (() -> Unit)?) {
         )
         // HANDOFF Home app bar: the "Map" pill at the end (M4-M2).
         onMap?.let { MapPill(onClick = it) }
+        onAlerts?.let { AlertsBell(unread = unreadAlerts, onClick = it) }
     }
 }
+
+/**
+ * Home's way into Alerts (M3-M6a; the Alerts tab before). Not in the handoff, which had it as a tab: drawn
+ * as the round app-bar button next to it (the Map pill's `primaryContainer` and 44dp disc, as the round
+ * back button), inside a 48dp touch target (handoff: touch targets >= 48dp; M3-M6a review #1), which makes
+ * the app bar row 48dp. The unread count sits on the disc's top-end corner, ringed in the page colour; the
+ * badge is silent and the button says the count instead ("Notifications, 3 unread").
+ */
+@Composable
+private fun AlertsBell(
+    unread: Int?,
+    onClick: () -> Unit,
+) {
+    val description = bahrNavigationSpokenLabel(stringResource(Res.string.alerts_title), unread)
+    // Not clipped, so the badge may stand past the target's edge; the ripple is the target's circle.
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier =
+            Modifier
+                .size(BahrSize.touchTarget)
+                .testTag(HOME_ALERTS_TAG)
+                .clickable(
+                    interactionSource = null,
+                    indication = ripple(bounded = false, radius = BahrSize.touchTarget / 2),
+                    role = Role.Button,
+                    onClick = onClick,
+                ).semantics { contentDescription = description },
+    ) {
+        BadgedBox(
+            badge = { BahrCountBadge(props = BahrCountBadge.Props(count = unread, ring = MaterialTheme.colorScheme.background)) },
+        ) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier =
+                    Modifier
+                        .size(BahrSpacing.minTouch)
+                        .clip(BahrTheme.shapes.full)
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+            ) {
+                Icon(
+                    imageVector = BahrIcons.Notifications.outlined(),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(BahrSize.iconMedium),
+                )
+            }
+        }
+    }
+}
+
+/** No unread count: the bell without a badge (one instance, so a default never restarts collection). */
+internal val NoUnreadAlerts: StateFlow<Int?> = MutableStateFlow(null)
+
+/** For tests and UI automation: Home's Alerts bell. */
+internal const val HOME_ALERTS_TAG = "home_alerts"
 
 /** Home's way into the map (M4-M2, HANDOFF Home app bar: `map` + "Map" on primary-container). */
 @Composable

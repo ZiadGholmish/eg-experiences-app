@@ -17,7 +17,7 @@ internal data class NotificationsUiState(
 )
 
 /**
- * The Alerts tab (M3-M0b). Signed out: the handoff's signed-out state (sign-in buttons); signed in: its
+ * The notifications page (M3-M0b; pushed from Home's bell since M3-M6a). Signed out: the handoff's signed-out state (sign-in buttons); signed in: its
  * empty state, until M3-B9 / M3-M6 bring the list. Signing in or out anywhere reaches it through the
  * session.
  */

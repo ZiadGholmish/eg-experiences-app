@@ -54,6 +54,7 @@ import eg.bahr.feature.home.model.NoteSectionDto
 import eg.bahr.feature.home.model.TripsSectionDto
 import eg.bahr.feature.home.presentation.components.HomeSection
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.datetime.LocalDate
 import org.junit.After
 import org.junit.Before
@@ -193,6 +194,21 @@ class TripListScreenshotTest {
 
     @Test
     fun empty() = snapEach("trip_list_empty") { listTrips = { page(emptyList()) } }
+
+    // ---------- The Alerts bell's unread badge (M3-M6a) ----------
+    // On the loading state, which draws the same app bar with nothing moving under it. The badge sits on
+    // the bell's top-end corner (top-left of the bell in Arabic), ringed in the page colour.
+
+    @Test
+    fun alertsBadge() = snapEach("trip_list_alerts_badge", unreadAlerts = 3) { listTrips = { awaitCancellation() } }
+
+    /** Above nine: "9+", read left to right in Arabic too. */
+    @Test
+    fun alertsBadgeMoreThanNine() = snapEach("trip_list_alerts_badge_9plus", unreadAlerts = 12) { listTrips = { awaitCancellation() } }
+
+    @Test
+    fun alertsBadgeDark() =
+        snapEach("trip_list_alerts_badge_dark", unreadAlerts = 3, theme = BahrThemeName.Dark) { listTrips = { awaitCancellation() } }
 
     // ---------- Home's server-driven sections (M4-M1a) ----------
     // A tall screen, so the banner carousel, a trip row, the category chips and the start of "All
@@ -645,6 +661,7 @@ class TripListScreenshotTest {
         act: TripListViewModel.() -> Unit = {},
         scrollToKey: Any? = null,
         theme: BahrThemeName = BahrThemeName.LakeBurullus,
+        unreadAlerts: Int? = null,
         stub: FakeTripRepository.() -> Unit,
     ) {
         val viewModel = TripListViewModel(FakeTripRepository().apply(stub), waitlistMemory())
@@ -659,8 +676,16 @@ class TripListScreenshotTest {
                             if (theme == BahrThemeName.Dark) MaterialTheme.colorScheme.onBackground else LocalContentColor.current,
                     ) {
                         Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-                            // onMap: the app always passes it, so Home's goldens show the "Map" pill (M4-M2).
-                            TripListScreen(onTripClick = {}, header = header, onMap = {}, viewModel = viewModel)
+                            // onMap and onAlerts: the app always passes them, so Home's goldens show the "Map" pill
+                            // (M4-M2) and the Alerts bell (M3-M6a).
+                            TripListScreen(
+                                onTripClick = {},
+                                header = header,
+                                onMap = {},
+                                onAlerts = {},
+                                unreadAlerts = MutableStateFlow(unreadAlerts),
+                                viewModel = viewModel,
+                            )
                         }
                     }
                 }

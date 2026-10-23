@@ -47,7 +47,7 @@ import eg.bahr.feature.map.navigation.TripMapRoute
 import eg.bahr.feature.map.navigation.tripMapScreen
 import eg.bahr.feature.mytrips.navigation.MyTripsRoute
 import eg.bahr.feature.mytrips.navigation.myTripsScreen
-import eg.bahr.feature.notifications.navigation.NotificationsRoute
+import eg.bahr.feature.notifications.navigation.navigateToNotifications
 import eg.bahr.feature.notifications.navigation.notificationsScreen
 import eg.bahr.feature.reviews.navigation.navigateToReviews
 import eg.bahr.feature.reviews.navigation.reviewsScreen
@@ -79,10 +79,10 @@ import org.koin.compose.koinInject
  *
  * Every tab has the same graph and its own NavController, so each keeps its own back stack: a trip
  * opened from the map stays in the Map tab while Home keeps its scroll. Only the start differs: Home
- * (after splash, once per process), the map, My trips, Alerts, Profile (M3-M0b). Android composes the
- * selected tab's NavHost under its Compose bar ([AppTabs]); iOS hosts one per tab, each in its own
- * Compose root under SwiftUI's `TabView`, fed by `IosTabs`. Search is no tab since M3-M0b: it is pushed in
- * the tab that opened it (Home's field, the Map header), bar hidden, and reopens on the last search.
+ * (after splash, once per process), the map, My trips, Profile (M3-M0b; Alerts left the bar in
+ * M3-M6a). Android composes the selected tab's NavHost under its Compose bar ([AppTabs]); iOS hosts
+ * one per tab, each in its own Compose root under SwiftUI's `TabView`, fed by `IosTabs`. Search is no
+ * tab since M3-M0b: it is pushed in the tab that opened it (Home's field, the Map header), bar hidden, and reopens on the last search.
  *
  * The NavHost reports to [tabs] whether its root is on top, which is what shows or hides the bar, and
  * takes re-taps of its tab from it: off the root, back to the root; on it, back to the top.
@@ -179,6 +179,9 @@ fun AppNavHost(
                 // Search opens full screen in this tab (M3-M0b); the map is a tab (M4-M8), which the pill switches to.
                 onSearch = { navController.navigateToSearchTrips() },
                 onMap = { tabs.select(AppTab.Map) },
+                // The bell (M3-M6a; the Alerts tab before) pushes the notifications page over Home, bar
+                // hidden; Back comes back to Home. Its unread count (unreadAlerts) is wired by M3-M6.
+                onAlerts = navController::navigateToNotifications,
                 scrollToTop = scrollRequests,
             )
 
@@ -212,10 +215,11 @@ fun AppNavHost(
                 onSaved = { navController.popBackStack() },
             )
 
-            // The Alerts tab's root (M3-M0b): the empty or signed-out state until M3-B9 / M3-M6.
+            // The notifications page (M3-M0b's Alerts tab; pushed from Home's bell since M3-M6a): the empty or
+            // signed-out state until M3-M6.
             notificationsScreen(
+                onBack = { navController.popBackStack() },
                 signInButtons = { modifier -> SignInButtonsSlot(modifier) },
-                scrollToTop = scrollRequests,
             )
 
             // The My trips tab's root (M3-M0): signed out it offers the sign-in sheet; a row opens its trip.
@@ -286,7 +290,6 @@ internal val AppTab.rootRoute: Any
             AppTab.Home -> TripListRoute
             AppTab.Map -> TripMapRoute
             AppTab.MyTrips -> MyTripsRoute
-            AppTab.Alerts -> NotificationsRoute
             AppTab.Profile -> ProfileRoute
         }
 
@@ -296,7 +299,6 @@ internal fun AppTab.isRoot(destination: NavDestination): Boolean =
         AppTab.Home -> destination.hasRoute<TripListRoute>()
         AppTab.Map -> destination.hasRoute<TripMapRoute>()
         AppTab.MyTrips -> destination.hasRoute<MyTripsRoute>()
-        AppTab.Alerts -> destination.hasRoute<NotificationsRoute>()
         AppTab.Profile -> destination.hasRoute<ProfileRoute>()
     }
 

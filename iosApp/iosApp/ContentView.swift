@@ -34,7 +34,7 @@ enum SharedApp {
     }
 }
 
-/// The app's tabs (M4-M8; the M3-M0b tabs and Alerts badge): a native `TabView` (Liquid Glass on iOS 26), one Compose root per tab.
+/// The app's tabs (M4-M8; since M3-M6a Home · Map · My trips · Profile, Alerts being a bell on Home): a native `TabView` (Liquid Glass on iOS 26), one Compose root per tab.
 ///
 /// The bar's labels and direction follow the app language, which the shared code sends with the labels
 /// already translated (core:localization), so no string is kept here. A switch in Profile re-sends
@@ -55,7 +55,7 @@ struct ContentView: View {
                     .tabItem {
                         Label { Text(tabs.title(tab)) } icon: { tabs.icon(tab) }
                             .environment(\.symbolVariants, .none)
-                            // The count is said inside the name ("Alerts, 3 unread"), not as a badge alone.
+                            // A count is said inside the name ("My trips, 3 unread"), not as a badge alone.
                             .accessibilityLabel(Text(tabs.spokenLabel(tab)))
                     }
                     .badge(tabs.badge(tab))

@@ -103,7 +103,7 @@ data class BahrExtendedColors(
      * Oct 2026). Coral is never destructive: coral means go forward.
      */
     val errorStrong: Color,
-    /** The unread count on the Alerts tab (`badge` / `onBadge`, Oct 2026): 6.3:1 in light. */
+    /** An unread count: Home's Alerts bell since M3-M6a, the Alerts tab before (`badge` / `onBadge`, Oct 2026): 6.3:1 in light. */
     val badge: Color,
     val onBadge: Color,
     /** The bottom bar's ground (`navSurface`, Oct 2026). */

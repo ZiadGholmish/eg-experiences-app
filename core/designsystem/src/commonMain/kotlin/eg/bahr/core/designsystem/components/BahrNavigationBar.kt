@@ -1,14 +1,9 @@
 package eg.bahr.core.designsystem.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -20,17 +15,12 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import eg.bahr.core.designsystem.icon.BahrIcons
 import eg.bahr.core.designsystem.theme.BahrBorder
 import eg.bahr.core.designsystem.theme.BahrSize
@@ -47,7 +37,7 @@ import org.jetbrains.compose.resources.stringResource
  * label at 800 in `onSurface`; the others are outlined in `onSurfaceVariant` with a 600 label. Labels
  * always show. A way around the app, so never coral. (M4-M8's per-tab colours went with this design.)
  *
- * An item may carry an unread count ([Item.badgeCount]): a `badge` pill on the icon's top-end corner
+ * An item may carry an unread count ([Item.badgeCount]): a [BahrCountBadge] on the icon's top-end corner
  * (it mirrors in RTL), "1"–"9", then "9+". The pill is hidden from screen readers; the item's label
  * carries the count instead ("Alerts, 3 unread"; 9+ is read as "more than 9"), so it is heard once.
  *
@@ -119,7 +109,7 @@ fun BahrNavigationBar(
                     onClick = { props.onSelect(index) },
                     icon = {
                         // M3 hides the icon from screen readers when a label shows; the label speaks.
-                        BadgedBox(badge = { BahrNavigationBar.badgeText(item.badgeCount)?.let { NavBadge(it) } }) {
+                        BadgedBox(badge = { BahrCountBadge(props = BahrCountBadge.Props(count = item.badgeCount, ring = x.navSurface)) }) {
                             Icon(
                                 imageVector = if (item.selected) item.icon.filled() else item.icon.outlined(),
                                 contentDescription = null,
@@ -173,46 +163,3 @@ fun bahrNavigationSpokenLabel(
     val count = if ((badgeCount ?: 0) > BahrNavigationBar.BADGE_MAX) stringResource(Res.string.nav_badge_more_than) else shown
     return stringResource(Res.string.nav_item_unread, label, count)
 }
-
-/**
- * The count pill (handoff §1): 18dp tall, at least as wide, 11sp at 800 with tabular figures, white on
- * `badge`, ringed 2dp in the bar's own colour so it stands off the icon. Silent for screen readers.
- */
-@Composable
-private fun NavBadge(text: String) {
-    val x = BahrTheme.colors
-    val shape = BahrTheme.shapes.full
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier =
-            Modifier
-                .clearAndSetSemantics {}
-                .heightIn(min = BADGE_HEIGHT.dp)
-                .widthIn(min = BADGE_HEIGHT.dp)
-                .border(BahrBorder.selected, x.navSurface, shape)
-                .padding(BahrBorder.selected)
-                .clip(shape)
-                .background(x.badge)
-                .padding(horizontal = BADGE_PADDING.dp),
-    ) {
-        Text(
-            text = text,
-            color = x.onBadge,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-            // "9+" stays "9+" in Arabic too (a bare RTL run would draw it "+9").
-            style =
-                MaterialTheme.typography.labelMedium.copy(
-                    fontWeight = FontWeight.ExtraBold,
-                    fontFeatureSettings = "tnum",
-                    textDirection = TextDirection.Ltr,
-                ),
-        )
-    }
-}
-
-/** The pill's 18px plus the 2px ring on each side, as the prototype's box-shadow ring adds it. */
-private const val BADGE_HEIGHT = 22
-
-/** The prototype's `padding: 0 5px` inside the pill. */
-private const val BADGE_PADDING = 3

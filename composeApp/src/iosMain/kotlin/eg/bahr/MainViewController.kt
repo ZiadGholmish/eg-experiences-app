@@ -34,7 +34,8 @@ import platform.UIKit.traitOverrides
 
 /**
  * The SwiftUI `TabView` in `iosApp` (M4-M8; kept by the user's decision of 2026-10-14 over M3-M0b's
- * Compose bar, with the new tabs and the Alerts badge), as the shared code drives it. Swift implements it
+ * Compose bar, with the new tabs and badge support; four tabs since M3-M6a moved Alerts to Home's bell), as
+ * the shared code drives it. Swift implements it
  * (`iosApp/iosApp/AppTabs.swift`); the shared code calls it on the main thread.
  *
  * Swift draws the bar natively (Liquid Glass on iOS 26) but makes no decision of its own beyond

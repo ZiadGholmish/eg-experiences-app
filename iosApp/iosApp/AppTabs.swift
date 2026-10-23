@@ -2,18 +2,18 @@ import ComposeApp
 import SwiftUI
 import UIKit
 
-/// The bottom bar's tabs (M4-M8; since M3-M0b Home · Map · My trips · Alerts · Profile), as Swift names them. The order, and everything about what a tab
+/// The bottom bar's tabs (M4-M8; since M3-M6a Home · Map · My trips · Profile: Alerts moved to a bell in Home's top bar,
+/// which is Compose), as Swift names them. A selection stored by an older build as "alerts" restores as Home. The order, and everything about what a tab
 /// shows, is the shared code's (`AppTab` in composeApp); this only maps each one to an SF Symbol and a
 /// stable string for the stored selection.
 enum BahrTab: String, CaseIterable {
-    case home, map, mytrips, alerts, profile
+    case home, map, mytrips, profile
 
     var kotlin: AppTab {
         switch self {
         case .home: return .home
         case .map: return .map
         case .mytrips: return .mytrips
-        case .alerts: return .alerts
         case .profile: return .profile
         }
     }
@@ -22,20 +22,18 @@ enum BahrTab: String, CaseIterable {
         switch tab {
         case .map: self = .map
         case .mytrips: self = .mytrips
-        case .alerts: self = .alerts
         case .profile: self = .profile
         default: self = .home
         }
     }
 
     /// SF Symbols, the iOS counterpart of the Android bar's Material Symbols (the handoff's `home`, `map`,
-    /// `confirmation_number`, `notifications`, `person`).
+    /// `confirmation_number`, `person`).
     var symbol: String {
         switch self {
         case .home: return "house"
         case .map: return "map"
         case .mytrips: return "ticket"
-        case .alerts: return "bell"
         case .profile: return "person"
         }
     }
@@ -65,7 +63,7 @@ final class TabBarModel: NSObject, ObservableObject, AppTabBar {
     @Published private(set) var rightToLeft = true
     /// What VoiceOver says for each tab: its name, with the unread count inside (handoff §1).
     @Published private(set) var spokenLabels: [String] = []
-    /// Each tab's badge ("3", "9+"), "" for none. None until M3-B9 brings the unread count.
+    /// Each tab's badge ("3", "9+"), "" for none. None since M3-M6a: the unread count is on Home's bell.
     @Published private(set) var badges: [String] = []
     /// Profile → Appearance (M3-M0b): light (the default), dark, or nil to follow the phone. The whole
     /// window takes it, so the bar and every tab's Compose root agree.

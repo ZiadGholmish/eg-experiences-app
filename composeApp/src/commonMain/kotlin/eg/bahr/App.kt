@@ -78,7 +78,7 @@ data class IosBarContent(
 )
 
 /**
- * The composition root of one tab on iOS (M4-M8): SwiftUI's `TabView` hosts five of these, one per
+ * The composition root of one tab on iOS (M4-M8): SwiftUI's `TabView` hosts four of these (M3-M6a), one per
  * tab, each with its own NavHost, all over the one Koin graph and the one [tabs] state. Every root sends
  * the bar's content ([onBarContent]); Swift ignores repeats. The selected tab's root also hosts
  * "Complete your profile" (M3-M0b), so the sheet shows once, over what is on screen.
