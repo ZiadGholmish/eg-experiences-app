@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -30,6 +31,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import eg.bahr.core.designsystem.components.BahrLottie
 import eg.bahr.core.designsystem.icon.BahrIcons
 import eg.bahr.core.designsystem.theme.BahrSize
 import eg.bahr.core.designsystem.theme.BahrSpacing
@@ -117,29 +119,30 @@ private fun StateFor(
         SessionState.Unknown -> Unit
         SessionState.SignedOut ->
             StateMessage(
-                icon = BahrIcons.LockPerson,
-                disc = c.surfaceContainer,
-                tint = c.onSurfaceVariant,
+                art = { StateDisc(BahrIcons.LockPerson, disc = c.surfaceContainer, tint = c.onSurfaceVariant) },
                 title = stringResource(Res.string.alerts_signed_out_title),
                 body = stringResource(Res.string.alerts_signed_out_body),
             ) { signInButtons(Modifier.padding(top = BahrSpacing.md)) }
+        // The empty state rings its bell once (M3-M8): the same disc and bell as the still state's, in
+        // motion. Decorative: the title says it.
         is SessionState.SignedIn ->
             StateMessage(
-                icon = BahrIcons.Notifications,
-                disc = c.primaryContainer,
-                tint = c.onPrimaryContainer,
+                art = {
+                    BahrLottie(
+                        modifier = Modifier.width(BahrSize.lottieState),
+                        props = BahrLottie.Props(BahrLottie.Animation.Bell),
+                    )
+                },
                 title = stringResource(Res.string.alerts_empty_title),
                 body = stringResource(Res.string.alerts_empty_body),
             )
     }
 }
 
-/** The handoff's centred state: a 72dp tinted disc, a title, a line, and optionally what to do. */
+/** The handoff's centred state: its art (a 72dp tinted disc), a title, a line, and optionally what to do. */
 @Composable
 private fun StateMessage(
-    icon: BahrIcons,
-    disc: Color,
-    tint: Color,
+    art: @Composable () -> Unit,
     title: String,
     body: String,
     action: @Composable () -> Unit = {},
@@ -152,17 +155,7 @@ private fun StateMessage(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(BahrSpacing.md),
     ) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier =
-                Modifier
-                    .padding(bottom = BahrSpacing.xs)
-                    .size(BahrSize.stateDisc)
-                    .clip(BahrTheme.shapes.full)
-                    .background(disc),
-        ) {
-            Icon(icon.outlined(), contentDescription = null, tint = tint, modifier = Modifier.size(BahrSize.iconState))
-        }
+        Box(Modifier.padding(bottom = BahrSpacing.xs)) { art() }
         Text(
             text = title,
             style = MaterialTheme.typography.titleLarge,
@@ -177,6 +170,25 @@ private fun StateMessage(
             textAlign = TextAlign.Center,
         )
         action()
+    }
+}
+
+/** The still states' art: a 72dp tinted disc with an icon. */
+@Composable
+private fun StateDisc(
+    icon: BahrIcons,
+    disc: Color,
+    tint: Color,
+) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier =
+            Modifier
+                .size(BahrSize.stateDisc)
+                .clip(BahrTheme.shapes.full)
+                .background(disc),
+    ) {
+        Icon(icon.outlined(), contentDescription = null, tint = tint, modifier = Modifier.size(BahrSize.iconState))
     }
 }
 

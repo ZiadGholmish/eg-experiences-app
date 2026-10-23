@@ -64,8 +64,17 @@ googleId = "1.1.1"
 # against Skiko 0.9.4.2, and on 1.12 the iOS build's Compose compatibility check warned the two were incompatible.
 coil = "3.6.3"
 
+# Lottie (M3-M8): Compottie, Compose Multiplatform's Lottie player (Android + iOS). Google/AndroidX publish no
+# multiplatform Lottie player and Airbnb's lottie-compose is Android only. 2.3.x is built against Compose
+# Multiplatform 1.12.1 and Kotlin 2.4.0 (its release notes: "Compose updated to 1.12"; its Gradle module metadata).
+# Only the base artifact: the app reads its JSON through compose resources itself (no compottie-resources, which
+# pulls the dotLottie unzipper in) and plays no expressions.
+compottie = "2.3.3"
+
 # Serialization
-kotlinxSerialization = "1.8.1"
+# 1.9.0 (M3-M8): what Compottie 2.3.3 requires, so every app build resolved it anyway; at the catalog every module
+# compiles against the version it runs with (the kotlinxDatetime lesson below).
+kotlinxSerialization = "1.9.0"
 
 # Coroutines
 kotlinxCoroutines = "1.10.2"
@@ -149,6 +158,9 @@ google-identity-googleid = { module = "com.google.android.libraries.identity.goo
 # Coil
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 coil-network-ktor = { module = "io.coil-kt.coil3:coil-network-ktor3", version.ref = "coil" }
+
+# Lottie
+compottie = { module = "io.github.alexzhirkevich:compottie", version.ref = "compottie" }
 
 # Logging
 kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
@@ -25,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
@@ -39,9 +41,11 @@ import androidx.paging.compose.itemKey
 import eg.bahr.core.catalog.data.appError
 import eg.bahr.core.designsystem.components.BahrEmptyView
 import eg.bahr.core.designsystem.components.BahrErrorView
+import eg.bahr.core.designsystem.components.BahrLottie
 import eg.bahr.core.designsystem.components.BahrPrimaryButton
 import eg.bahr.core.designsystem.lifecycle.RefreshesOnReturn
 import eg.bahr.core.designsystem.theme.BahrElevation
+import eg.bahr.core.designsystem.theme.BahrSize
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.designsystem.theme.bahrShadow
@@ -76,8 +80,8 @@ import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * My trips (M3-M0), the fifth tab's root. The handoff has no such screen; the layout is this step's
- * (see the step report): the title, then signed out a sign-in card (the coral button is the screen's
- * one step forward) and the device's own waiting lists under it; signed in, the three segments as a
+ * (see the step report): the title, then signed out a sign-in card (a sailing-boat hero since M3-M8;
+ * the coral button is the screen's one step forward) and the device's own waiting lists under it; signed in, the three segments as a
  * segmented control (as Settings' language) over one list.
  *
  * [onSignIn] opens the sign-in sheet; [onTripClick] the trip page (a booking or entry's trip).
@@ -311,6 +315,13 @@ private fun SignInCard(onSignIn: () -> Unit) {
                 .padding(BahrSpacing.lg),
         verticalArrangement = Arrangement.spacedBy(BahrSpacing.md),
     ) {
+        // The card's hero (M3-M8): a boat on the lake, sailed once and then still. Its water is drawn in
+        // `surface`, the card's own ground. Decorative: the title says what the card is for. Kept to a
+        // modest height so this phone's waiting lists stay in view under the card.
+        BahrLottie(
+            modifier = Modifier.align(Alignment.CenterHorizontally).height(BahrSize.lottieHero),
+            props = BahrLottie.Props(BahrLottie.Animation.Sailboat),
+        )
         Text(stringResource(Res.string.mytrips_signed_out_title), style = MaterialTheme.typography.titleMedium)
         Text(
             stringResource(Res.string.mytrips_signed_out_body),

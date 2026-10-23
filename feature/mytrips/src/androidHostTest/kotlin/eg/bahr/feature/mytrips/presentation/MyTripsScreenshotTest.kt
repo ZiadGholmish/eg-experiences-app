@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.paging.LoadState
@@ -17,6 +18,7 @@ import androidx.paging.PagingData
 import androidx.paging.compose.collectAsLazyPagingItems
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.common.result.AppError
+import eg.bahr.core.designsystem.components.BAHR_LOTTIE_READY_TAG
 import eg.bahr.core.designsystem.theme.BahrLocale
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.designsystem.theme.BahrThemeName
@@ -36,7 +38,7 @@ import org.robolectric.annotation.GraphicsMode
 import kotlin.test.assertEquals
 
 /**
- * M3-M0: My trips × {ar, en} × {signed out with this phone's waiting lists, loading, Upcoming loaded,
+ * M3-M0: My trips × {ar, en} × {signed out with this phone's waiting lists (also dark) or none, loading, Upcoming loaded,
  * Waiting list loaded, Past empty, waiting list failed}. From the stateless content with fixed paging
  * data, as the screen draws it.
  *
@@ -63,11 +65,29 @@ class MyTripsScreenshotTest {
                 ),
         )
 
+    /*
+     * Signed out (M3-M8): the sign-in card's sailing-boat hero (BahrLottie) over this phone's waiting lists,
+     * which must stay in view under it. The hero is shot at rest (reduced motion: the frame it stops on).
+     */
     @Test
-    fun signedOutArabic() = shoot("mytrips_signed_out", AppLanguage.ARABIC, signedOutState, emptyList())
+    fun signedOutArabic() = shootSignedOut("mytrips_signed_out", AppLanguage.ARABIC, signedOutState)
 
     @Test
-    fun signedOutEnglish() = shoot("mytrips_signed_out", AppLanguage.ENGLISH, signedOutState, emptyList())
+    fun signedOutEnglish() = shootSignedOut("mytrips_signed_out", AppLanguage.ENGLISH, signedOutState)
+
+    @Test
+    fun signedOutDarkArabic() = shootSignedOut("mytrips_signed_out_dark", AppLanguage.ARABIC, signedOutState, BahrThemeName.Dark)
+
+    @Test
+    fun signedOutDarkEnglish() = shootSignedOut("mytrips_signed_out_dark", AppLanguage.ENGLISH, signedOutState, BahrThemeName.Dark)
+
+    /** No waiting list joined on this phone: the card alone. */
+    @Test
+    fun signedOutNoJoinsArabic() = shootSignedOut("mytrips_signed_out_no_joins", AppLanguage.ARABIC, MyTripsUiState(SessionState.SignedOut))
+
+    @Test
+    fun signedOutNoJoinsEnglish() =
+        shootSignedOut("mytrips_signed_out_no_joins", AppLanguage.ENGLISH, MyTripsUiState(SessionState.SignedOut))
 
     @Test
     fun loadingArabic() = shoot("mytrips_loading", AppLanguage.ARABIC, MyTripsUiState(session = signedIn), emptyList(), loading)
@@ -158,6 +178,26 @@ class MyTripsScreenshotTest {
         assertEquals(listOf(MyTripsSegment.Waitlist), picked)
     }
 
+    private fun shootSignedOut(
+        prefix: String,
+        language: AppLanguage,
+        state: MyTripsUiState,
+        theme: BahrThemeName = BahrThemeName.LakeBurullus,
+    ) {
+        compose.setContent {
+            Themed(language, theme, reducedMotion = true) {
+                MyTripsContent(
+                    state = state,
+                    bookings = flowOf(PagingData.from(emptyList<MyBookingDto>(), loaded)).collectAsLazyPagingItems(),
+                    actions = MyTripsActions(),
+                )
+            }
+        }
+        // The hero's file is read off the main thread: idle alone would shoot its empty box.
+        compose.waitUntil(LOTTIE_LOAD_TIMEOUT_MS) { compose.onAllNodesWithTag(BAHR_LOTTIE_READY_TAG).fetchSemanticsNodes().isNotEmpty() }
+        compose.captureScreenshot("${prefix}_${language.tag}")
+    }
+
     private fun shoot(
         prefix: String,
         language: AppLanguage,
@@ -182,10 +222,16 @@ class MyTripsScreenshotTest {
     private fun Themed(
         language: AppLanguage,
         theme: BahrThemeName = BahrThemeName.LakeBurullus,
+        // Only the shots with an animation: reduced motion also holds the skeletons' pulse still.
+        reducedMotion: Boolean = false,
         content: @Composable () -> Unit,
     ) {
         ProvideAppLanguage(language) {
-            BahrTheme(locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English, theme = theme) {
+            BahrTheme(
+                locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English,
+                theme = theme,
+                reducedMotion = reducedMotion,
+            ) {
                 // The app's tab Scaffold sets onBackground as the content colour; a bare test root does not, so dark
                 // shots would draw uncoloured text black on the dark page (light goldens keep their recorded black).
                 CompositionLocalProvider(
@@ -198,3 +244,5 @@ class MyTripsScreenshotTest {
         }
     }
 }
+
+private const val LOTTIE_LOAD_TIMEOUT_MS = 10_000L

@@ -5,7 +5,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import eg.bahr.core.common.locale.AppLanguage
+import eg.bahr.core.designsystem.components.BAHR_LOTTIE_READY_TAG
 import eg.bahr.core.designsystem.components.BahrSignInButton
 import eg.bahr.core.designsystem.theme.BahrLocale
 import eg.bahr.core.designsystem.theme.BahrSpacing
@@ -27,7 +29,8 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * The Alerts tab (M3-M0b, handoff §3's states) × {ar, en} × {light, dark} × {signed in: empty, signed
- * out: the sign-in buttons, the stored sign-in not read yet}.
+ * out: the sign-in buttons, the stored sign-in not read yet}. The empty state's bell (BahrLottie, M3-M8) is
+ * shot at rest: reduced motion shows the frame a played-once animation stops on, so the shot is fixed.
  *
  * Record: `./gradlew :feature:notifications:recordRoborazziAndroidHostTest`; verify: `verifyRoborazziAndroidHostTest`.
  */
@@ -79,10 +82,20 @@ class NotificationsScreenshotTest {
     ) {
         compose.setContent {
             ProvideAppLanguage(language) {
-                BahrTheme(locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English, theme = theme) {
+                BahrTheme(
+                    locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English,
+                    theme = theme,
+                    reducedMotion = true,
+                ) {
                     NotificationsContent(NotificationsUiState(session), signInButtons = { StandInSignInButtons(it) })
                 }
             }
+        }
+        // The bell's file is read off the main thread: idle alone would shoot its empty box.
+        if (session is SessionState.SignedIn) {
+            compose.waitUntil(
+                LOTTIE_LOAD_TIMEOUT_MS,
+            ) { compose.onAllNodesWithTag(BAHR_LOTTIE_READY_TAG).fetchSemanticsNodes().isNotEmpty() }
         }
         compose.captureScreenshot("${prefix}_${language.tag}")
     }
@@ -100,3 +113,5 @@ class NotificationsScreenshotTest {
         }
     }
 }
+
+private const val LOTTIE_LOAD_TIMEOUT_MS = 10_000L

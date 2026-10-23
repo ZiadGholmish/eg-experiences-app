@@ -293,6 +293,16 @@ object BahrSize {
     val stateDisc = 72.dp
     val iconState = 34.dp
 
+    /**
+     * A state's animation box (M3-M8, BahrLottie's Bell): the bell's disc fills 60% of its canvas, so
+     * this width draws the disc at [stateDisc], the size of the still states' disc; the rest is the room
+     * its rings go out into.
+     */
+    val lottieState = 120.dp
+
+    /** A hero animation's height (M3-M8, BahrLottie's Sailboat on My trips' sign-in card). */
+    val lottieHero = 112.dp
+
     /** Profile's initials avatar (account handoff §2: 60px). */
     val avatarProfile = 60.dp
 

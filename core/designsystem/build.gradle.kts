@@ -23,6 +23,10 @@ kotlin {
             implementation(libs.kotlinx.coroutines.core)
             // RefreshesOnReturn (M3-M0b): a screen's resume, shared by My trips and Profile. A library, not a module edge.
             implementation(libs.androidx.lifecycle.runtimeCompose)
+            // BahrLottie (M3-M8): the Lottie player, and the JSON tree the animations are re-tinted through
+            // per theme. Libraries, not module edges.
+            implementation(libs.compottie)
+            implementation(libs.kotlinx.serialization.json)
         }
         commonTest.dependencies {
             implementation(projects.core.testing)
