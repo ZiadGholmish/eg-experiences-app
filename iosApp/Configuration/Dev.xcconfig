@@ -1,13 +1,28 @@
 #include "Config.xcconfig"
 
-// Placeholder until a dev host is deployed — matches composeApp's `dev` flavor.
-// NOT yet wired to a build configuration: the project has only Debug (Local)
-// and Release (Prod). Add a `Dev` configuration pointing here when one exists.
-BASE_URL = https:/$()/api-dev.example.invalid/api/v1/
+// The Dev build configuration and the "iosApp Dev" scheme (M3-M19a): a debug build of the deployed dev
+// environment, the iOS counterpart of Android's `devDebug`. Bundle id eg.bahr.app.dev, the id the dev
+// backend lists in AUTH_APPLE_CLIENT_IDS and the dev Firebase/Google clients are made for.
+APP_ENVIRONMENT = dev
 
-// Placeholder share-link host, matching composeApp's `dev` flavor (appLinks).
-APP_LINK_HOST = dev.example.invalid
+// The dev api, the same host as composeApp's `dev` flavor (androidApp/build.gradle.kts).
+BASE_URL = https:/$()/d1epegbe1ipzwy.cloudfront.net/api/v1/
+
+// Share-link host (Universal Links), the same as the `dev` flavor's App Links host. The dev api serves
+// /.well-known/apple-app-site-association there.
+APP_LINK_HOST = d1epegbe1ipzwy.cloudfront.net
+
+// Associated Domains, Sign in with Apple and Push Notifications (iosApp.entitlements). A device build
+// needs the eg.bahr.app.dev App ID to have all three capabilities (docs/setup-signin-push.md).
 CODE_SIGN_ENTITLEMENTS = iosApp/iosApp.entitlements
+
+// Kotlin's embedAndSignAppleFrameworkForXcode infers the framework's build type from CONFIGURATION, and
+// knows only Debug and Release: a Dev build links the debug framework (debuggable, fast to build).
+KOTLIN_FRAMEWORK_BUILD_TYPE = debug
 
 PRODUCT_BUNDLE_IDENTIFIER = eg.bahr.app.dev
 DISPLAY_NAME = Bahr Dev
+
+// Google Sign-In client ids for eg.bahr.app.dev, gitignored. Without the file Google is hidden and the
+// sign-in sheet offers Apple only. See SignIn.private.xcconfig.example. The `?` makes it optional.
+#include? "SignIn.dev.private.xcconfig"

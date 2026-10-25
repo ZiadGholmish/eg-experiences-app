@@ -20,8 +20,16 @@ MAPS_API_KEY_IOS =
 
 // Sign-in (M3-M0). Google Sign-In for iOS reads GIDClientID from Info.plist; its URL scheme is the reversed
 // client id. Both empty by default: the app then offers Apple only (and Apple needs the Sign in with Apple
-// capability, see iosApp.entitlements). Real values go in the gitignored SignIn.private.xcconfig (see its
-// .example). FAKE_SIGN_IN is set by Local.xcconfig only (see there); the app ignores it in Release builds.
+// capability, see iosApp.entitlements). An iOS OAuth client belongs to one bundle id, so each environment
+// reads its own gitignored file (M3-M19a): SignIn.local.private.xcconfig from Local.xcconfig,
+// SignIn.dev.private.xcconfig from Dev.xcconfig, SignIn.prod.private.xcconfig from Prod.xcconfig (see
+// SignIn.private.xcconfig.example). FAKE_SIGN_IN is set by Local.xcconfig only (see there); the app ignores
+// it in Release builds.
 GOOGLE_IOS_CLIENT_ID =
 GOOGLE_IOS_REVERSED_CLIENT_ID =
-#include? "SignIn.private.xcconfig"
+
+// Push Notifications entitlement (iosApp.entitlements, M3-M19a). `development` for every configuration:
+// automatic signing uses a development profile, whose aps-environment is development, and a different value
+// fails code signing. Xcode rewrites it to `production` from the distribution profile when an archive is
+// exported for TestFlight or the App Store.
+APS_ENVIRONMENT = development

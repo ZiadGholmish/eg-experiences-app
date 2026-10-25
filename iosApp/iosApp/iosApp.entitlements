@@ -15,5 +15,9 @@
 	<array>
 		<string>Default</string>
 	</array>
+	<!-- Push Notifications (M3-M19a; used from M3-M5, FCM over APNs). Dev and Prod only, as above.
+	     APS_ENVIRONMENT is `development` (Config.xcconfig, which says why); an App Store export rewrites it. -->
+	<key>aps-environment</key>
+	<string>$(APS_ENVIRONMENT)</string>
 </dict>
 </plist>

@@ -59,6 +59,11 @@ googleMapsCompose = "7.0.0"
 androidxCredentials = "1.5.0"
 googleId = "1.1.1"
 
+# Firebase config (M3-M19a): Google's Gradle plugin that turns androidApp/src/<flavor>/google-services.json into
+# the resources the Firebase SDK (M3-M5) starts from. Android only (Firebase's own build tooling; iOS reads its
+# GoogleService-Info.plist from the app bundle). 4.5.0: the newest on Google Maven (checked 2026-10-25).
+googleServices = "4.5.0"
+
 # Image loading
 # 3.6.3 (M3-M10): built against Skiko 0.150.1, the line Compose Multiplatform 1.12.2 ships (0.150.2). 3.3.0 was built
 # against Skiko 0.9.4.2, and on 1.12 the iOS build's Compose compatibility check warned the two were incompatible.
@@ -212,3 +217,4 @@ kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", versio
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 roborazzi = { id = "io.github.takahirom.roborazzi", version.ref = "roborazzi" }
 kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
+googleServices = { id = "com.google.gms.google-services", version.ref = "googleServices" }

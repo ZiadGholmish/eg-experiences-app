@@ -84,7 +84,7 @@ device, set `LOCAL_BASE_URL` in `local.properties` to your machine's LAN address
 | Flavor | Base URL | Share-link host (App Links) |
 |---|---|---|
 | `local` | `LOCAL_BASE_URL` from `local.properties`, default `http://10.0.2.2:8084/api/v1/` | `LOCAL_APP_LINK_HOST`, default `localhost`; http and https |
-| `dev` | placeholder — no dev host deployed yet | placeholder `dev.example.invalid` |
+| `dev` | `https://d1epegbe1ipzwy.cloudfront.net/api/v1/` (the deployed dev api) | `d1epegbe1ipzwy.cloudfront.net` |
 | `prod` | placeholder — no prod host deployed yet | `bahr.eg` |
 
 ### iOS
@@ -101,8 +101,11 @@ xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp \
 ```
 
 `Configuration/*.xcconfig` are the iOS counterpart of the Android product
-flavors: `Debug` builds against `Local.xcconfig`, `Release` against
-`Prod.xcconfig`. `BASE_URL` reaches Swift through `Info.plist`, and
+flavors: `Debug` builds against `Local.xcconfig`, `Dev` (scheme `iosApp Dev`,
+bundle id `eg.bahr.app.dev`, M3-M19a) against `Dev.xcconfig`, `Release` against
+`Prod.xcconfig`. Real Google/Apple sign-in and push need ids and files only the
+account owner has; `docs/setup-signin-push.md` lists each one and where it goes,
+and the app builds without any of them. `BASE_URL` reaches Swift through `Info.plist`, and
 `ContentView` hands it to the shared entry point:
 
 ```swift
@@ -251,8 +254,8 @@ it signable by a personal team. `ContentView` hands every URL from `onOpenURL` /
 - **No payment step.** `BookingScreen` goes from a seat *hold* straight to the
   confirmation screen, because the backend has no payment endpoint yet. Until
   Paymob lands, a "confirmed" booking is an unpaid hold.
-- **No deployed hosts.** The `dev` and `prod` base URLs are `example.invalid`
-  placeholders on both platforms, so only the `local` flavor talks to anything.
+- **No prod host.** The `prod` base URL is an `example.invalid` placeholder on both
+  platforms; `local` and `dev` reach real backends.
 - **Trip photos 404.** `AssetUrlResolver` builds `/assets/<key>` URLs, but the
   api deployable serves no such route and answers 401, so every card renders an
   empty image box.

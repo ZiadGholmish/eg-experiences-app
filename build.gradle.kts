@@ -12,6 +12,7 @@ plugins {
     alias(libs.plugins.roborazzi) apply false
     alias(libs.plugins.spotless) apply false
     alias(libs.plugins.kover) apply false
+    alias(libs.plugins.googleServices) apply false
     // Root-only setup: Spotless for build scripts and build-logic, the merged
     // Kover report + gate (koverVerifyMobile), installGitHooks.
     id("bahr.root")

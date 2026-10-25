@@ -18,7 +18,7 @@ final class NativeSignInBridge: NSObject, AuthNativeSignIn {
 
     /// Fake sign-in (M3-M0 review #8): a Debug build only, of the Local configuration (`FAKE_SIGN_IN = YES`
     /// is set there and nowhere else), and only while no Google client id is configured: adding real ids
-    /// in SignIn.private.xcconfig switches Local to Apple and Google without any other flag. The shared
+    /// in SignIn.local.private.xcconfig switches Local to Apple and Google without any other flag. The shared
     /// code checks the debug build again.
     static var fakeSignIn: Bool {
         #if DEBUG
@@ -64,7 +64,7 @@ final class NativeSignInBridge: NSObject, AuthNativeSignIn {
         #endif
     }
 
-    /// Google shows only with a client id in Info.plist (GIDClientID, from SignIn.private.xcconfig).
+    /// Google shows only with a client id in Info.plist (GIDClientID, from SignIn.<env>.private.xcconfig).
     func googleAvailable() -> Bool {
         #if canImport(GoogleSignIn)
         let id = (Bundle.main.object(forInfoDictionaryKey: "GIDClientID") as? String ?? "").trimmingCharacters(in: .whitespaces)

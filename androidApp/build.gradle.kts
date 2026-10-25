@@ -6,6 +6,10 @@ import eg.bahr.buildlogic.localSetting
 // `startApp` / `onDeepLink`). bahr-modularization graph: :androidApp → :composeApp only.
 plugins {
     id("bahr.android.app")
+    // Firebase config (M3-M19a): reads androidApp/src/<flavor>/google-services.json when it is there. Always
+    // applied, so dropping the file in turns it on with no build change; a flavor without one builds as before
+    // (`missingGoogleServicesStrategy` below). The Firebase SDK and push itself come with M3-M5.
+    alias(libs.plugins.googleServices)
 }
 
 // `local.properties` is gitignored, so each developer points the local flavor at
@@ -27,10 +31,24 @@ val androidMapsKey: String = localSetting("MAPS_API_KEY_ANDROID")
 
 // Sign in with Google (M3-M0): the Google "web" (server) OAuth client id Credential Manager puts in the ID
 // token's `aud`, the same value the backend lists in AUTH_GOOGLE_CLIENT_IDS. From local.properties or the
-// environment, like the Maps key. Empty: the local flavor signs in with fake tokens (the local backend's
-// fake verifier), other flavors offer no sign-in.
-val googleServerClientId: String = localSetting("GOOGLE_SERVER_CLIENT_ID")
+// environment, like the Maps key. One per flavor (M3-M19a), GOOGLE_SERVER_CLIENT_ID_<FLAVOR>, because setting
+// it is what switches a flavor to real sign-in: one shared value would also turn off the local flavor's fake
+// sign-in, which the local api's fake verifier needs. Empty: the local flavor signs in with fake tokens, the
+// others offer no sign-in (the sheet says sign-in is not set up). docs/setup-signin-push.md.
+fun googleServerClientId(flavor: String): String = localSetting("GOOGLE_SERVER_CLIENT_ID_${flavor.uppercase()}")
+
+// The single pre-M3-M19a name is no longer read; say so rather than silently building without sign-in.
+if (localSetting("GOOGLE_SERVER_CLIENT_ID").isNotEmpty()) {
+    logger.warn("GOOGLE_SERVER_CLIENT_ID is ignored: set GOOGLE_SERVER_CLIENT_ID_LOCAL/_DEV/_PROD (docs/setup-signin-push.md).")
+}
 if (androidMapsKey.isEmpty()) logger.warn("MAPS_API_KEY_ANDROID is not set: the Android map shows pins on a plain ground.")
+
+googleServices {
+    // A flavor without its google-services.json (every flavor on a fresh checkout) still builds: the app then has
+    // no Firebase config and push stays off (M3-M5). The file is per flavor because each Firebase app is made
+    // for one package (eg.bahr.app.dev, …), and the plugin refuses a file with no client for the variant's id.
+    missingGoogleServicesStrategy = com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesStrategy.IGNORE
+}
 
 dependencies {
     implementation(projects.composeApp)
@@ -51,7 +69,6 @@ android {
         // AndroidManifest.xml → com.google.android.geo.API_KEY. Restrict the key to this app's package
         // names and signing SHA-1 in the Google Cloud console.
         manifestPlaceholders["mapsApiKey"] = androidMapsKey
-        buildConfigField("String", "GOOGLE_SERVER_CLIENT_ID", "\"$googleServerClientId\"")
         // Fake sign-in only where the backend can verify it: the local flavor (see "local" below).
         buildConfigField("boolean", "ALLOW_FAKE_SIGN_IN", "false")
     }
@@ -65,6 +82,7 @@ android {
     productFlavors {
         create("local") {
             dimension = "environment"
+            googleSignIn(googleServerClientId("local"))
             applicationIdSuffix = ".local"
             versionNameSuffix = "-local"
             buildConfigField("String", "BASE_URL", "\"$localBaseUrl\"")
@@ -74,6 +92,7 @@ android {
         }
         create("dev") {
             dimension = "environment"
+            googleSignIn(googleServerClientId("dev"))
             applicationIdSuffix = ".dev"
             versionNameSuffix = "-dev"
             buildConfigField("String", "BASE_URL", "\"https://d1epegbe1ipzwy.cloudfront.net/api/v1/\"")
@@ -81,10 +100,16 @@ android {
         }
         create("prod") {
             dimension = "environment"
+            googleSignIn(googleServerClientId("prod"))
             buildConfigField("String", "BASE_URL", "\"https://api.example.invalid/api/v1/\"")
             appLinks(host = "bahr.eg", allowsHttp = false)
         }
     }
+}
+
+/** The flavor's Google server client id ([googleServerClientId]) into BuildConfig; empty when unset. */
+fun com.android.build.api.dsl.ApplicationProductFlavor.googleSignIn(serverClientId: String) {
+    buildConfigField("String", "GOOGLE_SERVER_CLIENT_ID", "\"$serverClientId\"")
 }
 
 /**

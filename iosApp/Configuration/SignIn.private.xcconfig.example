@@ -1,7 +1,14 @@
-// Copy to SignIn.private.xcconfig (gitignored) and fill in to try real Google Sign-In on iOS (M3-M0).
-// The iOS OAuth client id from the Google Cloud console, and the same id reversed, which is the URL
-// scheme Google Sign-In returns to. The backend must list the client id in AUTH_GOOGLE_CLIENT_IDS.
+// Google Sign-In on iOS (M3-M0; one file per environment since M3-M19a). Copy to the gitignored file of the
+// environment you build and fill in its two values:
+//   SignIn.dev.private.xcconfig    Dev configuration ("iosApp Dev" scheme), bundle id eg.bahr.app.dev
+//   SignIn.local.private.xcconfig  Debug configuration (Local), bundle id eg.bahr.app.local
+//   SignIn.prod.private.xcconfig   Release configuration (Prod), bundle id eg.bahr.app
+// The values: the iOS OAuth client id that Google Cloud made for that bundle id, and the same id reversed,
+// which is the URL scheme Google Sign-In returns to. The environment's backend must list the client id in
+// AUTH_GOOGLE_CLIENT_IDS. Without the file the Google button is hidden and the sheet offers Apple only (Local:
+// fake sign-in). Adding it turns Google on at the next build, with no code change. docs/setup-signin-push.md.
 GOOGLE_IOS_CLIENT_ID = 123456789012-abcdefghijklmnopqrstuvwxyz012345.apps.googleusercontent.com
 GOOGLE_IOS_REVERSED_CLIENT_ID = com.googleusercontent.apps.123456789012-abcdefghijklmnopqrstuvwxyz012345
-// With a client id here, the Local build signs in with Apple and Google for real instead of with fake
-// tokens; run the local api with AUTH_VERIFICATION=jwks and AUTH_*_CLIENT_IDS then. Don't set FAKE_SIGN_IN here.
+// With a client id in SignIn.local.private.xcconfig the Local build signs in with Apple and Google for real
+// instead of with fake tokens; run the local api with AUTH_VERIFICATION=jwks and AUTH_*_CLIENT_IDS then.
+// Don't set FAKE_SIGN_IN here.

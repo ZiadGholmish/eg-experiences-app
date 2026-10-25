@@ -27,9 +27,17 @@ LOCAL_APP_LINK_HOST=localhost
 MAPS_API_KEY_ANDROID=
 MAPS_API_KEY_IOS=
 
-# Sign in with Google on Android (M3-M0): the Google "web" (server) OAuth client id, the one Credential
-# Manager puts in the ID token's `aud`; the backend lists the same value in AUTH_GOOGLE_CLIENT_IDS. The
-# Android OAuth client (package + signing SHA-1) must also exist in the same Google Cloud project. Empty:
-# the `local` flavor signs in with fake tokens (the local api's fake verifier), other flavors offer no
-# sign-in. iOS's Google client id goes in iosApp/Configuration/SignIn.private.xcconfig instead.
-GOOGLE_SERVER_CLIENT_ID=
+# Sign in with Google on Android (M3-M0; one per flavor since M3-M19a): the Google "web" (server) OAuth client id
+# of that environment's Google Cloud project, the one Credential Manager puts in the ID token's `aud`; the backend
+# lists the same value in AUTH_GOOGLE_CLIENT_IDS. The Android OAuth client (package + your signing SHA-1) must also
+# exist in the same project. Empty: the `local` flavor signs in with fake tokens (the local api's fake verifier),
+# the other flavors offer no sign-in. Setting GOOGLE_SERVER_CLIENT_ID_LOCAL switches the local build to real
+# Google sign-in (run the local api with AUTH_VERIFICATION=jwks then). The local clients live in the dev project,
+# so _LOCAL and _DEV are usually the same web client id. iOS's Google client ids go in
+# iosApp/Configuration/SignIn.<env>.private.xcconfig instead. Checklist: docs/setup-signin-push.md.
+GOOGLE_SERVER_CLIENT_ID_LOCAL=
+GOOGLE_SERVER_CLIENT_ID_DEV=
+GOOGLE_SERVER_CLIENT_ID_PROD=
+
+# Push (Firebase, M3-M5) needs no setting here: drop the environment's google-services.json into
+# androidApp/src/<flavor>/ (local, dev or prod; gitignored). Without it the app builds with push off.

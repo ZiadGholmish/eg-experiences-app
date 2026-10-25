@@ -1,5 +1,8 @@
 #include "Config.xcconfig"
 
+// The Firebase file folder (iosApp/Firebase/<APP_ENVIRONMENT>/), M3-M19a.
+APP_ENVIRONMENT = local
+
 // `$()` breaks up the `//`, which xcconfig would otherwise read as a comment.
 // The simulator shares the host's network stack, so localhost reaches the api
 // deployable directly. NOT 10.0.2.2 — that alias only means something to the
@@ -22,9 +25,13 @@ APP_LINK_HOST = localhost
 
 // The local api runs the `local` profile: its fake verifier takes only made-up ID tokens (M3-B1), so the
 // local build signs in with those instead of Apple or Google (M3-M0). Only in a Debug build, and only
-// while no Google client id is configured (SignIn.private.xcconfig): with one, Local signs in for real
+// while no Google client id is configured (SignIn.local.private.xcconfig): with one, Local signs in for real
 // (run the api with AUTH_VERIFICATION=jwks then). Never set in Config.xcconfig or a private file.
 FAKE_SIGN_IN = YES
 
 PRODUCT_BUNDLE_IDENTIFIER = eg.bahr.app.local
 DISPLAY_NAME = Bahr Local
+
+// Google Sign-In client ids for eg.bahr.app.local, gitignored (see SignIn.private.xcconfig.example).
+// Without the file the local build keeps signing in with fake tokens.
+#include? "SignIn.local.private.xcconfig"

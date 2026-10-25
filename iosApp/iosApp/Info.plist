@@ -20,7 +20,7 @@
 	<string>$(MAPS_API_KEY_IOS)</string>
 
 	<!-- Sign-in (M3-M0). Google Sign-In for iOS reads GIDClientID; Google returns to the app on the
-	     reversed client id's URL scheme. Both from the xcconfig (SignIn.private.xcconfig), empty without
+	     reversed client id's URL scheme. Both from the xcconfig (SignIn.<env>.private.xcconfig), empty without
 	     one, and the app then offers Apple only. FAKE_SIGN_IN (YES on Local) makes the app sign in with
 	     the local backend's fake tokens instead. -->
 	<key>GIDClientID</key>
