@@ -86,9 +86,10 @@ interface BahrLottie {
     /**
      * What the animation is drawn on (M3-M8b). The files paint their ground-coloured parts (the boat's
      * water band, the check's gap and tick) in the `surface` role; on the page's `background` (the
-     * sign-in sheet, booking confirmed) they take that colour instead, or they would show as a box.
+     * sign-in sheet, booking confirmed) they take that colour instead, or they would show as a box; in a
+     * snackbar ("Your profile is saved") its `inverseSurface`.
      */
-    enum class Ground { Surface, Background }
+    enum class Ground { Surface, Background, InverseSurface }
 
     @Immutable
     data class Props(
@@ -187,7 +188,12 @@ private fun lottieRoles(
         "primaryContainer" to scheme.primaryContainer,
         "onPrimaryContainer" to scheme.onPrimaryContainer,
         "secondary" to scheme.secondary,
-        "surface" to if (ground == BahrLottie.Ground.Background) scheme.background else scheme.surface,
+        "surface" to
+            when (ground) {
+                BahrLottie.Ground.Surface -> scheme.surface
+                BahrLottie.Ground.Background -> scheme.background
+                BahrLottie.Ground.InverseSurface -> scheme.inverseSurface
+            },
         "success" to extended.success,
         "successContainer" to extended.successContainer,
     )

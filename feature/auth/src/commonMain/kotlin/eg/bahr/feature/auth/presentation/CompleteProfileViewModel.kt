@@ -30,6 +30,11 @@ internal data class CompleteProfileUiState(
     val checked: Boolean = false,
     val saving: Boolean = false,
     val error: AppError? = null,
+    /**
+     * A save just went through (M3-M8b): the sheet is gone and "Your profile is saved" shows as a snackbar
+     * until [CompleteProfileViewModel.savedShown]. Outlives the ask itself, which closes at once.
+     */
+    val saved: Boolean = false,
 ) {
     val nameInvalid: Boolean get() = checked && !PersonName.isValid(name)
     val phoneProblem: MobileProblem? get() = if (checked) PhoneNumbers.mobileProblem(PhoneNumbers.normalizeMobile(phone)) else null
@@ -57,13 +62,15 @@ internal class CompleteProfileViewModel(
             .onEach { (prompt, draft) ->
                 _uiState.update { state ->
                     when {
-                        prompt == null -> CompleteProfileUiState()
+                        // The ask closing keeps a snackbar that is still showing.
+                        prompt == null -> CompleteProfileUiState(saved = state.saved)
                         // A new ask starts the form over.
                         prompt != state.prompt ->
                             CompleteProfileUiState(
                                 prompt = prompt,
                                 name = draft?.name ?: prompt.name,
                                 phone = draft?.phone ?: PhoneNumbers.normalizeMobile(prompt.phone),
+                                saved = state.saved,
                             )
                         draft != null -> state.copy(name = draft.name, phone = draft.phone)
                         else -> state
@@ -101,10 +108,19 @@ internal class CompleteProfileViewModel(
         _uiState.update { it.copy(saving = true, error = null) }
         viewModelScope.launch {
             when (val result = repository.updateProfile(PersonName.clean(state.name), PhoneNumbers.normalizeMobile(state.phone))) {
-                is AppResult.Success -> repository.closeProfilePrompt()
+                is AppResult.Success -> {
+                    // Flagged before the ask closes, so the reset that follows the closing keeps it.
+                    _uiState.update { it.copy(saved = true) }
+                    repository.closeProfilePrompt()
+                }
                 is AppResult.Failure -> _uiState.update { it.copy(saving = false, error = result.error) }
             }
         }
+    }
+
+    /** The "saved" snackbar has gone (timed out, or its host left the screen). */
+    fun savedShown() {
+        _uiState.update { it.copy(saved = false) }
     }
 
     /** "Later" (or the sheet swiped away): signed in without the details; checkout asks again. */

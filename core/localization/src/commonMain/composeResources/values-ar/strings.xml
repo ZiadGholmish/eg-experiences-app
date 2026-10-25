@@ -403,6 +403,8 @@
     <string name="account_name_invalid">اكتب اسمك، من 2 لـ 60 حرف.</string>
     <string name="auth_profile_name_from">من حساب %1$s</string>
     <string name="auth_profile_later_note">هنسألك تاني وإنت بتدفع.</string>
+    <!-- After "Complete your profile" saves (M3-M8b): the snackbar beside the drawn-in check. -->
+    <string name="auth_profile_saved">بياناتك اتحفظت</string>
     <string name="auth_delete_gone">هنمسح اسمك ورقم موبايلك والإيميل اللي داخل بيه.</string>
     <string name="auth_delete_kept">حجوزاتك هتفضل محفوظة عند المضيف من غير اسم ولا رقم، عشان حساب المقاعد والفلوس.</string>
     <string name="alerts_title">الإشعارات</string>

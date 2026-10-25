@@ -1,14 +1,26 @@
 package eg.bahr.feature.auth.presentation
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -21,8 +33,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import eg.bahr.core.designsystem.components.BahrBottomSheet
 import eg.bahr.core.designsystem.components.BahrBottomSheetContent
 import eg.bahr.core.designsystem.components.BahrFormField
+import eg.bahr.core.designsystem.components.BahrLottie
 import eg.bahr.core.designsystem.icon.BahrIcons
 import eg.bahr.core.designsystem.theme.BahrSize
+import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.account_name_invalid
@@ -34,6 +48,7 @@ import eg.bahr.core.localization.generated.resources.auth_profile_name
 import eg.bahr.core.localization.generated.resources.auth_profile_name_from
 import eg.bahr.core.localization.generated.resources.auth_profile_phone
 import eg.bahr.core.localization.generated.resources.auth_profile_save
+import eg.bahr.core.localization.generated.resources.auth_profile_saved
 import eg.bahr.core.localization.generated.resources.auth_profile_title
 import eg.bahr.core.localization.generated.resources.edit_saving
 import eg.bahr.core.localization.generated.resources.provider_apple
@@ -53,6 +68,8 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 internal fun CompleteProfileSheet(viewModel: CompleteProfileViewModel = koinViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    // Before the early return: the sheet has closed by the time the snackbar shows.
+    if (state.saved) SavedSnackbarHost(onShown = viewModel::savedShown)
     if (state.prompt == null) return
     val actions =
         CompleteProfileActions(
@@ -167,6 +184,62 @@ private fun ColumnScope.CompleteProfileForm(
             color = c.onErrorContainer,
             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive },
         )
+    }
+}
+
+/**
+ * "Your profile is saved" (M3-M8b, user decision 2026-10-25): the sheet closes at once on a good Save, and
+ * this snackbar says so over whatever screen is under it, placed like the app's error snackbar. [onShown]
+ * once it has gone; only then, as Profile's "Saved" (M3-M0b review #1): clearing the flag first would
+ * cancel `showSnackbar`, which takes the snackbar away.
+ */
+@Composable
+private fun SavedSnackbarHost(onShown: () -> Unit) {
+    val hostState = remember { SnackbarHostState() }
+    val text = stringResource(Res.string.auth_profile_saved)
+    val currentOnShown by rememberUpdatedState(onShown)
+    LaunchedEffect(hostState) {
+        try {
+            hostState.showSnackbar(text)
+        } finally {
+            currentOnShown()
+        }
+    }
+    Box(Modifier.fillMaxSize()) {
+        SnackbarHost(
+            hostState = hostState,
+            modifier =
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(BahrSpacing.gutter),
+        ) { ProfileSavedSnackbar() }
+    }
+}
+
+/**
+ * The snackbar itself: the success check drawn in once (reduced motion: its last frame), then the line.
+ * Decorative check: the line says it. Split out for the screenshot tests.
+ */
+@Composable
+internal fun ProfileSavedSnackbar(modifier: Modifier = Modifier) {
+    Snackbar(
+        modifier = modifier,
+        shape = BahrTheme.shapes.medium,
+        containerColor = MaterialTheme.colorScheme.inverseSurface,
+        contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            BahrLottie(
+                modifier = Modifier.width(BahrSize.lottieInline),
+                // On the snackbar's own ground: the gap round the disc and the tick take its colour.
+                props = BahrLottie.Props(BahrLottie.Animation.SuccessCheck, ground = BahrLottie.Ground.InverseSurface),
+            )
+            Text(stringResource(Res.string.auth_profile_saved), style = MaterialTheme.typography.bodyMedium)
+        }
     }
 }
 

@@ -67,7 +67,7 @@ class CompleteProfileViewModelTest {
         }
 
     @Test
-    fun `a valid form is sent trimmed and normalised - and the sheet closes`() =
+    fun `a valid form is sent trimmed and normalised - the sheet closes and says it is saved`() =
         runViewModelTest {
             val repository = FakeAuthRepository(initial = signedIn)
             repository.askForProfile(ask)
@@ -82,6 +82,10 @@ class CompleteProfileViewModelTest {
             assertEquals("Sara Ali" to "01012345678", repository.profiles.single())
             assertNull(repository.prompt.value)
             assertNull(vm.uiState.value.prompt)
+            // M3-M8b: the sheet is gone, the "saved" snackbar stays until it has been shown.
+            assertTrue(vm.uiState.value.saved)
+            vm.savedShown()
+            assertFalse(vm.uiState.value.saved)
         }
 
     @Test
@@ -106,6 +110,7 @@ class CompleteProfileViewModelTest {
             assertFalse(vm.uiState.value.saving)
             assertEquals(refused, vm.uiState.value.error)
             assertEquals("01012345678", repository.prompt.value?.phone, "still asking")
+            assertFalse(vm.uiState.value.saved, "nothing saved")
         }
 
     @Test
@@ -122,6 +127,7 @@ class CompleteProfileViewModelTest {
             assertNull(repository.prompt.value)
             assertNull(vm.uiState.value.prompt)
             assertTrue(repository.profiles.isEmpty())
+            assertFalse(vm.uiState.value.saved, "Later saves nothing, so says nothing")
         }
 
     /**

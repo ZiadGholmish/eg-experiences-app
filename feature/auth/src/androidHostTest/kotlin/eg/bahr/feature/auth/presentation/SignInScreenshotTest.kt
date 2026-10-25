@@ -44,7 +44,8 @@ import kotlin.test.assertEquals
  * in progress again, no provider configured}. M3-M0b: the "Complete your profile" sheet (prefilled, the
  * errors after Save, saving) and the delete-account sheet (M3-M0b: sheets instead of dialogs) (default,
  * a host's account refused, deleting). Drawn from the stateless content, as the screens draw it. M3-M8b: the
- * sign-in sheet's welcome boat (BahrLottie, played once) is shot still under reduced motion, also in dark.
+ * sign-in sheet's welcome boat (BahrLottie, played once) is shot still under reduced motion, also in dark; and
+ * the "Your profile is saved" snackbar with its check, light and dark.
  *
  * Record: `./gradlew :feature:auth:recordRoborazziAndroidHostTest`; verify: `verifyRoborazziAndroidHostTest`.
  */
@@ -150,6 +151,31 @@ class SignInScreenshotTest {
         shoot("complete_profile_saving", AppLanguage.ENGLISH) {
             SheetFrame { CompleteProfileContent(saving.copy(name = "Menna Hassan"), CompleteProfileActions()) }
         }
+
+    /*
+     * M3-M8b: "Your profile is saved", the snackbar once the sheet has closed on a good Save, at the bottom of
+     * the page as the app places it. Its check (BahrLottie, played once) is shot still under reduced motion.
+     */
+    @Test
+    fun profileSavedArabic() = shoot("profile_saved_snackbar", AppLanguage.ARABIC, lottie = true) { SavedFrame() }
+
+    @Test
+    fun profileSavedEnglish() = shoot("profile_saved_snackbar", AppLanguage.ENGLISH, lottie = true) { SavedFrame() }
+
+    @Test
+    fun profileSavedDarkArabic() =
+        shoot("profile_saved_snackbar_dark", AppLanguage.ARABIC, lottie = true, theme = BahrThemeName.Dark) { SavedFrame() }
+
+    @Test
+    fun profileSavedDarkEnglish() =
+        shoot("profile_saved_snackbar_dark", AppLanguage.ENGLISH, lottie = true, theme = BahrThemeName.Dark) { SavedFrame() }
+
+    @Composable
+    private fun SavedFrame() {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+            ProfileSavedSnackbar(Modifier.padding(BahrSpacing.gutter))
+        }
+    }
 
     @Test
     fun `the sheet's Save and Later reach the view model`() {

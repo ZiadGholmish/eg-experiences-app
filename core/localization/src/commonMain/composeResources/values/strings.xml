@@ -387,6 +387,8 @@
     <!-- %1$s is the sign-in provider, Google or Apple. -->
     <string name="auth_profile_name_from">From your %1$s account</string>
     <string name="auth_profile_later_note">We’ll ask again at checkout.</string>
+    <!-- After "Complete your profile" saves (M3-M8b): the snackbar beside the drawn-in check. -->
+    <string name="auth_profile_saved">Your profile is saved</string>
     <string name="auth_delete_gone">We’ll delete your name, mobile number and sign-in email.</string>
     <string name="auth_delete_kept">Your bookings stay on record for the host without your name or number, so seat and payment records stay correct.</string>
     <string name="alerts_title">Notifications</string>
