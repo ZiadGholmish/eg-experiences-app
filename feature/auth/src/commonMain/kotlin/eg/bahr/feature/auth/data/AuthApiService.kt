@@ -1,7 +1,7 @@
 package eg.bahr.feature.auth.data
 
 import eg.bahr.core.common.result.AppResult
-import eg.bahr.core.network.auth.withDeviceId
+import eg.bahr.core.network.auth.withInstallSecret
 import eg.bahr.core.network.auth.withoutAuth
 import eg.bahr.core.network.callApi
 import eg.bahr.feature.auth.model.AccountDto
@@ -25,8 +25,9 @@ internal class AuthApiService(
     private val client: HttpClient,
 ) {
     /**
-     * Without our token (this is how one is obtained), with `X-Device-Id`, so the server attaches this
-     * device's anonymous holds and waiting-list entries to the account.
+     * Without our token (this is how one is obtained), with `X-Device-Id` and this install's `X-Install-Secret`:
+     * since M3-B13 the server attaches the install's anonymous holds and waiting-list entries to the account only when
+     * the secret proves the install (M3-M5). Without a kept secret only the id goes, and nothing is attached.
      */
     suspend fun signIn(
         provider: AuthProvider,
@@ -35,7 +36,7 @@ internal class AuthApiService(
         callApi {
             client.post("auth/${provider.wire}") {
                 withoutAuth()
-                withDeviceId()
+                withInstallSecret()
                 setBody(request)
             }
         }

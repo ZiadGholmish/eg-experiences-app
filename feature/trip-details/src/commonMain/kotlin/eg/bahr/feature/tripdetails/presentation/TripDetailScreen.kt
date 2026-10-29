@@ -23,6 +23,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -57,6 +59,7 @@ import eg.bahr.feature.tripdetails.presentation.components.TripStickyBar
 import eg.bahr.feature.tripdetails.presentation.components.TripTitleBlock
 import eg.bahr.feature.tripdetails.presentation.components.WaitlistPanelState
 import kotlinx.coroutines.launch
+import kotlinx.datetime.LocalDate
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -80,9 +83,17 @@ internal fun TripDetailScreen(
     modifier: Modifier = Modifier,
     onHostClick: ((HostDto) -> Unit)? = null,
     onSeeAllReviews: ((title: String) -> Unit)? = null,
-    viewModel: TripDetailViewModel = koinViewModel { parametersOf(slug) },
+    date: String? = null,
+    placeOpened: Boolean = false,
+    pushPrompt: (@Composable (onDone: () -> Unit) -> Unit)? = null,
+    viewModel: TripDetailViewModel =
+        koinViewModel { parametersOf(slug, TripLink(date?.let(::linkedDate), placeOpened)) },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    // Right after a successful join (M3-M5): the push pre-prompt, until it says it is done.
+    if (state.askForPush) {
+        if (pushPrompt != null) pushPrompt(viewModel::pushPromptDone) else SideEffect(Unit) { viewModel.pushPromptDone() }
+    }
     val error = state.error
     if (error != null && state.trip == null) {
         BahrErrorView(
@@ -113,6 +124,7 @@ internal fun TripDetailScreen(
     TripPage(
         state = state,
         waitlist = waitlist,
+        onDatesRevealed = viewModel::datesRevealed,
         onBack = onBack,
         onSelectDeparture = viewModel::selectDeparture,
         onContinue = { departureId -> onContinue(slug, departureId) },
@@ -129,6 +141,7 @@ internal enum class TripSection { Hero, Title, Facts, Inclusions, Itinerary, Hos
 private fun TripPage(
     state: TripDetailUiState,
     waitlist: WaitlistPanelState,
+    onDatesRevealed: () -> Unit,
     onBack: () -> Unit,
     onSelectDeparture: (String) -> Unit,
     onContinue: (String) -> Unit,
@@ -141,6 +154,15 @@ private fun TripPage(
     val sections = sectionsFor(trip)
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+
+    // Opened on a linked date (M3-M5): the dates, the picked one and its band come into view once.
+    val reveal = state.revealDates && TripSection.Availability in sections
+    LaunchedEffect(reveal) {
+        if (reveal) {
+            listState.scrollTo(sections, TripSection.Availability)
+            onDatesRevealed()
+        }
+    }
 
     // imePadding: the waiting-list email field sits low on the page; the list shrinks above the
     // keyboard (and the sticky bar rides on it) so the focused field can be scrolled into view.
@@ -317,3 +339,11 @@ internal const val TRIP_STICKY_BAR_TAG = "trip_sticky_bar"
 
 private const val TITLE_SKELETON_LINES = 3
 private const val ITINERARY_SKELETON_LINES = 5
+
+/** A link's `?date=` (`YYYY-MM-DD`); anything else is no date, and the page opens with none picked. */
+private fun linkedDate(text: String): LocalDate? =
+    try {
+        LocalDate.parse(text)
+    } catch (_: IllegalArgumentException) {
+        null
+    }

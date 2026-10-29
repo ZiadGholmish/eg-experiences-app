@@ -1,5 +1,8 @@
 <resources>
-    <!-- Launcher label only. Everything inside the app comes from
-         core:localization's compose resources. -->
+    <!-- What the system shows outside the app: the launcher label and (M3-M5) the notification channel's name in the
+         system settings. Everything inside the app comes from core:localization's compose resources. -->
     <string name="app_name">Bahr</string>
+    <string name="push_channel_name">Seats and bookings</string>
+    <!-- Not translated: an id. The manifest names it as FCM's default channel; EgApplication creates it. -->
+    <string name="push_channel_id" translatable="false">bahr_default</string>
 </resources>

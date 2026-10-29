@@ -7,6 +7,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import eg.bahr.core.common.auth.InstallSecretStore
 import eg.bahr.core.common.auth.SessionStore
 import eg.bahr.core.common.auth.StoredSession
 import kotlinx.coroutines.flow.first
@@ -19,39 +20,81 @@ import javax.crypto.spec.GCMParameterSpec
 
 actual fun secureSessionStore(dataStore: DataStore<Preferences>): SessionStore = KeystoreSessionStore(dataStore)
 
+actual fun secureInstallSecretStore(dataStore: DataStore<Preferences>): InstallSecretStore = KeystoreInstallSecretStore(dataStore)
+
 /**
  * The session JSON encrypted with an AES-256-GCM key that never leaves the Android Keystore; the
  * preferences file holds only `base64(iv) + "." + base64(ciphertext)`. A value that does not decrypt
  * (the key was wiped, e.g. after a restore onto a new device) reads as signed out, and is dropped.
  */
 internal class KeystoreSessionStore(
-    private val dataStore: DataStore<Preferences>,
+    dataStore: DataStore<Preferences>,
 ) : SessionStore {
-    override suspend fun read(): StoredSession? {
+    private val sealed = SealedPreference(dataStore, stringPreferencesKey("session_sealed"), KeystoreSealer(KEY_ALIAS))
+
+    override suspend fun read(): StoredSession? = SessionCodec.decode(sealed.read())
+
+    override suspend fun write(session: StoredSession?) = sealed.write(session?.let(SessionCodec::encode))
+
+    private companion object {
+        const val KEY_ALIAS = "bahr_session"
+    }
+}
+
+/**
+ * The install secret (M3-M5) sealed the same way as the session, under a key of its own: a lost key then costs the
+ * install its secret (it registers again under a new id), never the sign-in.
+ */
+internal class KeystoreInstallSecretStore(
+    dataStore: DataStore<Preferences>,
+) : InstallSecretStore {
+    private val sealed = SealedPreference(dataStore, stringPreferencesKey("install_secret_sealed"), KeystoreSealer(KEY_ALIAS))
+
+    override suspend fun read(deviceId: String): String? = InstallSecretCodec.secretFor(deviceId, sealed.read())
+
+    override suspend fun write(
+        deviceId: String,
+        secret: String?,
+    ) = sealed.write(secret?.let { InstallSecretCodec.encode(deviceId, it) })
+
+    private companion object {
+        const val KEY_ALIAS = "bahr_install"
+    }
+}
+
+/** One preference holding a value sealed by [sealer]; a value that no longer opens reads as none and is dropped. */
+private class SealedPreference(
+    private val dataStore: DataStore<Preferences>,
+    private val key: Preferences.Key<String>,
+    private val sealer: KeystoreSealer,
+) {
+    suspend fun read(): String? {
         val stored = dataStore.data.first()[key] ?: return null
-        val plain = decrypt(stored)
-        if (plain == null) {
-            write(null)
-            return null
-        }
-        return SessionCodec.decode(plain)
+        val plain = sealer.open(stored)
+        if (plain == null) write(null)
+        return plain
     }
 
-    override suspend fun write(session: StoredSession?) {
-        val value = session?.let { encrypt(SessionCodec.encode(it)) }
+    suspend fun write(plain: String?) {
+        val value = plain?.let(sealer::seal)
         dataStore.edit { preferences ->
             if (value == null) preferences.remove(key) else preferences[key] = value
         }
     }
+}
 
-    private fun encrypt(plain: String): String {
+/** AES-256-GCM under the Keystore key [alias] (made on first use): `base64(iv) + "." + base64(ciphertext)`. */
+private class KeystoreSealer(
+    private val alias: String,
+) {
+    fun seal(plain: String): String {
         val cipher = Cipher.getInstance(TRANSFORMATION)
         cipher.init(Cipher.ENCRYPT_MODE, secretKey())
         val sealed = cipher.doFinal(plain.encodeToByteArray())
         return encode(cipher.iv) + SEPARATOR + encode(sealed)
     }
 
-    private fun decrypt(stored: String): String? =
+    fun open(stored: String): String? =
         try {
             val (iv, sealed) = stored.split(SEPARATOR).takeIf { it.size == 2 } ?: return null
             val cipher = Cipher.getInstance(TRANSFORMATION)
@@ -65,11 +108,11 @@ internal class KeystoreSessionStore(
 
     private fun secretKey(): SecretKey {
         val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
-        (keyStore.getKey(KEY_ALIAS, null) as? SecretKey)?.let { return it }
+        (keyStore.getKey(alias, null) as? SecretKey)?.let { return it }
         val generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEYSTORE)
         generator.init(
             KeyGenParameterSpec
-                .Builder(KEY_ALIAS, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
+                .Builder(alias, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
                 .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
                 .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
                 .setKeySize(KEY_BITS)
@@ -83,9 +126,7 @@ internal class KeystoreSessionStore(
     private fun decode(text: String): ByteArray = Base64.decode(text, Base64.NO_WRAP)
 
     private companion object {
-        val key = stringPreferencesKey("session_sealed")
         const val ANDROID_KEYSTORE = "AndroidKeyStore"
-        const val KEY_ALIAS = "bahr_session"
         const val TRANSFORMATION = "AES/GCM/NoPadding"
         const val KEY_BITS = 256
         const val TAG_BITS = 128

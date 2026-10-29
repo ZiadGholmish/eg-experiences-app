@@ -16,6 +16,8 @@ import eg.bahr.core.designsystem.generated.resources.ic_beach_access_filled
 import eg.bahr.core.designsystem.generated.resources.ic_bedtime
 import eg.bahr.core.designsystem.generated.resources.ic_bedtime_filled
 import eg.bahr.core.designsystem.generated.resources.ic_block
+import eg.bahr.core.designsystem.generated.resources.ic_bolt
+import eg.bahr.core.designsystem.generated.resources.ic_bolt_filled
 import eg.bahr.core.designsystem.generated.resources.ic_calendar_month
 import eg.bahr.core.designsystem.generated.resources.ic_calendar_month_filled
 import eg.bahr.core.designsystem.generated.resources.ic_campaign
@@ -35,6 +37,8 @@ import eg.bahr.core.designsystem.generated.resources.ic_delete
 import eg.bahr.core.designsystem.generated.resources.ic_delete_filled
 import eg.bahr.core.designsystem.generated.resources.ic_directions_bus
 import eg.bahr.core.designsystem.generated.resources.ic_directions_bus_filled
+import eg.bahr.core.designsystem.generated.resources.ic_do_not_disturb_on
+import eg.bahr.core.designsystem.generated.resources.ic_do_not_disturb_on_filled
 import eg.bahr.core.designsystem.generated.resources.ic_error
 import eg.bahr.core.designsystem.generated.resources.ic_error_filled
 import eg.bahr.core.designsystem.generated.resources.ic_event
@@ -204,6 +208,9 @@ enum class BahrIcons(
     Waves(Res.drawable.ic_waves, Res.drawable.ic_waves),
     Badge(Res.drawable.ic_badge, Res.drawable.ic_badge_filled),
 
+    /** The push pre-prompt's "first to book gets it" (M3-M5). */
+    Bolt(Res.drawable.ic_bolt, Res.drawable.ic_bolt_filled),
+
     /**
      * A row that opens a page (M3-M0b, Profile): Material Symbols `chevron_right`, auto-mirrored, so it
      * points left in Arabic. The prototype swaps `chevron_left`/`chevron_right` by language only because
@@ -214,6 +221,9 @@ enum class BahrIcons(
     /** The My trips tab (M3-M0b, the handoff's `confirmation_number`; M3-M0 drew [Backpack]). */
     ConfirmationNumber(Res.drawable.ic_confirmation_number, Res.drawable.ic_confirmation_number_filled),
     Delete(Res.drawable.ic_delete, Res.drawable.ic_delete_filled),
+
+    /** The push pre-prompt's "no ads" (M3-M5). */
+    DoNotDisturbOn(Res.drawable.ic_do_not_disturb_on, Res.drawable.ic_do_not_disturb_on_filled),
     Error(Res.drawable.ic_error, Res.drawable.ic_error_filled),
     HourglassTop(Res.drawable.ic_hourglass_top, Res.drawable.ic_hourglass_top),
     HowToReg(Res.drawable.ic_how_to_reg, Res.drawable.ic_how_to_reg_filled),

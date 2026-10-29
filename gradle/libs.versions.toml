@@ -63,6 +63,11 @@ googleId = "1.1.1"
 # the resources the Firebase SDK (M3-M5) starts from. Android only (Firebase's own build tooling; iOS reads its
 # GoogleService-Info.plist from the app bundle). 4.5.0: the newest on Google Maven (checked 2026-10-25).
 googleServices = "4.5.0"
+# Push (M3-M5): Firebase Cloud Messaging for Android. Android only: Google publishes no Kotlin Multiplatform Firebase
+# artifact, so iOS uses the Firebase iOS SDK (FirebaseMessaging, Swift Package Manager in iosApp/) behind a Swift bridge,
+# as Maps and Sign-In do. 26.0.1: the newest firebase-messaging on Google Maven (checked 2026-10-28). Without a
+# google-services.json the SDK has no FirebaseApp and the app treats push as off (AndroidPush.kt).
+firebaseMessaging = "26.0.1"
 
 # Image loading
 # 3.6.3 (M3-M10): built against Skiko 0.150.1, the line Compose Multiplatform 1.12.2 ships (0.150.2). 3.3.0 was built
@@ -117,6 +122,7 @@ ktlint = "1.5.0"
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "androidx-appcompat" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }
+firebase-messaging = { module = "com.google.firebase:firebase-messaging", version.ref = "firebaseMessaging" }
 androidx-lifecycle-viewmodelCompose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "androidx-lifecycle" }
 androidx-lifecycle-runtimeCompose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose", version.ref = "androidx-lifecycle" }
 

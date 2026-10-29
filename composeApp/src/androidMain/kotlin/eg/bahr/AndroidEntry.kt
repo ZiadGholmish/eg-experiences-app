@@ -1,7 +1,10 @@
 package eg.bahr
 
 import android.app.Application
+import android.content.Context
+import android.content.Intent
 import androidx.appcompat.app.AppCompatDelegate
+import eg.bahr.core.common.push.PushChannel
 import eg.bahr.core.common.theme.AppAppearance
 import eg.bahr.core.datastore.APP_PREFERENCES_FILE
 import eg.bahr.core.datastore.AppSettingsStore
@@ -9,13 +12,18 @@ import eg.bahr.deeplink.AppDeepLinkInbox
 import eg.bahr.di.AppLinkConfig
 import eg.bahr.di.initKoin
 import eg.bahr.di.seedStoredAppearance
+import eg.bahr.di.startInstallRegistration
 import eg.bahr.feature.auth.di.AuthConfig
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.GlobalContext
+import org.koin.dsl.module
 
 /**
  * The Android entry points `:androidApp` calls (M3-M13), as iOS's `startApp` / `onDeepLink` are for Swift. The
@@ -34,7 +42,11 @@ fun Application.startApp(
     appLinkAllowsHttp: Boolean,
     googleServerClientId: String,
     allowFakeSignIn: Boolean,
+    pushChannelId: String,
+    pushChannelName: String,
 ) {
+    pushChannelIdInUse = pushChannelId
+    val push = AndroidPush.start(this, appScope, pushChannelId, pushChannelName)
     initKoin(
         baseUrl = baseUrl,
         isDebug = isDebug,
@@ -46,8 +58,43 @@ fun Application.startApp(
     ) {
         androidContext(this@startApp)
         androidLogger()
+        // The platform's push (M3-M5): core:network registers the install with its token.
+        modules(module { single<PushChannel> { push } })
     }
     followAppearance()
+    GlobalContext.get().startInstallRegistration(appScope)
+}
+
+/** The process's own scope for what runs as long as the app: the install's registration and the push channel. */
+private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+/** [startApp]'s channel id, for pushes shown while the app is in front. */
+private var pushChannelIdInUse = ""
+
+/**
+ * The activity's intent (launch or `onNewIntent`): a tap on a push the system showed in the background carries the
+ * push's data as extras (M3-M5); anything else that is a link is a deep link. True when it was a push.
+ */
+fun onPushIntent(intent: Intent): Boolean = AndroidPush.openFromExtras(intent)
+
+/** `FirebaseMessagingService.onNewToken` (M3-M5). The token is never logged. */
+fun onPushToken(token: String) {
+    AndroidPush.onNewToken(token)
+}
+
+/** `FirebaseMessagingService.onMessageReceived` while the app is in front (M3-M5): shown as the system would. */
+fun Context.onPushMessage(
+    title: String?,
+    body: String?,
+    data: Map<String, String>,
+    tag: String?,
+) {
+    AndroidPush.showInForeground(this, pushChannelIdInUse, title, body, data, tag)
+}
+
+/** The activity came to the front: the notification permission may have changed in the system settings (M3-M5). */
+fun onAppForeground() {
+    GlobalContext.getOrNull()?.getOrNull<PushChannel>()?.refresh()
 }
 
 /** A link the activity received (launch or `onNewIntent`); it waits in the inbox until the Home tab's NavHost opens it. */

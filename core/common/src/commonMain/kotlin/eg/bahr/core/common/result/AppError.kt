@@ -16,11 +16,16 @@ sealed interface AppError {
     /** The server answered, but not in time. Retryable. */
     data object Timeout : AppError
 
-    /** The server answered with `success: false`. */
+    /**
+     * The server answered with `success: false`. [reason] is the contract's `ApiError.reason` (since MA-B9), finer
+     * than [code] on the few failures where a client acts on the difference (e.g. `INSTALL_SECRET_INVALID`, M3-M5).
+     * Branch on [code] first; an unknown reason counts as none.
+     */
     data class Api(
         val code: String,
         val message: String?,
         val httpStatus: Int?,
+        val reason: String? = null,
     ) : AppError
 
     /** The body did not match the contract. Never retryable — it is a bug. */

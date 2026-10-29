@@ -52,3 +52,15 @@ object ApiErrorCodes {
      */
     const val NON_JSON_RESPONSE = "NON_JSON_RESPONSE"
 }
+
+/**
+ * The `ApiError.reason` values the app acts on (openapi `ApiError.reason`). Branch on the code first; a reason not
+ * listed here counts as none.
+ */
+object ApiErrorReasons {
+    /**
+     * FORBIDDEN (since M3-B12): the install secret is missing or wrong for this `X-Device-Id`, or the server no longer
+     * knows the install. Not a sign-in problem: the tokens are kept, the install registers again.
+     */
+    const val INSTALL_SECRET_INVALID = "INSTALL_SECRET_INVALID"
+}

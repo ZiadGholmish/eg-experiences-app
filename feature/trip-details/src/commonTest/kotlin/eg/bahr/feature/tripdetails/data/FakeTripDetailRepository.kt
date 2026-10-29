@@ -24,6 +24,8 @@ internal class FakeTripDetailRepository(
     var departuresFor: suspend (slug: String) -> AppResult<List<DepartureDto>> = { unset() },
     var cards: Map<String, TripCardDto> = emptyMap(),
     var joinWaitlist: suspend (departureId: String, request: WaitlistRequest) -> AppResult<Unit> = { _, _ -> unset() },
+    /** The signed-in account's email (M3-M5); null is signed out. */
+    var accountEmail: String? = null,
 ) : TripDetailRepository {
     val departureReads = mutableListOf<String>()
     val waitlistJoins = mutableListOf<Pair<String, WaitlistRequest>>()
@@ -44,6 +46,8 @@ internal class FakeTripDetailRepository(
     }
 
     override fun cachedCard(slug: String): TripCardDto? = cards[slug]
+
+    override suspend fun accountEmail(): String? = accountEmail
 
     private companion object {
         fun unset(): AppResult.Failure = AppResult.Failure(AppError.Unknown("FakeTripDetailRepository: call not stubbed"))

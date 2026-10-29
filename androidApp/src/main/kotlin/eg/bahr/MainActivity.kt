@@ -23,10 +23,19 @@ class MainActivity : AppCompatActivity() {
         offerDeepLink(intent)
     }
 
+    /** The notification permission may have been changed in the system settings meanwhile (M3-M5). */
+    override fun onResume() {
+        super.onResume()
+        onAppForeground()
+    }
+
     private fun offerDeepLink(intent: Intent?) {
-        if (intent?.action != Intent.ACTION_VIEW) return
+        if (intent == null) return
         // Reopened from recents: the intent is the one the task was started with, not a new tap.
         if (intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0) return
+        // A tap on a push the system showed (M3-M5): the launcher intent with the push's data as extras.
+        if (onPushIntent(intent)) return
+        if (intent.action != Intent.ACTION_VIEW) return
         intent.dataString?.let(::onDeepLink)
     }
 }

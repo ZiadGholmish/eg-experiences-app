@@ -1,5 +1,6 @@
 <resources>
-    <!-- Launcher label only, Arabic. Everything inside the app comes from
-         core:localization's compose resources. -->
+    <!-- What the system shows outside the app, Arabic: the launcher label and (M3-M5) the notification channel's
+         name. Everything inside the app comes from core:localization's compose resources. -->
     <string name="app_name">بحر</string>
+    <string name="push_channel_name">الأماكن والحجوزات</string>
 </resources>

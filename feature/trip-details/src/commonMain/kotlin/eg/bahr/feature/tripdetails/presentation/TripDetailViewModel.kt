@@ -44,6 +44,13 @@ internal data class TripDetailUiState(
     val joinedWaitlists: Map<String, String> = emptyMap(),
     /** What a refused join turned out to mean, said in the availability band (the notice may be gone). */
     val waitlistOutcome: WaitlistOutcome? = null,
+    /**
+     * A waiting-list join just succeeded: the push pre-prompt (M3-M5) is placed until it says it is done
+     * ([TripDetailViewModel.pushPromptDone]).
+     */
+    val askForPush: Boolean = false,
+    /** The page opened on a linked date (M3-M5): scroll to the dates once, then [TripDetailViewModel.datesRevealed]. */
+    val revealDates: Boolean = false,
 ) {
     /**
      * The dates to show: the live list when it has answered, else the trip's own `dates` (the same
@@ -127,8 +134,23 @@ internal data class WaitlistOutcome(
     val date: LocalDate,
     val kind: Kind,
 ) {
-    enum class Kind { SeatsOpened, DateClosed }
+    enum class Kind {
+        SeatsOpened,
+        DateClosed,
+
+        /** Opened from a "a place opened" push (M3-M5), and the fresh dates show the date bookable. */
+        PlaceOpened,
+    }
 }
+
+/**
+ * What a trip link asked for beyond the trip (M3-M5): the [date] to open on (`?date=`) and whether it came from a
+ * "a place opened" push ([placeOpened]). Empty for a tap in a list.
+ */
+internal data class TripLink(
+    val date: LocalDate? = null,
+    val placeOpened: Boolean = false,
+)
 
 /**
  * A date can be picked when it can be booked, or when it is sold out: picking a full date shows the
@@ -149,11 +171,23 @@ internal class TripDetailViewModel(
     private val slug: String,
     private val repository: TripDetailRepository,
     private val waitlists: WaitlistMemory,
+    private val link: TripLink = TripLink(),
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(TripDetailUiState(preview = repository.cachedCard(slug)))
     val uiState: StateFlow<TripDetailUiState> = _uiState.asStateFlow()
 
+    /** The linked date is applied once, to the first fresh read of the dates (M3-M5). */
+    private var linkApplied = link.date == null
+
+    /** The signed-in account's email, read once (M3-M5); null signed out or until it is read. */
+    private var accountEmail: String? = null
+
     init {
+        viewModelScope.launch {
+            accountEmail = repository.accountEmail()
+            // A form opened before the email arrived is filled now, unless something was typed meanwhile.
+            accountEmail?.let { email -> updateForm { form -> if (form.email.isEmpty()) form.copy(email = email) else form } }
+        }
         viewModelScope.launch {
             waitlists.joins.collect { joins ->
                 val today = waitlists.today()
@@ -184,10 +218,13 @@ internal class TripDetailViewModel(
             val live = (repository.departuresFor(slug) as? AppResult.Success)?.data
             // A failure is not an error screen: the trip's own `dates` stand in (see `departures`).
             _uiState.update { it.copy(liveDeparturesLoading = false, liveDepartures = live).keepingSelection() }
+            applyLink(live)
             // The live list when it answered, else the trip's own copy once that has: both are every
             // upcoming date (the contract lists them all from today on). Neither: nothing is known, so
             // nothing is dropped.
             val dates = live ?: tripRead.join().let { _uiState.value.trip?.dates }
+            // A failed live read waited for the trip: its own dates can place the linked date now.
+            applyLink(live)
             if (dates != null) reconcileJoins(dates)
         }
     }
@@ -215,9 +252,47 @@ internal class TripDetailViewModel(
         waitlists.forget(dropped.mapTo(mutableSetOf(), JoinedWaitlist::departureId))
         if (reopened != null) {
             _uiState.update {
-                it.copy(waitlistOutcome = WaitlistOutcome(reopened.id, reopened.date, WaitlistOutcome.Kind.SeatsOpened))
+                // A push's "A place opened" (M3-M5) already says it, for the date the person came for.
+                if (it.waitlistOutcome?.kind == WaitlistOutcome.Kind.PlaceOpened) {
+                    it
+                } else {
+                    it.copy(waitlistOutcome = WaitlistOutcome(reopened.id, reopened.date, WaitlistOutcome.Kind.SeatsOpened))
+                }
             }
         }
+    }
+
+    /**
+     * Opens the page on the linked date (M3-M5), once, from the first read of the dates: picked when it can be
+     * (bookable or sold out), and said to be open again ("A place opened — book now") only when the push said so
+     * *and* the [live] read shows it bookable (seat counts are hints: by the tap the place may be gone, and then the
+     * sold-out notice shows instead). A failed live read picks from the trip's own copy and claims nothing.
+     */
+    private fun applyLink(live: List<DepartureDto>?) {
+        if (linkApplied) return
+        val state = _uiState.value
+        if (live == null && state.trip == null) return
+        linkApplied = true
+        val linked = state.departures.firstOrNull { it.date == link.date && it.isSelectable() } ?: return
+        val opened = link.placeOpened && live?.firstOrNull { it.id == linked.id }?.availability == DateAvailability.Open
+        _uiState.update {
+            it.copy(
+                selectedDepartureId = linked.id,
+                waitlist = null,
+                waitlistOutcome = if (opened) WaitlistOutcome(linked.id, linked.date, WaitlistOutcome.Kind.PlaceOpened) else null,
+                revealDates = true,
+            )
+        }
+    }
+
+    /** The page has scrolled to the linked date. */
+    fun datesRevealed() {
+        _uiState.update { it.copy(revealDates = false) }
+    }
+
+    /** The push pre-prompt was answered, or was not needed (M3-M5). */
+    fun pushPromptDone() {
+        _uiState.update { it.copy(askForPush = false) }
     }
 
     /**
@@ -243,7 +318,8 @@ internal class TripDetailViewModel(
                 // Already on its list: the notice says so instead of offering the form again.
                 full.id in state.joinedWaitlists -> state
                 state.waitlist?.departureId == full.id -> state
-                else -> state.copy(waitlist = WaitlistForm(full.id))
+                // Signed in: the account's email, which the person can still change (M3-M5).
+                else -> state.copy(waitlist = WaitlistForm(full.id, email = accountEmail.orEmpty()))
             }
         }
     }
@@ -289,6 +365,8 @@ internal class TripDetailViewModel(
                         it.copy(
                             joinedWaitlists = it.joinedWaitlists + (form.departureId to email),
                             waitlist = it.waitlist?.takeUnless { open -> open.departureId == form.departureId },
+                            // The moment a push permission has an obvious reason (handoff §3).
+                            askForPush = true,
                         )
                     }
                     waitlists.remember(form.departureId, slug, full.date, form.partySize, email)

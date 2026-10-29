@@ -13,6 +13,7 @@ import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
 import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.designsystem.theme.BahrSharedTransitions
@@ -47,6 +48,7 @@ import eg.bahr.feature.map.navigation.TripMapRoute
 import eg.bahr.feature.map.navigation.tripMapScreen
 import eg.bahr.feature.mytrips.navigation.MyTripsRoute
 import eg.bahr.feature.mytrips.navigation.myTripsScreen
+import eg.bahr.feature.notifications.navigation.PushPromptSlot
 import eg.bahr.feature.notifications.navigation.navigateToNotifications
 import eg.bahr.feature.notifications.navigation.notificationsScreen
 import eg.bahr.feature.reviews.navigation.navigateToReviews
@@ -59,6 +61,7 @@ import eg.bahr.feature.settings.navigation.navigateToEditPersonalInfo
 import eg.bahr.feature.settings.navigation.profileScreen
 import eg.bahr.feature.splash.navigation.SplashRoute
 import eg.bahr.feature.splash.navigation.splashScreen
+import eg.bahr.feature.tripdetails.navigation.TripDetailRoute
 import eg.bahr.feature.tripdetails.navigation.navigateToTripDetail
 import eg.bahr.feature.tripdetails.navigation.tripDetailScreen
 import eg.bahr.feature.triplisting.navigation.categoryTripsScreen
@@ -253,6 +256,8 @@ fun AppNavHost(
                 onHostClick = { host -> navController.navigateToHostProfile(host.slug, host.name, host.avatar) },
                 // "See all reviews" (M4-M11), in this tab's stack, bar hidden.
                 onSeeAllReviews = { slug, title -> navController.navigateToReviews(trip = slug, title = title) },
+                // Right after a waiting-list join (M3-M5): feature:notifications' push pre-prompt.
+                pushPrompt = { onDone -> PushPromptSlot(onDone) },
             )
 
             hostProfileScreen(
@@ -321,13 +326,20 @@ private class NavControllerDeepLinkDestinations(
 
     override fun switchLanguage(language: AppLanguage) = languages.switchTo(language)
 
-    override fun openTrip(slug: String) {
+    override fun openTrip(
+        slug: String,
+        date: String?,
+        placeOpened: Boolean,
+    ) {
+        val route = TripDetailRoute(slug, date, placeOpened)
+        // The same link already on top (iOS may hand one over twice) is not pushed again. Compared by its arguments, not
+        // single-top: a push for another date of the trip on top must open on that date (M3-M5).
+        val top = navController.currentBackStackEntry
+        if (top?.destination?.hasRoute<TripDetailRoute>() == true && top.toRoute<TripDetailRoute>() == route) return
         val placement = tripLinkPlacement(bookingInProgress = navController.hasBookingInProgress())
-        navController.navigateToTripDetail(slug) {
+        navController.navigateToTripDetail(route) {
             // Otherwise whatever was open goes and Home stays: back from the linked trip is Home.
             if (placement == TripLinkPlacement.AboveList) popUpTo<TripListRoute>()
-            // The same trip already on top is not pushed twice.
-            launchSingleTop = true
         }
     }
 

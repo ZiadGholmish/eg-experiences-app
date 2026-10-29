@@ -14,6 +14,11 @@ internal sealed interface DeepLink {
     data class Trip(
         val slug: String,
         val language: AppLanguage? = null,
+        /**
+         * The link's `?date=` (`YYYY-MM-DD`, M3-M5): the date a "a place opened" email or push points to. Anything
+         * that is not a calendar date's shape is no date.
+         */
+        val date: String? = null,
     ) : DeepLink
 
     /** Anything else, including a malformed trip link: the app opens on the trip list. */
@@ -26,7 +31,7 @@ internal sealed interface DeepLink {
  * Deliberately strict, and a hand-written grammar rather than a general URL parser, so that what is
  * accepted is exactly what is written here: the configured [host] (any port), `https` (plus `http`
  * when [allowsHttp], the local flavor only), and the path `/t/{slug}` with at most one trailing slash.
- * Query parameters other than `lang` and the fragment are ignored.
+ * Query parameters other than `lang` and `date` (M3-M5) and the fragment are ignored.
  */
 internal class DeepLinkParser(
     host: String,
@@ -42,7 +47,7 @@ internal class DeepLinkParser(
         val slug = TripPath.matchEntire(path)?.groupValues?.get(1) ?: return DeepLink.Unknown
         if (slug.length > SLUG_MAX_LENGTH || !Slug.matches(slug)) return DeepLink.Unknown
 
-        return DeepLink.Trip(slug = slug, language = languageOf(query))
+        return DeepLink.Trip(slug = slug, language = languageOf(query), date = dateOf(query))
     }
 
     private fun isAllowedScheme(scheme: String): Boolean = scheme == "https" || (allowsHttp && scheme == "http")
@@ -56,18 +61,28 @@ internal class DeepLinkParser(
 
     /** Exactly `ar` or `en`, as the backend's `PageLanguage` reads it; anything else is no language. */
     private fun languageOf(query: String): AppLanguage? {
-        val value =
-            query
-                .split('&')
-                .firstOrNull { it.substringBefore('=') == LANG_PARAM }
-                ?.substringAfter('=', missingDelimiterValue = "")
-                ?.trim()
-                ?.lowercase()
-                ?: return null
+        val value = param(query, LANG_PARAM)?.lowercase() ?: return null
         return AppLanguage.entries.firstOrNull { it.tag == value }
     }
 
+    /** `YYYY-MM-DD` as the server writes it (`?date=`, openapi `joinWaitlist`); the trip page checks it is a real day. */
+    private fun dateOf(query: String): String? = param(query, DATE_PARAM)?.takeIf { DateShape.matches(it) }
+
+    private fun param(
+        query: String,
+        name: String,
+    ): String? =
+        query
+            .split('&')
+            .firstOrNull { it.substringBefore('=') == name }
+            ?.substringAfter('=', missingDelimiterValue = "")
+            ?.trim()
+
     private companion object {
+        val DateShape = Regex("""^\d{4}-\d{2}-\d{2}$""")
+
+        const val DATE_PARAM = "date"
+
         /** scheme :// authority, then an optional path, query and fragment (RFC 3986, appendix B). */
         val UrlShape = Regex("""^([A-Za-z][A-Za-z0-9+.-]*)://([^/?#]*)([^?#]*)(?:\?([^#]*))?(?:#.*)?$""")
 

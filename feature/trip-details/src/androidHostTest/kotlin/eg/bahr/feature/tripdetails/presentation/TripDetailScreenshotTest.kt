@@ -40,6 +40,7 @@ import eg.bahr.feature.tripdetails.model.ReviewsDto
 import eg.bahr.feature.tripdetails.model.TripDetailDto
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.plus
 import kotlinx.serialization.json.Json
 import org.junit.After
@@ -319,6 +320,25 @@ class TripDetailScreenshotTest {
         }
 
     /**
+     * A tap on the "a place opened" push (M3-M5): the page opens on the push's date, which the fresh dates show
+     * bookable, and the band says a place opened; the button reads Continue.
+     */
+    @Test
+    fun placeOpenedArabic() =
+        snap("trip_detail_place_opened", AppLanguage.ARABIC, link = placeOpened(), scrollTo = TripSection.Availability) {
+            serve(TripDetailPayloads.arabic, TripDetailPayloads.arabicDepartures)
+        }
+
+    @Test
+    fun placeOpenedEnglish() =
+        snap("trip_detail_place_opened", AppLanguage.ENGLISH, link = placeOpened(), scrollTo = TripSection.Availability) {
+            serve(TripDetailPayloads.english, TripDetailPayloads.englishDepartures)
+        }
+
+    /** The second Saturday, bookable in the payload. */
+    private fun placeOpened() = TripLink(LocalDate.parse("2026-10-17"), placeOpened = true)
+
+    /**
      * `DEPARTURE_NOT_OPEN`: the host cancelled the date while it showed as full. The re-read answers it
      * cancelled, the selection and the notice go, and the band says the date can't be booked.
      */
@@ -558,9 +578,10 @@ class TripDetailScreenshotTest {
         theme: BahrThemeName = BahrThemeName.LakeBurullus,
         // The shot holds a BahrLottie (the joined tick): drawn still under reduced motion, once its file has loaded.
         lottie: Boolean = false,
+        link: TripLink = TripLink(),
         stub: FakeTripDetailRepository.() -> Unit,
     ) {
-        val viewModel = TripDetailViewModel(SLUG, FakeTripDetailRepository().apply(stub), waitlists)
+        val viewModel = TripDetailViewModel(SLUG, FakeTripDetailRepository().apply(stub), waitlists, link)
         compose.setContent {
             ProvideAppLanguage(language) {
                 BahrTheme(

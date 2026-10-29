@@ -2,6 +2,7 @@ package eg.bahr.feature.auth.data
 
 import eg.bahr.core.common.auth.AuthTokens
 import eg.bahr.core.common.auth.DeviceIdSource
+import eg.bahr.core.common.auth.InstallSecretStore
 import eg.bahr.core.common.auth.SessionStore
 import eg.bahr.core.common.auth.StoredSession
 import eg.bahr.core.common.result.AppResult
@@ -31,7 +32,8 @@ import kotlin.test.assertTrue
 
 /**
  * The account operations on the real client (MockEngine), payloads from openapi's `SignIn` and
- * `Account`: the provider in the path, the raw nonce in the body, `X-Device-Id` on sign-in only, no
+ * `Account`: the provider in the path, the raw nonce in the body, `X-Device-Id` and the install's
+ * `X-Install-Secret` on sign-in only (M3-M5: M3-B13 attaches the install's holds and entries only with it), no
  * bearer on sign-in, and the session signed in with the tokens and account summary.
  */
 class AuthApiServiceTest {
@@ -43,6 +45,16 @@ class AuthApiServiceTest {
         override suspend fun write(session: StoredSession?) {
             this.session = session
         }
+    }
+
+    /** The secret kept for [DEVICE] only, as core:datastore keeps it with its id. */
+    private class MemorySecrets : InstallSecretStore {
+        override suspend fun read(deviceId: String) = SECRET.takeIf { deviceId == DEVICE }
+
+        override suspend fun write(
+            deviceId: String,
+            secret: String?,
+        ) = Unit
     }
 
     private val requests = mutableListOf<HttpRequestData>()
@@ -63,6 +75,7 @@ class AuthApiServiceTest {
                 languageTagProvider = { "ar" },
                 session = session,
                 deviceIds = DeviceIdSource { DEVICE },
+                installSecrets = MemorySecrets(),
             )
         return DefaultAuthRepository(AuthApiService(client), session) to (session to store)
     }
@@ -80,6 +93,7 @@ class AuthApiServiceTest {
             assertEquals(HttpMethod.Post, request.method)
             assertTrue(request.url.encodedPath.endsWith("/auth/google"))
             assertEquals(DEVICE, request.headers["X-Device-Id"])
+            assertEquals(SECRET, request.headers["X-Install-Secret"], "the install proves itself (openapi SignInInstallSecret)")
             assertNull(request.headers[HttpHeaders.Authorization], "sign-in carries no bearer token")
             val body = Json.parseToJsonElement(request.bodyText()).jsonObject
             assertEquals("google.jwt", body["idToken"]?.jsonPrimitive?.content)
@@ -109,6 +123,7 @@ class AuthApiServiceTest {
             assertEquals(HttpMethod.Patch, patch.method)
             assertEquals("Bearer at", patch.headers[HttpHeaders.Authorization])
             assertNull(patch.headers["X-Device-Id"])
+            assertNull(patch.headers["X-Install-Secret"], "the secret goes only where the contract asks for it")
             assertEquals(SessionState.SignedIn("Sara Ali", profileComplete = true, providers = setOf("google")), session.state.value)
         }
 
@@ -178,6 +193,7 @@ class AuthApiServiceTest {
 
     private companion object {
         const val DEVICE = "3f2b1c4e-5d6a-4b7c-8d9e-0f1a2b3c4d5e"
+        const val SECRET = "s3cr3t-issued-by-registerDevice"
         const val RAW_NONCE = "0123456789abcdef0123456789abcdef"
         const val MIN_NONCE = 16
 

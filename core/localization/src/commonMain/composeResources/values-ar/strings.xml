@@ -421,4 +421,13 @@
     <string name="appearance_light">فاتح</string>
     <string name="appearance_dark">غامق</string>
     <string name="appearance_system">زي الموبايل</string>
+    <!-- Push pre-prompt (M3-M5, handoff §3). -->
+    <string name="push_prompt_title">تحب نبلغك أول ما مكان يفضى؟</string>
+    <string name="push_prompt_body">هنبعتلك إشعار لو حد لغى حجزه في الرحلة دي.</string>
+    <string name="push_prompt_point_first">المكان مش بيتحجز لك. أول واحد يحجز ياخده، فالإشعار بيفرق.</string>
+    <string name="push_prompt_point_no_ads">مش هنبعت إعلانات. بس حاجات عن حجوزاتك ورحلاتك.</string>
+    <string name="push_prompt_allow">أيوه، بلّغني</string>
+    <string name="push_prompt_not_now">مش دلوقتي</string>
+    <!-- A tap on the "a place opened" push (M3-M5). -->
+    <string name="trip_place_opened">فضي مكان يوم %1$s. احجز دلوقتي، أول واحد يحجز ياخده.</string>
 </resources>

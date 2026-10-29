@@ -148,6 +148,40 @@ class DeepLinkInboxTest {
         assertEquals(TripLinkPlacement.AboveList, tripLinkPlacement(bookingInProgress = false))
     }
 
+    @Test
+    fun `a place-opened push opens the trip on its date and says so - M3-M5`() {
+        val inbox = DeepLinkInbox()
+        val destinations = RecordingDestinations()
+
+        inbox.offer("https://bahr.eg/t/burullus-dawn?date=2026-10-24", placeOpened = true)
+        inbox.dispatch(parser, destinations)
+
+        assertEquals(listOf("trip:burullus-dawn@2026-10-24:place-opened"), destinations.calls)
+    }
+
+    @Test
+    fun `the email's link opens the same date without claiming a place - and a newer link drops the push's claim`() {
+        val inbox = DeepLinkInbox()
+        val destinations = RecordingDestinations()
+
+        inbox.offer("https://bahr.eg/t/burullus-dawn?date=2026-10-24", placeOpened = true)
+        inbox.offer("https://bahr.eg/t/burullus-dawn?date=2026-10-31")
+        inbox.dispatch(parser, destinations)
+
+        assertEquals(listOf("trip:burullus-dawn@2026-10-31"), destinations.calls)
+    }
+
+    @Test
+    fun `a push whose link names no date claims nothing`() {
+        val inbox = DeepLinkInbox()
+        val destinations = RecordingDestinations()
+
+        inbox.offer("https://bahr.eg/t/burullus-dawn", placeOpened = true)
+        inbox.dispatch(parser, destinations)
+
+        assertEquals(listOf("trip:burullus-dawn"), destinations.calls)
+    }
+
     private class RecordingDestinations : DeepLinkDestinations {
         val calls = mutableListOf<String>()
 
@@ -159,8 +193,12 @@ class DeepLinkInboxTest {
             calls += "language:${language.tag}"
         }
 
-        override fun openTrip(slug: String) {
-            calls += "trip:$slug"
+        override fun openTrip(
+            slug: String,
+            date: String?,
+            placeOpened: Boolean,
+        ) {
+            calls += "trip:$slug" + (date?.let { "@$it" } ?: "") + (if (placeOpened) ":place-opened" else "")
         }
 
         override fun openList() {

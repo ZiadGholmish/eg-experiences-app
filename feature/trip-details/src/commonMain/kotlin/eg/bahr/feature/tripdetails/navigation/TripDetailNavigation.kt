@@ -1,5 +1,6 @@
 package eg.bahr.feature.tripdetails.navigation
 
+import androidx.compose.runtime.Composable
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavOptionsBuilder
@@ -28,18 +29,27 @@ import eg.bahr.feature.tripdetails.presentation.TripDetailScreen
  * M4-M11: [onSeeAllReviews] opens every review of the trip [slug][TripDetailRoute.slug] (with the trip's title)
  * from "See all reviews" under the previews (shown only when the trip counts more reviews than it previews),
  * usually feature:reviews' `navigateToReviews`.
+ *
+ * M3-M5: [pushPrompt] is placed right after a successful waiting-list join (usually feature:notifications'
+ * `PushPromptSlot`, the push pre-prompt); it calls `onDone` when answered or not needed, and is removed then. Null:
+ * no prompt. The route's `date` / `placeOpened` open the page on a linked date (see [TripDetailRoute]).
  */
 fun NavGraphBuilder.tripDetailScreen(
     onBack: () -> Unit,
     onContinue: (slug: String, departureId: String) -> Unit,
     onHostClick: ((HostLink) -> Unit)? = null,
     onSeeAllReviews: ((slug: String, title: String) -> Unit)? = null,
+    pushPrompt: (@Composable (onDone: () -> Unit) -> Unit)? = null,
 ) {
     composable<TripDetailRoute> { entry ->
-        val slug = entry.toRoute<TripDetailRoute>().slug
+        val route = entry.toRoute<TripDetailRoute>()
+        val slug = route.slug
         BahrDestination(this) {
             TripDetailScreen(
                 slug = slug,
+                date = route.date,
+                placeOpened = route.placeOpened,
+                pushPrompt = pushPrompt,
                 onBack = onBack,
                 onContinue = onContinue,
                 // Null when the app wires no host page: the card then stays as it was, not tappable.
@@ -65,3 +75,9 @@ fun NavController.navigateToTripDetail(
     slug: String,
     builder: NavOptionsBuilder.() -> Unit = {},
 ) = navigate(TripDetailRoute(slug), builder)
+
+/** The trip page as [route] names it: a linked date and whether a place opened on it (M3-M5). */
+fun NavController.navigateToTripDetail(
+    route: TripDetailRoute,
+    builder: NavOptionsBuilder.() -> Unit = {},
+) = navigate(route, builder)

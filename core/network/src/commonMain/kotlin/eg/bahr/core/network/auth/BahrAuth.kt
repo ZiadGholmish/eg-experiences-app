@@ -3,6 +3,7 @@ package eg.bahr.core.network.auth
 import co.touchlab.kermit.Logger
 import eg.bahr.core.common.auth.AuthTokens
 import eg.bahr.core.common.auth.DeviceIdSource
+import eg.bahr.core.common.auth.InstallSecretStore
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.network.callApi
@@ -33,7 +34,21 @@ fun HttpRequestBuilder.withoutAuth() = attributes.put(NoAuth, Unit)
  */
 fun HttpRequestBuilder.withDeviceId() = attributes.put(DeviceId, Unit)
 
+/** Marks a request that carries this install's `X-Install-Secret` next to its `X-Device-Id` (M3-M5). */
+private val InstallSecret = AttributeKey<Unit>("BahrInstallSecret")
+
+/**
+ * Send this install's id *and* its secret (openapi `SignInInstallSecret`, `InstallSecret`, M3-B12/B13): sign-in, so
+ * the server attaches this install's anonymous holds and waiting-list entries, and the guest inbox. Without a kept
+ * secret only the id goes. Never logged (the client logs at INFO, without headers).
+ */
+fun HttpRequestBuilder.withInstallSecret() {
+    attributes.put(DeviceId, Unit)
+    attributes.put(InstallSecret, Unit)
+}
+
 internal const val HEADER_DEVICE_ID = "X-Device-Id"
+internal const val HEADER_INSTALL_SECRET = "X-Install-Secret"
 
 /**
  * Bearer token on every request while signed in, one retry after a 401 with a refreshed token, and
@@ -44,10 +59,15 @@ internal const val HEADER_DEVICE_ID = "X-Device-Id"
 internal fun bahrAuth(
     session: AuthSession,
     deviceIds: DeviceIdSource,
+    installSecrets: InstallSecretStore?,
 ) = createClientPlugin("BahrAuth") {
     on(Send) { request ->
         if (request.attributes.contains(DeviceId)) {
-            deviceIdOrNull(deviceIds)?.let { request.headers[HEADER_DEVICE_ID] = it }
+            val deviceId = deviceIdOrNull(deviceIds)
+            deviceId?.let { request.headers[HEADER_DEVICE_ID] = it }
+            if (deviceId != null && installSecrets != null && request.attributes.contains(InstallSecret)) {
+                installSecretOrNull(installSecrets, deviceId)?.let { request.headers[HEADER_INSTALL_SECRET] = it }
+            }
         }
         if (request.attributes.contains(NoAuth)) return@on proceed(request)
 
@@ -81,6 +101,20 @@ private suspend fun deviceIdOrNull(deviceIds: DeviceIdSource): String? =
         throw e
     } catch (e: Exception) {
         Logger.withTag("BahrAuth").w(e) { "No device id for this request" }
+        null
+    }
+
+/** A secret the secure store cannot give is left out: the request still goes, proving less (openapi `SignInInstallSecret`). */
+private suspend fun installSecretOrNull(
+    installSecrets: InstallSecretStore,
+    deviceId: String,
+): String? =
+    try {
+        installSecrets.read(deviceId)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Logger.withTag("BahrAuth").w(e) { "No install secret for this request" }
         null
     }
 

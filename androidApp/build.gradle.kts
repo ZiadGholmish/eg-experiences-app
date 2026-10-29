@@ -55,6 +55,8 @@ dependencies {
 
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.appcompat)
+    // PushService (M3-M5): FCM's service shell; the push logic is :composeApp's.
+    implementation(libs.firebase.messaging)
 }
 
 android {

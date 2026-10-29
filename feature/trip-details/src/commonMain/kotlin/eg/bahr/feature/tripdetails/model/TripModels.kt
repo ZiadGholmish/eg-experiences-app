@@ -207,6 +207,16 @@ internal data class WaitlistRequest(
     val locale: String? = null,
 )
 
+/**
+ * openapi `Account` (`getMe`), only the field the trip page uses: the email a signed-in person's waiting-list form is
+ * prefilled with (M3-M5). Its own copy, as feature:settings has one: a feature never imports another's types.
+ * Absent when the provider gave none (Apple may not).
+ */
+@Serializable
+internal data class AccountEmailDto(
+    val email: String? = null,
+)
+
 /** True for a trip that stays away overnight: its duration label is words, not a time range. */
 internal val TripDetailDto.isMultiDay: Boolean get() = nights > 0
 

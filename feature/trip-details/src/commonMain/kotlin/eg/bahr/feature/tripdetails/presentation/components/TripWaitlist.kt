@@ -57,6 +57,7 @@ import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.designsystem.theme.bahrShadow
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.a11y_busy
+import eg.bahr.core.localization.generated.resources.trip_place_opened
 import eg.bahr.core.localization.generated.resources.trip_waitlist_date_closed
 import eg.bahr.core.localization.generated.resources.trip_waitlist_email
 import eg.bahr.core.localization.generated.resources.trip_waitlist_email_invalid
@@ -326,6 +327,8 @@ internal fun WaitlistOutcomeNote(
         when (outcome.kind) {
             WaitlistOutcome.Kind.SeatsOpened ->
                 Triple(stringResource(Res.string.trip_waitlist_seats_opened, date), BahrIcons.EventSeat, BahrTheme.colors.success)
+            WaitlistOutcome.Kind.PlaceOpened ->
+                Triple(stringResource(Res.string.trip_place_opened, date), BahrIcons.EventSeat, BahrTheme.colors.success)
             WaitlistOutcome.Kind.DateClosed ->
                 Triple(
                     stringResource(Res.string.trip_waitlist_date_closed, date),

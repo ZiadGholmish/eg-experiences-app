@@ -406,4 +406,14 @@
     <string name="appearance_light">Light</string>
     <string name="appearance_dark">Dark</string>
     <string name="appearance_system">Same as phone</string>
+    <!-- Push pre-prompt (M3-M5, handoff §3; copy from docs/design/prototype/Bahr Account - Notifications.dc.html):
+         a bottom sheet right after a waiting-list join, before the OS dialog. -->
+    <string name="push_prompt_title">Want us to tell you when a seat opens?</string>
+    <string name="push_prompt_body">We’ll notify you if someone cancels on this trip.</string>
+    <string name="push_prompt_point_first">The seat isn’t held for you. First to book gets it, so the alert matters.</string>
+    <string name="push_prompt_point_no_ads">No ads. Only your bookings and trips.</string>
+    <string name="push_prompt_allow">Yes, notify me</string>
+    <string name="push_prompt_not_now">Not now</string>
+    <!-- A tap on the "a place opened" push (M3-M5): the trip page opens on that date and says so in its band. -->
+    <string name="trip_place_opened">A place opened on %1$s. Book now: the first to book gets it.</string>
 </resources>

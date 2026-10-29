@@ -29,7 +29,9 @@ enum SharedApp {
             nativeSignIn: NativeSignInBridge.bridge(),
             allowFakeSignIn: NativeSignInBridge.fakeSignIn,
             tabBar: tabs,
-            selectedTab: tabs.selected.kotlin
+            selectedTab: tabs.selected.kotlin,
+            // Push (M3-M5): on only when Firebase was configured (a GoogleService-Info.plist in the build).
+            pushAvailable: PushSetup.available
         )
     }
 }

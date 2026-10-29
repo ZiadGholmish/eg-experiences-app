@@ -22,8 +22,15 @@ internal interface DeepLinkDestinations {
      */
     fun switchLanguage(language: AppLanguage)
 
-    /** The trip page, with the trip list under it so back goes to the list. */
-    fun openTrip(slug: String)
+    /**
+     * The trip page, with the trip list under it so back goes to the list; on [date] when the link names one, saying a
+     * place opened on it when [placeOpened] (a `waitlist_seat_opened` push, M3-M5) and the date is really bookable.
+     */
+    fun openTrip(
+        slug: String,
+        date: String? = null,
+        placeOpened: Boolean = false,
+    )
 
     fun openList()
 }
@@ -62,7 +69,15 @@ internal class DeepLinkInbox {
     /** The pending link whose `?lang=` was already asked for (see [dispatch]). */
     private var languageAskedFor: String? = null
 
-    fun offer(url: String) {
+    /** The pending link a "a place opened" push brought (M3-M5); any other link replacing it clears it. */
+    private var placeOpenedFor: String? = null
+
+    /** [placeOpened]: tapped on a `waitlist_seat_opened` push (M3-M5), rather than opened from a page or an email. */
+    fun offer(
+        url: String,
+        placeOpened: Boolean = false,
+    ) {
+        placeOpenedFor = url.takeIf { placeOpened }
         _pending.value = url
     }
 
@@ -94,8 +109,10 @@ internal class DeepLinkInbox {
         // compareAndSet, so a link offered while this one is being opened is kept for the next dispatch.
         if (!_pending.compareAndSet(url, null)) return
         languageAskedFor = null
+        val placeOpened = placeOpenedFor == url
+        placeOpenedFor = null
         when (link) {
-            is DeepLink.Trip -> destinations.openTrip(link.slug)
+            is DeepLink.Trip -> destinations.openTrip(link.slug, link.date, placeOpened = placeOpened && link.date != null)
             DeepLink.Unknown -> destinations.openList()
         }
     }

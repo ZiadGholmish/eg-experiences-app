@@ -2,6 +2,7 @@ package eg.bahr.core.datastore
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import eg.bahr.core.common.auth.InstallSecretStore
 import eg.bahr.core.common.auth.SessionStore
 import eg.bahr.core.common.auth.StoredSession
 import kotlinx.cinterop.BetaInteropApi
@@ -41,26 +42,78 @@ import platform.Security.kSecValueData
 /** iOS keeps the session in the Keychain; the preferences file is not used. */
 actual fun secureSessionStore(dataStore: DataStore<Preferences>): SessionStore = KeychainSessionStore()
 
+/** The install secret (M3-M5): a Keychain item of its own, beside the session's. */
+actual fun secureInstallSecretStore(dataStore: DataStore<Preferences>): InstallSecretStore = KeychainInstallSecretStore()
+
 /**
- * One generic-password item ([service], [ACCOUNT]) holding the session JSON, readable after the first
- * unlock and never synced or restored to another device (`…ThisDeviceOnly`): a copied refresh token
- * would be replayed from two devices, which revokes the sign-in (openapi `refreshTokens`).
- *
- * The Keychain outlives an uninstall, the preferences do not. So the first read of an install (no
- * [ownedKey] in [defaults] yet) deletes whatever item a previous install left, and an install that
- * starts signed out stays signed out, as on Android (M3-M0 review #7).
+ * One generic-password item ([service], [KeychainItem.ACCOUNT]) holding the session JSON (see [KeychainItem] for the
+ * rules: this device only, wiped on the first read of a new install).
  *
  * A failed Keychain call throws with its `OSStatus`; `AuthSession` logs it (and, on a read, starts
  * signed out) instead of the failure passing silently (M3-M0 review #4). [service] is a parameter only
  * so the simulator test can use an item of its own.
  */
-@OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
 internal class KeychainSessionStore(
-    private val service: String = SERVICE,
-    private val defaults: NSUserDefaults = NSUserDefaults.standardUserDefaults,
-    private val ownedKey: String = OWNED_KEY,
+    service: String = SERVICE,
+    defaults: NSUserDefaults = NSUserDefaults.standardUserDefaults,
+    ownedKey: String = OWNED_KEY,
 ) : SessionStore {
-    override suspend fun read(): StoredSession? {
+    private val item = KeychainItem(service, defaults, ownedKey)
+
+    override suspend fun read(): StoredSession? = SessionCodec.decode(item.read())
+
+    override suspend fun write(session: StoredSession?) = item.write(session?.let(SessionCodec::encode))
+
+    internal companion object {
+        const val SERVICE = "eg.bahr.session"
+
+        /** In the app's preferences (gone with an uninstall): this install owns the Keychain item. */
+        const val OWNED_KEY = "eg.bahr.session.keychainOwned"
+    }
+}
+
+/**
+ * The install secret with its device id (M3-M5), in an item of its own. Throws like [KeychainSessionStore]; the
+ * registration logs it and carries on without a secret. On an unsigned simulator build the Keychain refuses every
+ * call (M3-M0 follow-up), so there the secret is not kept across launches.
+ */
+internal class KeychainInstallSecretStore(
+    service: String = SERVICE,
+    defaults: NSUserDefaults = NSUserDefaults.standardUserDefaults,
+    ownedKey: String = OWNED_KEY,
+) : InstallSecretStore {
+    private val item = KeychainItem(service, defaults, ownedKey)
+
+    override suspend fun read(deviceId: String): String? = InstallSecretCodec.secretFor(deviceId, item.read())
+
+    override suspend fun write(
+        deviceId: String,
+        secret: String?,
+    ) = item.write(secret?.let { InstallSecretCodec.encode(deviceId, it) })
+
+    internal companion object {
+        const val SERVICE = "eg.bahr.install"
+        const val OWNED_KEY = "eg.bahr.install.keychainOwned"
+    }
+}
+
+/**
+ * One generic-password item ([service], [ACCOUNT]) holding a string, readable after the first unlock and never
+ * synced or restored to another device (`…ThisDeviceOnly`): a copied refresh token would be replayed from two
+ * devices, which revokes the sign-in (openapi `refreshTokens`), and a copied install secret would let two phones
+ * act as one install.
+ *
+ * The Keychain outlives an uninstall, the preferences do not. So the first read of an install (no
+ * [ownedKey] in [defaults] yet) deletes whatever item a previous install left, and an install that
+ * starts signed out stays signed out, as on Android (M3-M0 review #7).
+ */
+@OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
+private class KeychainItem(
+    private val service: String,
+    private val defaults: NSUserDefaults,
+    private val ownedKey: String,
+) {
+    fun read(): String? {
         if (!defaults.boolForKey(ownedKey)) {
             delete()
             defaults.setBool(true, forKey = ownedKey)
@@ -82,17 +135,17 @@ internal class KeychainSessionStore(
                 else -> error("Keychain read failed: OSStatus $status")
             }
             val data = CFBridgingRelease(result.value) as? NSData ?: return@memScoped null
-            SessionCodec.decode(NSString.create(data = data, encoding = NSUTF8StringEncoding)?.toString())
+            NSString.create(data = data, encoding = NSUTF8StringEncoding)?.toString()
         }
     }
 
-    override suspend fun write(session: StoredSession?) {
+    fun write(value: String?) {
         // Delete then add: simpler than SecItemUpdate's two dictionaries, and a write is rare (sign-in,
-        // a token refresh every so often).
+        // a token refresh every so often, an install's first registration).
         delete()
         defaults.setBool(true, forKey = ownedKey)
-        if (session == null) return
-        val data = (SessionCodec.encode(session) as NSString).dataUsingEncoding(NSUTF8StringEncoding) ?: error("Session not encodable")
+        if (value == null) return
+        val data = (value as NSString).dataUsingEncoding(NSUTF8StringEncoding) ?: error("Value not encodable")
         val add =
             query(
                 kSecValueData to data,
@@ -133,11 +186,7 @@ internal class KeychainSessionStore(
             else -> value
         }
 
-    internal companion object {
-        const val SERVICE = "eg.bahr.session"
+    companion object {
         const val ACCOUNT = "default"
-
-        /** In the app's preferences (gone with an uninstall): this install owns the Keychain item. */
-        const val OWNED_KEY = "eg.bahr.session.keychainOwned"
     }
 }

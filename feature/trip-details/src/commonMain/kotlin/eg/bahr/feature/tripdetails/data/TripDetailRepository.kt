@@ -3,6 +3,8 @@ package eg.bahr.feature.tripdetails.data
 import eg.bahr.core.catalog.data.TripCardCache
 import eg.bahr.core.catalog.model.TripCardDto
 import eg.bahr.core.common.result.AppResult
+import eg.bahr.core.network.auth.AuthSession
+import eg.bahr.core.network.auth.SessionState
 import eg.bahr.feature.tripdetails.model.DepartureDto
 import eg.bahr.feature.tripdetails.model.TripDetailDto
 import eg.bahr.feature.tripdetails.model.WaitlistRequest
@@ -28,6 +30,13 @@ internal interface TripDetailRepository {
      * for a cold open, e.g. a shared link.
      */
     fun cachedCard(slug: String): TripCardDto?
+
+    /**
+     * The signed-in account's email, for the waiting-list form (M3-M5: "signed-in users get the waitlist email
+     * prefilled"); null when signed out, when the account has none, or when it could not be read (the form then
+     * stays empty, as it is signed out).
+     */
+    suspend fun accountEmail(): String?
 }
 
 /**
@@ -39,6 +48,7 @@ internal interface TripDetailRepository {
 internal class DefaultTripDetailRepository(
     private val api: TripDetailApiService,
     private val cards: TripCardCache,
+    private val session: AuthSession,
 ) : TripDetailRepository {
     override suspend fun tripBySlug(slug: String): AppResult<TripDetailDto> = api.tripBySlug(slug)
 
@@ -50,4 +60,9 @@ internal class DefaultTripDetailRepository(
     ): AppResult<Unit> = api.joinWaitlist(departureId, request)
 
     override fun cachedCard(slug: String): TripCardDto? = cards.card(slug)
+
+    override suspend fun accountEmail(): String? {
+        if (session.load() !is SessionState.SignedIn) return null
+        return (api.me() as? AppResult.Success)?.data?.email?.takeIf { it.isNotBlank() }
+    }
 }

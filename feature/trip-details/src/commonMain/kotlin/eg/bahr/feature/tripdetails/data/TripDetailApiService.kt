@@ -3,6 +3,7 @@ package eg.bahr.feature.tripdetails.data
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.network.auth.withDeviceId
 import eg.bahr.core.network.callApi
+import eg.bahr.feature.tripdetails.model.AccountEmailDto
 import eg.bahr.feature.tripdetails.model.DepartureDto
 import eg.bahr.feature.tripdetails.model.TripDetailDto
 import eg.bahr.feature.tripdetails.model.WaitlistRequest
@@ -51,4 +52,7 @@ internal class TripDetailApiService(
                 setBody(request)
             }
         }
+
+    /** `getMe` with the bearer token: the signed-in account's email, to prefill the waiting-list form (M3-M5). */
+    suspend fun me(): AppResult<AccountEmailDto> = callApi { client.get("me") }
 }

@@ -40,6 +40,8 @@ ICONS=(
   # M3-M0b: the bottom bar, Profile and the Alerts tab (docs/design/prototype/Bahr Account - Notifications.dc.html).
   badge chevron_right confirmation_number delete error hourglass_top how_to_reg lock_person logout
   notifications person_remove rate_review support_agent travel_explore
+  # M3-M5: the push pre-prompt sheet's two reasons.
+  bolt do_not_disturb_on
 )
 
 TMP="$(mktemp -d)"

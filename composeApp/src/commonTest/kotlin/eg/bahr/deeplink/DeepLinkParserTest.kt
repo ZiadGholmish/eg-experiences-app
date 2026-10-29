@@ -21,6 +21,21 @@ class DeepLinkParserTest {
     ) = assertEquals(DeepLink.Unknown, parser.parse(url), url)
 
     @Test
+    fun `a waiting-list link opens its trip on the date it names - M3-M5`() {
+        assertEquals(
+            DeepLink.Trip("burullus-dawn", date = "2026-10-24"),
+            prod.parse("https://bahr.eg/t/burullus-dawn?date=2026-10-24"),
+        )
+        assertEquals(
+            DeepLink.Trip("burullus-dawn", AppLanguage.ENGLISH, date = "2026-10-24"),
+            prod.parse("https://bahr.eg/t/burullus-dawn?lang=en&date=2026-10-24"),
+        )
+        listOf("24-10-2026", "2026-10-24T05:00", "", "tomorrow").forEach { date ->
+            assertEquals(DeepLink.Trip("burullus-dawn"), prod.parse("https://bahr.eg/t/burullus-dawn?date=$date"), "date=$date is no date")
+        }
+    }
+
+    @Test
     fun `a share link opens its trip`() {
         assertTrip("burullus-dawn", "https://bahr.eg/t/burullus-dawn")
         assertTrip("a", "https://bahr.eg/t/a")

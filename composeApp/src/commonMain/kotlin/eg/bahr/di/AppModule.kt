@@ -5,12 +5,14 @@ import androidx.datastore.preferences.core.Preferences
 import eg.bahr.core.catalog.di.catalogModule
 import eg.bahr.core.common.error.AppErrorController
 import eg.bahr.core.common.locale.AppLanguage
+import eg.bahr.core.common.push.PushChannel
 import eg.bahr.core.datastore.AppSettingsStore
 import eg.bahr.core.datastore.createPreferencesDataStore
 import eg.bahr.core.datastore.di.dataStoreModule
 import eg.bahr.core.network.ApiConfig
 import eg.bahr.core.network.LanguageTagProvider
 import eg.bahr.core.network.di.networkModule
+import eg.bahr.core.network.install.InstallRegistrar
 import eg.bahr.deeplink.DeepLinkParser
 import eg.bahr.feature.auth.di.AuthConfig
 import eg.bahr.feature.auth.di.authModule
@@ -30,6 +32,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import org.koin.core.Koin
 import org.koin.core.KoinApplication
 import org.koin.core.context.startKoin
 import org.koin.core.module.Module
@@ -145,3 +148,12 @@ fun initKoin(
         appDeclaration()
         modules(appModules(baseUrl, isDebug, appLinks, auth, preferencesPath))
     }
+
+/**
+ * After [initKoin] (M3-M5): reads the push permission once and starts this install's registration (`registerDevice`),
+ * which runs for the life of the process on [scope]: now, on each sign-in and sign-out, and whenever the token changes.
+ */
+fun Koin.startInstallRegistration(scope: CoroutineScope) {
+    getOrNull<PushChannel>()?.refresh()
+    get<InstallRegistrar>().start(scope)
+}

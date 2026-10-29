@@ -25,6 +25,8 @@ internal data class ApiErrorDto(
     val code: String,
     val message: String? = null,
     val violations: List<FieldViolationDto>? = null,
+    /** openapi `ApiError.reason` (since MA-B9): finer than [code] on a few failures. */
+    val reason: String? = null,
 )
 
 @Serializable

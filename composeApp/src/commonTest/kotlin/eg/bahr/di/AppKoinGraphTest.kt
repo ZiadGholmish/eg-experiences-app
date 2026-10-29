@@ -5,7 +5,9 @@ import androidx.datastore.preferences.core.Preferences
 import eg.bahr.core.catalog.data.TripCardCache
 import eg.bahr.core.catalog.data.TripListRepository
 import eg.bahr.core.catalog.data.WaitlistMemory
+import eg.bahr.core.common.auth.DeviceIdRenewal
 import eg.bahr.core.common.auth.DeviceIdSource
+import eg.bahr.core.common.auth.InstallSecretStore
 import eg.bahr.core.common.auth.SessionStore
 import eg.bahr.core.common.error.AppErrorController
 import eg.bahr.core.datastore.ActiveHoldStore
@@ -15,6 +17,7 @@ import eg.bahr.core.datastore.WaitlistJoinsStore
 import eg.bahr.core.network.ApiConfig
 import eg.bahr.core.network.LanguageTagProvider
 import eg.bahr.core.network.auth.AuthSession
+import eg.bahr.core.network.install.InstallRegistrar
 import eg.bahr.core.testing.TEST_BASE_URL
 import eg.bahr.core.testing.runKoinGraphTest
 import eg.bahr.deeplink.DeepLinkParser
@@ -59,6 +62,9 @@ class AppKoinGraphTest {
             assertSame(koin.get<TripCardCache>(), koin.get<TripCardCache>(), "one card cache for Home and the trip page")
             assertSame(koin.get<WaitlistMemory>(), koin.get<WaitlistMemory>(), "one waiting-list memory for every list")
             assertSame(koin.get<AuthSession>(), koin.get<AuthSession>(), "one sign-in for every request and screen (M3-M0)")
+            assertSame(koin.get<InstallRegistrar>(), koin.get<InstallRegistrar>(), "one registration of the install at a time (M3-M5)")
+            assertSame<Any>(koin.get<DeviceIdSource>(), koin.get<DeviceIdRenewal>(), "the id renewed is the id sent (M3-M5)")
+            koin.get<InstallSecretStore>()
             koin.get<HttpClient>().close()
         }
 

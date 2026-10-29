@@ -3,6 +3,7 @@ package eg.bahr
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.window.ComposeUIViewController
 import eg.bahr.core.common.locale.AppLanguage
+import eg.bahr.core.common.push.PushChannel
 import eg.bahr.core.datastore.APP_PREFERENCES_FILE
 import eg.bahr.deeplink.AppDeepLinkInbox
 import eg.bahr.di.AppAppearanceState
@@ -10,12 +11,18 @@ import eg.bahr.di.AppLanguageState
 import eg.bahr.di.AppLinkConfig
 import eg.bahr.di.initKoin
 import eg.bahr.di.seedStoredAppearance
+import eg.bahr.di.startInstallRegistration
 import eg.bahr.feature.auth.di.AuthConfig
 import eg.bahr.feature.auth.di.NativeSignIn
 import eg.bahr.feature.map.di.TripMapNativeViews
 import eg.bahr.navigation.AppTab
 import eg.bahr.navigation.AppTabsState
+import eg.bahr.push.AppPushChannel
+import eg.bahr.push.openPush
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
@@ -98,6 +105,9 @@ interface AppTabBar {
  * the framework header as [mapViews] is. Swift leaves it out when [allowFakeSignIn] (a Debug build of
  * the Local configuration with no Google client id): the local backend's fake verifier only takes
  * made-up tokens, which the app then signs in with instead. Honoured only with [isDebug].
+ *
+ * [pushAvailable] (M3-M5): Swift configured Firebase, which it does only when the build carries a
+ * `GoogleService-Info.plist` (M3-M19a); without it push is off and the install registers without a token.
  */
 @Suppress("unused")
 fun startApp(
@@ -109,8 +119,10 @@ fun startApp(
     allowFakeSignIn: Boolean,
     tabBar: AppTabBar,
     selectedTab: AppTab,
+    pushAvailable: Boolean,
 ) {
     if (IosTabs.started) return
+    val push = iosPushChannel(pushAvailable, IosPushState.scope).also { IosPushState.channel = it }
     initKoin(
         baseUrl = baseUrl,
         isDebug = isDebug,
@@ -123,7 +135,10 @@ fun startApp(
     ) {
         mapViews?.let { views -> modules(module { single<TripMapNativeViews> { views } }) }
         nativeSignIn?.let { bridge -> modules(module { single<NativeSignIn> { bridge } }) }
+        // The platform's push (M3-M5): core:network registers the install with its token.
+        modules(module { single<PushChannel> { push } })
     }
+    KoinPlatform.getKoin().startInstallRegistration(IosPushState.scope)
     // The stored appearance before any Compose root or the bar draws (M3-M0b review R4-1).
     KoinPlatform.getKoin().seedStoredAppearance()
     IosTabs.start(tabBar, selectedTab)
@@ -156,6 +171,45 @@ fun onTabTapped(tab: AppTab) {
 @Suppress("unused")
 fun onDeepLink(url: String) {
     AppDeepLinkInbox.offer(url)
+}
+
+/**
+ * Swift entry point (M3-M5): the FCM token from Firebase Messaging's delegate, at start and whenever it rotates; nil
+ * when there is none. Never logged.
+ */
+@Suppress("unused")
+fun onPushToken(token: String?) {
+    IosPushState.pendingToken = token
+    IosPushState.channel?.onFcmToken(token)
+}
+
+/**
+ * Swift entry point (M3-M5): a tap on one of our notifications, with the push's `link` and `type` data. Safe before
+ * [startApp]: the link waits in the inbox, as a Universal Link does.
+ */
+@Suppress("unused")
+fun onPushOpened(
+    link: String?,
+    type: String?,
+) {
+    openPush(link, type)
+}
+
+/** Swift entry point (M3-M5): the app became active; the notification permission may have changed in Settings. */
+@Suppress("unused")
+fun onAppForeground() {
+    IosPushState.channel?.refresh()
+}
+
+/** The push channel [startApp] made, and a token Swift handed over before it. One per process, like Koin. */
+private object IosPushState {
+    val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    var channel: AppPushChannel? = null
+        set(value) {
+            field = value
+            pendingToken?.let { value?.onFcmToken(it) }
+        }
+    var pendingToken: String? = null
 }
 
 /**

@@ -57,6 +57,7 @@ suspend inline fun <reified T> callApi(crossinline block: suspend () -> HttpResp
                         code = envelope.error?.code ?: ApiErrorCodes.UNKNOWN,
                         message = envelope.error?.message,
                         httpStatus = response.status.value,
+                        reason = envelope.error?.reason,
                     ),
                 )
         }

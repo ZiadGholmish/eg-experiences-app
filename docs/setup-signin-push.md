@@ -25,7 +25,7 @@ has no `AUTH_GOOGLE_CLIENT_IDS` yet.
 |---|---|---|
 | Google client ids | `local`: signs in with fake tokens. `dev`/`prod`: no provider, and the sheet says sign-in is not set up | Google button hidden, Apple only. `Debug` (Local): fake tokens |
 | Apple capability on the App ID | n/a (Android has no Apple sign-in) | the build still compiles, but a device build can't be signed with the entitlement (see step 4) |
-| Firebase file | builds, no Firebase config, push off | builds; the "Copy Firebase Config" phase logs `push is off in this build` |
+| Firebase file | builds and runs: no `FirebaseApp`, push off, the install registers without a token, no push pre-prompt | builds and runs: Firebase is not configured (`PushSetup`), push off, the same; the "Copy Firebase Config" phase logs `push is off in this build` |
 
 Each one turns on by dropping the value or file in and rebuilding. No code or build-file change is needed.
 
@@ -88,8 +88,11 @@ terraform -chdir=bahr-be/terraform/environments/dev/google output -raw google_se
 | `GoogleService-Info.plist` | `iosApp/Firebase/<env>/GoogleService-Info.plist` (`local`, `dev`, `prod`, from `APP_ENVIRONMENT` in the xcconfig) | a "Copy Firebase Config" build phase copies it into the app, and only when it is there. A normal Resources entry would fail the build without the file |
 
 The placeholders `androidApp/google-services.json.example` and `iosApp/Firebase/GoogleService-Info.plist.example`
-show each file's shape. The Firebase SDK itself, permission prompts and token registration are M3-M5. Until
-then the files are only packaged.
+show each file's shape. Since M3-M5 the app uses them: Android's `firebase-messaging` (`:composeApp`'s
+`AndroidPush.kt`, `:androidApp`'s `PushService`) and iOS's Firebase Messaging (Swift Package `firebase-ios-sdk`,
+`iosApp/iosApp/Push.swift`). The install registers on every start (`POST /devices`, token only once notifications are
+allowed); the push pre-prompt follows a waiting-list join; a tap opens the trip page on the push's date. Android's
+default notification channel is `bahr_default` (`androidApp/src/main/res/values/strings.xml`, named in the manifest).
 
 Uploading the APNs auth key to Firebase (`keys.md` step 5) is what makes iOS push deliver. It needs nothing in the
 app.

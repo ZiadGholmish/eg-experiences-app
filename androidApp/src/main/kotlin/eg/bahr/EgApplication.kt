@@ -13,6 +13,8 @@ class EgApplication : Application() {
             appLinkAllowsHttp = BuildConfig.APP_LINK_ALLOWS_HTTP,
             googleServerClientId = BuildConfig.GOOGLE_SERVER_CLIENT_ID,
             allowFakeSignIn = BuildConfig.ALLOW_FAKE_SIGN_IN,
+            pushChannelId = getString(R.string.push_channel_id),
+            pushChannelName = getString(R.string.push_channel_name),
         )
     }
 }

@@ -4,6 +4,7 @@ import eg.bahr.feature.tripdetails.data.DefaultTripDetailRepository
 import eg.bahr.feature.tripdetails.data.TripDetailApiService
 import eg.bahr.feature.tripdetails.data.TripDetailRepository
 import eg.bahr.feature.tripdetails.presentation.TripDetailViewModel
+import eg.bahr.feature.tripdetails.presentation.TripLink
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
@@ -14,6 +15,7 @@ import org.koin.dsl.module
 val tripDetailsModule =
     module {
         single { TripDetailApiService(get()) }
-        single<TripDetailRepository> { DefaultTripDetailRepository(get(), get()) }
-        viewModel { (slug: String) -> TripDetailViewModel(slug, get(), get()) }
+        // AuthSession (core:network): a signed-in person's waiting-list email is prefilled (M3-M5).
+        single<TripDetailRepository> { DefaultTripDetailRepository(get(), get(), get()) }
+        viewModel { (slug: String, link: TripLink) -> TripDetailViewModel(slug, get(), get(), link) }
     }

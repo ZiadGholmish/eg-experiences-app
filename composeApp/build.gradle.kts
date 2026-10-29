@@ -18,6 +18,8 @@ kotlin {
             implementation(libs.androidx.activity.compose)
             implementation(libs.koin.android)
             implementation(libs.ktor.client.okhttp)
+            // Push (M3-M5): the FCM token and foreground pushes (AndroidPush.kt). Starts only with a google-services.json.
+            implementation(libs.firebase.messaging)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)

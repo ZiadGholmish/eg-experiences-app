@@ -2,6 +2,7 @@ package eg.bahr.core.network
 
 import co.touchlab.kermit.Logger
 import eg.bahr.core.common.auth.DeviceIdSource
+import eg.bahr.core.common.auth.InstallSecretStore
 import eg.bahr.core.network.auth.AuthSession
 import eg.bahr.core.network.auth.HttpSessionRemote
 import eg.bahr.core.network.auth.bahrAuth
@@ -49,7 +50,8 @@ internal object HttpClientFactory {
         languageTagProvider: LanguageTagProvider,
         session: AuthSession,
         deviceIds: DeviceIdSource,
-    ): HttpClient = HttpClient { configure(config, languageTagProvider, session, deviceIds) }
+        installSecrets: InstallSecretStore?,
+    ): HttpClient = HttpClient { configure(config, languageTagProvider, session, deviceIds, installSecrets) }
 
     fun create(
         engine: HttpClientEngine,
@@ -57,8 +59,9 @@ internal object HttpClientFactory {
         languageTagProvider: LanguageTagProvider,
         session: AuthSession?,
         deviceIds: DeviceIdSource?,
+        installSecrets: InstallSecretStore? = null,
     ): HttpClient =
-        HttpClient(engine) { configure(config, languageTagProvider, session, deviceIds) }
+        HttpClient(engine) { configure(config, languageTagProvider, session, deviceIds, installSecrets) }
             // Tests build the client directly; it is the session's way to the server then.
             .also { client -> session?.remote = HttpSessionRemote { client } }
 
@@ -67,11 +70,12 @@ internal object HttpClientFactory {
         languageTagProvider: LanguageTagProvider,
         session: AuthSession?,
         deviceIds: DeviceIdSource?,
+        installSecrets: InstallSecretStore?,
     ) {
         expectSuccess = false
 
         // Signed-in requests (M3-M0). Without a session (most ApiService tests) requests go anonymous.
-        if (session != null) install(bahrAuth(session, deviceIds ?: DeviceIdSource { error("no device id source") }))
+        if (session != null) install(bahrAuth(session, deviceIds ?: DeviceIdSource { error("no device id source") }, installSecrets))
 
         install(ContentNegotiation) {
             json(json)
@@ -117,6 +121,7 @@ fun apiHttpClient(
     config: ApiConfig,
     session: AuthSession? = null,
     deviceIds: DeviceIdSource? = null,
+    installSecrets: InstallSecretStore? = null,
     // Last, so the tests' trailing `{ "ar" }` still means the language.
     languageTagProvider: LanguageTagProvider,
-): HttpClient = HttpClientFactory.create(engine, config, languageTagProvider, session, deviceIds)
+): HttpClient = HttpClientFactory.create(engine, config, languageTagProvider, session, deviceIds, installSecrets)
