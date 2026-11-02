@@ -1,7 +1,7 @@
 package eg.bahr.feature.booking.data
 
 import eg.bahr.core.common.result.AppResult
-import eg.bahr.core.network.auth.withDeviceId
+import eg.bahr.core.network.auth.withInstallSecret
 import eg.bahr.core.network.callApi
 import eg.bahr.feature.booking.model.BookingDepartureDto
 import eg.bahr.feature.booking.model.BookingDto
@@ -39,8 +39,9 @@ internal class BookingApiService(
     suspend fun placeHold(request: PlaceHoldRequest): AppResult<HeldSeatsDto> =
         callApi {
             client.post("bookings") {
-                // So a signed-in account can claim this device's anonymous hold (M3-B1).
-                withDeviceId()
+                // So a signed-in account can claim this device's anonymous hold (M3-B1), and with the install's secret
+                // (M3-B13a, openapi `HoldInstallSecret`) so a lapse counts against this install only when it proves it.
+                withInstallSecret()
                 setBody(request)
             }
         }

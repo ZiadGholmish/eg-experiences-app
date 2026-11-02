@@ -150,3 +150,10 @@ fun NavController.navigateToBookingConfirmed(ref: String) =
     navigate(BookingConfirmedRoute(ref)) {
         popUpTo<BookingRoute> { inclusive = true }
     }
+
+/**
+ * A booking opened from outside the booking flow (M3-M6: a notification about it), on top of what is open, by its
+ * reference: the same page as after paying, which reads the booking again and shows it as it is now. Unlike
+ * [navigateToBookingConfirmed] it pops nothing, so Back returns to where it was opened from.
+ */
+fun NavController.navigateToBookingByRef(ref: String) = navigate(BookingConfirmedRoute(ref)) { launchSingleTop = true }

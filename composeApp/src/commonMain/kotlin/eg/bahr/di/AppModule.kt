@@ -22,6 +22,7 @@ import eg.bahr.feature.host.di.hostModule
 import eg.bahr.feature.map.di.mapModule
 import eg.bahr.feature.mytrips.di.myTripsModule
 import eg.bahr.feature.notifications.di.notificationsModule
+import eg.bahr.feature.notifications.navigation.UnreadAlerts
 import eg.bahr.feature.reviews.di.reviewsModule
 import eg.bahr.feature.search.di.searchModule
 import eg.bahr.feature.settings.di.settingsModule
@@ -156,4 +157,15 @@ fun initKoin(
 fun Koin.startInstallRegistration(scope: CoroutineScope) {
     getOrNull<PushChannel>()?.refresh()
     get<InstallRegistrar>().start(scope)
+}
+
+/**
+ * The app came to the front (both platforms' entry points): the notification permission is read again (M3-M5), a
+ * registration that did not land (an offline first launch) is tried again on [scope] (M3-M5 review #2), and the bell's
+ * unread count is read again (M3-M6, handoff §1: on app foreground).
+ */
+fun Koin.onAppForeground(scope: CoroutineScope) {
+    getOrNull<PushChannel>()?.refresh()
+    getOrNull<InstallRegistrar>()?.onForeground(scope)
+    getOrNull<UnreadAlerts>()?.refresh()
 }

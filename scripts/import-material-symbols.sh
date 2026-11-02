@@ -42,6 +42,8 @@ ICONS=(
   notifications person_remove rate_review support_agent travel_explore
   # M3-M5: the push pre-prompt sheet's two reasons.
   bolt do_not_disturb_on
+  # M3-M6: the notifications page (row types, Mark all as read, the error state, the row menu).
+  check_circle cloud_off done_all mark_email_read mark_email_unread visibility_off
 )
 
 TMP="$(mktemp -d)"

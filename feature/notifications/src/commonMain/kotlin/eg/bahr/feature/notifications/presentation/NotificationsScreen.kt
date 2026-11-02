@@ -1,6 +1,5 @@
 package eg.bahr.feature.notifications.presentation
 
-import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,146 +16,464 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.paging.LoadState
+import androidx.paging.compose.LazyPagingItems
+import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.itemContentType
+import androidx.paging.compose.itemKey
+import eg.bahr.core.designsystem.components.BahrBottomSheet
 import eg.bahr.core.designsystem.components.BahrLottie
+import eg.bahr.core.designsystem.components.BahrPrimaryButton
+import eg.bahr.core.designsystem.components.BahrSkeleton
+import eg.bahr.core.designsystem.components.BahrSkeletonCircle
+import eg.bahr.core.designsystem.components.BahrSkeletonLine
 import eg.bahr.core.designsystem.icon.BahrIcons
+import eg.bahr.core.designsystem.lifecycle.RefreshesOnReturn
 import eg.bahr.core.designsystem.theme.BahrSize
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.action_back
+import eg.bahr.core.localization.generated.resources.action_retry
+import eg.bahr.core.localization.generated.resources.alerts_clear_read
+import eg.bahr.core.localization.generated.resources.alerts_clear_read_body
+import eg.bahr.core.localization.generated.resources.alerts_clear_read_keep
+import eg.bahr.core.localization.generated.resources.alerts_clear_read_title
+import eg.bahr.core.localization.generated.resources.alerts_deleted
+import eg.bahr.core.localization.generated.resources.alerts_earlier
 import eg.bahr.core.localization.generated.resources.alerts_empty_body
 import eg.bahr.core.localization.generated.resources.alerts_empty_title
-import eg.bahr.core.localization.generated.resources.alerts_signed_out_body
-import eg.bahr.core.localization.generated.resources.alerts_signed_out_title
+import eg.bahr.core.localization.generated.resources.alerts_error_body
+import eg.bahr.core.localization.generated.resources.alerts_error_title
+import eg.bahr.core.localization.generated.resources.alerts_mark_all_read
+import eg.bahr.core.localization.generated.resources.alerts_more
+import eg.bahr.core.localization.generated.resources.alerts_time_days
+import eg.bahr.core.localization.generated.resources.alerts_time_hours
+import eg.bahr.core.localization.generated.resources.alerts_time_minutes
+import eg.bahr.core.localization.generated.resources.alerts_time_now
 import eg.bahr.core.localization.generated.resources.alerts_title
+import eg.bahr.core.localization.generated.resources.alerts_today
+import eg.bahr.core.localization.generated.resources.alerts_undo
 import eg.bahr.core.network.auth.SessionState
+import eg.bahr.feature.notifications.presentation.components.NotificationRow
+import eg.bahr.feature.notifications.presentation.components.NotificationRowActions
+import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Instant
+
+/** Where a tap on an item goes, joined in :composeApp (see `notificationsScreen`). */
+internal data class AlertDestinations(
+    val onOpenTrip: (slug: String, date: String?, placeOpened: Boolean) -> Unit,
+    val onOpenBooking: (ref: String) -> Unit,
+    /** My reviews; null until it exists (M3-M4): a review's item then only reads. */
+    val onOpenReview: ((id: String) -> Unit)?,
+)
+
+/** What the page's controls call, the view model's in the app and no-ops in the screenshot tests. */
+internal data class NotificationsActions(
+    val onBack: () -> Unit,
+    val onOpen: (InboxEntry.Item) -> Unit = {},
+    val onSetRead: (InboxEntry.Item, Boolean) -> Unit = { _, _ -> },
+    val onDelete: (InboxEntry.Item) -> Unit = {},
+    val onUndoDelete: (String) -> Unit = {},
+    val onCommitDelete: (String) -> Unit = {},
+    val onMarkAllRead: () -> Unit = {},
+    val onAskClearRead: () -> Unit = {},
+    val onDismissClearRead: () -> Unit = {},
+    val onClearRead: () -> Unit = {},
+    val onRetry: () -> Unit = {},
+)
 
 /**
- * The notifications page (M3-M0b, handoff §3's states), pushed from Home's bell since M3-M6a (the Alerts
- * tab before); [onBack] is its top bar's Back. Until M3-B9 / M3-M6 bring the list: signed in,
- * the empty state ("No notifications yet"); signed out, why sign-in is needed and the sign-in buttons,
- * which are feature:auth's ([signInButtons], joined in :composeApp). Nothing while the stored sign-in
- * is still being read, so neither state flashes.
+ * The notifications page (M3-M6, account handoff §3), pushed from Home's bell (M3-M6a): newest first in Today and
+ * Earlier, unread rows tinted with a dot, a tap reads the item and opens its page ([destinations]), "Mark all as read",
+ * a swipe deletes with Undo, a long press reads, unreads or deletes, and the overflow's "Clear read". Signed out it is
+ * this install's guest inbox (M3-B12), so there is no sign-in prompt. Reads again on each return.
  */
 @Composable
 internal fun NotificationsScreen(
     onBack: () -> Unit,
-    signInButtons: @Composable (Modifier) -> Unit,
+    destinations: AlertDestinations,
     viewModel: NotificationsViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    NotificationsContent(state = state, onBack = onBack, signInButtons = signInButtons)
+    val items = viewModel.notifications.collectAsLazyPagingItems()
+    RefreshesOnReturn(viewModel::refresh)
+    val actions =
+        remember(viewModel, destinations, onBack) {
+            NotificationsActions(
+                onBack = onBack,
+                onOpen = { item ->
+                    viewModel.open(item)
+                    destinations.open(item.target)
+                },
+                onSetRead = viewModel::setRead,
+                onDelete = viewModel::delete,
+                onUndoDelete = viewModel::undoDelete,
+                onCommitDelete = viewModel::commitDelete,
+                onMarkAllRead = viewModel::markAllRead,
+                onAskClearRead = viewModel::askClearRead,
+                onDismissClearRead = viewModel::dismissClearRead,
+                onClearRead = viewModel::clearRead,
+                onRetry = viewModel::refresh,
+            )
+        }
+    NotificationsContent(state = state, items = items, actions = actions)
+    if (state.confirmClearRead) {
+        BahrBottomSheet(props = clearReadProps(state, actions)) { ClearReadBody() }
+    }
+}
+
+private fun AlertDestinations.open(target: AlertTarget?) {
+    when (target) {
+        is AlertTarget.Trip -> onOpenTrip(target.slug, target.date, target.placeOpened)
+        is AlertTarget.Booking -> onOpenBooking(target.ref)
+        is AlertTarget.Review -> onOpenReview?.invoke(target.id)
+        null -> Unit
+    }
 }
 
 /** Stateless, for the screenshot tests. */
 @Composable
 internal fun NotificationsContent(
     state: NotificationsUiState,
-    onBack: () -> Unit,
-    signInButtons: @Composable (Modifier) -> Unit,
-    scroll: ScrollState = rememberScrollState(),
+    items: LazyPagingItems<InboxEntry>,
+    actions: NotificationsActions,
 ) {
-    val c = MaterialTheme.colorScheme
+    val snackbar = remember { SnackbarHostState() }
+    UndoSnackbar(state.pendingDelete, snackbar, actions)
+    val refresh = items.loadState.refresh
+    val hasItems = items.itemCount > 0
     // The handoff's page is `surface` (not the off-white page of the trip lists), in light and dark.
-    Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(c.surface)
-                .windowInsetsPadding(WindowInsets.statusBars)
-                // A pushed page since M3-M6a, so no tab bar takes the gesture area for it: the sign-in
-                // buttons, scrolled to the end with large text, stay above it.
-                .windowInsetsPadding(WindowInsets.navigationBars),
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surface)
+            .windowInsetsPadding(WindowInsets.statusBars)
+            // A pushed page (M3-M6a): no tab bar takes the gesture area, so the list's end stays above it.
+            .windowInsetsPadding(WindowInsets.navigationBars),
     ) {
-        TopBar(onBack)
-        // The state sits in the middle of the space under the title, and scrolls when it does not fit
-        // (large text, a small phone).
-        BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
-            Column(
-                modifier = Modifier.verticalScroll(scroll).heightIn(min = maxHeight).fillMaxWidth(),
-                verticalArrangement = Arrangement.Center,
-            ) {
-                StateFor(state.session, signInButtons)
+        Column(Modifier.fillMaxSize()) {
+            TopBar(actions, showListActions = hasItems && state.session != SessionState.Unknown)
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                when {
+                    // The stored sign-in not read yet: which inbox is not known, so nothing flashes.
+                    state.session == SessionState.Unknown -> Unit
+                    hasItems -> InboxList(items, state.now, actions)
+                    refresh is LoadState.Loading -> InboxSkeleton()
+                    refresh is LoadState.Error ->
+                        Centred {
+                            StateMessage(
+                                art = {
+                                    StateDisc(
+                                        BahrIcons.CloudOff,
+                                        MaterialTheme.colorScheme.errorContainer,
+                                        MaterialTheme.colorScheme.onErrorContainer,
+                                    )
+                                },
+                                title = stringResource(Res.string.alerts_error_title),
+                                body = stringResource(Res.string.alerts_error_body),
+                            ) {
+                                BahrPrimaryButton(
+                                    text = stringResource(Res.string.action_retry),
+                                    onClick = actions.onRetry,
+                                    modifier = Modifier.fillMaxWidth().padding(top = BahrSpacing.md),
+                                )
+                            }
+                        }
+                    else -> Centred { EmptyState() }
+                }
             }
+        }
+        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(BahrSpacing.gutter)) { Snackbar(it) }
+    }
+}
+
+/**
+ * The swipe's Undo (M3-M6): one snackbar per deleted item; Undo puts it back, and its going away (timeout, a swipe on
+ * the snackbar) lets the delete go. A next delete replaces it; the view model has already sent the first.
+ */
+@Composable
+private fun UndoSnackbar(
+    pending: PendingDelete?,
+    snackbar: SnackbarHostState,
+    actions: NotificationsActions,
+) {
+    val message = stringResource(Res.string.alerts_deleted)
+    val undo = stringResource(Res.string.alerts_undo)
+    val current by rememberUpdatedState(actions)
+    LaunchedEffect(pending?.id, snackbar) {
+        val id = pending?.id ?: return@LaunchedEffect
+        when (snackbar.showSnackbar(message, actionLabel = undo, duration = SnackbarDuration.Short)) {
+            SnackbarResult.ActionPerformed -> current.onUndoDelete(id)
+            SnackbarResult.Dismissed -> current.onCommitDelete(id)
         }
     }
 }
 
 /**
- * A pushed page's bar (M3-M6a), as the handoff's other pushed page (Edit personal info): Back, then the
- * title. Back is drawn because iOS has no system Back button, only the edge swipe.
+ * The page's bar: Back, and with a list "Mark all as read" (the prototype's text button) and an overflow holding
+ * "Clear read" (not in the prototype: see the step report); the title under it, at the prototype's heading size. One
+ * row cannot hold Back, the title and both actions at 360dp ("Notifications" was cut), and the prototype, drawn as a
+ * tab, had no Back.
  */
 @Composable
-private fun TopBar(onBack: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().heightIn(min = BahrSize.topBar).padding(horizontal = BahrSpacing.sm),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(BahrSpacing.xs),
-    ) {
-        IconButton(onClick = onBack, modifier = Modifier.size(BahrSize.touchTarget)) {
-            Icon(
-                BahrIcons.ArrowBack.outlined(),
-                contentDescription = stringResource(Res.string.action_back),
-                // Set, not inherited: iOS roots have no Scaffold to provide a content colour, so dark
-                // would draw it black on the dark page.
-                tint = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.size(BahrSize.iconNav),
-            )
+private fun TopBar(
+    actions: NotificationsActions,
+    showListActions: Boolean,
+) {
+    val c = MaterialTheme.colorScheme
+    Column(Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().heightIn(min = BahrSize.touchTarget).padding(horizontal = BahrSpacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(BahrSpacing.xs),
+        ) {
+            IconButton(onClick = actions.onBack, modifier = Modifier.size(BahrSize.touchTarget)) {
+                Icon(
+                    BahrIcons.ArrowBack.outlined(),
+                    contentDescription = stringResource(Res.string.action_back),
+                    // Set, not inherited: iOS roots have no Scaffold to provide a content colour, so dark
+                    // would draw it black on the dark page.
+                    tint = c.onSurface,
+                    modifier = Modifier.size(BahrSize.iconNav),
+                )
+            }
+            Box(Modifier.weight(1f))
+            if (showListActions) {
+                TextButton(onClick = actions.onMarkAllRead, modifier = Modifier.heightIn(min = BahrSize.touchTarget)) {
+                    Icon(
+                        BahrIcons.DoneAll.outlined(),
+                        contentDescription = null,
+                        tint = c.primary,
+                        modifier = Modifier.size(BahrSize.iconMedium),
+                    )
+                    Text(
+                        text = stringResource(Res.string.alerts_mark_all_read),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = c.primary,
+                        modifier = Modifier.padding(start = BahrSpacing.xs),
+                    )
+                }
+                Overflow(actions)
+            }
         }
         Text(
             text = stringResource(Res.string.alerts_title),
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.semantics { heading() },
+            // The prototype's 26px heading at 800.
+            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.ExtraBold),
+            color = c.onSurface,
+            modifier = Modifier.padding(horizontal = BahrSpacing.gutter).padding(bottom = BahrSpacing.xs).semantics { heading() },
         )
     }
 }
 
 @Composable
-private fun StateFor(
-    session: SessionState,
-    signInButtons: @Composable (Modifier) -> Unit,
-) {
-    val c = MaterialTheme.colorScheme
-    when (session) {
-        SessionState.Unknown -> Unit
-        SessionState.SignedOut ->
-            StateMessage(
-                art = { StateDisc(BahrIcons.LockPerson, disc = c.surfaceContainer, tint = c.onSurfaceVariant) },
-                title = stringResource(Res.string.alerts_signed_out_title),
-                body = stringResource(Res.string.alerts_signed_out_body),
-            ) { signInButtons(Modifier.padding(top = BahrSpacing.md)) }
-        // The empty state rings its bell (M3-M8), over and over while on screen (M3-M8b, the user's call):
-        // the same disc and bell as the still state's, in motion. Decorative: the title says it.
-        is SessionState.SignedIn ->
-            StateMessage(
-                art = {
-                    BahrLottie(
-                        modifier = Modifier.width(BahrSize.lottieState),
-                        props = BahrLottie.Props(BahrLottie.Animation.Bell, playback = BahrLottie.Playback.Loop),
-                    )
-                },
-                title = stringResource(Res.string.alerts_empty_title),
-                body = stringResource(Res.string.alerts_empty_body),
+private fun Overflow(actions: NotificationsActions) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { open = true }, modifier = Modifier.size(BahrSize.touchTarget)) {
+            Icon(
+                BahrIcons.MoreVert.outlined(),
+                contentDescription = stringResource(Res.string.alerts_more),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(BahrSize.iconNav),
             )
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            DropdownMenuItem(
+                text = { Text(stringResource(Res.string.alerts_clear_read)) },
+                leadingIcon = { Icon(BahrIcons.Delete.outlined(), contentDescription = null) },
+                onClick = {
+                    open = false
+                    actions.onAskClearRead()
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun InboxList(
+    items: LazyPagingItems<InboxEntry>,
+    now: Instant,
+    actions: NotificationsActions,
+) {
+    LazyColumn(state = rememberLazyListState(), modifier = Modifier.fillMaxSize()) {
+        items(
+            count = items.itemCount,
+            key = items.itemKey { it.key },
+            contentType = items.itemContentType { if (it is InboxEntry.Header) CONTENT_HEADER else CONTENT_ITEM },
+        ) { index ->
+            when (val entry = items[index]) {
+                is InboxEntry.Header -> GroupLabel(entry.group)
+                is InboxEntry.Item ->
+                    NotificationRow(
+                        item = entry,
+                        time = relativeTime(entry.createdAt, now),
+                        actions =
+                            NotificationRowActions(
+                                onOpen = { actions.onOpen(entry) },
+                                onSetRead = { read -> actions.onSetRead(entry, read) },
+                                onDelete = { actions.onDelete(entry) },
+                            ),
+                    )
+                null -> Unit
+            }
+        }
+        when (items.loadState.append) {
+            is LoadState.Loading -> item(key = KEY_APPEND, contentType = CONTENT_SKELETON) { SkeletonRow(SKELETON_WIDTHS.first()) }
+            is LoadState.Error ->
+                item(key = KEY_APPEND, contentType = CONTENT_RETRY) {
+                    Box(Modifier.fillMaxWidth().padding(BahrSpacing.md), contentAlignment = Alignment.Center) {
+                        TextButton(onClick = items::retry) { Text(stringResource(Res.string.action_retry)) }
+                    }
+                }
+            is LoadState.NotLoading -> Unit
+        }
+    }
+}
+
+@Composable
+private fun GroupLabel(group: InboxGroup) {
+    Text(
+        text = stringResource(if (group == InboxGroup.Today) Res.string.alerts_today else Res.string.alerts_earlier),
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(start = BahrSpacing.gutter, end = BahrSpacing.gutter, top = BahrSpacing.md, bottom = BahrSpacing.xs)
+                .semantics { heading() },
+    )
+}
+
+/**
+ * "now", "12 min", "1 h", "12 d" (the prototype's), in Western digits. Counted from [now], the time of the last read,
+ * so the rows do not tick on screen; each return reads the list (and the time) again.
+ */
+@Composable
+private fun relativeTime(
+    createdAt: Instant,
+    now: Instant,
+): String {
+    val elapsed = (now - createdAt).coerceAtLeast(Duration.ZERO)
+    return when {
+        elapsed < 1.minutes -> stringResource(Res.string.alerts_time_now)
+        elapsed < 1.hours -> stringResource(Res.string.alerts_time_minutes, elapsed.inWholeMinutes.toInt())
+        elapsed < 1.days -> stringResource(Res.string.alerts_time_hours, elapsed.inWholeHours.toInt())
+        else -> elapsed.inWholeDays.toInt().let { pluralStringResource(Res.plurals.alerts_time_days, it, it) }
+    }
+}
+
+/** The handoff's loading state: the group label, then 7 rows, at the prototype's widths. One "Loading" node for readers. */
+@Composable
+private fun InboxSkeleton() {
+    BahrSkeleton(modifier = Modifier.fillMaxSize().padding(top = BahrSpacing.sm), verticalArrangement = Arrangement.Top) {
+        BahrSkeletonLine(
+            modifier =
+                Modifier
+                    .padding(start = BahrSpacing.gutter, end = BahrSpacing.gutter, top = BahrSpacing.sm, bottom = BahrSpacing.md)
+                    .width(BahrSize.skeletonLabelWidth),
+        )
+        SKELETON_WIDTHS.forEach { SkeletonRow(it) }
+    }
+}
+
+@Composable
+private fun SkeletonRow(widths: SkeletonWidths) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = BahrSpacing.gutter, vertical = BahrSpacing.md),
+        horizontalArrangement = Arrangement.spacedBy(BahrSpacing.md),
+    ) {
+        BahrSkeletonCircle(props = BahrSkeletonCircle.Props(BahrSize.notificationDisc))
+        Column(
+            Modifier.weight(1f).padding(top = BahrSpacing.xs),
+            verticalArrangement = Arrangement.spacedBy(BahrSpacing.sm),
+        ) {
+            BahrSkeletonLine(props = BahrSkeletonLine.Props(widthFraction = widths.title))
+            BahrSkeletonLine(props = BahrSkeletonLine.Props(widthFraction = widths.body, height = BahrSize.skeletonLineSmall))
+        }
+    }
+}
+
+/** A skeleton row's two lines, as shares of the text column (the prototype's `skel` list, docs/reviews/M3-M14). */
+private data class SkeletonWidths(
+    val title: Float,
+    val body: Float,
+)
+
+private val SKELETON_WIDTHS =
+    listOf(
+        SkeletonWidths(0.62f, 0.88f),
+        SkeletonWidths(0.74f, 0.76f),
+        SkeletonWidths(0.55f, 0.92f),
+        SkeletonWidths(0.68f, 0.70f),
+        SkeletonWidths(0.80f, 0.84f),
+        SkeletonWidths(0.58f, 0.66f),
+        SkeletonWidths(0.70f, 0.90f),
+    )
+
+/** Empty (M3-M8): the bell rings, over and over while on screen (M3-M8b). Decorative: the title says it. */
+@Composable
+private fun EmptyState() {
+    StateMessage(
+        art = {
+            BahrLottie(
+                modifier = Modifier.width(BahrSize.lottieState),
+                props = BahrLottie.Props(BahrLottie.Animation.Bell, playback = BahrLottie.Playback.Loop),
+            )
+        },
+        title = stringResource(Res.string.alerts_empty_title),
+        body = stringResource(Res.string.alerts_empty_body),
+    )
+}
+
+/** The state sits in the middle of the space under the title, and scrolls when it does not fit (large text). */
+@Composable
+private fun Centred(content: @Composable () -> Unit) {
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier.verticalScroll(rememberScrollState()).heightIn(min = maxHeight).fillMaxWidth(),
+            verticalArrangement = Arrangement.Center,
+        ) { content() }
     }
 }
 
@@ -212,3 +529,44 @@ private fun StateDisc(
         Icon(icon.outlined(), contentDescription = null, tint = tint, modifier = Modifier.size(BahrSize.iconState))
     }
 }
+
+/** "Clear read" cannot be undone (deletion is for good), so it asks first; Keep is the safe way out. */
+@Composable
+private fun clearReadProps(
+    state: NotificationsUiState,
+    actions: NotificationsActions,
+) = BahrBottomSheet.Props(
+    title = stringResource(Res.string.alerts_clear_read_title),
+    onDismiss = actions.onDismissClearRead,
+    actions =
+        listOf(
+            BahrBottomSheet.Action(
+                text = stringResource(Res.string.alerts_clear_read),
+                style = BahrBottomSheet.Action.Style.Destructive,
+                onClick = actions.onClearRead,
+                loading = state.clearingRead,
+            ),
+        ),
+    cancel =
+        BahrBottomSheet.Action(
+            text = stringResource(Res.string.alerts_clear_read_keep),
+            onClick = actions.onDismissClearRead,
+            enabled = !state.clearingRead,
+        ),
+    dismissible = !state.clearingRead,
+)
+
+@Composable
+private fun ClearReadBody() {
+    Text(
+        text = stringResource(Res.string.alerts_clear_read_body),
+        style = MaterialTheme.typography.bodyMedium,
+        color = BahrTheme.colors.onSurfaceSecondary,
+    )
+}
+
+private const val CONTENT_HEADER = "header"
+private const val CONTENT_ITEM = "item"
+private const val CONTENT_SKELETON = "skeleton"
+private const val CONTENT_RETRY = "retry"
+private const val KEY_APPEND = "append"

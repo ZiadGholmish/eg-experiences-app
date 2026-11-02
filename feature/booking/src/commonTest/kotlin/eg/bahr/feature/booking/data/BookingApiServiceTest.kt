@@ -1,11 +1,16 @@
 package eg.bahr.feature.booking.data
 
+import eg.bahr.core.common.auth.DeviceIdSource
+import eg.bahr.core.common.auth.InstallSecretStore
+import eg.bahr.core.common.auth.SessionStore
+import eg.bahr.core.common.auth.StoredSession
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.network.ApiConfig
 import eg.bahr.core.network.ApiErrorCodes
 import eg.bahr.core.network.MoneyDto
 import eg.bahr.core.network.apiHttpClient
+import eg.bahr.core.network.auth.AuthSession
 import eg.bahr.feature.booking.model.GuestRequest
 import eg.bahr.feature.booking.model.PlaceHoldRequest
 import io.ktor.client.engine.mock.MockEngine
@@ -26,6 +31,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 
 /**
  * `placeHold` and the two reads of the date + party screen through the app's real client on a
@@ -77,6 +83,48 @@ class BookingApiServiceTest {
             assertEquals("2026-10-09T22:42:30.549567+03:00", held.holdExpiresAt)
             assertEquals("2026-10-09T22:27:30.549567+03:00", held.serverNow)
             assertEquals(10, held.seatsRemaining)
+        }
+
+    @Test
+    fun `a hold carries the install's id and its kept secret - only the id when none is kept`() =
+        runTest {
+            val ids = DeviceIdSource { DEVICE_ID }
+            val kept = mutableMapOf(DEVICE_ID to "install-secret-1")
+            val secrets =
+                object : InstallSecretStore {
+                    override suspend fun read(deviceId: String) = kept[deviceId]
+
+                    override suspend fun write(
+                        deviceId: String,
+                        secret: String?,
+                    ) = Unit
+                }
+            val engine =
+                MockEngine { request ->
+                    requests += request
+                    respond(HELD, HttpStatusCode.Created, headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()))
+                }
+            val api =
+                BookingApiService(
+                    apiHttpClient(
+                        engine,
+                        ApiConfig(BASE_URL, isDebug = false),
+                        // The device-id plugin rides on the session's (signed out here).
+                        session = AuthSession(NoSession),
+                        deviceIds = ids,
+                        installSecrets = secrets,
+                    ) { "ar" },
+                )
+
+            api.placeHold(request)
+            kept.clear()
+            api.placeHold(request)
+
+            val (proven, bare) = requests
+            assertEquals(DEVICE_ID, proven.headers["X-Device-Id"])
+            assertEquals("install-secret-1", proven.headers["X-Install-Secret"], "openapi HoldInstallSecret (M3-B13a)")
+            assertEquals(DEVICE_ID, bare.headers["X-Device-Id"])
+            assertNull(bare.headers["X-Install-Secret"], "never sent empty")
         }
 
     @Test
@@ -168,8 +216,15 @@ class BookingApiServiceTest {
             assertEquals(ApiErrorCodes.CONFLICT, error.code)
         }
 
+    private object NoSession : SessionStore {
+        override suspend fun read(): StoredSession? = null
+
+        override suspend fun write(session: StoredSession?) = Unit
+    }
+
     private companion object {
         const val BASE_URL = "http://localhost/api/v1/"
+        const val DEVICE_ID = "3f2b1c4e-5d6a-4b7c-8d9e-0f1a2b3c4d5e"
 
         /** As served by the local api (2026-10-09) for `getBooking` on a fresh hold; the contract's `Booking`. */
         val BOOKING_HELD =

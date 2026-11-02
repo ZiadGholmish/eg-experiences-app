@@ -22,6 +22,10 @@ import io.ktor.client.request.setBody
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -31,7 +35,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.Serializable
-import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -71,7 +74,7 @@ class InstallRegistrar internal constructor(
     private val clientProvider: () -> HttpClient,
     private val deviceIds: DeviceIdSource,
     private val renewal: DeviceIdRenewal,
-    private val secrets: InstallSecretStore?,
+    secrets: InstallSecretStore?,
     private val push: PushChannel,
     private val session: AuthSession,
     private val language: LanguageTagProvider,
@@ -82,10 +85,25 @@ class InstallRegistrar internal constructor(
     private val mutex = Mutex()
 
     /**
-     * The last secret issued in this run, with its id: what is sent when secure storage cannot give it back (an
-     * unsigned iOS simulator build has no Keychain), so this run's later registrations still prove the install.
+     * The secure store behind the secret, with this run's issued secret to stand in when it cannot give it back (an
+     * unsigned iOS simulator build has no Keychain), and a read that failed told apart from none kept (M3-M5 review #1).
+     * The app shares one with `BahrAuth` (networkModule), so the guest inbox proves the install the same way.
      */
-    private var issued: Pair<String, String>? = null
+    private val secrets: InstallSecrets = secrets as? InstallSecrets ?: InstallSecrets(secrets)
+
+    /**
+     * Whether the last registration failed (an offline first launch, M3-M5 review #2); false before the first, which
+     * [start] sends itself, so coming to the front at launch adds none.
+     */
+    private var lastFailed = false
+
+    private val _registrations = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
+    /**
+     * One signal per registration that landed (M3-M6): a sign-in's registration is what moves the guest inbox into the
+     * account (openapi `registerDevice`), so the bell re-reads its count after it, not on the session change alone.
+     */
+    val registrations: SharedFlow<Unit> = _registrations.asSharedFlow()
 
     /**
      * Registers on every change of what the server should know: signed in or out (once the stored sign-in has been
@@ -108,25 +126,51 @@ class InstallRegistrar internal constructor(
         }
 
     /**
+     * The app came to the front (M3-M5 review #2): a start-up registration that did not land (offline at first launch)
+     * is tried again now rather than at the next sign-in, token change or cold start, so the install gets its secret
+     * (and its guest inbox) as soon as it is back online. Nothing is sent while the last one landed or one is under way.
+     */
+    fun onForeground(scope: CoroutineScope) {
+        if (!lastFailed || mutex.isLocked) return
+        scope.launch { register() }
+    }
+
+    /**
      * One registration, after any in flight has answered. Also what the guest inbox calls on `INSTALL_SECRET_INVALID`
      * (M3-M6): register again, which starts over under a new id if the secret is refused here too.
+     *
+     * A refusal after the secure store failed to give the secret ([InstallSecrets.Read.Failed]) is not a reason to start
+     * over: the secret is most likely still kept, and a new id would lose the install's anonymous holds and entries for
+     * nothing. It is logged and retried at the next trigger.
      */
     suspend fun register(): AppResult<Unit> =
         mutex.withLock {
             val deviceId = deviceIds.deviceId()
-            when (val first = send(deviceId, secretFor(deviceId))) {
-                is AppResult.Success -> first.keepSecret(deviceId)
-                is AppResult.Failure ->
-                    if (first.error.isSecretRefused()) {
-                        log.w { "Install secret refused; registering under a new install id" }
-                        forget(deviceId)
-                        val fresh = renewal.renewDeviceId()
-                        send(fresh, secret = null).keepSecret(fresh)
-                    } else {
-                        log.i { "Device registration failed (${first.error}); next trigger retries" }
-                        first
-                    }
-            }
+            val read = secrets.readFor(deviceId)
+            val result =
+                when (val first = send(deviceId, (read as? InstallSecrets.Read.Kept)?.secret)) {
+                    is AppResult.Success -> first.keepSecret(deviceId)
+                    is AppResult.Failure ->
+                        when {
+                            !first.error.isSecretRefused() -> {
+                                log.i { "Device registration failed (${first.error}); next trigger retries" }
+                                first
+                            }
+                            read == InstallSecrets.Read.Failed -> {
+                                log.w { "Install secret refused while the secure store could not be read; keeping this id" }
+                                first
+                            }
+                            else -> {
+                                log.w { "Install secret refused; registering under a new install id" }
+                                secrets.write(deviceId, null)
+                                val fresh = renewal.renewDeviceId()
+                                send(fresh, secret = null).keepSecret(fresh)
+                            }
+                        }
+                }
+            lastFailed = result is AppResult.Failure
+            if (!lastFailed) _registrations.tryEmit(Unit)
+            result
         }
 
     private suspend fun send(
@@ -147,35 +191,10 @@ class InstallRegistrar internal constructor(
     private suspend fun AppResult<DeviceRegistrationDto>.keepSecret(deviceId: String): AppResult<Unit> =
         when (this) {
             is AppResult.Success -> {
-                data.installSecret?.let { secret ->
-                    issued = deviceId to secret
-                    guarded("keep") { secrets?.write(deviceId, secret) }
-                }
+                data.installSecret?.let { secret -> secrets.write(deviceId, secret) }
                 AppResult.Success(Unit)
             }
             is AppResult.Failure -> this
-        }
-
-    private suspend fun secretFor(deviceId: String): String? =
-        guarded("read") { secrets?.read(deviceId) } ?: issued?.takeIf { it.first == deviceId }?.second
-
-    private suspend fun forget(deviceId: String) {
-        issued = null
-        guarded("forget") { secrets?.write(deviceId, null) }
-    }
-
-    /** Secure storage that fails is logged and treated as empty: the registration still goes. */
-    private suspend fun <T> guarded(
-        what: String,
-        block: suspend () -> T?,
-    ): T? =
-        try {
-            block()
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            log.w(e) { "Install secret: could not $what it" }
-            null
         }
 
     private fun AppError.isSecretRefused(): Boolean =

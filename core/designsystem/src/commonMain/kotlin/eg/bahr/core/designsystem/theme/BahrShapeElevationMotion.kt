@@ -408,6 +408,21 @@ object BahrSize {
      */
     val ratingBarHeight = 6.dp
     val ratingStarColumn = 28.dp
+
+    /**
+     * A notification row (account handoff §3, M3-M6): at least 72px tall, a 40px icon disc tinted by type (20px icon),
+     * an 8px unread dot; its loading line under the title is 10px, and a group label still loading 70px wide.
+     */
+    val notificationRow = 72.dp
+    val notificationDisc = 40.dp
+    val iconNotification = 20.dp
+    val unreadDot = 8.dp
+    val skeletonLineSmall = 10.dp
+    val skeletonLabelWidth = 70.dp
+
+    /** The push pre-prompt sheet's bell disc, above its title (prototype: 56px, a 28px icon; M3-M5 review #6). */
+    val sheetDisc = 56.dp
+    val iconSheet = 28.dp
 }
 
 internal val LocalBahrShapes = staticCompositionLocalOf { BahrShapes() }

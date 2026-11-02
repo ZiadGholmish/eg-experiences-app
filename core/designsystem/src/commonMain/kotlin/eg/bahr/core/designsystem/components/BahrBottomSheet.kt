@@ -102,6 +102,7 @@ interface BahrBottomSheet {
 fun BahrBottomSheet(
     modifier: Modifier = Modifier,
     props: BahrBottomSheet.Props,
+    header: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit = {},
 ) {
     val direction = LocalLayoutDirection.current
@@ -126,15 +127,19 @@ fun BahrBottomSheet(
         modifier = modifier,
     ) {
         CompositionLocalProvider(LocalLayoutDirection provides direction) {
-            BahrBottomSheetContent(props, content)
+            BahrBottomSheetContent(props, header, content)
         }
     }
 }
 
-/** The sheet's inside, without the sheet: for screenshot tests, which cannot draw a second window. */
+/**
+ * The sheet's inside, without the sheet: for screenshot tests, which cannot draw a second window. [header] goes above
+ * the title (the push pre-prompt's bell disc, M3-M5 review #6); the other sheets have none.
+ */
 @Composable
 fun BahrBottomSheetContent(
     props: BahrBottomSheet.Props,
+    header: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit = {},
 ) {
     val safe = remember { FocusRequester() }
@@ -151,6 +156,7 @@ fun BahrBottomSheetContent(
                 .padding(start = BahrSpacing.xl, end = BahrSpacing.xl, bottom = BahrSpacing.xxl),
         verticalArrangement = Arrangement.spacedBy(BahrSpacing.md),
     ) {
+        header?.invoke()
         Text(
             text = props.title,
             style = MaterialTheme.typography.titleLarge,

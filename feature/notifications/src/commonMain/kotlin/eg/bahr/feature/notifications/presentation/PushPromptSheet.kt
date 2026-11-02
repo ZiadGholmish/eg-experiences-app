@@ -56,7 +56,10 @@ internal fun PushPromptSheet(
         }
     }
     if (state == PushPromptUiState.Showing) {
-        BahrBottomSheet(props = props(onAllow = { viewModel.allow(permissions) }, onNotNow = viewModel::notNow)) { PushPromptBody() }
+        BahrBottomSheet(
+            props = props(onAllow = { viewModel.allow(permissions) }, onNotNow = viewModel::notNow),
+            header = { BellDisc() },
+        ) { PushPromptBody() }
     }
 }
 
@@ -66,7 +69,7 @@ internal fun PushPromptContent(
     onAllow: () -> Unit = {},
     onNotNow: () -> Unit = {},
 ) {
-    BahrBottomSheetContent(props(onAllow, onNotNow)) { PushPromptBody() }
+    BahrBottomSheetContent(props(onAllow, onNotNow), header = { BellDisc() }) { PushPromptBody() }
 }
 
 /**
@@ -96,24 +99,29 @@ private fun props(
         ),
 )
 
-/**
- * The prototype's sheet: the `notifications_active` disc, the promise, then why it matters (no seat is held, first to
- * book gets it) and what it will never be (ads).
- */
+/** The prototype's 56px `notifications_active` disc, above the title (M3-M5 review #6). */
 @Composable
-private fun ColumnScope.PushPromptBody() {
+private fun BellDisc() {
     val c = MaterialTheme.colorScheme
     Box(
         contentAlignment = Alignment.Center,
-        modifier = Modifier.size(BahrSize.touchTarget).clip(BahrTheme.shapes.full).background(c.primaryContainer),
+        modifier = Modifier.size(BahrSize.sheetDisc).clip(BahrTheme.shapes.full).background(c.primaryContainer),
     ) {
         Icon(
             BahrIcons.NotificationsActive.filled(),
             contentDescription = null,
             tint = c.onPrimaryContainer,
-            modifier = Modifier.size(BahrSize.iconNav),
+            modifier = Modifier.size(BahrSize.iconSheet),
         )
     }
+}
+
+/**
+ * The prototype's sheet under its title: the promise, then why it matters (no seat is held, first to
+ * book gets it) and what it will never be (ads).
+ */
+@Composable
+private fun ColumnScope.PushPromptBody() {
     Text(
         text = stringResource(Res.string.push_prompt_body),
         style = MaterialTheme.typography.bodyLarge,

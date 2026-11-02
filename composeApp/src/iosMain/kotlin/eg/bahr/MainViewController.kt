@@ -10,11 +10,13 @@ import eg.bahr.di.AppAppearanceState
 import eg.bahr.di.AppLanguageState
 import eg.bahr.di.AppLinkConfig
 import eg.bahr.di.initKoin
+import eg.bahr.di.onAppForeground
 import eg.bahr.di.seedStoredAppearance
 import eg.bahr.di.startInstallRegistration
 import eg.bahr.feature.auth.di.AuthConfig
 import eg.bahr.feature.auth.di.NativeSignIn
 import eg.bahr.feature.map.di.TripMapNativeViews
+import eg.bahr.feature.notifications.navigation.UnreadAlerts
 import eg.bahr.navigation.AppTab
 import eg.bahr.navigation.AppTabsState
 import eg.bahr.push.AppPushChannel
@@ -195,10 +197,24 @@ fun onPushOpened(
     openPush(link, type)
 }
 
-/** Swift entry point (M3-M5): the app became active; the notification permission may have changed in Settings. */
+/**
+ * Swift entry point (M3-M5): the app became active. The notification permission may have changed in Settings, a
+ * registration that failed offline is tried again (M3-M5 review #2), and the bell's count is read again (M3-M6).
+ */
 @Suppress("unused")
 fun onAppForeground() {
-    IosPushState.channel?.refresh()
+    if (!IosTabs.started) return
+    KoinPlatform.getKoin().onAppForeground(IosPushState.scope)
+}
+
+/**
+ * Swift entry point (M3-M6): one of our pushes arrived while the app is in front (`willPresent`). A new item is in the
+ * inbox: the bell's count, and an open notifications page, are read again.
+ */
+@Suppress("unused")
+fun onPushReceived() {
+    if (!IosTabs.started) return
+    KoinPlatform.getKoin().getOrNull<UnreadAlerts>()?.onPushReceived()
 }
 
 /** The push channel [startApp] made, and a token Swift handed over before it. One per process, like Koin. */

@@ -136,6 +136,7 @@ class TripDetailLinkTest {
             vm.selectDeparture(SOLD_OUT)
 
             vm.openWaitlist()
+            advanceUntilIdle()
 
             assertEquals(
                 "sara@example.com",
@@ -161,6 +162,30 @@ class TripDetailLinkTest {
 
             assertEquals(
                 "",
+                vm.uiState.value.openWaitlist
+                    ?.email,
+            )
+        }
+
+    @Test
+    fun `the account is read only once the waiting-list form shows - and only once`() =
+        runViewModelTest {
+            val repository = repo(email = "sara@example.com")
+            val vm = TripDetailViewModel("burullus-dawn", repository, waitlistMemory())
+            advanceUntilIdle()
+            assertEquals(0, repository.accountEmailReads, "a visit without the form costs no GET /me (M3-M5 review #4)")
+
+            vm.selectDeparture(SOLD_OUT)
+            vm.openWaitlist()
+            advanceUntilIdle()
+            vm.selectDeparture(SOLD_OUT)
+            vm.selectDeparture(SOLD_OUT)
+            vm.openWaitlist()
+            advanceUntilIdle()
+
+            assertEquals(1, repository.accountEmailReads)
+            assertEquals(
+                "sara@example.com",
                 vm.uiState.value.openWaitlist
                     ?.email,
             )

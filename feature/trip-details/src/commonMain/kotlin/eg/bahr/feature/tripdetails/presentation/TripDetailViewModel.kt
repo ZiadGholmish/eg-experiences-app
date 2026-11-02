@@ -12,6 +12,7 @@ import eg.bahr.feature.tripdetails.data.TripDetailRepository
 import eg.bahr.feature.tripdetails.model.DepartureDto
 import eg.bahr.feature.tripdetails.model.TripDetailDto
 import eg.bahr.feature.tripdetails.model.WaitlistRequest
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -179,15 +180,16 @@ internal class TripDetailViewModel(
     /** The linked date is applied once, to the first fresh read of the dates (M3-M5). */
     private var linkApplied = link.date == null
 
-    /** The signed-in account's email, read once (M3-M5); null signed out or until it is read. */
+    /** The signed-in account's email (M3-M5); null signed out or until it is read. */
     private var accountEmail: String? = null
 
+    /**
+     * The one read of [accountEmail], started when the waiting-list form first opens (M3-M5 review #4): most visits
+     * never show the form, and each would cost a `GET /me` otherwise.
+     */
+    private var accountEmailRead: Job? = null
+
     init {
-        viewModelScope.launch {
-            accountEmail = repository.accountEmail()
-            // A form opened before the email arrived is filled now, unless something was typed meanwhile.
-            accountEmail?.let { email -> updateForm { form -> if (form.email.isEmpty()) form.copy(email = email) else form } }
-        }
         viewModelScope.launch {
             waitlists.joins.collect { joins ->
                 val today = waitlists.today()
@@ -322,6 +324,17 @@ internal class TripDetailViewModel(
                 else -> state.copy(waitlist = WaitlistForm(full.id, email = accountEmail.orEmpty()))
             }
         }
+        if (_uiState.value.waitlist != null) readAccountEmailOnce()
+    }
+
+    private fun readAccountEmailOnce() {
+        if (accountEmailRead != null) return
+        accountEmailRead =
+            viewModelScope.launch {
+                accountEmail = repository.accountEmail()
+                // The form opened before the email arrived is filled now, unless something was typed meanwhile.
+                accountEmail?.let { email -> updateForm { form -> if (form.email.isEmpty()) form.copy(email = email) else form } }
+            }
     }
 
     /**

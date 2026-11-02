@@ -12,6 +12,7 @@ import eg.bahr.core.network.LanguageTagProvider
 import eg.bahr.core.network.auth.AuthSession
 import eg.bahr.core.network.auth.HttpSessionRemote
 import eg.bahr.core.network.install.InstallRegistrar
+import eg.bahr.core.network.install.InstallSecrets
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngine
 import org.koin.dsl.module
@@ -32,13 +33,16 @@ val networkModule =
                 session.remote = HttpSessionRemote { scope.get<HttpClient>() }
             }
         }
+        // The install secret over core:datastore's secure store (bound there; a graph without one keeps it in memory),
+        // shared by the client and the registration so both tell a failed read from none kept (M3-M5 review #1).
+        single { InstallSecrets(getOrNull<InstallSecretStore>()) }
         single<HttpClient> {
             val config = get<ApiConfig>()
             val language = get<LanguageTagProvider>()
             val session = get<AuthSession>()
             val deviceIds = get<DeviceIdSource>()
-            // The install secret for sign-in and the guest inbox (M3-M5); core:datastore binds it.
-            val installSecrets = getOrNull<InstallSecretStore>()
+            // The install secret for sign-in, holds and the guest inbox (M3-M5): the same reader as the registration's.
+            val installSecrets = get<InstallSecrets>()
             // An engine bound in Koin is a test's MockEngine; the app binds none and Ktor picks the platform's.
             when (val engine = getOrNull<HttpClientEngine>()) {
                 null -> HttpClientFactory.create(config, language, session, deviceIds, installSecrets)
@@ -54,7 +58,7 @@ val networkModule =
                 clientProvider = { scope.get<HttpClient>() },
                 deviceIds = get(),
                 renewal = get<DeviceIdRenewal>(),
-                secrets = getOrNull<InstallSecretStore>(),
+                secrets = get<InstallSecrets>(),
                 push = getOrNull<PushChannel>() ?: NoPushChannel,
                 session = get(),
                 language = get(),

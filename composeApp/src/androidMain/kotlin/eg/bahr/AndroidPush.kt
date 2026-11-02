@@ -95,6 +95,7 @@ internal object AndroidPush {
     fun showInForeground(
         context: Context,
         channelId: String,
+        smallIcon: Int,
         title: String?,
         body: String?,
         data: Map<String, String>,
@@ -118,7 +119,8 @@ internal object AndroidPush {
         val notification =
             NotificationCompat
                 .Builder(context, channelId)
-                .setSmallIcon(context.applicationInfo.icon)
+                // A white-on-transparent mark (M3-M5 review #3): a full-colour launcher icon shows as a blob there.
+                .setSmallIcon(smallIcon.takeIf { it != 0 } ?: context.applicationInfo.icon)
                 .setContentTitle(title)
                 .setContentText(body)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(body))

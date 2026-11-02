@@ -1,11 +1,11 @@
 package eg.bahr.feature.notifications.navigation
 
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
+import androidx.compose.runtime.remember
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import eg.bahr.core.designsystem.theme.BahrDestination
+import eg.bahr.feature.notifications.presentation.AlertDestinations
 import eg.bahr.feature.notifications.presentation.NotificationsScreen
 import kotlinx.serialization.Serializable
 
@@ -17,16 +17,24 @@ import kotlinx.serialization.Serializable
 data object NotificationsRoute
 
 /**
- * The notifications page. [onBack] is its top bar's Back (system Back and the edge swipe pop it too).
- * [signInButtons] draws feature:auth's sign-in buttons for the signed-out state (wired in :composeApp,
- * given a modifier for its place).
+ * The notifications page (M3-M6): the account's inbox, or this install's guest inbox while signed out. [onBack] is its
+ * top bar's Back (system Back and the edge swipe pop it too). A tap on an item reads it and opens its page, in this
+ * tab's stack: [onOpenTrip] the trip page (on `date` with it picked when the item names one; `placeOpened` for "a place
+ * opened", which the page checks is still true), [onOpenBooking] the booking by reference, [onOpenReview] My reviews
+ * (null until that page exists: the item then only reads).
  */
 fun NavGraphBuilder.notificationsScreen(
     onBack: () -> Unit,
-    signInButtons: @Composable (Modifier) -> Unit,
+    onOpenTrip: (slug: String, date: String?, placeOpened: Boolean) -> Unit,
+    onOpenBooking: (ref: String) -> Unit,
+    onOpenReview: ((id: String) -> Unit)? = null,
 ) {
     composable<NotificationsRoute> {
-        BahrDestination(this) { NotificationsScreen(onBack = onBack, signInButtons = signInButtons) }
+        BahrDestination(this) {
+            val destinations =
+                remember(onOpenTrip, onOpenBooking, onOpenReview) { AlertDestinations(onOpenTrip, onOpenBooking, onOpenReview) }
+            NotificationsScreen(onBack = onBack, destinations = destinations)
+        }
     }
 }
 

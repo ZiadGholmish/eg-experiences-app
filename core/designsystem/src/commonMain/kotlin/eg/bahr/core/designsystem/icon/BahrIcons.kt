@@ -25,10 +25,14 @@ import eg.bahr.core.designsystem.generated.resources.ic_campaign_filled
 import eg.bahr.core.designsystem.generated.resources.ic_chat
 import eg.bahr.core.designsystem.generated.resources.ic_chat_filled
 import eg.bahr.core.designsystem.generated.resources.ic_check
+import eg.bahr.core.designsystem.generated.resources.ic_check_circle
+import eg.bahr.core.designsystem.generated.resources.ic_check_circle_filled
 import eg.bahr.core.designsystem.generated.resources.ic_chevron_right
 import eg.bahr.core.designsystem.generated.resources.ic_circle
 import eg.bahr.core.designsystem.generated.resources.ic_circle_filled
 import eg.bahr.core.designsystem.generated.resources.ic_close
+import eg.bahr.core.designsystem.generated.resources.ic_cloud_off
+import eg.bahr.core.designsystem.generated.resources.ic_cloud_off_filled
 import eg.bahr.core.designsystem.generated.resources.ic_confirmation_number
 import eg.bahr.core.designsystem.generated.resources.ic_confirmation_number_filled
 import eg.bahr.core.designsystem.generated.resources.ic_credit_card
@@ -39,6 +43,7 @@ import eg.bahr.core.designsystem.generated.resources.ic_directions_bus
 import eg.bahr.core.designsystem.generated.resources.ic_directions_bus_filled
 import eg.bahr.core.designsystem.generated.resources.ic_do_not_disturb_on
 import eg.bahr.core.designsystem.generated.resources.ic_do_not_disturb_on_filled
+import eg.bahr.core.designsystem.generated.resources.ic_done_all
 import eg.bahr.core.designsystem.generated.resources.ic_error
 import eg.bahr.core.designsystem.generated.resources.ic_error_filled
 import eg.bahr.core.designsystem.generated.resources.ic_event
@@ -75,6 +80,10 @@ import eg.bahr.core.designsystem.generated.resources.ic_lock_person_filled
 import eg.bahr.core.designsystem.generated.resources.ic_logout
 import eg.bahr.core.designsystem.generated.resources.ic_map
 import eg.bahr.core.designsystem.generated.resources.ic_map_filled
+import eg.bahr.core.designsystem.generated.resources.ic_mark_email_read
+import eg.bahr.core.designsystem.generated.resources.ic_mark_email_read_filled
+import eg.bahr.core.designsystem.generated.resources.ic_mark_email_unread
+import eg.bahr.core.designsystem.generated.resources.ic_mark_email_unread_filled
 import eg.bahr.core.designsystem.generated.resources.ic_more_vert
 import eg.bahr.core.designsystem.generated.resources.ic_notifications
 import eg.bahr.core.designsystem.generated.resources.ic_notifications_active
@@ -120,6 +129,8 @@ import eg.bahr.core.designsystem.generated.resources.ic_verified
 import eg.bahr.core.designsystem.generated.resources.ic_verified_filled
 import eg.bahr.core.designsystem.generated.resources.ic_visibility
 import eg.bahr.core.designsystem.generated.resources.ic_visibility_filled
+import eg.bahr.core.designsystem.generated.resources.ic_visibility_off
+import eg.bahr.core.designsystem.generated.resources.ic_visibility_off_filled
 import eg.bahr.core.designsystem.generated.resources.ic_waves
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.vectorResource
@@ -238,6 +249,22 @@ enum class BahrIcons(
     RateReview(Res.drawable.ic_rate_review, Res.drawable.ic_rate_review_filled),
     SupportAgent(Res.drawable.ic_support_agent, Res.drawable.ic_support_agent),
     TravelExplore(Res.drawable.ic_travel_explore, Res.drawable.ic_travel_explore),
+
+    /** The notifications page (M3-M6): a confirmed booking row. */
+    CheckCircle(Res.drawable.ic_check_circle, Res.drawable.ic_check_circle_filled),
+
+    /** The notifications page's error state (M3-M6). */
+    CloudOff(Res.drawable.ic_cloud_off, Res.drawable.ic_cloud_off_filled),
+
+    /** "Mark all as read" (M3-M6). */
+    DoneAll(Res.drawable.ic_done_all, Res.drawable.ic_done_all),
+
+    /** A notification's "Mark as read" / "Mark as unread" (M3-M6). */
+    MarkEmailRead(Res.drawable.ic_mark_email_read, Res.drawable.ic_mark_email_read_filled),
+    MarkEmailUnread(Res.drawable.ic_mark_email_unread, Res.drawable.ic_mark_email_unread_filled),
+
+    /** A review that was not published (M3-M6, the notifications page). */
+    VisibilityOff(Res.drawable.ic_visibility_off, Res.drawable.ic_visibility_off_filled),
     ;
 
     /** FILL 0, the prototype's default (`class="ms"`). */

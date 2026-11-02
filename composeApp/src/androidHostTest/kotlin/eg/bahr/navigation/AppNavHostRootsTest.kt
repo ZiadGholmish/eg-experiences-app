@@ -14,6 +14,7 @@ import eg.bahr.feature.booking.navigation.BookingConfirmedRoute
 import eg.bahr.feature.booking.navigation.BookingRoute
 import eg.bahr.feature.booking.navigation.HoldRoute
 import eg.bahr.feature.booking.navigation.navigateToBooking
+import eg.bahr.feature.booking.navigation.navigateToBookingByRef
 import eg.bahr.feature.booking.navigation.navigateToBookingConfirmed
 import eg.bahr.feature.booking.navigation.navigateToHold
 import eg.bahr.feature.home.navigation.TripListRoute
@@ -168,6 +169,43 @@ class AppNavHostRootsTest {
 
         assertTrue(nav.isAt(AppTab.Home))
         assertEquals(listOf(TripListRoute::class.simpleName), screens())
+    }
+
+    /**
+     * M3-M5 review #5: a trip link is not pushed again when the same route (slug, date and the push's claim) is on top,
+     * but is when only the slug matches: another date of the trip on top must open on that date.
+     */
+    @Test
+    fun `a link already on top is the same route only with the same arguments`() {
+        show(start = TripListRoute)
+        val linked = TripDetailRoute(SLUG, date = "2026-10-24", placeOpened = true)
+        assertFalse(nav.isShowing(linked), "nothing linked on top yet")
+
+        onUi { nav.navigateToTripDetail(linked) }
+        assertTrue(nav.isShowing(linked))
+        assertTrue(nav.isShowing(TripDetailRoute(SLUG, date = "2026-10-24", placeOpened = true)), "equal by value")
+        assertFalse(nav.isShowing(TripDetailRoute(SLUG, date = "2026-10-31", placeOpened = true)), "another date")
+        assertFalse(nav.isShowing(TripDetailRoute(SLUG, date = "2026-10-24")), "the same date without the push's claim")
+        assertFalse(nav.isShowing(TripDetailRoute("another-trip", date = "2026-10-24", placeOpened = true)))
+
+        onUi { nav.navigateToNotifications() }
+        assertFalse(nav.isShowing(linked), "only the top entry counts")
+    }
+
+    /** M3-M6: a notification's booking opens over the notifications page, popping nothing; Back returns to the list. */
+    @Test
+    fun `a booking opened from the notifications page sits on top of it`() {
+        show(start = TripListRoute)
+        onUi { nav.navigateToNotifications() }
+
+        onUi { nav.navigateToBookingByRef(REF) }
+        assertEquals(
+            listOf(TripListRoute::class.simpleName, NotificationsRoute::class.simpleName, BookingConfirmedRoute::class.simpleName),
+            screens(),
+        )
+
+        onUi { nav.popBackStack() }
+        assertEquals(listOf(TripListRoute::class.simpleName, NotificationsRoute::class.simpleName), screens())
     }
 
     // ---------- Plumbing ----------

@@ -394,8 +394,33 @@
     <string name="alerts_title">Notifications</string>
     <string name="alerts_empty_title">No notifications yet</string>
     <string name="alerts_empty_body">We’ll tell you here when a booking is confirmed, a seat opens on a trip you’re waiting for, or a host messages you.</string>
-    <string name="alerts_signed_out_title">Sign in to get notifications</string>
-    <string name="alerts_signed_out_body">Notifications are tied to your bookings, so we need to know who you are.</string>
+    <!-- The notifications page (M3-M6, account handoff §3). Copy from the prototype where it has it; the rest
+         (the row menu, delete + undo, Clear read, the relative times beyond the prototype's) is new: needs a native read. -->
+    <string name="alerts_mark_all_read">Mark all as read</string>
+    <string name="alerts_error_title">We couldn’t load your notifications</string>
+    <string name="alerts_error_body">Your connection looks weak. Try again in a moment.</string>
+    <string name="alerts_today">Today</string>
+    <string name="alerts_earlier">Earlier</string>
+    <string name="alerts_time_now">now</string>
+    <string name="alerts_time_minutes">%1$d min</string>
+    <string name="alerts_time_hours">%1$d h</string>
+    <plurals name="alerts_time_days">
+        <item quantity="one">%1$d d</item>
+        <item quantity="other">%1$d d</item>
+    </plurals>
+    <!-- A row as a screen reader says it: title, body, time; an unread row starts with "Unread". -->
+    <string name="alerts_row_unread">Unread. %1$s. %2$s. %3$s</string>
+    <string name="alerts_row_read">%1$s. %2$s. %3$s</string>
+    <string name="alerts_mark_read">Mark as read</string>
+    <string name="alerts_mark_unread">Mark as unread</string>
+    <string name="alerts_delete">Delete</string>
+    <string name="alerts_deleted">Notification deleted</string>
+    <string name="alerts_undo">Undo</string>
+    <string name="alerts_more">More options</string>
+    <string name="alerts_clear_read">Clear read</string>
+    <string name="alerts_clear_read_title">Clear the notifications you’ve read?</string>
+    <string name="alerts_clear_read_body">Unread ones stay. This can’t be undone.</string>
+    <string name="alerts_clear_read_keep">Keep them</string>
     <!-- Brand names, written as their owners write them in either language. -->
     <string name="provider_google">Google</string>
     <string name="provider_apple">Apple</string>

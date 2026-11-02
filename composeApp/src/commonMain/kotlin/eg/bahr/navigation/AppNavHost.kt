@@ -36,6 +36,7 @@ import eg.bahr.feature.booking.navigation.bookingScreen
 import eg.bahr.feature.booking.navigation.hasBookingInProgress
 import eg.bahr.feature.booking.navigation.holdScreen
 import eg.bahr.feature.booking.navigation.navigateToBooking
+import eg.bahr.feature.booking.navigation.navigateToBookingByRef
 import eg.bahr.feature.booking.navigation.navigateToHold
 import eg.bahr.feature.booking.navigation.returnToDateSelection
 import eg.bahr.feature.home.navigation.HomeAction
@@ -49,6 +50,7 @@ import eg.bahr.feature.map.navigation.tripMapScreen
 import eg.bahr.feature.mytrips.navigation.MyTripsRoute
 import eg.bahr.feature.mytrips.navigation.myTripsScreen
 import eg.bahr.feature.notifications.navigation.PushPromptSlot
+import eg.bahr.feature.notifications.navigation.UnreadAlerts
 import eg.bahr.feature.notifications.navigation.navigateToNotifications
 import eg.bahr.feature.notifications.navigation.notificationsScreen
 import eg.bahr.feature.reviews.navigation.navigateToReviews
@@ -111,6 +113,9 @@ fun AppNavHost(
     val navigationEvents = LocalNavigationEventDispatcherOwner.current?.navigationEventDispatcher
     val backSwipe = remember(navigationEvents) { { navigationEvents.backSwipe() } }
     val transitions = remember(backSwipe) { AppScreenTransitions(reducedMotion, backSwipe) }
+
+    // The bell's count (M3-M6): one per app, which the notifications page keeps up with each change.
+    val unreadAlerts: UnreadAlerts = koinInject()
 
     // Splash runs once per process; a NavHost rebuilt later (a language switch) starts on Home itself.
     val start: Any = remember(tab) { tab.startRoute(splashDone = tabs.splashDone) }
@@ -183,8 +188,9 @@ fun AppNavHost(
                 onSearch = { navController.navigateToSearchTrips() },
                 onMap = { tabs.select(AppTab.Map) },
                 // The bell (M3-M6a; the Alerts tab before) pushes the notifications page over Home, bar
-                // hidden; Back comes back to Home. Its unread count (unreadAlerts) is wired by M3-M6.
+                // hidden; Back comes back to Home. Its badge is the inbox's unread count (M3-M6).
                 onAlerts = navController::navigateToNotifications,
+                unreadAlerts = unreadAlerts.count,
                 scrollToTop = scrollRequests,
             )
 
@@ -218,11 +224,12 @@ fun AppNavHost(
                 onSaved = { navController.popBackStack() },
             )
 
-            // The notifications page (M3-M0b's Alerts tab; pushed from Home's bell since M3-M6a): the empty or
-            // signed-out state until M3-M6.
+            // The notifications page (M3-M6; pushed from Home's bell since M3-M6a): a tap opens the item's page on top,
+            // so Back returns to the list. My reviews (M3-M4) is not built yet: a review's item only reads.
             notificationsScreen(
                 onBack = { navController.popBackStack() },
-                signInButtons = { modifier -> SignInButtonsSlot(modifier) },
+                onOpenTrip = { slug, date, placeOpened -> navController.navigateToTripDetail(TripDetailRoute(slug, date, placeOpened)) },
+                onOpenBooking = navController::navigateToBookingByRef,
             )
 
             // The My trips tab's root (M3-M0): signed out it offers the sign-in sheet; a row opens its trip.
@@ -316,6 +323,16 @@ internal fun NavController.popToRoot(tab: AppTab) {
     }
 }
 
+/**
+ * The same trip link already on top (iOS may hand one over twice): it is not pushed again. Compared by the route's
+ * arguments, not single-top: a push for another date of the trip on top must open on that date (M3-M5). Internal for
+ * AppNavHostRootsTest (M3-M5 review #5).
+ */
+internal fun NavController.isShowing(route: TripDetailRoute): Boolean {
+    val top = currentBackStackEntry ?: return false
+    return top.destination.hasRoute<TripDetailRoute>() && top.toRoute<TripDetailRoute>() == route
+}
+
 private class NavControllerDeepLinkDestinations(
     private val navController: NavHostController,
     private val languages: AppLanguageState,
@@ -332,10 +349,7 @@ private class NavControllerDeepLinkDestinations(
         placeOpened: Boolean,
     ) {
         val route = TripDetailRoute(slug, date, placeOpened)
-        // The same link already on top (iOS may hand one over twice) is not pushed again. Compared by its arguments, not
-        // single-top: a push for another date of the trip on top must open on that date (M3-M5).
-        val top = navController.currentBackStackEntry
-        if (top?.destination?.hasRoute<TripDetailRoute>() == true && top.toRoute<TripDetailRoute>() == route) return
+        if (navController.isShowing(route)) return
         val placement = tripLinkPlacement(bookingInProgress = navController.hasBookingInProgress())
         navController.navigateToTripDetail(route) {
             // Otherwise whatever was open goes and Home stays: back from the linked trip is Home.

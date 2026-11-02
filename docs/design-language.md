@@ -80,7 +80,9 @@ the date + party screen (`radio`, `stepSegmentWidth/Height`, `stepperValue`, M2-
 `progressBar` over a refreshing list (M4-M6), and the map's pins and legend from map.html
 (`pinStem`, `pinDot`, `legendDot`, M4-M2; the drive line's `route*` sizes went with the drive, M4-M9), and Home's
 `logoTile` and hero-slide `heroForward` circle (M4-M1, M4-M7), and the host page's `avatarLarge` and
-rating bars (`ratingBarHeight`, `ratingStarColumn`, M4-M10; the handoff has no host page).
+rating bars (`ratingBarHeight`, `ratingStarColumn`, M4-M10; the handoff has no host page), and the
+notifications page's row (`notificationRow`, `notificationDisc`, `iconNotification`, `unreadDot`, its skeleton's
+`skeletonLineSmall` and `skeletonLabelWidth`) and the push pre-prompt's `sheetDisc` (account handoff §3, M3-M6).
 They exist so `feature/*` holds no `.dp` (ModuleGraphTest). They are not design tokens: changing one
 changes a component, not the theme, and none has a Dusk/HighContrast variant. If design adds a size
 to tokens.json, move it to the token's own group and port it from there.

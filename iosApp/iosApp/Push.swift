@@ -40,12 +40,14 @@ final class PushAppDelegate: NSObject, UIApplicationDelegate, UNUserNotification
         MainViewControllerKt.onPushToken(token: fcmToken)
     }
 
-    /// In front, iOS shows nothing unless asked: show it as it would in the background, with its sound.
+    /// In front, iOS shows nothing unless asked: show it as it would in the background, with its sound. A new item is
+    /// in the inbox too (M3-M6): the shared code reads the bell's count and an open notifications page again.
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
+        DispatchQueue.main.async { MainViewControllerKt.onPushReceived() }
         completionHandler([.banner, .list, .sound])
     }
 

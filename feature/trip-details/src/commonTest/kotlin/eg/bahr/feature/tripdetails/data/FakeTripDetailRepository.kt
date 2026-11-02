@@ -47,7 +47,13 @@ internal class FakeTripDetailRepository(
 
     override fun cachedCard(slug: String): TripCardDto? = cards[slug]
 
-    override suspend fun accountEmail(): String? = accountEmail
+    /** How many times the account was read (`GET /me`, M3-M5 review #4: only once the waiting-list form shows). */
+    var accountEmailReads = 0
+
+    override suspend fun accountEmail(): String? {
+        accountEmailReads++
+        return accountEmail
+    }
 
     private companion object {
         fun unset(): AppResult.Failure = AppResult.Failure(AppError.Unknown("FakeTripDetailRepository: call not stubbed"))

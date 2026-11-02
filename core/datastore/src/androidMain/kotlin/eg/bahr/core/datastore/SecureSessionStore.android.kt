@@ -11,8 +11,8 @@ import eg.bahr.core.common.auth.InstallSecretStore
 import eg.bahr.core.common.auth.SessionStore
 import eg.bahr.core.common.auth.StoredSession
 import kotlinx.coroutines.flow.first
-import java.security.GeneralSecurityException
 import java.security.KeyStore
+import javax.crypto.AEADBadTagException
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -62,7 +62,12 @@ internal class KeystoreInstallSecretStore(
     }
 }
 
-/** One preference holding a value sealed by [sealer]; a value that no longer opens reads as none and is dropped. */
+/**
+ * One preference holding a value sealed by [sealer]. A value that can never open again (its key was replaced, the
+ * text is not ours) reads as none and is dropped. Any other Keystore failure is thrown and the value kept (M3-M5
+ * review #1): a transient error must not destroy the secret or the sign-in for good, and the reader can tell "failed"
+ * from "none" (the registration then keeps the install's id).
+ */
 private class SealedPreference(
     private val dataStore: DataStore<Preferences>,
     private val key: Preferences.Key<String>,
@@ -94,13 +99,15 @@ private class KeystoreSealer(
         return encode(cipher.iv) + SEPARATOR + encode(sealed)
     }
 
+    /** Null only when [stored] can never open under this key; a transient Keystore failure throws instead. */
     fun open(stored: String): String? =
         try {
             val (iv, sealed) = stored.split(SEPARATOR).takeIf { it.size == 2 } ?: return null
             val cipher = Cipher.getInstance(TRANSFORMATION)
             cipher.init(Cipher.DECRYPT_MODE, secretKey(), GCMParameterSpec(TAG_BITS, decode(iv)))
             cipher.doFinal(decode(sealed)).decodeToString()
-        } catch (_: GeneralSecurityException) {
+        } catch (_: AEADBadTagException) {
+            // Sealed under another key (wiped and made again, e.g. a restore onto a new device): gone for good.
             null
         } catch (_: IllegalArgumentException) {
             null

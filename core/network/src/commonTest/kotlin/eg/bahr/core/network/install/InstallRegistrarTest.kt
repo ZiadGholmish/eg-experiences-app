@@ -27,6 +27,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -67,7 +68,13 @@ class InstallRegistrarTest {
     private class Secrets : InstallSecretStore {
         val kept = mutableMapOf<String, String>()
 
-        override suspend fun read(deviceId: String) = kept[deviceId]
+        /** The platform's store failing (an iOS Keychain read before the first unlock, a Keystore error). */
+        var failing = false
+
+        override suspend fun read(deviceId: String): String? {
+            if (failing) error("errSecInteractionNotAllowed")
+            return kept[deviceId]
+        }
 
         override suspend fun write(
             deviceId: String,
@@ -291,6 +298,83 @@ class InstallRegistrarTest {
             assertEquals(2, requests.size, "nothing else was sent")
         }
 
+    @Test
+    fun `a secret read that throws is not no secret - refused then - the install keeps its id`() =
+        runTest {
+            secrets.kept[FIRST_ID] = SECRET
+            secrets.failing = true
+            val registrar = registrar { HttpStatusCode.Forbidden to SECRET_REFUSED }
+
+            val result = registrar.register()
+
+            assertIs<AppResult.Failure>(result)
+            assertEquals(1, requests.size, "no second registration under a new id")
+            assertNull(requests.single().headers["X-Install-Secret"], "nothing to send")
+            assertEquals(0, ids.renewals)
+            assertEquals(SECRET, secrets.kept[FIRST_ID], "the kept secret is not forgotten")
+
+            // The store answers again (the phone was unlocked): the next trigger proves the install with it.
+            secrets.failing = false
+            requests.clear()
+            assertIs<AppResult.Success<Unit>>(registrar { NOT_ISSUED.ok() }.register())
+            assertEquals(SECRET, requests.single().headers["X-Install-Secret"])
+        }
+
+    @Test
+    fun `a store that fails stands in this run's issued secret`() =
+        runTest {
+            val registrar = registrar { (if (requests.size == 1) ISSUED else NOT_ISSUED).ok() }
+            registrar.register()
+            secrets.failing = true
+
+            registrar.register()
+
+            assertEquals(SECRET, requests[1].headers["X-Install-Secret"])
+        }
+
+    @Test
+    fun `back in front after an offline first launch - it registers again - not while the last one landed`() =
+        runTest {
+            var offline = true
+            val registrar =
+                registrar {
+                    if (offline) HttpStatusCode.ServiceUnavailable to UNAVAILABLE else ISSUED.ok()
+                }
+            val landed = Channel<Unit>(Channel.UNLIMITED)
+            backgroundScope.launch { registrar.registrations.collect { landed.send(Unit) } }
+            registrar.onForeground(backgroundScope)
+            runCurrent()
+            assertTrue(requests.isEmpty(), "in front at launch: the start-up registration is start's, not a second one")
+            assertIs<AppResult.Failure>(registrar.register())
+
+            offline = false
+            registrar.onForeground(backgroundScope)
+            withContext(Dispatchers.Default) { withTimeout(ARRIVAL_TIMEOUT_MS) { landed.receive() } }
+            assertEquals(2, requests.size)
+            assertEquals(SECRET, secrets.kept[FIRST_ID])
+
+            registrar.onForeground(backgroundScope)
+            runCurrent()
+            assertEquals(2, requests.size, "registered: nothing to retry")
+        }
+
+    @Test
+    fun `each registration that lands is signalled - a failed one is not`() =
+        runTest {
+            var fail = false
+            val registrar = registrar { if (fail) HttpStatusCode.TooManyRequests to RATE_LIMITED else NOT_ISSUED.ok() }
+            var signals = 0
+            backgroundScope.launch { registrar.registrations.collect { signals++ } }
+            runCurrent()
+
+            registrar.register()
+            fail = true
+            registrar.register()
+            runCurrent()
+
+            assertEquals(1, signals)
+        }
+
     /** The next request the engine saw; the engine answers on its own thread, so this waits in real time. */
     private suspend fun Channel<HttpRequestData>.next(): HttpRequestData =
         withContext(Dispatchers.Default) { withTimeout(ARRIVAL_TIMEOUT_MS) { receive() } }
@@ -304,6 +388,8 @@ class InstallRegistrarTest {
         const val SECOND_ID = "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d"
         const val SECRET = "kq3VZ1x0Rm2b8yQe0n4tH6wXg9aJ5cLsP7dF2uK1oYi"
         const val ISSUED = """{"success":true,"data":{"installSecret":"$SECRET"},"error":null}"""
+        const val UNAVAILABLE = """{"success":false,"error":{"code":"INTERNAL_ERROR","message":"m"}}"""
+        const val RATE_LIMITED = """{"success":false,"error":{"code":"RATE_LIMITED","message":"m"}}"""
         const val NOT_ISSUED = """{"success":true,"data":{"installSecret":null},"error":null}"""
         const val SECRET_REFUSED =
             """{"success":false,"error":{"code":"FORBIDDEN","message":"Register this install again.","reason":"INSTALL_SECRET_INVALID"}}"""

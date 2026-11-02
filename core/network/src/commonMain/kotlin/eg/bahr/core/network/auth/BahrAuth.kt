@@ -38,9 +38,10 @@ fun HttpRequestBuilder.withDeviceId() = attributes.put(DeviceId, Unit)
 private val InstallSecret = AttributeKey<Unit>("BahrInstallSecret")
 
 /**
- * Send this install's id *and* its secret (openapi `SignInInstallSecret`, `InstallSecret`, M3-B12/B13): sign-in, so
- * the server attaches this install's anonymous holds and waiting-list entries, and the guest inbox. Without a kept
- * secret only the id goes. Never logged (the client logs at INFO, without headers).
+ * Send this install's id *and* its secret (openapi `SignInInstallSecret`, `InstallSecret`, `HoldInstallSecret`,
+ * M3-B12/B13/B13a): sign-in, so the server attaches this install's anonymous holds and waiting-list entries; a hold, so
+ * an unpaid one counts against this install only when it proves it (M3-M6); and the guest inbox. Without a kept
+ * secret (or when secure storage cannot give it) only the id goes. Never logged (the client logs at INFO, without headers).
  */
 fun HttpRequestBuilder.withInstallSecret() {
     attributes.put(DeviceId, Unit)

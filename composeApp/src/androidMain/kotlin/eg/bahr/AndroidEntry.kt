@@ -11,9 +11,11 @@ import eg.bahr.core.datastore.AppSettingsStore
 import eg.bahr.deeplink.AppDeepLinkInbox
 import eg.bahr.di.AppLinkConfig
 import eg.bahr.di.initKoin
+import eg.bahr.di.onAppForeground
 import eg.bahr.di.seedStoredAppearance
 import eg.bahr.di.startInstallRegistration
 import eg.bahr.feature.auth.di.AuthConfig
+import eg.bahr.feature.notifications.navigation.UnreadAlerts
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
@@ -44,8 +46,10 @@ fun Application.startApp(
     allowFakeSignIn: Boolean,
     pushChannelId: String,
     pushChannelName: String,
+    pushSmallIcon: Int,
 ) {
     pushChannelIdInUse = pushChannelId
+    pushSmallIconInUse = pushSmallIcon
     val push = AndroidPush.start(this, appScope, pushChannelId, pushChannelName)
     initKoin(
         baseUrl = baseUrl,
@@ -68,8 +72,9 @@ fun Application.startApp(
 /** The process's own scope for what runs as long as the app: the install's registration and the push channel. */
 private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-/** [startApp]'s channel id, for pushes shown while the app is in front. */
+/** [startApp]'s channel id and monochrome small icon (`:androidApp`'s drawable), for pushes shown while the app is in front. */
 private var pushChannelIdInUse = ""
+private var pushSmallIconInUse = 0
 
 /**
  * The activity's intent (launch or `onNewIntent`): a tap on a push the system showed in the background carries the
@@ -89,12 +94,18 @@ fun Context.onPushMessage(
     data: Map<String, String>,
     tag: String?,
 ) {
-    AndroidPush.showInForeground(this, pushChannelIdInUse, title, body, data, tag)
+    AndroidPush.showInForeground(this, pushChannelIdInUse, pushSmallIconInUse, title, body, data, tag)
+    // A new item in the inbox: the bell's count, and an open notifications page, read again (M3-M6).
+    GlobalContext.getOrNull()?.getOrNull<UnreadAlerts>()?.onPushReceived()
 }
 
-/** The activity came to the front: the notification permission may have changed in the system settings (M3-M5). */
+/**
+ * The activity came to the front: the notification permission may have changed in the system settings (M3-M5), a
+ * registration that failed offline is tried again (M3-M5 review #2), and the bell's count is read again (M3-M6).
+ */
 fun onAppForeground() {
-    GlobalContext.getOrNull()?.getOrNull<PushChannel>()?.refresh()
+    val koin = GlobalContext.getOrNull() ?: return
+    koin.onAppForeground(appScope)
 }
 
 /** A link the activity received (launch or `onNewIntent`); it waits in the inbox until the Home tab's NavHost opens it. */
