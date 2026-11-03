@@ -13,6 +13,7 @@ import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.designsystem.theme.BahrThemeName
 import eg.bahr.core.localization.ProvideAppLanguage
 import eg.bahr.core.testing.captureScreenshot
+import eg.bahr.feature.notifications.navigation.PushPromptReason
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -45,10 +46,18 @@ class PushPromptScreenshotTest {
     @Test
     fun darkEnglish() = shoot("push_prompt_dark", AppLanguage.ENGLISH, BahrThemeName.Dark)
 
+    /** On a hold just placed (M3-M7): the reminder's own copy. */
+    @Test
+    fun holdArabic() = shoot("push_prompt_hold", AppLanguage.ARABIC, reason = PushPromptReason.HoldReminder)
+
+    @Test
+    fun holdEnglish() = shoot("push_prompt_hold", AppLanguage.ENGLISH, reason = PushPromptReason.HoldReminder)
+
     private fun shoot(
         prefix: String,
         language: AppLanguage,
         theme: BahrThemeName = BahrThemeName.LakeBurullus,
+        reason: PushPromptReason = PushPromptReason.WaitingList,
     ) {
         compose.setContent {
             ProvideAppLanguage(language) {
@@ -58,7 +67,7 @@ class PushPromptScreenshotTest {
                     reducedMotion = true,
                 ) {
                     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface), contentAlignment = Alignment.BottomCenter) {
-                        PushPromptContent()
+                        PushPromptContent(reason = reason)
                     }
                 }
             }

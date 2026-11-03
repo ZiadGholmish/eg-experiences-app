@@ -7,6 +7,7 @@ import eg.bahr.deeplink.AppDeepLinkInbox
 import eg.bahr.deeplink.DeepLinkDestinations
 import eg.bahr.deeplink.DeepLinkParser
 import eg.bahr.push.PUSH_LINK
+import eg.bahr.push.PUSH_REF
 import eg.bahr.push.PUSH_TYPE
 import org.junit.After
 import org.junit.Test
@@ -48,7 +49,10 @@ class AndroidPushTest {
 
     /** The inbox is one per process: whatever a test left in it is opened (and so dropped) before the next. */
     @After
-    fun drainInbox() = AppDeepLinkInbox.dispatch(parser, Opened())
+    fun drainInbox() {
+        AppDeepLinkInbox.dispatch(parser, Opened())
+        AppDeepLinkInbox.takeHold()
+    }
 
     @Test
     fun `a tapped place-opened push opens its trip on that date - saying a place opened`() {
@@ -79,6 +83,22 @@ class AndroidPushTest {
     fun `an intent without our link is not a push`() {
         assertFalse(AndroidPush.openFromExtras(Intent(Intent.ACTION_MAIN)))
         assertNull(AppDeepLinkInbox.pending.value)
+    }
+
+    @Test
+    fun `a tapped hold reminder opens that hold's seats - not a link`() {
+        val tap = Intent(Intent.ACTION_MAIN).putExtra(PUSH_TYPE, "hold_expiring").putExtra(PUSH_REF, "BRL-7K4M2X9P")
+
+        assertTrue(AndroidPush.openFromExtras(tap))
+
+        assertEquals("BRL-7K4M2X9P", AppDeepLinkInbox.takeHold())
+        assertNull(AppDeepLinkInbox.pending.value)
+    }
+
+    @Test
+    fun `a ref on another push type is not a hold to open`() {
+        assertFalse(AndroidPush.openFromExtras(Intent().putExtra(PUSH_TYPE, "broadcast").putExtra(PUSH_REF, "BRL-7K4M2X9P")))
+        assertNull(AppDeepLinkInbox.pendingHold.value)
     }
 
     private companion object {

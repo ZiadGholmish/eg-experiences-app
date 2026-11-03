@@ -130,6 +130,8 @@ internal class BookingViewModel(
     private val repository: BookingRepository,
     private val activeHold: ActiveHoldStore,
     private val clock: Clock = Clock.System,
+    /** The "about to expire" reminder (M3-M7): scheduled with the hold, gone with a stored hold found over. */
+    private val reminders: HoldReminderSchedule = NoHoldReminderSchedule,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(BookingUiState(selectedDepartureId = departureId))
     val uiState: StateFlow<BookingUiState> = _uiState.asStateFlow()
@@ -210,6 +212,7 @@ internal class BookingViewModel(
             when (val result = repository.placeHold(request)) {
                 is AppResult.Success -> {
                     val seats = result.data
+                    val receivedAt = clock.now()
                     val route =
                         HoldRoute(
                             ref = seats.ref,
@@ -221,7 +224,13 @@ internal class BookingViewModel(
                         )
                     // Stored before the hold screen opens, so there is never a live hold on screen
                     // that a restart would forget.
-                    storeHold(StoredHold(seats.ref, request.guest.phone, seats.holdExpiresAt, seats.serverNow))
+                    val stored = storeHold(StoredHold(seats.ref, request.guest.phone, seats.holdExpiresAt, seats.serverNow))
+                    // Only a stored hold gets a reminder: its tap reads the hold back with the stored phone, and
+                    // without one would have to say the seats were released while they are still held.
+                    val deadline = HoldDeadline.from(seats.holdExpiresAt, seats.serverNow, receivedAt)
+                    if (stored && deadline != null) {
+                        reminders.onHeld(seats.ref, deadline, _uiState.value.trip?.title, request.partySize)
+                    }
                     _uiState.update { it.copy(isPlacingHold = false, held = route, heldAlready = false) }
                 }
 
@@ -239,15 +248,16 @@ internal class BookingViewModel(
      * A failed local write (a full disk) must not cost the user a hold the server already gave them:
      * they still go on to it; it just will not survive a restart.
      */
-    private suspend fun storeHold(hold: StoredHold) {
+    private suspend fun storeHold(hold: StoredHold): Boolean =
         try {
             activeHold.save(hold)
+            true
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (failed: Exception) {
             Logger.withTag(LOG_TAG).w(failed) { "Could not store the hold; Home will not offer to continue it" }
+            false
         }
-    }
 
     /**
      * The stored hold, read again: still held → hand over to it; over (or unknown to the server) →
@@ -260,18 +270,23 @@ internal class BookingViewModel(
                 val booking = read.data
                 // The same "still held" rule as Home's card and the hold screen.
                 val holdExpiresAt = booking.holdExpiresAt
-                if (holdExpiresAt != null && booking.liveDeadline(clock.now()) != null) {
+                val deadline = booking.liveDeadline(clock.now())
+                if (holdExpiresAt != null && deadline != null) {
+                    // A live read: the reminder follows the fresh deadline (M3-M7).
+                    reminders.onHeld(stored.ref, deadline, booking.trip?.title, booking.partySize)
                     // The fresh pair, just read: the hold screen's countdown is right from its
                     // first frame even if its own re-read fails.
                     StoredHoldCheck.Live(reopenedHold(stored, booking, holdExpiresAt))
                 } else {
                     activeHold.clear(stored.ref)
+                    reminders.onEnded(stored.ref)
                     StoredHoldCheck.None
                 }
             }
             is AppResult.Failure ->
                 if (read.error.isNotFound()) {
                     activeHold.clear(stored.ref)
+                    reminders.onEnded(stored.ref)
                     StoredHoldCheck.None
                 } else {
                     StoredHoldCheck.Unknown(read.error)

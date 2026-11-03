@@ -12,6 +12,33 @@ class DeepLinkInboxTest {
     private val opened = RecordingDestinations()
 
     @Test
+    fun `a tapped hold reminder waits for the NavHost and is taken once`() {
+        inbox.offerHold("BRL-7K4M2X9P")
+
+        assertEquals("BRL-7K4M2X9P", inbox.takeHold())
+        assertNull(inbox.takeHold())
+    }
+
+    @Test
+    fun `the last tap wins - a link replaces a pending hold and a hold a pending link`() {
+        inbox.offerHold("BRL-7K4M2X9P")
+        inbox.offer("https://bahr.eg/t/burullus-dawn")
+        assertNull(inbox.pendingHold.value)
+
+        inbox.offerHold("BRL-7K4M2X9P")
+        assertNull(inbox.pending.value)
+        assertEquals("BRL-7K4M2X9P", inbox.pendingHold.value)
+    }
+
+    @Test
+    fun `a ref that is not a booking reference's shape is ignored`() {
+        inbox.offerHold("../../etc")
+        inbox.offerHold("")
+
+        assertNull(inbox.pendingHold.value)
+    }
+
+    @Test
     fun `a trip link opens the trip once`() {
         inbox.offer("https://bahr.eg/t/burullus-dawn")
 

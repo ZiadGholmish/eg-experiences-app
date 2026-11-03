@@ -38,6 +38,9 @@ import eg.bahr.feature.booking.navigation.holdScreen
 import eg.bahr.feature.booking.navigation.navigateToBooking
 import eg.bahr.feature.booking.navigation.navigateToBookingByRef
 import eg.bahr.feature.booking.navigation.navigateToHold
+import eg.bahr.feature.booking.navigation.navigateToHoldByRef
+import eg.bahr.feature.booking.navigation.openHeldSeats
+import eg.bahr.feature.booking.navigation.openHoldScreen
 import eg.bahr.feature.booking.navigation.returnToDateSelection
 import eg.bahr.feature.home.navigation.HomeAction
 import eg.bahr.feature.home.navigation.TripListRoute
@@ -49,6 +52,7 @@ import eg.bahr.feature.map.navigation.TripMapRoute
 import eg.bahr.feature.map.navigation.tripMapScreen
 import eg.bahr.feature.mytrips.navigation.MyTripsRoute
 import eg.bahr.feature.mytrips.navigation.myTripsScreen
+import eg.bahr.feature.notifications.navigation.PushPromptReason
 import eg.bahr.feature.notifications.navigation.PushPromptSlot
 import eg.bahr.feature.notifications.navigation.UnreadAlerts
 import eg.bahr.feature.notifications.navigation.navigateToNotifications
@@ -154,6 +158,11 @@ fun AppNavHost(
         val destinations = remember(navController, languages) { NavControllerDeepLinkDestinations(navController, languages) }
         LaunchedEffect(pendingLink, pastSplash) {
             if (pastSplash) inbox.dispatch(parser, destinations)
+        }
+        // A tapped hold reminder (M3-M7): that hold's seats, on top of what is open (or back to them if they are).
+        val pendingHold by inbox.pendingHold.collectAsStateWithLifecycle()
+        LaunchedEffect(pendingHold, pastSplash) {
+            if (pastSplash) inbox.takeHold()?.let(navController::navigateToHoldByRef)
         }
     }
 
@@ -280,8 +289,20 @@ fun AppNavHost(
                 onHeld = navController::navigateToHold,
             )
 
-            // Released or run out: back to date + party under it, which re-reads its dates.
-            holdScreen(onEnded = navController::returnToDateSelection)
+            // Released or run out: back to date + party under it, which re-reads its dates. A hold just placed offers
+            // feature:notifications' pre-prompt (M3-M7): the "about to expire" reminder needs the permission.
+            holdScreen(
+                onEnded = navController::returnToDateSelection,
+                reminderPrompt = { onDone -> PushPromptSlot(onDone = onDone, reason = PushPromptReason.HoldReminder) },
+            )
+
+            // A tapped hold reminder (M3-M7): the hold read again, then its seats in its place; over → back, where the
+            // app says the seats were released.
+            openHoldScreen(
+                onOpen = navController::openHeldSeats,
+                onEnded = { navController.popBackStack() },
+                onBack = { navController.popBackStack() },
+            )
 
             // Done: back to the root of the tab the booking was made in.
             bookingConfirmedScreen(onDone = { navController.popToRoot(tab) })

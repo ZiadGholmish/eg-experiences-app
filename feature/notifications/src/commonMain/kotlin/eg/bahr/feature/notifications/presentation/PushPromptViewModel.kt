@@ -6,6 +6,7 @@ import eg.bahr.core.common.push.PushChannel
 import eg.bahr.core.datastore.PushPromptStore
 import eg.bahr.feature.notifications.data.PushPermissionStatus
 import eg.bahr.feature.notifications.data.PushPermissions
+import eg.bahr.feature.notifications.navigation.PushPromptReason
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,9 +20,11 @@ import kotlinx.coroutines.launch
 internal enum class PushPromptUiState { Deciding, Showing, Waiting, Done }
 
 /**
- * The push pre-prompt (M3-M5, handoff §3), offered right after a waiting-list join:
- * - not shown when this build has no push ([PushChannel.isAvailable]: no Firebase config, M3-M19a), when
- *   notifications are already allowed, or after two "Not now"s ([MAX_DECLINES]; the person said no twice);
+ * The push pre-prompt (M3-M5, handoff §3), offered right after a waiting-list join, and (M3-M7, [reason]) right after a
+ * hold is placed:
+ * - not shown for a waiting list when this build has no push ([PushChannel.isAvailable]: no Firebase config, M3-M19a),
+ *   when notifications are already allowed, or after two "Not now"s for that reason ([MAX_DECLINES]; the person said
+ *   no twice);
  * - "Yes, notify me": the OS dialog if it can still be shown, else (refused for good, or turned off) the app's
  *   notification settings; either way the push channel is read again, so a grant registers the token;
  * - "Not now" (and swiping the sheet away, which says the same) is counted, and asked again at the next join.
@@ -32,6 +35,7 @@ internal enum class PushPromptUiState { Deciding, Showing, Waiting, Done }
 internal class PushPromptViewModel(
     private val push: PushChannel,
     private val store: PushPromptStore,
+    private val reason: PushPromptReason = PushPromptReason.WaitingList,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(PushPromptUiState.Deciding)
     val uiState: StateFlow<PushPromptUiState> = _uiState.asStateFlow()
@@ -43,7 +47,7 @@ internal class PushPromptViewModel(
     fun offer(permissions: PushPermissions) {
         _uiState.value = PushPromptUiState.Deciding
         viewModelScope.launch {
-            if (!push.isAvailable || store.declines() >= MAX_DECLINES) {
+            if (!needsPush() || declines() >= MAX_DECLINES) {
                 _uiState.value = PushPromptUiState.Done
                 return@launch
             }
@@ -77,8 +81,29 @@ internal class PushPromptViewModel(
     fun notNow() {
         if (_uiState.value != PushPromptUiState.Showing) return
         _uiState.value = PushPromptUiState.Done
-        viewModelScope.launch { store.recordDecline() }
+        viewModelScope.launch {
+            when (reason) {
+                PushPromptReason.WaitingList -> store.recordDecline()
+                PushPromptReason.HoldReminder -> store.recordHoldReminderDecline()
+            }
+        }
     }
+
+    /**
+     * Whether asking makes sense in this build. A seat alert is a server push: none without Firebase config. The hold
+     * reminder is a local notification (M3-M7), which needs only the permission (the gate the M3-M5 review asked to lift).
+     */
+    private fun needsPush(): Boolean =
+        when (reason) {
+            PushPromptReason.WaitingList -> push.isAvailable
+            PushPromptReason.HoldReminder -> true
+        }
+
+    private suspend fun declines(): Int =
+        when (reason) {
+            PushPromptReason.WaitingList -> store.declines()
+            PushPromptReason.HoldReminder -> store.holdReminderDeclines()
+        }
 
     /**
      * The placing screen has been told: back to [PushPromptUiState.Deciding], so the next placement (another join on

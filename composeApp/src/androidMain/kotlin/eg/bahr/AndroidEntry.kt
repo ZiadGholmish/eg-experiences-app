@@ -1,6 +1,7 @@
 package eg.bahr
 
 import android.app.Application
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import androidx.appcompat.app.AppCompatDelegate
@@ -15,7 +16,11 @@ import eg.bahr.di.onAppForeground
 import eg.bahr.di.seedStoredAppearance
 import eg.bahr.di.startInstallRegistration
 import eg.bahr.feature.auth.di.AuthConfig
+import eg.bahr.feature.booking.di.HoldReminder
+import eg.bahr.feature.booking.di.HoldReminders
 import eg.bahr.feature.notifications.navigation.UnreadAlerts
+import eg.bahr.push.PUSH_REF
+import eg.bahr.push.PUSH_TYPE
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
@@ -47,10 +52,12 @@ fun Application.startApp(
     pushChannelId: String,
     pushChannelName: String,
     pushSmallIcon: Int,
+    holdReminderReceiver: Class<out BroadcastReceiver>,
 ) {
     pushChannelIdInUse = pushChannelId
     pushSmallIconInUse = pushSmallIcon
     val push = AndroidPush.start(this, appScope, pushChannelId, pushChannelName)
+    val holdReminders = AndroidHoldReminders(this, holdReminderReceiver).also { holdRemindersInUse = it }
     initKoin(
         baseUrl = baseUrl,
         isDebug = isDebug,
@@ -64,6 +71,8 @@ fun Application.startApp(
         androidLogger()
         // The platform's push (M3-M5): core:network registers the install with its token.
         modules(module { single<PushChannel> { push } })
+        // The hold reminder (M3-M7), scheduled on the phone: feature:booking decides when.
+        modules(module { single<HoldReminders> { holdReminders } })
     }
     followAppearance()
     GlobalContext.get().startInstallRegistration(appScope)
@@ -75,6 +84,18 @@ private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 /** [startApp]'s channel id and monochrome small icon (`:androidApp`'s drawable), for pushes shown while the app is in front. */
 private var pushChannelIdInUse = ""
 private var pushSmallIconInUse = 0
+
+/** [startApp]'s hold reminders, for a server `hold_expiring` push shown in front (it takes the local one's place). */
+private var holdRemindersInUse: AndroidHoldReminders? = null
+
+/**
+ * The hold reminder's alarm went off (M3-M7; `:androidApp`'s `HoldReminderReceiver`, which [startApp] named): posted
+ * on the default channel, with the monochrome icon, if it still makes sense. The Application has run first, so both
+ * are set even in a process the system started only for the alarm.
+ */
+fun Context.onHoldReminderAlarm(intent: Intent) {
+    AndroidHoldReminders.post(this, intent, pushChannelIdInUse, pushSmallIconInUse)
+}
 
 /**
  * The activity's intent (launch or `onNewIntent`): a tap on a push the system showed in the background carries the
@@ -94,6 +115,8 @@ fun Context.onPushMessage(
     data: Map<String, String>,
     tag: String?,
 ) {
+    // A server `hold_expiring` for a hold whose reminder is still to come (M3-M7): the push takes its place, once.
+    data[PUSH_REF]?.takeIf { data[PUSH_TYPE] == HoldReminder.TYPE }?.let { holdRemindersInUse?.cancelPending(it) }
     AndroidPush.showInForeground(this, pushChannelIdInUse, pushSmallIconInUse, title, body, data, tag)
     // A new item in the inbox: the bell's count, and an open notifications page, read again (M3-M6).
     GlobalContext.getOrNull()?.getOrNull<UnreadAlerts>()?.onPushReceived()

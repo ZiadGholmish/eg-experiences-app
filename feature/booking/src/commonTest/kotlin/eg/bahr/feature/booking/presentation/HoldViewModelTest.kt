@@ -7,6 +7,7 @@ import eg.bahr.core.testing.runViewModelTest
 import eg.bahr.feature.booking.data.BookingFixtures
 import eg.bahr.feature.booking.data.FakeActiveHoldStore
 import eg.bahr.feature.booking.data.FakeBookingRepository
+import eg.bahr.feature.booking.data.RecordingHoldReminderSchedule
 import eg.bahr.feature.booking.model.HeldBookingDto
 import eg.bahr.feature.booking.navigation.HoldRoute
 import kotlinx.coroutines.test.TestScope
@@ -403,4 +404,71 @@ class HoldViewModelTest {
     private companion object {
         const val TICKS_IN_TWO_MINUTES = 240
     }
+
+    @Test
+    fun `each fresh deadline moves the reminder and a hold found gone cancels it`() =
+        runViewModelTest {
+            val reminders = RecordingHoldReminderSchedule()
+            val store = storedHold()
+            val vm = HoldViewModel(hold, FakeBookingRepository(heldBooking = { _, _ -> serverAnswer() }), store, deviceClock(), reminders)
+            vm.onStart()
+            runCurrent()
+
+            // From the server's answer, not the device clock (hours off): 15 minutes left at the read.
+            val (ref, deadline) = reminders.held.single()
+            assertEquals(hold.ref, ref)
+            assertEquals(15.minutes, deadline.remaining(deviceStart + elapsed()))
+
+            vm.onStop()
+            advanceTimeBy(5.minutes)
+            vm.onStart()
+            runCurrent()
+            assertEquals(2, reminders.held.size)
+            assertEquals(
+                10.minutes,
+                reminders.held
+                    .last()
+                    .second
+                    .remaining(deviceStart + elapsed()),
+            )
+            assertTrue(reminders.ended.isEmpty())
+
+            advanceTimeBy(10.minutes)
+            runCurrent()
+            assertEquals(HoldPhase.Expired, vm.uiState.value.phase)
+            assertEquals(listOf(hold.ref), reminders.ended)
+        }
+
+    @Test
+    fun `a release cancels the reminder but leaving after a failed release keeps it`() =
+        runViewModelTest {
+            val released = RecordingHoldReminderSchedule()
+            val ok =
+                FakeBookingRepository(heldBooking = { _, _ -> serverAnswer() }, releaseHold = { _, _ -> AppResult.Success(Unit) })
+            val vm = HoldViewModel(hold, ok, storedHold(), deviceClock(), released)
+            vm.onStart()
+            runCurrent()
+            vm.requestLeave()
+            vm.confirmLeave()
+            runCurrent()
+            assertEquals(listOf(hold.ref), released.ended)
+
+            val kept = RecordingHoldReminderSchedule()
+            val failing =
+                FakeBookingRepository(heldBooking = {
+                    _,
+                    _,
+                    ->
+                    serverAnswer()
+                }, releaseHold = { _, _ -> AppResult.Failure(AppError.Network) })
+            val left = HoldViewModel(hold, failing, storedHold(), deviceClock(), kept)
+            left.onStart()
+            runCurrent()
+            left.requestLeave()
+            left.confirmLeave()
+            runCurrent()
+            left.leaveWithoutRelease()
+            // Still held on the server: the reminder is still the way back before the seats go.
+            assertTrue(kept.ended.isEmpty())
+        }
 }

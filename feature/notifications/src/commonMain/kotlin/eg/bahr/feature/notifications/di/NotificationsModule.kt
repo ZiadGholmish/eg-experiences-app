@@ -6,6 +6,7 @@ import eg.bahr.feature.notifications.data.AlertsCenter
 import eg.bahr.feature.notifications.data.DefaultNotificationsRepository
 import eg.bahr.feature.notifications.data.NotificationsApiService
 import eg.bahr.feature.notifications.data.NotificationsRepository
+import eg.bahr.feature.notifications.navigation.PushPromptReason
 import eg.bahr.feature.notifications.navigation.UnreadAlerts
 import eg.bahr.feature.notifications.presentation.NotificationsViewModel
 import eg.bahr.feature.notifications.presentation.PushPromptViewModel
@@ -37,5 +38,5 @@ val notificationsModule =
             )
         } bind UnreadAlerts::class
         viewModel { NotificationsViewModel(repository = get(), center = get(), errors = get()) }
-        viewModel { PushPromptViewModel(push = getOrNull() ?: NoPushChannel, store = get()) }
+        viewModel { (reason: PushPromptReason) -> PushPromptViewModel(push = getOrNull() ?: NoPushChannel, store = get(), reason = reason) }
     }

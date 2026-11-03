@@ -55,6 +55,8 @@ internal class ContinueBookingViewModel(
     private val activeHold: ActiveHoldStore,
     private val repository: BookingRepository,
     private val clock: Clock = Clock.System,
+    /** The "about to expire" reminder (M3-M7): follows each live read, goes with a hold found over. */
+    private val reminders: HoldReminderSchedule = NoHoldReminderSchedule,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ContinueBookingUiState())
     val uiState: StateFlow<ContinueBookingUiState> = _uiState.asStateFlow()
@@ -161,6 +163,7 @@ internal class ContinueBookingViewModel(
                     is AppResult.Failure ->
                         if (result.error.isNotFound()) {
                             activeHold.clear(stored.ref)
+                            reminders.onEnded(stored.ref)
                             hide()
                         } else {
                             // Whatever shows stays (a live countdown keeps counting); ask again later.
@@ -180,9 +183,11 @@ internal class ContinueBookingViewModel(
         val holdExpiresAt = booking.holdExpiresAt
         if (fresh == null || serverNow == null || holdExpiresAt == null) {
             activeHold.clear(stored.ref)
+            reminders.onEnded(stored.ref)
             hide()
             return
         }
+        reminders.onHeld(stored.ref, fresh, booking.trip?.title, booking.partySize)
         deadline = fresh
         // The placement's pair is the hold's full length, as on the hold screen's progress bar.
         holdLength = HoldDeadline.length(stored.holdExpiresAt, stored.serverNow)

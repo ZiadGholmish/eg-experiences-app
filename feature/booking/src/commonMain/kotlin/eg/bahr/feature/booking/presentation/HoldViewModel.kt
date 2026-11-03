@@ -89,6 +89,11 @@ internal class HoldViewModel(
     private val repository: BookingRepository,
     private val activeHold: ActiveHoldStore,
     private val clock: Clock = Clock.System,
+    /**
+     * The "about to expire" reminder (M3-M7): moved to each fresh deadline, gone once the seats are released or no
+     * longer held. Kept on [leaveWithoutRelease]: the seats are still held then.
+     */
+    private val reminders: HoldReminderSchedule = NoHoldReminderSchedule,
 ) : ViewModel() {
     /** The hold's full length by the server's clock, from the answer that placed it; never re-derived. */
     private val holdLength: Duration? =
@@ -137,6 +142,14 @@ internal class HoldViewModel(
         ticker = null
     }
 
+    /**
+     * The reminder's pre-prompt was answered (M3-M7): read the hold again, so its reminder is scheduled afresh now that
+     * notifications may be allowed (iOS may not keep a request added before the permission was granted).
+     */
+    fun onReminderPromptDone() {
+        if (!_uiState.value.phase.isEnded) reread()
+    }
+
     /** The screen has handed the end of the hold to navigation. */
     fun onEndReported() = _uiState.update { it.copy(isEndReported = true) }
 
@@ -165,6 +178,7 @@ internal class HoldViewModel(
                 is AppResult.Success -> {
                     stopAll()
                     activeHold.clear(hold.ref)
+                    reminders.onEnded(hold.ref)
                     _uiState.update { it.copy(isReleasing = false, isLeaveConfirmVisible = false, phase = HoldPhase.Released) }
                 }
                 is AppResult.Failure ->
@@ -234,11 +248,14 @@ internal class HoldViewModel(
                 // Cleared before the phase change: Expired ends the screen, which clears this view
                 // model and its scope, and an unfinished clear would leave the phone stored.
                 activeHold.clear(hold.ref)
+                reminders.onEnded(hold.ref)
                 stopAll()
                 _uiState.update { it.copy(phase = HoldPhase.Expired, isLeaveConfirmVisible = false) }
             }
             fresh.remaining(receivedAt) > Duration.ZERO -> {
                 deadline = fresh
+                // Re-scheduled from the server's fresh deadline, never the device clock alone (M3-M7).
+                reminders.onHeld(hold.ref, fresh, booking.trip?.title, booking.partySize)
                 emptyChecks = 0
                 _uiState.update { it.copy(phase = HoldPhase.Holding) }
                 refreshClock(receivedAt)

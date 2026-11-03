@@ -16,6 +16,7 @@ class EgApplication : Application() {
             pushChannelId = getString(R.string.push_channel_id),
             pushChannelName = getString(R.string.push_channel_name),
             pushSmallIcon = R.drawable.ic_stat_bahr,
+            holdReminderReceiver = HoldReminderReceiver::class.java,
         )
     }
 }

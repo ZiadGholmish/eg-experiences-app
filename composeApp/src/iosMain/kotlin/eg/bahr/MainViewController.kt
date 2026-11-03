@@ -15,6 +15,8 @@ import eg.bahr.di.seedStoredAppearance
 import eg.bahr.di.startInstallRegistration
 import eg.bahr.feature.auth.di.AuthConfig
 import eg.bahr.feature.auth.di.NativeSignIn
+import eg.bahr.feature.booking.di.HoldReminder
+import eg.bahr.feature.booking.di.HoldReminders
 import eg.bahr.feature.map.di.TripMapNativeViews
 import eg.bahr.feature.notifications.navigation.UnreadAlerts
 import eg.bahr.navigation.AppTab
@@ -139,6 +141,8 @@ fun startApp(
         nativeSignIn?.let { bridge -> modules(module { single<NativeSignIn> { bridge } }) }
         // The platform's push (M3-M5): core:network registers the install with its token.
         modules(module { single<PushChannel> { push } })
+        // The hold reminder (M3-M7), scheduled on the phone: feature:booking decides when.
+        modules(module { single<HoldReminders> { IosHoldReminders } })
     }
     KoinPlatform.getKoin().startInstallRegistration(IosPushState.scope)
     // The stored appearance before any Compose root or the bar draws (M3-M0b review R4-1).
@@ -186,15 +190,28 @@ fun onPushToken(token: String?) {
 }
 
 /**
- * Swift entry point (M3-M5): a tap on one of our notifications, with the push's `link` and `type` data. Safe before
- * [startApp]: the link waits in the inbox, as a Universal Link does.
+ * Swift entry point (M3-M5): a tap on one of our notifications, with the push's `link`, `type` and (M3-M7, the hold
+ * reminder) `ref` data. Safe before [startApp]: the link or hold waits in the inbox, as a Universal Link does.
  */
 @Suppress("unused")
 fun onPushOpened(
     link: String?,
     type: String?,
+    ref: String?,
 ) {
-    openPush(link, type)
+    openPush(link, type, ref)
+}
+
+/**
+ * Swift entry point (M3-M7): a server push is being shown in front (`willPresent`, remote only), with its `type` and
+ * `ref`. A `hold_expiring` for a hold whose local reminder is still to come takes that reminder's place.
+ */
+@Suppress("unused")
+fun onRemotePushPresented(
+    type: String?,
+    ref: String?,
+) {
+    if (type == HoldReminder.TYPE && !ref.isNullOrBlank()) IosHoldReminders.cancelPending(ref)
 }
 
 /**
@@ -267,6 +284,8 @@ internal object IosTabs {
         scope.launch { appearance.appearance.drop(1).collect { tabBar.applyAppearance(it.tag) } }
         // A link from outside opens in the Home tab's stack: show Home so its NavHost can open it.
         scope.launch { AppDeepLinkInbox.pending.filterNotNull().collect { state.select(AppTab.Home) } }
+        // As does a tapped hold reminder (M3-M7).
+        scope.launch { AppDeepLinkInbox.pendingHold.filterNotNull().collect { state.select(AppTab.Home) } }
     }
 
     /**

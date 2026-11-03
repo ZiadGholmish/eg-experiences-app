@@ -1,5 +1,6 @@
 package eg.bahr.feature.booking.navigation
 
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -11,6 +12,7 @@ import eg.bahr.core.designsystem.theme.BahrDestination
 import eg.bahr.feature.booking.presentation.BookingConfirmedScreen
 import eg.bahr.feature.booking.presentation.BookingScreen
 import eg.bahr.feature.booking.presentation.HoldScreen
+import eg.bahr.feature.booking.presentation.OpenHoldScreen
 
 /**
  * The booking feature's public surface: destinations for the app's NavHost, and how to reach them.
@@ -44,20 +46,66 @@ fun NavGraphBuilder.bookingScreen(
  * The held seats and their countdown. [onEnded] is called once the hold is over, [holdExpired] true
  * when it ran out and false when the user released it; wire it to [returnToDateSelection].
  */
-fun NavGraphBuilder.holdScreen(onEnded: (holdExpired: Boolean) -> Unit) {
+fun NavGraphBuilder.holdScreen(
+    onEnded: (holdExpired: Boolean) -> Unit,
+    reminderPrompt: (@Composable (onDone: () -> Unit) -> Unit)? = null,
+) {
     composable<HoldRoute> { entry ->
         // Set by [navigateToBooking] when Continue elsewhere was turned back to this hold.
         val alreadyHeld by entry.savedStateHandle.getStateFlow(ALREADY_HELD_KEY, false).collectAsStateWithLifecycle()
+        // Set by [navigateToHold] for a hold just placed (M3-M7); kept in the entry's saved state so the prompt is
+        // offered once per placement, not again on a configuration change.
+        val promptPending by entry.savedStateHandle.getStateFlow(REMINDER_PROMPT_KEY, false).collectAsStateWithLifecycle()
         BahrDestination(this) {
             HoldScreen(
                 hold = entry.toRoute<HoldRoute>(),
                 onEnded = onEnded,
                 alreadyHeldNotice = alreadyHeld,
                 onAlreadyHeldNoticeSeen = { entry.savedStateHandle[ALREADY_HELD_KEY] = false },
+                reminderPrompt = reminderPrompt?.takeIf { promptPending },
+                onReminderPromptDone = { entry.savedStateHandle[REMINDER_PROMPT_KEY] = false },
             )
         }
     }
 }
+
+/**
+ * Between a tap on the hold reminder and the held seats (M3-M7, [navigateToHoldByRef]): [onOpen] gets the live hold
+ * (wire it to [openHeldSeats]); [onEnded] is called when it is over, once the app has said so (wire it to a plain pop).
+ */
+fun NavGraphBuilder.openHoldScreen(
+    onOpen: (HoldRoute) -> Unit,
+    onEnded: () -> Unit,
+    onBack: () -> Unit,
+) {
+    composable<OpenHoldRoute> { entry ->
+        BahrDestination(this) {
+            OpenHoldScreen(ref = entry.toRoute<OpenHoldRoute>().ref, onOpen = onOpen, onEnded = onEnded, onBack = onBack)
+        }
+    }
+}
+
+/**
+ * A tap on the hold reminder (M3-M7): the held seats of [ref]. Already on the back stack (the person was booking in
+ * this tab) → back to them, which re-reads the deadline as it shows; otherwise [OpenHoldRoute] on top of what is open,
+ * which reads the hold again and hands over to the held seats.
+ */
+fun NavController.navigateToHoldByRef(ref: String) {
+    // The topmost held-seats entry (getBackStackEntry), if any.
+    val held = if (hasEntry<HoldRoute>()) getBackStackEntry<HoldRoute>().toRoute<HoldRoute>() else null
+    if (held?.ref == ref) {
+        popBackStack<HoldRoute>(inclusive = false)
+    } else {
+        navigate(OpenHoldRoute(ref)) { launchSingleTop = true }
+    }
+}
+
+/** [openHoldScreen]'s live hold: the held seats take its place, so Back from them returns to where the tap landed. */
+fun NavController.openHeldSeats(hold: HoldRoute) =
+    navigate(hold) {
+        popUpTo<OpenHoldRoute> { inclusive = true }
+        launchSingleTop = true
+    }
 
 fun NavGraphBuilder.bookingConfirmedScreen(onDone: () -> Unit) {
     composable<BookingConfirmedRoute> { entry ->
@@ -101,7 +149,14 @@ fun NavController.navigateToHold(
         if (alreadyHeld) popUpTo<BookingRoute> { inclusive = true }
         launchSingleTop = true
     }
-    if (alreadyHeld) currentBackStackEntry?.savedStateHandle?.set(ALREADY_HELD_KEY, true)
+    val entry = currentBackStackEntry?.savedStateHandle ?: return
+    if (alreadyHeld) {
+        entry[ALREADY_HELD_KEY] = true
+    } else if (previousBackStackEntry?.destination?.hasRoute<BookingRoute>() == true) {
+        // Just placed from date + party (M3-M7): offer the reminder's pre-prompt once. Not for Home's card, a
+        // reminder's tap or a hold handed back, which reopen a hold the person has already been asked about.
+        entry[REMINDER_PROMPT_KEY] = true
+    }
 }
 
 /**
@@ -138,6 +193,7 @@ private inline fun <reified T : Any> NavController.hasEntry(): Boolean =
     }
 
 internal const val ALREADY_HELD_KEY = "already_held"
+internal const val REMINDER_PROMPT_KEY = "hold_reminder_prompt"
 internal const val HOLD_ENDED_KEY = "hold_ended"
 internal const val HOLD_ENDED_EXPIRED = "expired"
 internal const val HOLD_ENDED_RELEASED = "released"

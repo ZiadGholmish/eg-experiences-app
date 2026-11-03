@@ -13,6 +13,7 @@ import eg.bahr.feature.booking.data.BookingFixtures.saturdays
 import eg.bahr.feature.booking.data.BookingFixtures.trip
 import eg.bahr.feature.booking.data.FakeActiveHoldStore
 import eg.bahr.feature.booking.data.FakeBookingRepository
+import eg.bahr.feature.booking.data.RecordingHoldReminderSchedule
 import eg.bahr.feature.booking.model.HeldBookingDto
 import eg.bahr.feature.booking.model.HeldSeatsDto
 import kotlinx.coroutines.CompletableDeferred
@@ -542,5 +543,45 @@ class BookingViewModelTest {
                 vm.uiState.value.trip
                     ?.slug,
             )
+        }
+
+    @Test
+    fun `a placed hold schedules its reminder and a stored hold found over cancels its own`() =
+        runViewModelTest {
+            val stored = StoredHold("BRL-OLD00001", "+201011111111", "2026-10-09T22:40:00+03:00", "2026-10-09T22:25:00+03:00")
+            val reminders = RecordingHoldReminderSchedule()
+            val repo = loaded().apply { heldBooking = { _, _ -> AppResult.Success(heldBooking(status = "EXPIRED")) } }
+            val vm = BookingViewModel(SLUG, "dep-1", repo, FakeActiveHoldStore(stored), reminders = reminders)
+            advanceUntilIdle()
+            vm.fillGuest()
+
+            vm.placeHold()
+            advanceUntilIdle()
+
+            assertEquals(listOf(stored.ref), reminders.ended)
+            assertEquals(listOf(held().ref), reminders.held.map { it.first })
+        }
+
+    @Test
+    fun `a hold that could not be stored gets no reminder - its tap could not read it back`() =
+        runViewModelTest {
+            val reminders = RecordingHoldReminderSchedule()
+            val failing =
+                object : ActiveHoldStore {
+                    override val hold = MutableStateFlow<StoredHold?>(null)
+
+                    override suspend fun save(hold: StoredHold) = error("disk full")
+
+                    override suspend fun clear(ref: String) = Unit
+                }
+            val vm = BookingViewModel(SLUG, "dep-1", loaded(), failing, reminders = reminders)
+            advanceUntilIdle()
+            vm.fillGuest()
+
+            vm.placeHold()
+            advanceUntilIdle()
+
+            assertNotNull(vm.uiState.value.held)
+            assertTrue(reminders.held.isEmpty())
         }
 }

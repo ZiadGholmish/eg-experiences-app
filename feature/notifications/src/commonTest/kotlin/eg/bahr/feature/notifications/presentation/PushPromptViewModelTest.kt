@@ -5,6 +5,7 @@ import eg.bahr.core.datastore.PushPromptStore
 import eg.bahr.core.testing.runViewModelTest
 import eg.bahr.feature.notifications.data.PushPermissionStatus
 import eg.bahr.feature.notifications.data.PushPermissions
+import eg.bahr.feature.notifications.navigation.PushPromptReason
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -34,11 +35,18 @@ class PushPromptViewModelTest {
     private class FakeStore(
         var declines: Int = 0,
         var dialogShown: Boolean = false,
+        var holdDeclines: Int = 0,
     ) : PushPromptStore {
         override suspend fun declines() = declines
 
         override suspend fun recordDecline() {
             declines++
+        }
+
+        override suspend fun holdReminderDeclines() = holdDeclines
+
+        override suspend fun recordHoldReminderDecline() {
+            holdDeclines++
         }
 
         override suspend fun systemDialogShown() = dialogShown
@@ -211,5 +219,53 @@ class PushPromptViewModelTest {
             vm.offer(permissions)
             advanceUntilIdle()
             assertEquals(PushPromptUiState.Showing, vm.uiState.value)
+        }
+
+    @Test
+    fun `on a hold it asks in a build without push - the reminder is the phone's own`() =
+        runViewModelTest {
+            val vm = PushPromptViewModel(FakePush(isAvailable = false), FakeStore(), PushPromptReason.HoldReminder)
+
+            vm.offer(FakePermissions(PushPermissionStatus.CanAsk))
+            advanceUntilIdle()
+
+            assertEquals(PushPromptUiState.Showing, vm.uiState.value)
+        }
+
+    @Test
+    fun `on a hold Not now is counted apart from the waiting list's`() =
+        runViewModelTest {
+            // Two "no"s to seat alerts say nothing about a hold's reminder, and the other way round.
+            val store = FakeStore(declines = PushPromptViewModel.MAX_DECLINES)
+            val vm = PushPromptViewModel(FakePush(), store, PushPromptReason.HoldReminder)
+            repeat(PushPromptViewModel.MAX_DECLINES) {
+                vm.offer(FakePermissions(PushPermissionStatus.CanAsk))
+                advanceUntilIdle()
+                assertEquals(PushPromptUiState.Showing, vm.uiState.value)
+                vm.notNow()
+                advanceUntilIdle()
+                vm.finished()
+            }
+            assertEquals(PushPromptViewModel.MAX_DECLINES, store.holdDeclines)
+            assertEquals(PushPromptViewModel.MAX_DECLINES, store.declines)
+
+            vm.offer(FakePermissions(PushPermissionStatus.CanAsk))
+            advanceUntilIdle()
+            assertEquals(PushPromptUiState.Done, vm.uiState.value, "two Not nows on holds: no more asking")
+        }
+
+    @Test
+    fun `on a hold with the permission denied - Yes opens the app's settings`() =
+        runViewModelTest {
+            val permissions = FakePermissions(PushPermissionStatus.Denied)
+            val vm = PushPromptViewModel(FakePush(isAvailable = false), FakeStore(dialogShown = true), PushPromptReason.HoldReminder)
+            vm.offer(permissions)
+            advanceUntilIdle()
+
+            vm.allow(permissions)
+
+            assertEquals(1, permissions.settingsOpened)
+            assertEquals(0, permissions.dialogs)
+            assertEquals(PushPromptUiState.Done, vm.uiState.value)
         }
 }

@@ -3,7 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- Android 13+ asks before an app shows notifications (M3-M5): only after the push pre-prompt's "Yes". -->
+    <!-- Android 13+ asks before an app shows notifications (M3-M5): only after the push pre-prompt's "Yes" (after a
+         waiting-list join, or a hold just placed for its reminder, M3-M7). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- enableOnBackInvokedCallback (M3-M12): predictive back on Android 13-15 too (16 has it by default at
@@ -43,6 +44,12 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
+
+        <!-- The hold reminder's alarm (M3-M7): AlarmManager wakes it, only this app may (not exported). No
+             exact-alarm permission: the alarm is inexact (setAndAllowWhileIdle). -->
+        <receiver
+            android:name=".HoldReminderReceiver"
+            android:exported="false" />
 
         <activity
             android:name=".MainActivity"

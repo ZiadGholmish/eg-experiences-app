@@ -52,6 +52,13 @@ class PushPromptSheetTest {
 
         override suspend fun recordDecline() = Unit
 
+        override suspend fun holdReminderDeclines(): Int {
+            gate.await()
+            return 0
+        }
+
+        override suspend fun recordHoldReminderDecline() = Unit
+
         override suspend fun systemDialogShown(): Boolean {
             gate.await()
             return false

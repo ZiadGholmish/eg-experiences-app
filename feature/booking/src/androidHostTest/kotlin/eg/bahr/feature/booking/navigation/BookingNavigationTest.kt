@@ -48,6 +48,7 @@ class BookingNavigationTest {
                 composable<TripStub> {}
                 composable<BookingRoute> {}
                 composable<HoldRoute> {}
+                composable<OpenHoldRoute> {}
             }
         }
         compose.waitForIdle()
@@ -165,6 +166,45 @@ class BookingNavigationTest {
 
         assertTrue(onTop<BookingRoute>())
         assertEquals(HOLD_ENDED_RELEASED, nav.currentBackStackEntry?.savedStateHandle?.get<String>(HOLD_ENDED_KEY))
+    }
+
+    @Test
+    fun `a hold just placed from date and party offers the reminder prompt - one reopened does not`() {
+        onNav {
+            navigateToBooking("burullus-dawn", "dep-2")
+            navigateToHold(hold)
+        }
+        assertEquals(true, nav.currentBackStackEntry?.savedStateHandle?.get<Boolean>(REMINDER_PROMPT_KEY))
+
+        // Home's "Continue your booking" card opens the same hold again: no prompt.
+        onNav {
+            popBackStack<ListStub>(inclusive = false)
+            navigateToHold(hold)
+        }
+        assertEquals(null, nav.currentBackStackEntry?.savedStateHandle?.get<Boolean>(REMINDER_PROMPT_KEY))
+    }
+
+    @Test
+    fun `a tapped reminder goes back to its held seats when they are on the stack`() {
+        holdUnderLinkedTrip()
+
+        onNav { navigateToHoldByRef(hold.ref) }
+
+        assertTrue(onTop<HoldRoute>())
+        assertFalse(nav.currentBackStack.value.any { it.destination.hasRoute<OpenHoldRoute>() })
+    }
+
+    @Test
+    fun `a tapped reminder for a hold not on the stack reads it first and its seats then take its place`() {
+        onNav { navigateToHoldByRef(hold.ref) }
+        assertTrue(onTop<OpenHoldRoute>())
+
+        onNav { openHeldSeats(hold) }
+
+        assertTrue(onTop<HoldRoute>())
+        assertFalse(nav.currentBackStack.value.any { it.destination.hasRoute<OpenHoldRoute>() })
+        // Back from the held seats is where the tap landed.
+        assertTrue(nav.previousBackStackEntry?.destination?.hasRoute<ListStub>() == true)
     }
 }
 

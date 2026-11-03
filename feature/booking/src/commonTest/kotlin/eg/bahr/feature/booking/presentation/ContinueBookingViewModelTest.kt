@@ -11,6 +11,7 @@ import eg.bahr.core.testing.runViewModelTest
 import eg.bahr.feature.booking.data.BookingFixtures
 import eg.bahr.feature.booking.data.FakeActiveHoldStore
 import eg.bahr.feature.booking.data.FakeBookingRepository
+import eg.bahr.feature.booking.data.RecordingHoldReminderSchedule
 import eg.bahr.feature.booking.model.HeldBookingDto
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.test.TestScope
@@ -355,5 +356,53 @@ class ContinueBookingViewModelTest {
             runCurrent()
             assertEquals(600, vm.uiState.value.secondsLeft)
             vm.onStop()
+        }
+
+    @Test
+    fun `a live read moves the reminder and a hold found over cancels it`() =
+        runViewModelTest {
+            val reminders = RecordingHoldReminderSchedule()
+            val live =
+                ContinueBookingViewModel(
+                    FakeActiveHoldStore(stored),
+                    FakeBookingRepository(heldBooking = {
+                        _,
+                        _,
+                        ->
+                        serverAnswer()
+                    }),
+                    deviceClock(),
+                    reminders,
+                )
+            live.onStart()
+            runCurrent()
+            assertEquals(stored.ref, reminders.held.single().first)
+            assertEquals(
+                15.minutes,
+                reminders.held
+                    .single()
+                    .second
+                    .remaining(deviceStart + elapsed()),
+            )
+            live.onStop()
+
+            val over = RecordingHoldReminderSchedule()
+            val notFound = AppResult.Failure(AppError.Api(ApiErrorCodes.NOT_FOUND, null, 404))
+            val gone =
+                ContinueBookingViewModel(
+                    FakeActiveHoldStore(stored),
+                    FakeBookingRepository(heldBooking = {
+                        _,
+                        _,
+                        ->
+                        notFound
+                    }),
+                    deviceClock(),
+                    over,
+                )
+            gone.onStart()
+            runCurrent()
+            assertEquals(listOf(stored.ref), over.ended)
+            assertTrue(over.held.isEmpty())
         }
 }

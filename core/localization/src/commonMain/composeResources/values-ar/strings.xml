@@ -457,4 +457,19 @@
     <string name="push_prompt_not_now">مش دلوقتي</string>
     <!-- A tap on the "a place opened" push (M3-M5). -->
     <string name="trip_place_opened">فضي مكان يوم %1$s. احجز دلوقتي، أول واحد يحجز ياخده.</string>
+    <!-- The hold reminder (M3-M7). -->
+    <plurals name="hold_reminder_title">
+        <item quantity="zero">حجزك المؤقت هيخلص بعد %1$d دقيقة</item>
+        <item quantity="one">حجزك المؤقت هيخلص بعد دقيقة</item>
+        <item quantity="two">حجزك المؤقت هيخلص بعد دقيقتين</item>
+        <item quantity="few">حجزك المؤقت هيخلص بعد %1$d دقايق</item>
+        <item quantity="many">حجزك المؤقت هيخلص بعد %1$d دقيقة</item>
+        <item quantity="other">حجزك المؤقت هيخلص بعد %1$d دقيقة</item>
+    </plurals>
+    <string name="hold_reminder_body">%1$s · %2$s · كمّل الدفع قبل ما الأماكن تتساب</string>
+    <string name="hold_reminder_body_plain">كمّل الدفع قبل ما الأماكن تتساب.</string>
+    <!-- The push pre-prompt on a hold just placed (M3-M7). -->
+    <string name="push_prompt_hold_title">تحب نفكّرك قبل ما الأماكن تتساب؟</string>
+    <string name="push_prompt_hold_body">هنفكّرك قبل ما الأماكن المحجوزة لك تتساب.</string>
+    <string name="push_prompt_hold_point_time">الأماكن محجوزة لك كام دقيقة بس. التذكير هيوصلك وفيه لسه وقت تدفع.</string>
 </resources>

@@ -14,8 +14,10 @@ import androidx.core.app.NotificationManagerCompat
 import co.touchlab.kermit.Logger
 import com.google.firebase.FirebaseApp
 import com.google.firebase.messaging.FirebaseMessaging
+import eg.bahr.feature.booking.di.HoldReminder
 import eg.bahr.push.AppPushChannel
 import eg.bahr.push.PUSH_LINK
+import eg.bahr.push.PUSH_REF
 import eg.bahr.push.PUSH_TYPE
 import eg.bahr.push.openPush
 import kotlinx.coroutines.CoroutineScope
@@ -103,16 +105,20 @@ internal object AndroidPush {
     ) {
         val notifications = NotificationManagerCompat.from(context)
         if (!notifications.areNotificationsEnabled() || (title == null && body == null)) return
+        // A hold's `hold_expiring` (M3-M7) goes under the local reminder's tag, so the two are one in the tray.
+        val holdRef = data[PUSH_REF]?.takeIf { data[PUSH_TYPE] == HoldReminder.TYPE }
+        val trayTag = holdRef?.let(HoldReminder::tag) ?: tag
         val open =
             context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
                 data[PUSH_LINK]?.let { putExtra(PUSH_LINK, it) }
                 data[PUSH_TYPE]?.let { putExtra(PUSH_TYPE, it) }
+                holdRef?.let { putExtra(PUSH_REF, it) }
             } ?: return
         val tap =
             PendingIntent.getActivity(
                 context,
-                (tag ?: title).hashCode(),
+                (trayTag ?: title).hashCode(),
                 open,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
@@ -125,9 +131,11 @@ internal object AndroidPush {
                 .setContentText(body)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(body))
                 .setAutoCancel(true)
+                // Replacing one already in the tray (the same collapse id, or the hold's own reminder): no second alert.
+                .setOnlyAlertOnce(true)
                 .setContentIntent(tap)
                 .build()
-        notifications.notify(tag, NOTIFICATION_ID, notification)
+        notifications.notify(trayTag, NOTIFICATION_ID, notification)
     }
 
     /**
@@ -135,11 +143,19 @@ internal object AndroidPush {
      * activity with the push's data as string extras. True when it carried one of our links.
      */
     fun openFromExtras(intent: Intent): Boolean {
-        val link = intent.getStringExtra(PUSH_LINK) ?: return false
-        openPush(link, intent.getStringExtra(PUSH_TYPE))
+        val type = intent.getStringExtra(PUSH_TYPE)
+        // The hold reminder (M3-M7) carries the hold's reference and no link.
+        val ref = intent.getStringExtra(PUSH_REF)?.takeIf { type == HoldReminder.TYPE }
+        val link = intent.getStringExtra(PUSH_LINK)
+        if (ref == null && link == null) return false
+        openPush(link, type, ref)
         return true
     }
 
-    /** One id for all: the [showInForeground] tag tells our notifications apart (the server's collapse id). */
-    private const val NOTIFICATION_ID = 1
+    /**
+     * One id for all: the [showInForeground] tag tells our notifications apart (the server's collapse id). 0, the id
+     * FCM's own tray post uses with that tag (M3-M7), so a push shown in front and the same push shown in the
+     * background, or a hold's local reminder, replace each other rather than stack.
+     */
+    private const val NOTIFICATION_ID = AndroidHoldReminders.NOTIFICATION_ID
 }

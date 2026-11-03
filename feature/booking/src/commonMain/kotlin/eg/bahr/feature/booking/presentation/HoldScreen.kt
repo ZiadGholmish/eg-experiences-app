@@ -79,6 +79,9 @@ import org.koin.core.parameter.parametersOf
  *
  * Back (top bar or system) asks before giving the seats up; [onEnded] is called once the hold is
  * over, `true` when it ran out, `false` when the user left.
+ *
+ * [reminderPrompt] is placed for a hold just placed (M3-M7): the push pre-prompt, asking for the notification
+ * permission the hold reminder needs; [onReminderPromptDone] once it is answered or not needed.
  */
 @Composable
 internal fun HoldScreen(
@@ -87,6 +90,8 @@ internal fun HoldScreen(
     modifier: Modifier = Modifier,
     alreadyHeldNotice: Boolean = false,
     onAlreadyHeldNoticeSeen: () -> Unit = {},
+    reminderPrompt: (@Composable (onDone: () -> Unit) -> Unit)? = null,
+    onReminderPromptDone: () -> Unit = {},
     viewModel: HoldViewModel = koinViewModel { parametersOf(hold) },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -143,6 +148,15 @@ internal fun HoldScreen(
             TotalPanel(partySize = state.booking?.partySize, totalAmount = state.totalAmount, totalCurrency = state.totalCurrency)
         }
         PayBar(totalAmount = state.totalAmount, totalCurrency = state.totalCurrency)
+    }
+
+    // A hold just placed (M3-M7): feature:notifications' pre-prompt, if notifications are off, so the "about to
+    // expire" reminder can show. It decides itself whether to ask; once it is done it is not placed again.
+    if (reminderPrompt != null && !state.phase.isEnded) {
+        reminderPrompt {
+            onReminderPromptDone()
+            viewModel.onReminderPromptDone()
+        }
     }
 
     if (state.isLeaveConfirmVisible) {

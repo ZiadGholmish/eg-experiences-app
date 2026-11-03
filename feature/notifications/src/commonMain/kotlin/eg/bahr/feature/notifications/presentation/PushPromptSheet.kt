@@ -26,14 +26,19 @@ import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.push_prompt_allow
 import eg.bahr.core.localization.generated.resources.push_prompt_body
+import eg.bahr.core.localization.generated.resources.push_prompt_hold_body
+import eg.bahr.core.localization.generated.resources.push_prompt_hold_point_time
+import eg.bahr.core.localization.generated.resources.push_prompt_hold_title
 import eg.bahr.core.localization.generated.resources.push_prompt_not_now
 import eg.bahr.core.localization.generated.resources.push_prompt_point_first
 import eg.bahr.core.localization.generated.resources.push_prompt_point_no_ads
 import eg.bahr.core.localization.generated.resources.push_prompt_title
 import eg.bahr.feature.notifications.data.PushPermissions
 import eg.bahr.feature.notifications.data.rememberPushPermissions
+import eg.bahr.feature.notifications.navigation.PushPromptReason
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
 
 /**
  * The push pre-prompt (M3-M5, handoff §3) for one waiting-list join: decides whether to ask, shows the sheet if so,
@@ -42,7 +47,8 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 internal fun PushPromptSheet(
     onDone: () -> Unit,
-    viewModel: PushPromptViewModel = koinViewModel(),
+    reason: PushPromptReason = PushPromptReason.WaitingList,
+    viewModel: PushPromptViewModel = koinViewModel { parametersOf(reason) },
     permissions: PushPermissions = rememberPushPermissions(),
 ) {
     // One decision per placement: the screen places the sheet again for its next join.
@@ -57,19 +63,20 @@ internal fun PushPromptSheet(
     }
     if (state == PushPromptUiState.Showing) {
         BahrBottomSheet(
-            props = props(onAllow = { viewModel.allow(permissions) }, onNotNow = viewModel::notNow),
+            props = props(reason, onAllow = { viewModel.allow(permissions) }, onNotNow = viewModel::notNow),
             header = { BellDisc() },
-        ) { PushPromptBody() }
+        ) { PushPromptBody(reason) }
     }
 }
 
 /** The sheet's inside, for the screenshot tests (a sheet is a second window they cannot draw). */
 @Composable
 internal fun PushPromptContent(
+    reason: PushPromptReason = PushPromptReason.WaitingList,
     onAllow: () -> Unit = {},
     onNotNow: () -> Unit = {},
 ) {
-    BahrBottomSheetContent(props(onAllow, onNotNow), header = { BellDisc() }) { PushPromptBody() }
+    BahrBottomSheetContent(props(reason, onAllow, onNotNow), header = { BellDisc() }) { PushPromptBody(reason) }
 }
 
 /**
@@ -78,10 +85,17 @@ internal fun PushPromptContent(
  */
 @Composable
 private fun props(
+    reason: PushPromptReason,
     onAllow: () -> Unit,
     onNotNow: () -> Unit,
 ) = BahrBottomSheet.Props(
-    title = stringResource(Res.string.push_prompt_title),
+    title =
+        stringResource(
+            when (reason) {
+                PushPromptReason.WaitingList -> Res.string.push_prompt_title
+                PushPromptReason.HoldReminder -> Res.string.push_prompt_hold_title
+            },
+        ),
     onDismiss = onNotNow,
     actions =
         listOf(
@@ -121,13 +135,22 @@ private fun BellDisc() {
  * book gets it) and what it will never be (ads).
  */
 @Composable
-private fun ColumnScope.PushPromptBody() {
+private fun ColumnScope.PushPromptBody(reason: PushPromptReason) {
+    val body =
+        when (reason) {
+            PushPromptReason.WaitingList -> Res.string.push_prompt_body
+            PushPromptReason.HoldReminder -> Res.string.push_prompt_hold_body
+        }
     Text(
-        text = stringResource(Res.string.push_prompt_body),
+        text = stringResource(body),
         style = MaterialTheme.typography.bodyLarge,
         color = BahrTheme.colors.onSurfaceSecondary,
     )
-    Point(BahrIcons.Bolt, stringResource(Res.string.push_prompt_point_first))
+    when (reason) {
+        PushPromptReason.WaitingList -> Point(BahrIcons.Bolt, stringResource(Res.string.push_prompt_point_first))
+        // Under a live hold "the seat isn't held for you" would be wrong: the point is the time left (M3-M7).
+        PushPromptReason.HoldReminder -> Point(BahrIcons.Timer, stringResource(Res.string.push_prompt_hold_point_time))
+    }
     Point(BahrIcons.DoNotDisturbOn, stringResource(Res.string.push_prompt_point_no_ads))
 }
 

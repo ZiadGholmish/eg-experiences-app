@@ -52,8 +52,10 @@ fun App(appVersion: String) {
 
     // A link from outside opens in the Home tab's stack (its NavHost opens it).
     val pendingLink by AppDeepLinkInbox.pending.collectAsStateWithLifecycle()
+    // And so does a tapped hold reminder (M3-M7).
+    val pendingHold by AppDeepLinkInbox.pendingHold.collectAsStateWithLifecycle()
     // Synchronous, so a keyed SideEffect (Compose 1.12) rather than a coroutine (Compose audit L9).
-    SideEffect(pendingLink) { if (pendingLink != null) tabs.select(AppTab.Home) }
+    SideEffect(pendingLink, pendingHold) { if (pendingLink != null || pendingHold != null) tabs.select(AppTab.Home) }
 
     // A language switch starts every tab over at its root (see AppTabsState.resetToRoots).
     val languages: AppLanguageState = koinInject()

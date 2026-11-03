@@ -47,11 +47,20 @@ final class PushAppDelegate: NSObject, UIApplicationDelegate, UNUserNotification
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
-        DispatchQueue.main.async { MainViewControllerKt.onPushReceived() }
+        let data = notification.request.content.userInfo
+        // A server push (not one of the app's own local reminders, M3-M7): a `hold_expiring` takes the local reminder's place.
+        let isRemote = notification.request.trigger is UNPushNotificationTrigger
+        DispatchQueue.main.async {
+            if isRemote {
+                MainViewControllerKt.onRemotePushPresented(type: data["type"] as? String, ref: data["ref"] as? String)
+            }
+            MainViewControllerKt.onPushReceived()
+        }
         completionHandler([.banner, .list, .sound])
     }
 
-    /// A tap: the push's `link` opens in the Home tab, like a Universal Link.
+    /// A tap: the push's `link` opens in the Home tab, like a Universal Link; a hold reminder's `ref` (M3-M7) opens that
+    /// hold's seats there.
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse,
@@ -60,9 +69,10 @@ final class PushAppDelegate: NSObject, UIApplicationDelegate, UNUserNotification
         let data = response.notification.request.content.userInfo
         let link = data["link"] as? String
         let type = data["type"] as? String
+        let ref = data["ref"] as? String
         DispatchQueue.main.async {
-            if link != nil { TabBarModel.shared.showHomeForLink() }
-            MainViewControllerKt.onPushOpened(link: link, type: type)
+            if link != nil || ref != nil { TabBarModel.shared.showHomeForLink() }
+            MainViewControllerKt.onPushOpened(link: link, type: type, ref: ref)
             completionHandler()
         }
     }

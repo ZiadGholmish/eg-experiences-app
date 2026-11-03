@@ -41,6 +41,15 @@ data class HoldRoute(
 )
 
 /**
+ * The held seats by reference only (M3-M7): a tap on the "your hold is about to expire" reminder. Read again before the
+ * held seats open, since the reminder carries neither the guest's phone nor a fresh deadline.
+ */
+@Serializable
+data class OpenHoldRoute(
+    val ref: String,
+)
+
+/**
  * The confirmation screen keys on the booking reference — the thing the user is
  * told to keep, and the thing a "where is my booking" deep link will carry.
  */

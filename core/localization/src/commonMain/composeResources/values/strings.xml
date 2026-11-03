@@ -441,4 +441,17 @@
     <string name="push_prompt_not_now">Not now</string>
     <!-- A tap on the "a place opened" push (M3-M5): the trip page opens on that date and says so in its band. -->
     <string name="trip_place_opened">A place opened on %1$s. Book now: the first to book gets it.</string>
+    <!-- The "your hold is about to expire" reminder (M3-M7), a notification scheduled on the phone; copy from the
+         prototype's hold_expiring item (docs/design/prototype/Bahr Account - Notifications.dc.html). -->
+    <plurals name="hold_reminder_title">
+        <item quantity="one">Your seat hold ends in %1$d min</item>
+        <item quantity="other">Your seat hold ends in %1$d min</item>
+    </plurals>
+    <!-- %1$s the trip's title, %2$s the party ("2 people"). -->
+    <string name="hold_reminder_body">%1$s · %2$s · pay before the seats are released</string>
+    <string name="hold_reminder_body_plain">Pay before the seats are released.</string>
+    <!-- The push pre-prompt on a hold just placed (M3-M7): the reminder needs the notification permission. -->
+    <string name="push_prompt_hold_title">Want a reminder before your seats are released?</string>
+    <string name="push_prompt_hold_body">We’ll remind you before your seats are released.</string>
+    <string name="push_prompt_hold_point_time">Seats are held for a few minutes only. The reminder comes while there’s still time to pay.</string>
 </resources>

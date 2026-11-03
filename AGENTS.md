@@ -84,7 +84,7 @@ SECURITY_JWT_SECRET='local-dev-signing-key-at-least-32-bytes!!' ./gradlew :api:b
   never depends on another feature** — cross-feature navigation goes through
   lambdas wired in `:composeApp`, which holds no screens. `:androidApp` is the
   Android application around `:composeApp` (AGP 9, M3-M13): manifest, flavors,
-  BuildConfig and the `Application`/`Activity` shells only, depending on
+  BuildConfig and the `Application`/`Activity`/`Service`/`BroadcastReceiver` shells only, depending on
   `:composeApp` alone. The full graph is in
   the `bahr-modularization` skill; a new edge is a plan change.
 - **Build files are a few lines.** Shared setup lives in the `build-logic`

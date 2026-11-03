@@ -17,6 +17,14 @@ interface PushPromptStore {
 
     suspend fun recordDecline()
 
+    /**
+     * The same count for the pre-prompt on a hold just placed (M3-M7, the hold reminder): counted apart, since a "no"
+     * to seat alerts says nothing about a reminder before held seats are released. The OS dialog is one fact for both.
+     */
+    suspend fun holdReminderDeclines(): Int
+
+    suspend fun recordHoldReminderDecline()
+
     suspend fun systemDialogShown(): Boolean
 
     suspend fun recordSystemDialogShown()
@@ -31,6 +39,12 @@ class PreferencesPushPromptStore(
         dataStore.edit { preferences -> preferences[declinesKey] = (preferences[declinesKey] ?: 0) + 1 }
     }
 
+    override suspend fun holdReminderDeclines(): Int = dataStore.data.first()[holdDeclinesKey] ?: 0
+
+    override suspend fun recordHoldReminderDecline() {
+        dataStore.edit { preferences -> preferences[holdDeclinesKey] = (preferences[holdDeclinesKey] ?: 0) + 1 }
+    }
+
     override suspend fun systemDialogShown(): Boolean = dataStore.data.first()[askedKey] ?: false
 
     override suspend fun recordSystemDialogShown() {
@@ -40,5 +54,6 @@ class PreferencesPushPromptStore(
     private companion object {
         val declinesKey = intPreferencesKey("push_prompt_declines")
         val askedKey = booleanPreferencesKey("push_system_dialog_shown")
+        val holdDeclinesKey = intPreferencesKey("push_prompt_hold_declines")
     }
 }

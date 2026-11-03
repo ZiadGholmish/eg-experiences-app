@@ -72,13 +72,37 @@ internal class DeepLinkInbox {
     /** The pending link a "a place opened" push brought (M3-M5); any other link replacing it clears it. */
     private var placeOpenedFor: String? = null
 
+    private val _pendingHold = MutableStateFlow<String?>(null)
+
+    /**
+     * The reference of a hold whose reminder was tapped (M3-M7), until the Home tab's NavHost opens its held seats
+     * ([takeHold]). Not a URL: the reminder is the phone's own and has no web page to point at.
+     */
+    val pendingHold: StateFlow<String?> = _pendingHold.asStateFlow()
+
     /** [placeOpened]: tapped on a `waitlist_seat_opened` push (M3-M5), rather than opened from a page or an email. */
     fun offer(
         url: String,
         placeOpened: Boolean = false,
     ) {
         placeOpenedFor = url.takeIf { placeOpened }
+        // The last tap wins, whichever kind it was.
+        _pendingHold.value = null
         _pending.value = url
+    }
+
+    /** A tap on a hold's reminder (M3-M7). A [ref] that is not a booking reference's shape is ignored. */
+    fun offerHold(ref: String) {
+        if (!HoldRef.matches(ref)) return
+        _pending.value = null
+        placeOpenedFor = null
+        _pendingHold.value = ref
+    }
+
+    /** The pending hold, exactly once; compareAndSet, so a tap arriving meanwhile stays for the next call. */
+    fun takeHold(): String? {
+        val ref = _pendingHold.value ?: return null
+        return ref.takeIf { _pendingHold.compareAndSet(ref, null) }
     }
 
     /**
@@ -117,6 +141,12 @@ internal class DeepLinkInbox {
         }
     }
 }
+
+/**
+ * A booking reference (`BRL-7K4M2X9P`, openapi `HeldSeats.ref`) loosely: letters, digits and dashes. The tap's extras
+ * reach an exported activity, so anything else is not passed on; the held seats then check it is this device's hold.
+ */
+private val HoldRef = Regex("^[A-Za-z0-9-]{1,64}$")
 
 /**
  * The one inbox per process. The OS delivers links to the process (Activity intent, SwiftUI
