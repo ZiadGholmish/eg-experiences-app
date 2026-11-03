@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import eg.bahr.core.catalog.model.ImageDto
 import eg.bahr.core.catalog.model.RatingSummaryDto
 import eg.bahr.core.catalog.model.ReviewDto
 import eg.bahr.core.catalog.model.StarCountDto
@@ -101,6 +102,35 @@ class ReviewsScreenshotTest {
     private fun loaded(language: AppLanguage) {
         val arabic = language == AppLanguage.ARABIC
         snap("reviews_loaded", language, tripVm(FakeReviewsRepository(reviews = { answer(reviews(arabic), DAWN_SUMMARY) }), language))
+    }
+
+    /**
+     * M3-M4: a verified review with the traveller's photos (sized squares on their ground: no image loads in a
+     * screenshot) above the others.
+     */
+    @Test
+    fun photosArabic() = photos(AppLanguage.ARABIC)
+
+    @Test
+    fun photosEnglish() = photos(AppLanguage.ENGLISH)
+
+    private fun photos(language: AppLanguage) {
+        val arabic = language == AppLanguage.ARABIC
+        val withPhotos =
+            ReviewDto(
+                author = if (arabic) "منى س." else "Mona S.",
+                dateISO = LocalDate(2026, 10, 20),
+                body = if (arabic) "أحلى شروق شفته في حياتي." else "The best sunrise I have ever seen.",
+                tone = "secondary",
+                rating = 5,
+                verified = true,
+                photos = List(PHOTO_COUNT) { ImageDto(url = "https://photos.invalid/review-$it.jpg", width = 1600, height = 1200) },
+            )
+        snap(
+            "reviews_photos",
+            language,
+            tripVm(FakeReviewsRepository(reviews = { answer(listOf(withPhotos) + reviews(arabic), DAWN_SUMMARY) }), language),
+        )
     }
 
     /**
@@ -331,6 +361,8 @@ class ReviewsScreenshotTest {
             distribution = counts.mapIndexed { i, count -> StarCountDto(stars = 5 - i, count = count) },
         )
 
+        /** Five: more than a card's width, so the row scrolls (the server's limit per review). */
+        const val PHOTO_COUNT = 5
         val DAWN_SUMMARY = summary(4.8, 4, 1, 0, 0, 0)
         val HOST_SUMMARY = summary(4.7, 5, 2, 0, 0, 0)
         val EMPTY_SUMMARY = summary(null, 0, 0, 0, 0, 0)

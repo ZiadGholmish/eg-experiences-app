@@ -1,4 +1,4 @@
-// "See all reviews" of a trip or a host (M4-M11); split from feature:trips (M3-M16).
+// "See all reviews" of a trip or a host (M4-M11); split from feature:trips (M3-M16). Since M3-M4 also the review page.
 plugins {
     id("bahr.kmp.feature")
     id("bahr.kmp.screenshots")
@@ -14,6 +14,10 @@ kotlin {
             implementation(libs.androidx.paging.compose)
             // The review card and rating summary the trip and host pages share, `GET /trips?host=` for the Trip filter.
             implementation(projects.core.catalog)
+        }
+        androidMain.dependencies {
+            // The system Photo Picker (rememberLauncherForActivityResult + PickVisualMedia) for the review's photos (M3-M4).
+            implementation(libs.androidx.activity.compose)
         }
         commonTest.dependencies {
             // The ApiService tests run the real client (core:network's apiHttpClient) on a MockEngine.

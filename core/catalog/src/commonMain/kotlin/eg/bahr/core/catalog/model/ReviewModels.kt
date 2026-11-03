@@ -13,6 +13,9 @@ import kotlinx.serialization.Serializable
  * One review, the same shape on the trip page, the host page and the full list (`listReviews`). [tone]
  * tints the author's initial (the contract's `Tone`). [body] is absent for a review that is a rating
  * only; [rating] (1–5 stars, M4-B8) is absent from older servers, and then no stars are drawn.
+ *
+ * Since M3-B7 (drawn since M3-M4): [photos], the traveller's own, in their order (absent when there are none and from
+ * older servers), and [verified], written by someone who booked and took the trip through the app (absent: false).
  */
 @Serializable
 data class ReviewDto(
@@ -22,6 +25,8 @@ data class ReviewDto(
     val partyLabel: String? = null,
     val tone: String? = null,
     val rating: Int? = null,
+    val photos: List<ImageDto> = emptyList(),
+    val verified: Boolean = false,
 )
 
 /**

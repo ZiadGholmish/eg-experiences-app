@@ -10,7 +10,9 @@ import eg.bahr.core.testing.TEST_BASE_URL
 import eg.bahr.core.testing.jsonMockEngine
 import eg.bahr.core.testing.runKoinGraphTest
 import eg.bahr.feature.reviews.data.ReviewsRepository
+import eg.bahr.feature.reviews.data.WriteReviewRepository
 import eg.bahr.feature.reviews.presentation.ReviewsViewModel
+import eg.bahr.feature.reviews.presentation.WriteReviewViewModel
 import io.ktor.client.HttpClient
 import org.koin.core.Koin
 import org.koin.core.parameter.parametersOf
@@ -46,5 +48,13 @@ class ReviewsKoinGraphTest {
             koin.get<ReviewsRepository>()
             koin.get<ReviewsViewModel> { parametersOf("burullus-dawn", null, "Dawn") }
             koin.get<ReviewsViewModel> { parametersOf(null, "ashraf-el-bahr", null) }
+        }
+
+    @Test
+    fun `the review page's bindings resolve - M3-M4`() =
+        withGraph { koin ->
+            koin.get<WriteReviewRepository>()
+            koin.get<WriteReviewViewModel> { parametersOf("BHR-7Q2K", "Burullus at dawn") }
+            koin.get<WriteReviewViewModel> { parametersOf("BHR-7Q2K", null) }
         }
 }

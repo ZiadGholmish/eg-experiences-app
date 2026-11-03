@@ -19,7 +19,36 @@ internal data class MyBookingDto(
     val holdExpiresAt: String? = null,
     val trip: MyTripDto? = null,
     val departure: MyDepartureDto? = null,
+    /** Since M3-B7, `listMyBookings` only: the booking may be reviewed now ("Rate your trip", M3-M4). */
+    val canReview: Boolean = false,
+    /** Since M3-B7, `listMyBookings` only: the review written for this booking, if any. */
+    val review: MyBookingReviewDto? = null,
 )
+
+/** openapi `Booking.review` (M3-B7): the booking's review and where moderation has it. */
+@Serializable
+internal data class MyBookingReviewDto(
+    val id: String,
+    val status: String,
+    val canEdit: Boolean = false,
+)
+
+/** openapi `MyReviewStatus`. The contract says to read an unknown value as [Pending]. */
+internal enum class ReviewStatus {
+    Pending,
+    Published,
+    Rejected,
+    ;
+
+    companion object {
+        fun of(wire: String): ReviewStatus =
+            when (wire) {
+                "published" -> Published
+                "rejected" -> Rejected
+                else -> Pending
+            }
+    }
+}
 
 /** openapi `Booking.trip` / `MyWaitlistEntry.trip`. */
 @Serializable

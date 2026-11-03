@@ -6,6 +6,7 @@ import eg.bahr.core.network.MoneyDto
 import eg.bahr.core.network.PageDto
 import eg.bahr.core.network.auth.SessionState
 import eg.bahr.feature.mytrips.model.MyBookingDto
+import eg.bahr.feature.mytrips.model.MyBookingReviewDto
 import eg.bahr.feature.mytrips.model.MyDepartureDto
 import eg.bahr.feature.mytrips.model.MyTripDto
 import eg.bahr.feature.mytrips.model.MyWaitlistEntryDto
@@ -91,6 +92,40 @@ internal object MyTripsFixtures {
         listOf(
             MyBookingDto(ref = "BRL-2A4B6C8D", status = "COMPLETED", date = "2026-09-12", partySize = 3, trip = dawn),
             MyBookingDto(ref = "BRL-3E5F7G9H", status = "CANCELLED", date = "2026-08-29", partySize = 2, trip = murals),
+        )
+
+    /**
+     * Past bookings as `listMyBookings` sends them since M3-B7 (M3-M4): one to rate, one per review status, and a
+     * cancelled one that can never be reviewed.
+     */
+    fun pastWithReviews() =
+        listOf(
+            MyBookingDto(ref = "BRL-1R1R1R1R", status = "COMPLETED", date = "2026-10-03", partySize = 2, trip = dawn, canReview = true),
+            MyBookingDto(
+                ref = "BRL-2P2P2P2P",
+                status = "COMPLETED",
+                date = "2026-09-26",
+                partySize = 1,
+                trip = murals,
+                review = MyBookingReviewDto(id = "r1", status = "pending"),
+            ),
+            MyBookingDto(
+                ref = "BRL-3U3U3U3U",
+                status = "COMPLETED",
+                date = "2026-09-12",
+                partySize = 3,
+                trip = dawn,
+                review = MyBookingReviewDto(id = "r2", status = "published"),
+            ),
+            MyBookingDto(
+                ref = "BRL-4N4N4N4N",
+                status = "COMPLETED",
+                date = "2026-08-29",
+                partySize = 2,
+                trip = murals,
+                review = MyBookingReviewDto(id = "r3", status = "rejected", canEdit = true),
+            ),
+            MyBookingDto(ref = "BRL-5C5C5C5C", status = "CANCELLED", date = "2026-08-15", partySize = 2, trip = dawn),
         )
 
     fun waitlist() =

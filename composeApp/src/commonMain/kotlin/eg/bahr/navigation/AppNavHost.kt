@@ -58,7 +58,9 @@ import eg.bahr.feature.notifications.navigation.UnreadAlerts
 import eg.bahr.feature.notifications.navigation.navigateToNotifications
 import eg.bahr.feature.notifications.navigation.notificationsScreen
 import eg.bahr.feature.reviews.navigation.navigateToReviews
+import eg.bahr.feature.reviews.navigation.navigateToWriteReview
 import eg.bahr.feature.reviews.navigation.reviewsScreen
+import eg.bahr.feature.reviews.navigation.writeReviewScreen
 import eg.bahr.feature.search.navigation.navigateToSearchTrips
 import eg.bahr.feature.search.navigation.searchTripsScreen
 import eg.bahr.feature.settings.navigation.ProfileRoute
@@ -241,11 +243,19 @@ fun AppNavHost(
                 onOpenBooking = navController::navigateToBookingByRef,
             )
 
-            // The My trips tab's root (M3-M0): signed out it offers the sign-in sheet; a row opens its trip.
+            // The My trips tab's root (M3-M0): signed out it offers the sign-in sheet; a row opens its trip, a finished
+            // booking's "Rate your trip" the review page (M3-M4, feature:reviews) in this tab's stack, bar hidden.
             myTripsScreen(
                 onSignIn = navController::navigateToSignIn,
                 onTripClick = navController::navigateToTripDetail,
+                onRateTrip = { ref, title -> navController.navigateToWriteReview(ref, title) },
                 scrollToTop = scrollRequests,
+            )
+
+            // The review page (M3-M4): back or "Done" returns to My trips, which reads its bookings again.
+            writeReviewScreen(
+                onBack = { navController.popBackStack() },
+                onDone = { navController.popBackStack() },
             )
 
             // The sign-in sheet, pushed in whichever tab asked (bar hidden); closing or finishing goes back

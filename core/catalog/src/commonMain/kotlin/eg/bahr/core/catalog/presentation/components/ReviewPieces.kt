@@ -1,6 +1,7 @@
 package eg.bahr.core.catalog.presentation.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -28,6 +30,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextDirection
+import eg.bahr.core.catalog.model.ImageDto
 import eg.bahr.core.catalog.model.MAX_STARS
 import eg.bahr.core.catalog.model.MIN_STARS
 import eg.bahr.core.catalog.model.RatingSummaryDto
@@ -35,6 +38,7 @@ import eg.bahr.core.catalog.model.ReviewDto
 import eg.bahr.core.catalog.model.StarCountDto
 import eg.bahr.core.catalog.model.stars
 import eg.bahr.core.designsystem.components.BahrCard
+import eg.bahr.core.designsystem.components.ImageGround
 import eg.bahr.core.designsystem.format.BahrFormat
 import eg.bahr.core.designsystem.icon.BahrIcons
 import eg.bahr.core.designsystem.theme.BahrSize
@@ -45,6 +49,8 @@ import eg.bahr.core.localization.generated.resources.host_no_reviews
 import eg.bahr.core.localization.generated.resources.host_rating_average
 import eg.bahr.core.localization.generated.resources.host_rating_bar
 import eg.bahr.core.localization.generated.resources.host_reviews_count
+import eg.bahr.core.localization.generated.resources.review_photo
+import eg.bahr.core.localization.generated.resources.review_verified
 import eg.bahr.core.localization.generated.resources.reviews_see_all
 import eg.bahr.core.localization.generated.resources.trip_reviews
 import org.jetbrains.compose.resources.pluralStringResource
@@ -99,7 +105,8 @@ const val SEE_ALL_REVIEWS_TAG = "see_all_reviews"
 /**
  * One review: shared by the trip page's reviews, the host page's and the full list (the contract's one
  * `Review` shape). Its stars when the server sent them (M4-B8; an older server sends none, and then
- * none are drawn); a rating-only review has stars and no text.
+ * none are drawn); a rating-only review has stars and no text. Since M3-M4 its photos when it has any,
+ * and "Verified trip" when the server says so (M3-B7).
  */
 @Composable
 fun ReviewCard(review: ReviewDto) {
@@ -121,10 +128,54 @@ fun ReviewCard(review: ReviewDto) {
             review.body?.let {
                 Text(text = it, style = MaterialTheme.typography.bodyMedium, color = BahrTheme.colors.onSurfaceSecondary)
             }
+            if (review.photos.isNotEmpty()) ReviewPhotos(review.photos)
             review.partyLabel?.let {
                 Text(text = it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+            if (review.verified) VerifiedTrip()
         }
+    }
+}
+
+/**
+ * The traveller's photos (M3-M4), in their order: one row of [BahrSize.reviewPhoto] squares that scrolls sideways when
+ * five do not fit. Each has its size before it loads (the ground, then the LQIP, then the photo), so the card never
+ * grows under the reader. A plain Row: a review has at most a few photos (the server's limit, 5).
+ */
+@Composable
+private fun ReviewPhotos(photos: List<ImageDto>) {
+    Row(
+        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm),
+    ) {
+        photos.forEachIndexed { index, photo ->
+            val spoken = photo.alt ?: stringResource(Res.string.review_photo, index + 1)
+            ImageGround(
+                modifier =
+                    Modifier
+                        .size(BahrSize.reviewPhoto)
+                        .clip(BahrTheme.shapes.small)
+                        .clearAndSetSemantics { contentDescription = spoken },
+            ) { Photo(photo) }
+        }
+    }
+}
+
+/** "Verified trip" (M3-B7): the reviewer booked and took the trip through the app. Not a link, so no touch target. */
+@Composable
+private fun VerifiedTrip() {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(BahrSpacing.xs)) {
+        Icon(
+            BahrIcons.Verified.filled(),
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(BahrSize.iconSmall),
+        )
+        Text(
+            text = stringResource(Res.string.review_verified),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.primary,
+        )
     }
 }
 

@@ -9,11 +9,14 @@ import eg.bahr.core.testing.jsonMockEngine
 import eg.bahr.feature.mytrips.model.BookingStatus
 import eg.bahr.feature.mytrips.model.MyBookingDto
 import eg.bahr.feature.mytrips.model.MyWaitlistEntryDto
+import eg.bahr.feature.mytrips.model.ReviewStatus
 import io.ktor.client.request.HttpRequestData
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /** `listMyBookings` and `listMyWaitlist` on the real client, payloads shaped as openapi's examples. */
@@ -71,6 +74,29 @@ class MyTripsApiServiceTest {
         }
 
     @Test
+    fun `past bookings read whether they may be reviewed - and their review's status - M3-B7`() =
+        runTest {
+            val result = api(PAST_PAGE).bookings(status = "past", page = 0)
+
+            assertIs<AppResult.Success<PageDto<MyBookingDto>>>(result)
+            val (rate, reviewed, older) = result.data.items
+            assertTrue(rate.canReview)
+            assertNull(rate.review)
+            assertFalse(reviewed.canReview)
+            assertEquals(ReviewStatus.Published, reviewed.review?.status?.let(ReviewStatus::of))
+            // An older server sends neither: no "Rate your trip", no status.
+            assertFalse(older.canReview)
+            assertNull(older.review)
+        }
+
+    @Test
+    fun `a review status this build does not know reads as pending - as the contract says`() {
+        assertEquals(ReviewStatus.Pending, ReviewStatus.of("pending"))
+        assertEquals(ReviewStatus.Rejected, ReviewStatus.of("rejected"))
+        assertEquals(ReviewStatus.Pending, ReviewStatus.of("under_appeal"))
+    }
+
+    @Test
     fun `a status this build does not know reads as other - not a crash`() {
         assertEquals(BookingStatus.Other, BookingStatus.of("REFUNDED"))
     }
@@ -81,6 +107,15 @@ class MyTripsApiServiceTest {
                 """"trip":{"slug":"burullus-dawn","title":"Dawn on Lake Burullus"},"date":"2026-10-24","dayLabel":"Sat 24 Oct",""" +
                 """"departure":{"name":"Ramses Hilton","timeLocal":"05:00","arriveBy":"04:45"},"partySize":2,""" +
                 """"total":{"amount":900,"currency":"EGP"},"method":"card"}],"page":1,"size":20,"totalItems":21,"totalPages":2}}"""
+
+        const val PAST_PAGE =
+            """{"success":true,"data":{"items":[""" +
+                """{"ref":"BRL-1","status":"COMPLETED","serverNow":"2026-10-14T10:00:00+03:00","date":"2026-10-03","partySize":2,""" +
+                """"canReview":true},""" +
+                """{"ref":"BRL-2","status":"COMPLETED","serverNow":"2026-10-14T10:00:00+03:00","date":"2026-09-26","partySize":1,""" +
+                """"canReview":false,"review":{"id":"3f0c2a1e-8a4b-4d6e-9a51-2b7c0e4d9f10","status":"published","canEdit":false}},""" +
+                """{"ref":"BRL-3","status":"CONFIRMED","serverNow":"2026-10-14T10:00:00+03:00","date":"2026-09-19","partySize":3}""" +
+                """],"page":0,"size":20,"totalItems":3,"totalPages":1}}"""
 
         const val WAITLIST =
             """{"success":true,"data":[{"id":"7d1f3e2a-5b6c-4d7e-8f9a-0b1c2d3e4f5a",""" +

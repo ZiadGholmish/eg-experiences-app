@@ -3,12 +3,15 @@ package eg.bahr.feature.mytrips.presentation
 import androidx.paging.testing.asSnapshot
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
+import eg.bahr.core.network.PageDto
 import eg.bahr.core.network.auth.SessionState
 import eg.bahr.core.testing.runViewModelTest
 import eg.bahr.feature.mytrips.data.BookingList
 import eg.bahr.feature.mytrips.data.FakeMyTripsRepository
 import eg.bahr.feature.mytrips.data.MyTripsFixtures
+import eg.bahr.feature.mytrips.model.MyBookingReviewDto
 import eg.bahr.feature.mytrips.model.MyWaitlistEntryDto
+import eg.bahr.feature.mytrips.model.ReviewStatus
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -159,6 +162,33 @@ class MyTripsViewModelTest {
 
             assertEquals(listOf(BookingList.Upcoming to 0, BookingList.Upcoming to 0), repository.bookingReads)
             assertEquals(listOf("BRL-7K4M2X9P", "BRL-9Q3R5T7V"), shown.map { it.ref })
+        }
+
+    /** M3-M4: back from the review page, Past is read again and the booking shows its pending review, no more "Rate". */
+    @Test
+    fun `back from reviewing - Past reads again and shows the review's status`() =
+        runViewModelTest {
+            var reviewed = false
+            val repository =
+                FakeMyTripsRepository(session = signedIn, bookings = { _, _ ->
+                    val booking = MyTripsFixtures.pastWithReviews().first()
+                    val now = if (reviewed) booking.copy(canReview = false, review = MyBookingReviewDto("r9", "pending")) else booking
+                    AppResult.Success(PageDto(items = listOf(now), totalPages = 1))
+                })
+            val vm = MyTripsViewModel(repository)
+            vm.selectSegment(MyTripsSegment.Past)
+            advanceUntilIdle()
+
+            val shown =
+                vm.bookings.asSnapshot {
+                    reviewed = true
+                    vm.refresh()
+                }
+
+            assertEquals(listOf(BookingList.Past to 0, BookingList.Past to 0), repository.bookingReads)
+            val booking = shown.single()
+            assertEquals(false, booking.canReview)
+            assertEquals(ReviewStatus.Pending, booking.review?.status?.let(ReviewStatus::of))
         }
 
     @Test

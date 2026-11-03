@@ -85,13 +85,15 @@ import org.koin.compose.viewmodel.koinViewModel
  * the coral button is the screen's one step forward) and the device's own waiting lists under it; signed in, the three segments as a
  * segmented control (as Settings' language) over one list.
  *
- * [onSignIn] opens the sign-in sheet; [onTripClick] the trip page (a booking or entry's trip).
+ * [onSignIn] opens the sign-in sheet; [onTripClick] the trip page (a booking or entry's trip); [onRateTrip] the review
+ * page of a finished booking (M3-M4), whose status the row shows once it is back (the list is read again on return).
  * [scrollToTop] fires when the selected tab is tapped again.
  */
 @Composable
 internal fun MyTripsScreen(
     onSignIn: () -> Unit,
     onTripClick: (slug: String) -> Unit,
+    onRateTrip: (ref: String, title: String?) -> Unit = { _, _ -> },
     scrollToTop: Flow<Unit> = emptyFlow(),
     viewModel: MyTripsViewModel = koinViewModel(),
 ) {
@@ -107,6 +109,7 @@ internal fun MyTripsScreen(
             MyTripsActions(
                 onSignIn = onSignIn,
                 onTripClick = onTripClick,
+                onRateTrip = onRateTrip,
                 onSegment = viewModel::selectSegment,
                 onRetryWaitlist = viewModel::retryWaitlist,
             ),
@@ -117,6 +120,7 @@ internal fun MyTripsScreen(
 internal class MyTripsActions(
     val onSignIn: () -> Unit = {},
     val onTripClick: (String) -> Unit = {},
+    val onRateTrip: (ref: String, title: String?) -> Unit = { _, _ -> },
     val onSegment: (MyTripsSegment) -> Unit = {},
     val onRetryWaitlist: () -> Unit = {},
 )
@@ -241,7 +245,11 @@ private fun LazyListScope.bookingList(
         contentType = bookings.itemContentType { CONTENT_BOOKING },
     ) { index ->
         bookings[index]?.let { booking ->
-            BookingRow(booking, onClick = { booking.trip?.slug?.let(actions.onTripClick) })
+            BookingRow(
+                booking,
+                onClick = { booking.trip?.slug?.let(actions.onTripClick) },
+                onRateTrip = { actions.onRateTrip(booking.ref, booking.trip?.title) },
+            )
         }
     }
     if (bookings.loadState.append is LoadState.Loading) {

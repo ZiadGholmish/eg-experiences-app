@@ -101,6 +101,34 @@ class ReviewsApiServiceTest {
         }
 
     @Test
+    fun `a verified review with photos - M3-B7 - its photos in order and sized before they load`() =
+        runTest {
+            val body =
+                """
+                {"success":true,"data":{"items":[{"author":"Mona S.","dateISO":"2026-10-20","rating":5,"verified":true,
+                "photos":[{"url":"https://cdn.bahr.eg/reviews/a.jpg","width":1600,"height":1200,"lqip":"data:image/jpeg;base64,AA",
+                "variants":[{"url":"https://cdn.bahr.eg/reviews/a-390.webp","width":390,"format":"webp"}]},
+                {"url":"https://cdn.bahr.eg/reviews/b.jpg","width":1200,"height":1600}]}],
+                "page":0,"size":20,"totalItems":1,"totalPages":1,"rating":{"average":5.0,"count":1,"distribution":[]}}}
+                """.trimIndent()
+
+            val review = success(service(body).reviews(trip = "t", host = null, sort = ReviewSort.NEWEST, stars = null)).items.single()
+
+            assertEquals(true, review.verified)
+            assertEquals(listOf("https://cdn.bahr.eg/reviews/a.jpg", "https://cdn.bahr.eg/reviews/b.jpg"), review.photos.map { it.url })
+            assertEquals(1600 to 1200, review.photos[0].width to review.photos[0].height)
+        }
+
+    @Test
+    fun `a review without photos or verified - an older server - reads as none and not verified`() =
+        runTest {
+            val review = success(service().reviews(trip = "t", host = null, sort = ReviewSort.NEWEST, stars = null)).items.first()
+
+            assertEquals(emptyList(), review.photos)
+            assertFalse(review.verified)
+        }
+
+    @Test
     fun `an unpublished trip or a hidden host is NOT_FOUND by its code`() =
         runTest {
             val result =

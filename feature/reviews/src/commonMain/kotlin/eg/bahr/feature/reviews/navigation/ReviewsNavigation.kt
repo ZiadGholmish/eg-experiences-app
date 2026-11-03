@@ -7,11 +7,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import eg.bahr.core.designsystem.theme.BahrDestination
 import eg.bahr.feature.reviews.presentation.ReviewsScreen
+import eg.bahr.feature.reviews.presentation.WriteReviewScreen
 import kotlinx.serialization.Serializable
 
 /*
  * "See all reviews"' public surface (split from feature:trips, M3-M16): its destination for the app's NavHost, and
- * how to reach it. It opens nothing else.
+ * how to reach it. It opens nothing else. Since M3-M4 also the review page ("Rate your trip"), opened from My trips.
  *
  * M3-M12: the page moves with the app's one screen transition, which the NavHost sets, on an opaque page
  * ([BahrDestination]).
@@ -52,3 +53,36 @@ fun NavController.navigateToReviews(
     title: String? = null,
     builder: NavOptionsBuilder.() -> Unit = {},
 ) = navigate(ReviewsRoute(trip = trip, host = host, title = title), builder)
+
+/**
+ * Review a trip (M3-M4): booking [ref]'s review, opened from My trips' "Rate your trip" on a finished booking. [title]
+ * is the trip's title as My trips showed it (for the heading; the page reads nothing before sending).
+ */
+@Serializable
+data class WriteReviewRoute(
+    val ref: String,
+    val title: String? = null,
+)
+
+/**
+ * The review page (M3-M4). [onBack] leaves it, sent or not; [onDone] is "Done" once it is sent. Either way the screen
+ * under it (My trips) reads its bookings again on its return, so the review's status shows there.
+ */
+fun NavGraphBuilder.writeReviewScreen(
+    onBack: () -> Unit,
+    onDone: () -> Unit,
+) {
+    composable<WriteReviewRoute> { entry ->
+        val route = entry.toRoute<WriteReviewRoute>()
+        BahrDestination(this) {
+            WriteReviewScreen(ref = route.ref, title = route.title, onBack = onBack, onDone = onDone)
+        }
+    }
+}
+
+/** The review page of booking [ref] (M3-M4), [title] being its trip's: what My trips' `onRateTrip` hands over. */
+fun NavController.navigateToWriteReview(
+    ref: String,
+    title: String? = null,
+    builder: NavOptionsBuilder.() -> Unit = {},
+) = navigate(WriteReviewRoute(ref = ref, title = title), builder)

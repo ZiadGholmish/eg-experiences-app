@@ -423,6 +423,18 @@ object BahrSize {
     /** The push pre-prompt sheet's bell disc, above its title (prototype: 56px, a 28px icon; M3-M5 review #6). */
     val sheetDisc = 56.dp
     val iconSheet = 28.dp
+
+    /**
+     * A traveller's photo on a review card (M3-M4; no handoff size): a square small enough that a review's five
+     * fit a phone's card in one scrolling row, beside [avatarSmall] text.
+     */
+    val reviewPhoto = 64.dp
+
+    /**
+     * A photo tile on the review form (M3-M4; no handoff size), and its "Add photos" tile: three to a row on a
+     * 360dp phone inside the gutters.
+     */
+    val photoTile = 96.dp
 }
 
 internal val LocalBahrShapes = staticCompositionLocalOf { BahrShapes() }

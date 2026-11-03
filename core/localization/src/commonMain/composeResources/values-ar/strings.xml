@@ -472,4 +472,41 @@
     <string name="push_prompt_hold_title">تحب نفكّرك قبل ما الأماكن تتساب؟</string>
     <string name="push_prompt_hold_body">هنفكّرك قبل ما الأماكن المحجوزة لك تتساب.</string>
     <string name="push_prompt_hold_point_time">الأماكن محجوزة لك كام دقيقة بس. التذكير هيوصلك وفيه لسه وقت تدفع.</string>
+    <!-- Review a trip (M3-M4). -->
+    <string name="mytrips_rate_trip">قيّم رحلتك</string>
+    <string name="mytrips_review_pending">تقييمك بيتراجع</string>
+    <string name="mytrips_review_published">تقييمك اتنشر</string>
+    <string name="mytrips_review_rejected">تقييمك ما اتنشرش</string>
+    <string name="review_title">قيّم رحلتك</string>
+    <string name="review_stars_label">الرحلة كانت عاملة إزاي؟</string>
+    <string name="review_stars_missing">اختار هتديها كام نجمة.</string>
+    <plurals name="review_star">
+        <item quantity="zero">%1$d نجمة</item>
+        <item quantity="one">نجمة واحدة</item>
+        <item quantity="two">نجمتين</item>
+        <item quantity="few">%1$d نجوم</item>
+        <item quantity="many">%1$d نجمة</item>
+        <item quantity="other">%1$d نجمة</item>
+    </plurals>
+    <string name="review_text_label">احكي للناس عنها (اختياري)</string>
+    <string name="review_text_placeholder">إيه اللي عجبك؟ وإيه اللي الناس لازم تعرفه؟</string>
+    <string name="review_text_count">%1$d/%2$d</string>
+    <string name="review_text_too_long">خليه %1$d حرف بالكتير.</string>
+    <string name="review_photos_label">صور (اختياري)</string>
+    <string name="review_photos_hint">لحد %1$d صور.</string>
+    <string name="review_add_photos">ضيف صور</string>
+    <string name="review_remove_photo">شيل الصورة %1$d</string>
+    <string name="review_photo">صورة %1$d</string>
+    <string name="review_photos_failed">مقدرناش نضيف الصورة دي. جرّب واحدة تانية.</string>
+    <string name="review_moderation_note">بنراجع التقييمات خلال يوم. لو ما اتنشرش هنقولك السبب.</string>
+    <string name="review_submit">ابعت التقييم</string>
+    <string name="review_submitting">بنبعت…</string>
+    <string name="review_thanks">شكرًا! تقييمك هيظهر أول ما نوافق عليه.</string>
+    <string name="review_already">إنت قيّمت الرحلة دي قبل كده.</string>
+    <string name="review_done">تمام</string>
+    <string name="review_error_not_yet">الرحلة دي لسه مينفعش تتقيّم.</string>
+    <string name="review_error_not_found">مش لاقيين الحجز ده.</string>
+    <string name="review_error_photo_type">في صورة مش نافعة. شيلها وجرّب تاني.</string>
+    <string name="review_error_too_large">الصور كبيرة على الإرسال. شيل واحدة وجرّب تاني.</string>
+    <string name="review_verified">رحلة موثّقة</string>
 </resources>

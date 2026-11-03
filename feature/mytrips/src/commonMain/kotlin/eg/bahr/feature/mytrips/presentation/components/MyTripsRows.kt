@@ -17,16 +17,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import coil3.compose.AsyncImage
 import eg.bahr.core.catalog.model.ImageDto
 import eg.bahr.core.designsystem.components.BahrBadge
+import eg.bahr.core.designsystem.components.BahrPillButton
 import eg.bahr.core.designsystem.components.BahrSkeleton
 import eg.bahr.core.designsystem.components.BahrSkeletonBlock
 import eg.bahr.core.designsystem.components.BahrSkeletonLine
 import eg.bahr.core.designsystem.components.ImageGround
 import eg.bahr.core.designsystem.format.BahrFormat
+import eg.bahr.core.designsystem.icon.BahrIcons
 import eg.bahr.core.designsystem.theme.BahrElevation
 import eg.bahr.core.designsystem.theme.BahrSize
 import eg.bahr.core.designsystem.theme.BahrSpacing
@@ -37,6 +40,10 @@ import eg.bahr.core.localization.generated.resources.format_pair
 import eg.bahr.core.localization.generated.resources.mytrips_date_closed
 import eg.bahr.core.localization.generated.resources.mytrips_party_count
 import eg.bahr.core.localization.generated.resources.mytrips_place_opened
+import eg.bahr.core.localization.generated.resources.mytrips_rate_trip
+import eg.bahr.core.localization.generated.resources.mytrips_review_pending
+import eg.bahr.core.localization.generated.resources.mytrips_review_published
+import eg.bahr.core.localization.generated.resources.mytrips_review_rejected
 import eg.bahr.core.localization.generated.resources.mytrips_status_cancelled
 import eg.bahr.core.localization.generated.resources.mytrips_status_completed
 import eg.bahr.core.localization.generated.resources.mytrips_status_confirmed
@@ -48,6 +55,7 @@ import eg.bahr.core.localization.generated.resources.mytrips_trip_fallback
 import eg.bahr.feature.mytrips.model.BookingStatus
 import eg.bahr.feature.mytrips.model.MyBookingDto
 import eg.bahr.feature.mytrips.model.MyWaitlistEntryDto
+import eg.bahr.feature.mytrips.model.ReviewStatus
 import eg.bahr.feature.mytrips.presentation.DeviceJoin
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
@@ -63,6 +71,7 @@ import org.jetbrains.compose.resources.stringResource
 internal fun BookingRow(
     booking: MyBookingDto,
     onClick: () -> Unit,
+    onRateTrip: () -> Unit = {},
 ) {
     val status = BookingStatus.of(booking.status)
     val (label, tone) = status.badge()
@@ -73,6 +82,9 @@ internal fun BookingRow(
         party = booking.partySize,
         badge = label?.let { BahrBadge.Props(text = stringResource(it), tone = tone) },
         onClick = onClick,
+        // A finished trip (M3-M4): "Rate your trip" while it may be reviewed, then where its review stands.
+        review = booking.review?.let { ReviewStatus.of(it.status).badge() },
+        onRateTrip = if (booking.canReview && booking.review == null) onRateTrip else null,
     )
 }
 
@@ -126,6 +138,8 @@ private fun TripRow(
     party: Int,
     badge: BahrBadge.Props?,
     onClick: () -> Unit,
+    review: Pair<StringResource, BahrBadge.Tone>? = null,
+    onRateTrip: (() -> Unit)? = null,
 ) {
     val x = BahrTheme.colors
     val shape = BahrTheme.shapes.extraLarge
@@ -156,10 +170,39 @@ private fun TripRow(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            badge?.let { BahrBadge(props = it) }
+            if (badge != null || review != null) {
+                Row(horizontalArrangement = Arrangement.spacedBy(BahrSpacing.xs)) {
+                    badge?.let { BahrBadge(props = it) }
+                    review?.let { (text, tone) -> BahrBadge(props = BahrBadge.Props(stringResource(text), tone)) }
+                }
+            }
+            // Its own target inside the row: the row opens the trip, this the review page. A way in, not the
+            // screen's one step forward (a list may offer it many times), so primary, never coral.
+            onRateTrip?.let {
+                BahrPillButton(
+                    modifier = Modifier.padding(top = BahrSpacing.xs).testTag(RATE_TRIP_TAG),
+                    props =
+                        BahrPillButton.Props(
+                            text = stringResource(Res.string.mytrips_rate_trip),
+                            icon = BahrIcons.RateReview,
+                            onClick = it,
+                        ),
+                )
+            }
         }
     }
 }
+
+/** For tests: a row's "Rate your trip". */
+internal const val RATE_TRIP_TAG = "mytrips_rate_trip"
+
+/** Where moderation has the booking's review. Not published is the quiet neutral tone, not an error. */
+private fun ReviewStatus.badge(): Pair<StringResource, BahrBadge.Tone> =
+    when (this) {
+        ReviewStatus.Pending -> Res.string.mytrips_review_pending to BahrBadge.Tone.Secondary
+        ReviewStatus.Published -> Res.string.mytrips_review_published to BahrBadge.Tone.Success
+        ReviewStatus.Rejected -> Res.string.mytrips_review_rejected to BahrBadge.Tone.Quaternary
+    }
 
 /**
  * Booking or waiting-list rows still loading (M3-M14): [rows] rows drawn as [TripRow] lays one out (its

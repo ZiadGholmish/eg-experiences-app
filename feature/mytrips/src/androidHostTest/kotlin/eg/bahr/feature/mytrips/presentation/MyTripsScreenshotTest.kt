@@ -8,6 +8,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
@@ -27,6 +28,7 @@ import eg.bahr.core.network.auth.SessionState
 import eg.bahr.core.testing.captureScreenshot
 import eg.bahr.feature.mytrips.data.MyTripsFixtures
 import eg.bahr.feature.mytrips.model.MyBookingDto
+import eg.bahr.feature.mytrips.presentation.components.RATE_TRIP_TAG
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.datetime.LocalDate
 import org.junit.Rule
@@ -36,6 +38,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /**
  * M3-M0: My trips × {ar, en} × {signed out with this phone's waiting lists (also dark) or none, loading, Upcoming loaded,
@@ -159,6 +162,37 @@ class MyTripsScreenshotTest {
 
     @Test
     fun waitlistFailedEnglish() = shoot("mytrips_waitlist_failed", AppLanguage.ENGLISH, waitlistFailed, emptyList())
+
+    /** M3-M4: Past with "Rate your trip" on a finished booking and each review status on the reviewed ones. */
+    private val pastReviews = MyTripsUiState(session = signedIn, segment = MyTripsSegment.Past)
+
+    @Config(qualifiers = "en-w360dp-h1000dp-xhdpi")
+    @Test
+    fun pastReviewsArabic() = shoot("mytrips_past_reviews", AppLanguage.ARABIC, pastReviews, MyTripsFixtures.pastWithReviews())
+
+    @Config(qualifiers = "en-w360dp-h1000dp-xhdpi")
+    @Test
+    fun pastReviewsEnglish() = shoot("mytrips_past_reviews", AppLanguage.ENGLISH, pastReviews, MyTripsFixtures.pastWithReviews())
+
+    @Test
+    fun `Rate your trip calls back with the booking and its trip's title - only where it may be reviewed`() {
+        val rated = mutableListOf<Pair<String, String?>>()
+        val opened = mutableListOf<String>()
+        compose.setContent {
+            Themed(AppLanguage.ENGLISH) {
+                MyTripsContent(
+                    state = pastReviews,
+                    bookings = flowOf(PagingData.from(MyTripsFixtures.pastWithReviews(), loaded)).collectAsLazyPagingItems(),
+                    actions = MyTripsActions(onRateTrip = { ref, title -> rated += ref to title }, onTripClick = { opened += it }),
+                )
+            }
+        }
+        compose.onAllNodesWithTag(RATE_TRIP_TAG).assertCountEquals(1)
+        compose.onNodeWithTag(RATE_TRIP_TAG).performClick()
+        assertEquals(listOf<Pair<String, String?>>("BRL-1R1R1R1R" to "الفجر على بحيرة البرلس"), rated)
+        // The button is its own target: the row under it did not open the trip.
+        assertTrue(opened.isEmpty())
+    }
 
     @Test
     fun `signed out, the sign-in button and a device join call back`() {

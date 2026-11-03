@@ -454,4 +454,40 @@
     <string name="push_prompt_hold_title">Want a reminder before your seats are released?</string>
     <string name="push_prompt_hold_body">We’ll remind you before your seats are released.</string>
     <string name="push_prompt_hold_point_time">Seats are held for a few minutes only. The reminder comes while there’s still time to pay.</string>
+    <!-- Review a trip (M3-M4): My trips' "Rate your trip" on a finished booking, the review's status on its row, and the
+         review page. No handoff screen; the moderation note is the account prototype's revHint. -->
+    <string name="mytrips_rate_trip">Rate your trip</string>
+    <string name="mytrips_review_pending">Review pending</string>
+    <string name="mytrips_review_published">Review published</string>
+    <string name="mytrips_review_rejected">Review not published</string>
+    <string name="review_title">Rate your trip</string>
+    <string name="review_stars_label">How was the trip?</string>
+    <string name="review_stars_missing">Pick how many stars you give it.</string>
+    <!-- One star of the five, read out; selected says whether it is the rating. -->
+    <plurals name="review_star">
+        <item quantity="one">%1$d star</item>
+        <item quantity="other">%1$d stars</item>
+    </plurals>
+    <string name="review_text_label">Tell others about it (optional)</string>
+    <string name="review_text_placeholder">What did you like? What should others know?</string>
+    <string name="review_text_count">%1$d/%2$d</string>
+    <string name="review_text_too_long">Keep it to %1$d characters.</string>
+    <string name="review_photos_label">Photos (optional)</string>
+    <string name="review_photos_hint">Up to %1$d photos.</string>
+    <string name="review_add_photos">Add photos</string>
+    <string name="review_remove_photo">Remove photo %1$d</string>
+    <string name="review_photo">Photo %1$d</string>
+    <string name="review_photos_failed">We couldn’t add that photo. Try another one.</string>
+    <string name="review_moderation_note">We check reviews within a day. If one isn’t published, we’ll tell you why.</string>
+    <string name="review_submit">Send review</string>
+    <string name="review_submitting">Sending…</string>
+    <string name="review_thanks">Thanks — your review will appear once it’s approved.</string>
+    <string name="review_already">You’ve already reviewed this trip.</string>
+    <string name="review_done">Done</string>
+    <string name="review_error_not_yet">This trip can’t be reviewed yet.</string>
+    <string name="review_error_not_found">We couldn’t find this booking.</string>
+    <string name="review_error_photo_type">One of the photos can’t be used. Remove it and try again.</string>
+    <string name="review_error_too_large">The photos are too big to send. Remove one and try again.</string>
+    <!-- A review card: the reviewer booked and took the trip through the app (M3-B7). -->
+    <string name="review_verified">Verified trip</string>
 </resources>
