@@ -12,6 +12,12 @@
 	<key>APP_LINK_HOST</key>
 	<string>$(APP_LINK_HOST)</string>
 
+	<!-- Checkout (M3-M1): where the hosted checkout returns, <bundle id>://checkout, from the xcconfig; empty sends
+	     none. Read by the shared module's startApp. ASWebAuthenticationSession catches the scheme itself, so it
+	     needs no CFBundleURLTypes entry. -->
+	<key>PAYMENT_RETURN_URL</key>
+	<string>$(PAYMENT_RETURN_URL)</string>
+
 	<!-- Google Maps for iOS (M4-M2): MAPS_API_KEY_IOS from the gitignored
 	     Configuration/Maps.private.xcconfig (written from local.properties by
 	     ./gradlew :composeApp:writeIosMapsKey). Empty without one; the map then

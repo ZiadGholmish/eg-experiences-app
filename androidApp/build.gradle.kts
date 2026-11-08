@@ -24,6 +24,12 @@ val localBaseUrl: String = localSetting("LOCAL_BASE_URL", "http://10.0.2.2:8084/
 // host to check App Links verification end to end; see README → Deep links.
 val localAppLinkHost: String = localSetting("LOCAL_APP_LINK_HOST", "localhost")
 
+// Where the hosted checkout returns to (M3-M1): `<application id>://checkout`, which the manifest claims. The server
+// takes a return link only under a prefix it lists (PAYMENT_RETURN_URL_PREFIXES). The local api lists
+// eg.bahr.app.local://checkout by default; the local flavor still sends none unless local.properties sets
+// LOCAL_PAYMENT_RETURN_URL=eg.bahr.app.local://checkout, so it keeps working against an api that predates that prefix.
+val localPaymentReturnUrl: String = localSetting("LOCAL_PAYMENT_RETURN_URL")
+
 // Google Maps key (M4-M2) from the gitignored local.properties (or the CI's environment); never committed. An
 // empty one still builds: the map screen then draws its pins on a plain ground and logs a warning once. Only
 // presence is ever reported here, never the value.
@@ -91,6 +97,7 @@ android {
             appLinks(host = localAppLinkHost, allowsHttp = true)
             // The local api runs the `local` profile, whose fake verifier takes made-up ID tokens (M3-B1).
             buildConfigField("boolean", "ALLOW_FAKE_SIGN_IN", "true")
+            paymentReturn(localPaymentReturnUrl)
         }
         create("dev") {
             dimension = "environment"
@@ -99,12 +106,14 @@ android {
             versionNameSuffix = "-dev"
             buildConfigField("String", "BASE_URL", "\"https://d1epegbe1ipzwy.cloudfront.net/api/v1/\"")
             appLinks(host = "d1epegbe1ipzwy.cloudfront.net", allowsHttp = false)
+            paymentReturn("eg.bahr.app.dev://checkout")
         }
         create("prod") {
             dimension = "environment"
             googleSignIn(googleServerClientId("prod"))
             buildConfigField("String", "BASE_URL", "\"https://api.example.invalid/api/v1/\"")
             appLinks(host = "bahr.eg", allowsHttp = false)
+            paymentReturn("eg.bahr.app://checkout")
         }
     }
 }
@@ -127,4 +136,9 @@ fun com.android.build.api.dsl.ApplicationProductFlavor.appLinks(
     manifestPlaceholders["appLinkLocalScheme"] = if (allowsHttp) "http" else "https"
     buildConfigField("String", "APP_LINK_HOST", "\"$host\"")
     buildConfigField("boolean", "APP_LINK_ALLOWS_HTTP", allowsHttp.toString())
+}
+
+/** The flavor's payment return link (M3-M1) into BuildConfig; empty sends none. */
+fun com.android.build.api.dsl.ApplicationProductFlavor.paymentReturn(url: String) {
+    buildConfigField("String", "PAYMENT_RETURN_URL", "\"$url\"")
 }

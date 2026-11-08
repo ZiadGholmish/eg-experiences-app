@@ -12,7 +12,9 @@ import eg.bahr.core.network.MoneyDto
 import eg.bahr.core.network.apiHttpClient
 import eg.bahr.core.network.auth.AuthSession
 import eg.bahr.feature.booking.model.GuestRequest
+import eg.bahr.feature.booking.model.PayerRequest
 import eg.bahr.feature.booking.model.PlaceHoldRequest
+import eg.bahr.feature.booking.model.StartPaymentRequest
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.request.HttpRequestData
@@ -216,6 +218,67 @@ class BookingApiServiceTest {
             assertEquals(ApiErrorCodes.CONFLICT, error.code)
         }
 
+    @Test
+    fun `starts a payment with the phone in the body and decodes the hosted checkout`() =
+        runTest {
+            val request =
+                StartPaymentRequest(
+                    method = "vodafone_cash",
+                    payer = PayerRequest(name = "Nada Hassan", phone = "01001234567"),
+                    returnUrl = "eg.bahr.app://checkout/BRL-7K4M2X9P",
+                    guestPhone = "+201001234567",
+                )
+            val result = service(PAYMENT_STARTED, HttpStatusCode.Created).startPayment("BRL-7K4M2X9P", request)
+
+            val sent = requests.single()
+            assertEquals(HttpMethod.Post, sent.method)
+            assertEquals("/api/v1/bookings/BRL-7K4M2X9P/payments", sent.url.encodedPath)
+            // Never in the URL (openapi `guestPhone`): access logs must not see a phone.
+            assertEquals("", sent.url.encodedQuery)
+            val body = Json.parseToJsonElement((sent.body as OutgoingContent.ByteArrayContent).bytes().decodeToString()).jsonObject
+            assertEquals("vodafone_cash", body["method"]?.jsonPrimitive?.content)
+            val payer = body["payer"] as JsonObject
+            assertEquals("Nada Hassan", payer["name"]?.jsonPrimitive?.content)
+            assertEquals("01001234567", payer["phone"]?.jsonPrimitive?.content)
+            assertEquals("eg.bahr.app://checkout/BRL-7K4M2X9P", body["returnUrl"]?.jsonPrimitive?.content)
+            assertEquals("+201001234567", body["guestPhone"]?.jsonPrimitive?.content)
+
+            val started = (result as AppResult.Success).data
+            assertEquals("REDIRECT", started.action.type)
+            assertEquals("http://localhost:8084/fake-checkout/fake-5b0e", started.action.url)
+            assertEquals("2026-10-09T22:42:30.549567+03:00", started.holdExpiresAt)
+        }
+
+    @Test
+    fun `no return link and no hold phone are left out - not sent as null`() =
+        runTest {
+            val request = StartPaymentRequest(method = "card", payer = PayerRequest(name = "Nada Hassan", phone = "01001234567"))
+            val result = service(WALLET_PENDING, HttpStatusCode.Created).startPayment("BRL-7K4M2X9P", request)
+
+            val body =
+                Json
+                    .parseToJsonElement(
+                        (requests.single().body as OutgoingContent.ByteArrayContent).bytes().decodeToString(),
+                    ).jsonObject
+            assertFalse("returnUrl" in body)
+            assertFalse("guestPhone" in body)
+            val started = (result as AppResult.Success).data
+            assertEquals("WALLET_PENDING", started.action.type)
+            assertNull(started.action.url)
+        }
+
+    @Test
+    fun `a declined start is a failure carrying the contract's code`() =
+        runTest {
+            val request = StartPaymentRequest(method = "vodafone_cash", payer = PayerRequest(name = "Nada Hassan", phone = "01000000402"))
+            val result = service(DECLINED, HttpStatusCode.PaymentRequired).startPayment("BRL-7K4M2X9P", request)
+
+            val error = (result as AppResult.Failure).error
+            assertIs<AppError.Api>(error)
+            assertEquals(ApiErrorCodes.PAYMENT_DECLINED, error.code)
+            assertEquals(402, error.httpStatus)
+        }
+
     private object NoSession : SessionStore {
         override suspend fun read(): StoredSession? = null
 
@@ -246,6 +309,26 @@ class BookingApiServiceTest {
             "trip":{"slug":"burullus-dawn","title":"Dawn on Lake Burullus"},"date":"2026-11-07","dayLabel":"Sat 7 Nov",
             "departure":{"placeName":"Abdel Moneim Riad","city":"Cairo","timeLocal":"05:00"},"returnTime":"22:00",
             "partySize":1,"total":{"amount":450,"currency":"EGP"}}}
+            """.trimIndent()
+
+        /** The contract's `PaymentStarted` as the fake provider answers it (M3-B2): a hosted checkout to open. */
+        val PAYMENT_STARTED =
+            """
+            {"success":true,"data":{"paymentId":"0199c3a0-5eed-7000-8000-00000000a001",
+            "action":{"type":"REDIRECT","url":"http://localhost:8084/fake-checkout/fake-5b0e"},
+            "holdExpiresAt":"2026-10-09T22:42:30.549567+03:00"}}
+            """.trimIndent()
+
+        /** `WALLET_PENDING` with `url: null`, as the contract types it. */
+        val WALLET_PENDING =
+            """
+            {"success":true,"data":{"paymentId":"0199c3a0-5eed-7000-8000-00000000a002",
+            "action":{"type":"WALLET_PENDING","url":null},"holdExpiresAt":"2026-10-09T22:42:30.549567+03:00"}}
+            """.trimIndent()
+
+        val DECLINED =
+            """
+            {"success":false,"error":{"code":"PAYMENT_DECLINED","message":"The payment provider declined this payment"}}
             """.trimIndent()
 
         val CONFLICT =

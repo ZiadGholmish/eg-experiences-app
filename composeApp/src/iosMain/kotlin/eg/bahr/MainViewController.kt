@@ -15,6 +15,7 @@ import eg.bahr.di.seedStoredAppearance
 import eg.bahr.di.startInstallRegistration
 import eg.bahr.feature.auth.di.AuthConfig
 import eg.bahr.feature.auth.di.NativeSignIn
+import eg.bahr.feature.booking.di.CheckoutConfig
 import eg.bahr.feature.booking.di.HoldReminder
 import eg.bahr.feature.booking.di.HoldReminders
 import eg.bahr.feature.map.di.TripMapNativeViews
@@ -143,12 +144,20 @@ fun startApp(
         modules(module { single<PushChannel> { push } })
         // The hold reminder (M3-M7), scheduled on the phone: feature:booking decides when.
         modules(module { single<HoldReminders> { IosHoldReminders } })
+        // Checkout (M3-M1): where the hosted checkout returns (Info.plist's PAYMENT_RETURN_URL, from the xcconfig).
+        modules(module { single { CheckoutConfig(returnUrl = infoString(PAYMENT_RETURN_URL_KEY)) } })
     }
     KoinPlatform.getKoin().startInstallRegistration(IosPushState.scope)
     // The stored appearance before any Compose root or the bar draws (M3-M0b review R4-1).
     KoinPlatform.getKoin().seedStoredAppearance()
     IosTabs.start(tabBar, selectedTab)
 }
+
+/** A non-blank Info.plist string, or null: the xcconfigs leave a setting empty when an environment has none. */
+private fun infoString(key: String): String? = (NSBundle.mainBundle.objectForInfoDictionaryKey(key) as? String)?.takeIf { it.isNotBlank() }
+
+/** Info.plist's payment return link (M3-M1), `<bundle id>://checkout`; the ASWebAuthenticationSession watches its scheme. */
+private const val PAYMENT_RETURN_URL_KEY = "PAYMENT_RETURN_URL"
 
 /**
  * Swift entry point, one per tab: `MainViewControllerKt.TabViewController(tab:)`. One Compose root

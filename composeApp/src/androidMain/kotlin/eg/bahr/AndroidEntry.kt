@@ -10,12 +10,14 @@ import eg.bahr.core.common.theme.AppAppearance
 import eg.bahr.core.datastore.APP_PREFERENCES_FILE
 import eg.bahr.core.datastore.AppSettingsStore
 import eg.bahr.deeplink.AppDeepLinkInbox
+import eg.bahr.deeplink.isPaymentReturn
 import eg.bahr.di.AppLinkConfig
 import eg.bahr.di.initKoin
 import eg.bahr.di.onAppForeground
 import eg.bahr.di.seedStoredAppearance
 import eg.bahr.di.startInstallRegistration
 import eg.bahr.feature.auth.di.AuthConfig
+import eg.bahr.feature.booking.di.CheckoutConfig
 import eg.bahr.feature.booking.di.HoldReminder
 import eg.bahr.feature.booking.di.HoldReminders
 import eg.bahr.feature.notifications.navigation.UnreadAlerts
@@ -40,7 +42,8 @@ import org.koin.dsl.module
  *
  * Starts Koin with the per-flavor values ([appLinkHost]/[appLinkAllowsHttp]: the same values as the manifest's App
  * Links intent filter; [googleServerClientId] and [allowFakeSignIn]: Sign in with Google, fake sign-in on the local
- * flavor only, M3-M0), then follows the stored appearance.
+ * flavor only, M3-M0), then follows the stored appearance. [paymentReturnUrl] is where the hosted checkout returns
+ * (M3-M1; the manifest's `<application id>://checkout` filter); empty sends none.
  */
 fun Application.startApp(
     baseUrl: String,
@@ -53,7 +56,9 @@ fun Application.startApp(
     pushChannelName: String,
     pushSmallIcon: Int,
     holdReminderReceiver: Class<out BroadcastReceiver>,
+    paymentReturnUrl: String,
 ) {
+    paymentReturnUrlInUse = paymentReturnUrl
     pushChannelIdInUse = pushChannelId
     pushSmallIconInUse = pushSmallIcon
     val push = AndroidPush.start(this, appScope, pushChannelId, pushChannelName)
@@ -73,6 +78,8 @@ fun Application.startApp(
         modules(module { single<PushChannel> { push } })
         // The hold reminder (M3-M7), scheduled on the phone: feature:booking decides when.
         modules(module { single<HoldReminders> { holdReminders } })
+        // Checkout (M3-M1): where the hosted checkout sends the browser back to.
+        modules(module { single { CheckoutConfig(returnUrl = paymentReturnUrl.ifBlank { null }) } })
     }
     followAppearance()
     GlobalContext.get().startInstallRegistration(appScope)
@@ -84,6 +91,9 @@ private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 /** [startApp]'s channel id and monochrome small icon (`:androidApp`'s drawable), for pushes shown while the app is in front. */
 private var pushChannelIdInUse = ""
 private var pushSmallIconInUse = 0
+
+/** [startApp]'s payment return link: the checkout coming back is not a link to open ([onDeepLink]). */
+private var paymentReturnUrlInUse = ""
 
 /** [startApp]'s hold reminders, for a server `hold_expiring` push shown in front (it takes the local one's place). */
 private var holdRemindersInUse: AndroidHoldReminders? = null
@@ -133,6 +143,8 @@ fun onAppForeground() {
 
 /** A link the activity received (launch or `onNewIntent`); it waits in the inbox until the Home tab's NavHost opens it. */
 fun onDeepLink(url: String) {
+    // The hosted checkout returning (M3-M1) only brings the app forward; the held seats re-read the booking on start.
+    if (isPaymentReturn(url, paymentReturnUrlInUse)) return
     AppDeepLinkInbox.offer(url)
 }
 

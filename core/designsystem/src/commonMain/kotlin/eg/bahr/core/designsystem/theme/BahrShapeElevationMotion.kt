@@ -360,6 +360,9 @@ object BahrSize {
     /** The custom radio on a date row of the date + party screen (HANDOFF screen 4). */
     val radio = 22.dp
 
+    /** The tinted icon disc on a payment-method row of the checkout (HANDOFF screen 5, M3-M1). */
+    val methodDisc = 36.dp
+
     /** One segment of the booking flow's three-step indicator (24x4px in the handoff). */
     val stepSegmentWidth = 24.dp
     val stepSegmentHeight = 4.dp

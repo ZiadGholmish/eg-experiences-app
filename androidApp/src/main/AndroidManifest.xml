@@ -82,6 +82,18 @@
                     tools:ignore="AppLinkUrlError" />
                 <data android:pathPrefix="/t/" />
             </intent-filter>
+
+            <!-- The hosted checkout's return link (M3-M1): <application id>://checkout/{ref}, the flavor's
+                 PAYMENT_RETURN_URL. It only brings this (singleTask) activity forward, which clears the Custom
+                 Tab above it; the held seats then read the booking. The shared onDeepLink ignores it. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:host="checkout"
+                    android:scheme="${applicationId}" />
+            </intent-filter>
         </activity>
     </application>
 </manifest>

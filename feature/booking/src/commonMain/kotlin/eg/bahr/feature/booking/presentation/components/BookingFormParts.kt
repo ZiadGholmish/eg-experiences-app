@@ -178,9 +178,12 @@ private fun timesOf(departure: BookingDepartureDto): String? {
     return BahrFormat.timeRange(from, to)
 }
 
-/** The handoff's custom radio: a `primary` ring with an inset dot when picked, dashed when it cannot be. */
+/**
+ * The handoff's custom radio: a `primary` ring with an inset dot when picked, dashed when it cannot be. Also the
+ * checkout's payment-method rows (M3-M1).
+ */
 @Composable
-private fun Radio(
+internal fun Radio(
     selected: Boolean,
     open: Boolean,
 ) {

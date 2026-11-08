@@ -43,11 +43,15 @@ fun NavGraphBuilder.bookingScreen(
 }
 
 /**
- * The held seats and their countdown. [onEnded] is called once the hold is over, [holdExpired] true
- * when it ran out and false when the user released it; wire it to [returnToDateSelection].
+ * The held seats, their countdown and the checkout (M3-M1). [onEnded] is called once the hold is over, [holdExpired]
+ * true when it ran out and false when the user released it (or left while a payment was under way); wire it to
+ * [returnToDateSelection]. [onPaid] once the booking reads paid: wire it to [navigateToPaidBooking]. [onSignIn] when
+ * paying needs a sign-in: open the sign-in sheet over this screen (feature:auth), which comes back to it.
  */
 fun NavGraphBuilder.holdScreen(
     onEnded: (holdExpired: Boolean) -> Unit,
+    onPaid: (ref: String) -> Unit,
+    onSignIn: () -> Unit,
     reminderPrompt: (@Composable (onDone: () -> Unit) -> Unit)? = null,
 ) {
     composable<HoldRoute> { entry ->
@@ -60,6 +64,8 @@ fun NavGraphBuilder.holdScreen(
             HoldScreen(
                 hold = entry.toRoute<HoldRoute>(),
                 onEnded = onEnded,
+                onPaid = onPaid,
+                onSignIn = onSignIn,
                 alreadyHeldNotice = alreadyHeld,
                 onAlreadyHeldNoticeSeen = { entry.savedStateHandle[ALREADY_HELD_KEY] = false },
                 reminderPrompt = reminderPrompt?.takeIf { promptPending },
@@ -206,6 +212,19 @@ fun NavController.navigateToBookingConfirmed(ref: String) =
     navigate(BookingConfirmedRoute(ref)) {
         popUpTo<BookingRoute> { inclusive = true }
     }
+
+/**
+ * Paid (M3-M1): the booking's page in place of the booking flow, so Back from it does not return to a checkout that
+ * is over. Everything from date + party up goes when it is on the stack (a hold placed in this tab); otherwise only
+ * the held seats (opened from Home's card or a reminder), so Back returns to where they were opened from.
+ */
+fun NavController.navigateToPaidBooking(ref: String) {
+    val fromDateSelection = hasEntry<BookingRoute>()
+    navigate(BookingConfirmedRoute(ref)) {
+        if (fromDateSelection) popUpTo<BookingRoute> { inclusive = true } else popUpTo<HoldRoute> { inclusive = true }
+        launchSingleTop = true
+    }
+}
 
 /**
  * A booking opened from outside the booking flow (M3-M6: a notification about it), on top of what is open, by its

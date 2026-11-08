@@ -201,3 +201,46 @@ internal val BookingDepartureDto.laterReturnDate: LocalDate? get() = returnDate?
  * [HeldBookingDto.returnDate] is after its [HeldBookingDto.date].
  */
 internal val HeldBookingDto.laterReturnDate: LocalDate? get() = returnDate?.takeIf { it > date }
+
+/**
+ * openapi `StartPaymentRequest` (`startPayment`, M3-B2). [method] is the contract's lower-case wire value (`card`,
+ * `vodafone_cash`). [returnUrl] is where the hosted checkout sends the browser back to (the app's own link, which the
+ * server must allow); left out, the provider's default page. [guestPhone] is the phone the hold was made under: it
+ * proves a hold not yet on the signed-in account is this person's, in the body so it never reaches access logs.
+ */
+@Serializable
+internal data class StartPaymentRequest(
+    val method: String,
+    val payer: PayerRequest,
+    val returnUrl: String? = null,
+    val guestPhone: String? = null,
+)
+
+/** openapi `StartPaymentRequest.payer`: who pays. [phone] is the Vodafone Cash number when paying with it. */
+@Serializable
+internal data class PayerRequest(
+    val name: String,
+    val phone: String,
+)
+
+/**
+ * openapi `PaymentStarted`. The booking is PAYMENT_PENDING from now on; the payment's outcome arrives by webhook, so
+ * the app polls `getBooking`. [holdExpiresAt] is the deadline the customer already sees, unchanged.
+ */
+@Serializable
+internal data class PaymentStartedDto(
+    val paymentId: String,
+    val action: PaymentActionDto,
+    val holdExpiresAt: String,
+)
+
+/**
+ * openapi `PaymentStarted.action`. [type] is a string, not an enum, so an action added to the contract later cannot
+ * fail the decode: `REDIRECT` opens [url] (the hosted checkout), `WALLET_PENDING` has nothing to open, anything else
+ * is treated as nothing to open.
+ */
+@Serializable
+internal data class PaymentActionDto(
+    val type: String,
+    val url: String? = null,
+)

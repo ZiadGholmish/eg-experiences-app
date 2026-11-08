@@ -187,7 +187,8 @@ internal class ContinueBookingViewModel(
             hide()
             return
         }
-        reminders.onHeld(stored.ref, fresh, booking.trip?.title, booking.partySize)
+        // Moved to the fresh deadline, or gone while a payment is under way (M3-M1).
+        reminders.onLiveRead(stored.ref, booking, fresh)
         deadline = fresh
         // The placement's pair is the hold's full length, as on the hold screen's progress bar.
         holdLength = HoldDeadline.length(stored.holdExpiresAt, stored.serverNow)

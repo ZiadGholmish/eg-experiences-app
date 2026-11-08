@@ -12,3 +12,5 @@ CODE_SIGN_ENTITLEMENTS = iosApp/iosApp.entitlements
 
 // Google Sign-In client ids for eg.bahr.app, gitignored (see SignIn.private.xcconfig.example).
 #include? "SignIn.prod.private.xcconfig"
+// Checkout (M3-M1): where the hosted checkout returns (the server must list it in PAYMENT_RETURN_URL_PREFIXES).
+PAYMENT_RETURN_URL = eg.bahr.app:/$()/checkout

@@ -17,7 +17,7 @@ import org.koin.dsl.module
 val bookingModule =
     module {
         single { BookingApiService(get()) }
-        single<BookingRepository> { DefaultBookingRepository(get()) }
+        single<BookingRepository> { DefaultBookingRepository(get(), get()) }
         // The hold reminder (M3-M7): one per app, so the placement, the held seats and Home's card share what was
         // scheduled. The platform's scheduler comes from :composeApp's entry points; a graph without one (tests)
         // schedules nothing.
@@ -25,7 +25,10 @@ val bookingModule =
         viewModel { (slug: String, departureId: String) ->
             BookingViewModel(slug, departureId, get(), get(), reminders = get())
         }
-        viewModel { (hold: HoldRoute) -> HoldViewModel(hold, get(), get(), reminders = get()) }
+        // Checkout (M3-M1): the return link comes from :composeApp's entry points; without one none is sent.
+        viewModel { (hold: HoldRoute) ->
+            HoldViewModel(hold, get(), get(), reminders = get(), checkout = getOrNull<CheckoutConfig>() ?: CheckoutConfig())
+        }
         viewModel { ContinueBookingViewModel(get(), get(), reminders = get()) }
         viewModel { (ref: String) -> BookingConfirmedViewModel(ref, get()) }
         viewModel { (ref: String) -> OpenHoldViewModel(ref, get(), get(), errors = get(), reminders = get()) }

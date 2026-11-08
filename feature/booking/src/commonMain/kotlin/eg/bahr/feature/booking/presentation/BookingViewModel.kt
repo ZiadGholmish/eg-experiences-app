@@ -272,8 +272,8 @@ internal class BookingViewModel(
                 val holdExpiresAt = booking.holdExpiresAt
                 val deadline = booking.liveDeadline(clock.now())
                 if (holdExpiresAt != null && deadline != null) {
-                    // A live read: the reminder follows the fresh deadline (M3-M7).
-                    reminders.onHeld(stored.ref, deadline, booking.trip?.title, booking.partySize)
+                    // A live read: the reminder follows the fresh deadline (M3-M7), none while paying (M3-M1).
+                    reminders.onLiveRead(stored.ref, booking, deadline)
                     // The fresh pair, just read: the hold screen's countdown is right from its
                     // first frame even if its own re-read fails.
                     StoredHoldCheck.Live(reopenedHold(stored, booking, holdExpiresAt))

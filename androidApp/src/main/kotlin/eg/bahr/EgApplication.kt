@@ -17,6 +17,7 @@ class EgApplication : Application() {
             pushChannelName = getString(R.string.push_channel_name),
             pushSmallIcon = R.drawable.ic_stat_bahr,
             holdReminderReceiver = HoldReminderReceiver::class.java,
+            paymentReturnUrl = BuildConfig.PAYMENT_RETURN_URL,
         )
     }
 }

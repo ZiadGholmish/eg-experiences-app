@@ -6,6 +6,7 @@ import eg.bahr.core.localization.generated.resources.error_account_unauthorized
 import eg.bahr.core.localization.generated.resources.error_departure_not_open
 import eg.bahr.core.localization.generated.resources.error_hold_expired
 import eg.bahr.core.localization.generated.resources.error_no_seats_available
+import eg.bahr.core.localization.generated.resources.error_payment_declined
 import eg.bahr.core.localization.generated.resources.error_rate_limited
 import eg.bahr.core.localization.generated.resources.error_validation
 import eg.bahr.core.localization.messageRes
@@ -30,5 +31,6 @@ class ErrorCodeMessagesTest {
         assertEquals(Res.string.error_validation, api(ApiErrorCodes.VALIDATION_FAILED).messageRes())
         assertEquals(Res.string.error_rate_limited, api(ApiErrorCodes.RATE_LIMITED).messageRes())
         assertEquals(Res.string.error_account_unauthorized, api(ApiErrorCodes.UNAUTHORIZED).messageRes())
+        assertEquals(Res.string.error_payment_declined, api(ApiErrorCodes.PAYMENT_DECLINED).messageRes())
     }
 }

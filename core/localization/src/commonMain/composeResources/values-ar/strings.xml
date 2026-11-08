@@ -271,13 +271,34 @@
     <string name="booking_departs_from">القيام من %1$s، %2$s، %3$s</string>
     <string name="booking_departs_at">القيام من %1$s، %2$s</string>
     <string name="booking_pay_cta">ادفع %1$s</string>
-    <string name="booking_pay_coming">الدفع من التطبيق جاي في التحديث الجاي. مقاعدك محجوزة لحد ما الوقت يخلص.</string>
     <string name="booking_leave_title">هتمشي وتسيب المقاعد؟</string>
     <string name="booking_leave_body">حد تاني هيقدر يحجزها على طول.</string>
     <string name="booking_leave_confirm">سيب المقاعد</string>
     <string name="booking_leave_stay">خلّي المقاعد ليا</string>
     <string name="booking_leave_failed">مقدرناش نسيب المقاعد. هتتفك لوحدها لما الوقت يخلص.</string>
     <string name="booking_leave_anyway">امشي برضه</string>
+    <!-- الدفع (M3-M1). -->
+    <string name="booking_pay_with">طريقة الدفع</string>
+    <string name="booking_method_vf">فودافون كاش</string>
+    <string name="booking_method_vf_note">هتوصلك رسالة للتأكيد</string>
+    <string name="booking_method_card">كارت</string>
+    <string name="booking_method_card_note">فيزا · ماستركارد · ميزة</string>
+    <string name="booking_payer_vf_number">رقم فودافون كاش</string>
+    <string name="booking_payer_card_name">الاسم على الكارت</string>
+    <string name="booking_payer_card_note">هتكتب بيانات الكارت في صفحة الدفع الآمنة.</string>
+    <string name="booking_pay_vf_cta">ابعت طلب الدفع لـ %1$s</string>
+    <string name="booking_pay_foot">رقم الحجز هيظهر في الصفحة وهيوصلك برسالة.</string>
+    <string name="booking_pay_awaiting_checkout">كمّل الدفع في صفحة الدفع الآمنة. هنأكدلك هنا أول ما يتم.</string>
+    <string name="booking_pay_awaiting_wallet">شوف موبايلك ووافق على طلب فودافون كاش. هنأكدلك هنا أول ما يتم.</string>
+    <string name="booking_pay_confirming">بنأكد الدفع…</string>
+    <string name="booking_pay_late">وقت المقاعد خلص قبل ما الدفع يتأكد. لو الفلوس وصلت هنأكد حجزك، ولو المقاعد راحت هترجعلك لوحدها.</string>
+    <string name="booking_pay_reopen">افتح صفحة الدفع</string>
+    <string name="booking_pay_waiting_cta">مستنيين الدفع</string>
+    <string name="booking_pay_too_late">مفيش وقت كفاية تدفع للمقاعد دي.</string>
+    <string name="booking_leave_paying_title">هتخرج واحنا بنأكد الدفع؟</string>
+    <string name="booking_leave_paying_body">الدفع هيكمل. أول ما يتأكد هتلاقي الحجز في رحلاتي.</string>
+    <string name="booking_leave_paying_confirm">اخرج</string>
+    <string name="booking_leave_paying_stay">خليني هنا</string>
 
     <!-- الخريطة (M4-M2). -->
     <string name="map_open">خريطة</string>
@@ -296,6 +317,7 @@
     <string name="error_departure_not_open">الحجز اتقفل للتاريخ ده. اختار تاريخ تاني.</string>
     <string name="error_validation">راجع بياناتك وجرّب تاني.</string>
     <string name="error_rate_limited">محاولات كتير. استنى دقيقة وجرّب تاني.</string>
+    <string name="error_payment_declined">الدفع متمش. جرّب تاني أو ادفع بطريقة تانية.</string>
     <!-- Screen-reader state of a button whose action is in flight. -->
     <string name="a11y_busy">جاري التحميل</string>
     <string name="action_retry">حاول مرة أخرى</string>

@@ -9,6 +9,7 @@ import eg.bahr.core.localization.generated.resources.error_generic
 import eg.bahr.core.localization.generated.resources.error_hold_expired
 import eg.bahr.core.localization.generated.resources.error_network
 import eg.bahr.core.localization.generated.resources.error_no_seats_available
+import eg.bahr.core.localization.generated.resources.error_payment_declined
 import eg.bahr.core.localization.generated.resources.error_rate_limited
 import eg.bahr.core.localization.generated.resources.error_timeout
 import eg.bahr.core.localization.generated.resources.error_validation
@@ -41,6 +42,8 @@ fun AppError.messageRes(): StringResource =
                 DEPARTURE_NOT_OPEN -> Res.string.error_departure_not_open
                 VALIDATION_FAILED -> Res.string.error_validation
                 RATE_LIMITED -> Res.string.error_rate_limited
+                // The provider refused to start the payment (M3-M1); the hold is kept, another try or method may work.
+                PAYMENT_DECLINED -> Res.string.error_payment_declined
                 // A signed-in request the session could not keep alive (M3-M0): the tokens are dropped.
                 UNAUTHORIZED -> Res.string.error_account_unauthorized
                 else -> Res.string.error_generic
@@ -57,6 +60,7 @@ private const val DEPARTURE_NOT_OPEN = "DEPARTURE_NOT_OPEN"
 private const val VALIDATION_FAILED = "VALIDATION_FAILED"
 private const val RATE_LIMITED = "RATE_LIMITED"
 private const val UNAUTHORIZED = "UNAUTHORIZED"
+private const val PAYMENT_DECLINED = "PAYMENT_DECLINED"
 
 /** [messageRes], resolved in the composition's language. */
 @Composable

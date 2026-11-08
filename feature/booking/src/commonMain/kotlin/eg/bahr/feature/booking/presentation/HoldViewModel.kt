@@ -5,8 +5,14 @@ import androidx.lifecycle.viewModelScope
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.datastore.ActiveHoldStore
+import eg.bahr.core.network.ApiErrorCodes
+import eg.bahr.core.network.auth.SessionState
 import eg.bahr.feature.booking.data.BookingRepository
+import eg.bahr.feature.booking.di.CheckoutConfig
 import eg.bahr.feature.booking.model.HeldBookingDto
+import eg.bahr.feature.booking.model.PayerRequest
+import eg.bahr.feature.booking.model.PaymentStartedDto
+import eg.bahr.feature.booking.model.StartPaymentRequest
 import eg.bahr.feature.booking.navigation.HoldRoute
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -36,12 +42,18 @@ internal enum class HoldPhase {
     /** The user backed out and the server released the seats. */
     Released,
 
-    /** The user backed out but the release did not get through; the server frees the seats at the deadline. */
+    /**
+     * The user backed out but the release did not get through, or a payment was under way (M3-M1), which a release
+     * cannot undo: the server frees the seats at the deadline, or the payment confirms the booking.
+     */
     LeftUnreleased,
+
+    /** The server says the booking is paid (CONFIRMED): the screen hands over to the confirmation (M3-M1). */
+    Paid,
     ;
 
     /** Phases after which the screen leaves. */
-    val isEnded: Boolean get() = this == Expired || this == Released || this == LeftUnreleased
+    val isEnded: Boolean get() = this == Expired || this == Released || this == LeftUnreleased || this == Paid
 }
 
 internal data class HoldUiState(
@@ -65,10 +77,31 @@ internal data class HoldUiState(
     val releaseError: AppError? = null,
     /** The screen has passed the end on ([HoldViewModel.onEndReported]); it must not pass it on twice. */
     val isEndReported: Boolean = false,
-)
+    /** Checkout (M3-M1) from here on. Vodafone Cash by default (HANDOFF screen 5). */
+    val method: PaymentMethod = PaymentMethod.VodafoneCash,
+    val payer: PayerForm = PayerForm(),
+    /** A pay tap found a field wrong: the fields say which from then on. */
+    val showPayerErrors: Boolean = false,
+    val payment: PaymentStep = PaymentStep.Choosing,
+    /** Starting the payment failed (`PAYMENT_DECLINED`, no connection, …); the person may try again. */
+    val paymentError: AppError? = null,
+    /** The provider declined at its checkout: the booking read HELD again after a payment was started. */
+    val declined: Boolean = false,
+    /** The hosted checkout of the payment under way, to open again if its tab was closed before paying. */
+    val checkoutUrl: String? = null,
+    /** One-shot: the screen opens this in the browser, then calls [HoldViewModel.onCheckoutClosed]. */
+    val checkoutToOpen: String? = null,
+    /** The link the checkout returns to (this build's, under the booking's reference); the iOS session watches its scheme. */
+    val checkoutReturnUrl: String? = null,
+    /** One-shot: paying needs a sign-in; the screen opens the sign-in sheet, then [HoldViewModel.onSignInShown]. */
+    val signInRequested: Boolean = false,
+) {
+    /** The pay button is live: seats still held with time left, and no payment started or starting. */
+    val canPay: Boolean get() = phase == HoldPhase.Holding && secondsLeft > 0 && payment == PaymentStep.Choosing
+}
 
 /**
- * The held seats (HANDOFF screen 5, "Payment", step 2 of 3) without payment, which is M3.
+ * The held seats (HANDOFF screen 5, "Payment", step 2 of 3): the countdown, and since M3-M1 the checkout.
  *
  * The countdown is deadline-driven: each tick reads [clock] against a [HoldDeadline] built from the
  * server's `holdExpiresAt` and `serverNow`, never a counter decremented per tick, so a late tick or a
@@ -83,6 +116,17 @@ internal data class HoldUiState(
  * the seats are released or the server says they are no longer held. Not when the user leaves after
  * a failed release ([leaveWithoutRelease]): the seats are still held then, and the Home card is the
  * way back to them.
+ *
+ * **Checkout (M3-M1).** [pay] checks the payer's fields, asks for a sign-in when nobody is signed in (paying needs a
+ * customer's token; the sign-in sheet, no OTP), then `startPayment`s. From then on the booking is PAYMENT_PENDING and
+ * the answer comes from polling `getBooking` (every [POLL] while the screen shows, and at once when it comes back from
+ * the browser), never assumed:
+ * - CONFIRMED (or COMPLETED) → [HoldPhase.Paid]: the stored hold and its reminder are forgotten.
+ * - PAYMENT_PENDING → still waiting, whatever the countdown says: the server's grace (invisible) keeps the seats
+ *   while the payment completes, so a past deadline then is not "time is up".
+ * - HELD again → the provider declined it; the person may pay again before the deadline ([HoldUiState.declined]).
+ * - EXPIRED → [PaymentStep.Late]: late money can still confirm it, or is refunded automatically; polled more slowly.
+ * While a payment is under way Back cannot release the seats (`releaseHold` would answer CONFLICT): it only leaves.
  */
 internal class HoldViewModel(
     private val hold: HoldRoute,
@@ -94,6 +138,8 @@ internal class HoldViewModel(
      * longer held. Kept on [leaveWithoutRelease]: the seats are still held then.
      */
     private val reminders: HoldReminderSchedule = NoHoldReminderSchedule,
+    /** Where the hosted checkout returns to (M3-M1); none by default. */
+    private val checkout: CheckoutConfig = CheckoutConfig(),
 ) : ViewModel() {
     /** The hold's full length by the server's clock, from the answer that placed it; never re-derived. */
     private val holdLength: Duration? =
@@ -113,12 +159,37 @@ internal class HoldViewModel(
     private var nextCheckAt: Instant? = null
     private var emptyChecks = 0
 
+    /** When to read the booking next while a payment is under way, and how many of those reads failed in a row. */
+    private var nextPollAt: Instant? = null
+    private var failedPolls = 0
+
+    /**
+     * Bumped as a payment starts and once it has started: a read launched before then may answer HELD from before the
+     * start and would pass for a decline (M3-M1 review #1), so its answer is dropped.
+     */
+    private var paymentGeneration = 0
+
     private val _uiState =
-        MutableStateFlow(HoldUiState(ref = hold.ref, totalAmount = hold.totalAmount, totalCurrency = hold.totalCurrency))
+        MutableStateFlow(
+            HoldUiState(
+                ref = hold.ref,
+                totalAmount = hold.totalAmount,
+                totalCurrency = hold.totalCurrency,
+                payer = PayerForm.prefilled(hold.guestPhone),
+                checkoutReturnUrl = checkout.returnUrlFor(hold.ref),
+            ),
+        )
     val uiState: StateFlow<HoldUiState> = _uiState.asStateFlow()
 
     init {
         refreshClock()
+        // The payer's name from the account once someone is signed in (M3-M1), unless one was typed already.
+        viewModelScope.launch {
+            repository.session.collect { session ->
+                val name = (session as? SessionState.SignedIn)?.accountName?.takeIf { it.isNotBlank() } ?: return@collect
+                _uiState.update { if (it.payer.name.isBlank()) it.copy(payer = it.payer.copy(name = name)) else it }
+            }
+        }
     }
 
     /** The screen is visible: re-sync from the server and tick. */
@@ -155,7 +226,9 @@ internal class HoldViewModel(
 
     /** Back (top bar or system): confirm before the seats are given up. */
     fun requestLeave() {
-        if (_uiState.value.phase.isEnded) return
+        // While the payment starts there is nothing true to offer: releasing would race it (M3-M1 review #4). Its
+        // answer comes in moments, and Back then offers what fits.
+        if (_uiState.value.phase.isEnded || _uiState.value.payment == PaymentStep.Starting) return
         _uiState.update { it.copy(isLeaveConfirmVisible = true, releaseError = null) }
     }
 
@@ -172,6 +245,12 @@ internal class HoldViewModel(
     fun confirmLeave() {
         val state = _uiState.value
         if (state.isReleasing || state.phase.isEnded) return
+        if (state.payment.isUnderWay) {
+            // Nothing to release (it would answer CONFLICT): the payment confirms the booking or the seats free
+            // themselves. The stored hold stays, so Home's card leads back to it.
+            leaveWithoutRelease()
+            return
+        }
         _uiState.update { it.copy(isReleasing = true, releaseError = null) }
         viewModelScope.launch {
             when (val result = repository.releaseHold(hold.ref, hold.guestPhone)) {
@@ -182,7 +261,14 @@ internal class HoldViewModel(
                     _uiState.update { it.copy(isReleasing = false, isLeaveConfirmVisible = false, phase = HoldPhase.Released) }
                 }
                 is AppResult.Failure ->
-                    _uiState.update { it.copy(isReleasing = false, releaseError = result.error) }
+                    if (result.error.isCode(ApiErrorCodes.CONFLICT)) {
+                        // A payment started meanwhile (another device, or a late answer): "leave anyway" would be
+                        // wrong (M2-M2 carried note). Read the booking: it shows the payment under way or done.
+                        _uiState.update { it.copy(isReleasing = false, isLeaveConfirmVisible = false) }
+                        reread()
+                    } else {
+                        _uiState.update { it.copy(isReleasing = false, releaseError = result.error) }
+                    }
             }
         }
     }
@@ -202,6 +288,10 @@ internal class HoldViewModel(
         refreshClock(now)
         val state = _uiState.value
         when {
+            // A payment under way is polled on its own rhythm; zero on the countdown means nothing then.
+            state.payment.isUnderWay -> if (reread?.isActive != true && now >= (nextPollAt ?: now)) reread()
+            // Its answer decides; the countdown waits for it.
+            state.payment == PaymentStep.Starting -> Unit
             state.phase == HoldPhase.Holding && state.secondsLeft == 0 -> {
                 _uiState.update { it.copy(phase = HoldPhase.Checking) }
                 nextCheckAt = now
@@ -221,14 +311,21 @@ internal class HoldViewModel(
     /** `GET /bookings/{ref}`: the fresh deadline, or the news that the seats are gone. */
     private fun reread() {
         if (reread?.isActive == true) return
+        val generation = paymentGeneration
         reread =
             viewModelScope.launch {
-                when (val result = repository.heldBooking(hold.ref, hold.guestPhone)) {
+                val result = repository.heldBooking(hold.ref, hold.guestPhone)
+                // Sent before the payment started (or while it was starting): its HELD says nothing about the payment.
+                if (generation != paymentGeneration) return@launch
+                when (result) {
                     is AppResult.Success -> onBookingRead(result.data)
                     is AppResult.Failure -> {
                         // While still counting, a failed re-read changes nothing: the deadline we
                         // have stands. At zero it is retried; the seats are never assumed gone.
-                        if (_uiState.value.phase == HoldPhase.Checking) {
+                        if (_uiState.value.payment.isUnderWay) {
+                            failedPolls++
+                            nextPollAt = clock.now() + recheckBackoff(failedPolls)
+                        } else if (_uiState.value.phase == HoldPhase.Checking) {
                             _uiState.update { it.copy(checkError = result.error) }
                             scheduleNextCheck()
                         }
@@ -242,8 +339,28 @@ internal class HoldViewModel(
         val receivedAt = clock.now()
         val fresh = booking.liveDeadline(receivedAt)
         val stillHeld = fresh != null
+        val started = _uiState.value.payment.isUnderWay
         _uiState.update { it.copy(booking = booking, checkError = null) }
+        failedPolls = 0
         when {
+            booking.status in PAID_STATUSES -> {
+                // Bought: cleared before the phase change, as below, so the view model's end cannot cut it short.
+                activeHold.clear(hold.ref)
+                reminders.onEnded(hold.ref)
+                stopAll()
+                _uiState.update { it.copy(phase = HoldPhase.Paid, isLeaveConfirmVisible = false) }
+            }
+            booking.status == PAYMENT_PENDING -> onPaymentPending(booking, receivedAt)
+            started && booking.status == EXPIRED -> {
+                // The deadline passed with the payment unconfirmed. Late money still confirms it (or is refunded),
+                // so the booking is read again, more slowly; nothing is assumed. The stored hold is kept while this
+                // screen shows, but Home's card, date + party and a reminder tap read EXPIRED as over and forget it:
+                // after leaving, the way back is My trips, where a late confirmation shows (M3-M1 review #9).
+                reminders.onEnded(hold.ref)
+                _uiState.update { it.copy(payment = PaymentStep.Late, phase = HoldPhase.Holding) }
+                refreshClock(receivedAt)
+                nextPollAt = receivedAt + LATE_POLL
+            }
             !stillHeld -> {
                 // Cleared before the phase change: Expired ends the screen, which clears this view
                 // model and its scope, and an unfinished clear would leave the phone stored.
@@ -257,19 +374,155 @@ internal class HoldViewModel(
                 // Re-scheduled from the server's fresh deadline, never the device clock alone (M3-M7).
                 reminders.onHeld(hold.ref, fresh, booking.trip?.title, booking.partySize)
                 emptyChecks = 0
-                _uiState.update { it.copy(phase = HoldPhase.Holding) }
+                _uiState.update { it.copy(phase = HoldPhase.Holding).afterHeldAgain(started) }
                 refreshClock(receivedAt)
             }
             else -> {
                 // Held, but with nothing left: the server is about to call it EXPIRED. Ask again
                 // shortly rather than in a tight loop.
                 deadline = fresh
+                _uiState.update { it.afterHeldAgain(started) }
                 refreshClock(receivedAt)
                 if (_uiState.value.phase == HoldPhase.Holding) _uiState.update { it.copy(phase = HoldPhase.Checking) }
                 scheduleNextCheck()
             }
         }
     }
+
+    /**
+     * PAYMENT_PENDING: the countdown keeps the deadline the customer was given (it may be past while the server's
+     * grace runs) and the booking is read again every [POLL]. Found on a read rather than started here, it is
+     * [PaymentStep.Confirming]. No reminder now (M3-M1): "pay before the seats are released" no longer applies.
+     */
+    private fun onPaymentPending(
+        booking: HeldBookingDto,
+        receivedAt: Instant,
+    ) {
+        HoldDeadline.from(booking.holdExpiresAt, booking.serverNow, receivedAt)?.let { deadline = it }
+        reminders.onEnded(hold.ref)
+        _uiState.update {
+            it.copy(
+                phase = HoldPhase.Holding,
+                payment = if (it.payment.isUnderWay && it.payment != PaymentStep.Late) it.payment else PaymentStep.Confirming,
+            )
+        }
+        refreshClock(receivedAt)
+        nextPollAt = receivedAt + POLL
+    }
+
+    /** HELD after a payment was started here: the provider declined it, so the form is back, saying so. */
+    private fun HoldUiState.afterHeldAgain(started: Boolean): HoldUiState =
+        if (started) copy(payment = PaymentStep.Choosing, declined = true, checkoutUrl = null, checkoutToOpen = null) else this
+
+    // ---- Checkout (M3-M1) ----
+
+    fun selectMethod(method: PaymentMethod) {
+        if (_uiState.value.payment != PaymentStep.Choosing) return
+        _uiState.update { it.copy(method = method, paymentError = null) }
+    }
+
+    fun onPayerNameChange(name: String) = _uiState.update { it.copy(payer = it.payer.copy(name = name)) }
+
+    fun onPayerPhoneChange(phone: String) = _uiState.update { it.copy(payer = it.payer.copy(phone = phone)) }
+
+    /**
+     * The pay button. Fields first, then the sign-in (asked here, only when paying: the sign-in sheet, no OTP), then
+     * `startPayment`. After a sign-in the person taps pay again: nothing is charged, or sent to their phone, without
+     * a tap made while signed in.
+     */
+    fun pay() {
+        val state = _uiState.value
+        if (!state.canPay) return
+        if (!state.payer.isValid) {
+            _uiState.update { it.copy(showPayerErrors = true) }
+            return
+        }
+        // A read sent before this payment would answer HELD after it starts and pass for a decline: it is dropped,
+        // and the first poll after the start reads afresh.
+        paymentGeneration++
+        reread?.cancel()
+        _uiState.update { it.copy(payment = PaymentStep.Starting, paymentError = null, declined = false, isLeaveConfirmVisible = false) }
+        viewModelScope.launch {
+            if (repository.currentSession() !is SessionState.SignedIn) {
+                _uiState.update { it.copy(payment = PaymentStep.Choosing, signInRequested = true) }
+                return@launch
+            }
+            val request =
+                StartPaymentRequest(
+                    method = state.method.wire,
+                    payer = PayerRequest(name = state.payer.cleanName, phone = state.payer.cleanPhone),
+                    returnUrl = state.checkoutReturnUrl,
+                    // Always sent: the hold may not be on the account yet (made signed out, or on another install).
+                    guestPhone = hold.guestPhone,
+                )
+            when (val result = repository.startPayment(hold.ref, request)) {
+                is AppResult.Success -> onPaymentStarted(result.data)
+                is AppResult.Failure -> onPaymentNotStarted(result.error)
+            }
+        }
+    }
+
+    private fun onPaymentStarted(started: PaymentStartedDto) {
+        // A read sent while it was starting (the screen came back to the front) is dropped, and frees the slot.
+        paymentGeneration++
+        reread?.cancel()
+        // Nothing to remind about while the payment completes (M3-M1 decision); a decline brings it back.
+        reminders.onEnded(hold.ref)
+        val url = started.action.url?.takeIf { started.action.type == ACTION_REDIRECT && it.isNotBlank() }
+        _uiState.update {
+            it.copy(
+                payment = if (url != null) PaymentStep.AwaitingCheckout else PaymentStep.AwaitingWallet,
+                checkoutUrl = url,
+                checkoutToOpen = url,
+                isLeaveConfirmVisible = false,
+            )
+        }
+        failedPolls = 0
+        nextPollAt = clock.now() + POLL
+    }
+
+    /** Branches on the code only; every failure leaves the form, and the booking HELD on the server's side. */
+    private fun onPaymentNotStarted(error: AppError) {
+        val code = (error as? AppError.Api)?.code
+        when (code) {
+            // The token was refused or is not a customer's: sign in (again), then pay.
+            ApiErrorCodes.UNAUTHORIZED, ApiErrorCodes.IDENTITY_REQUIRED ->
+                _uiState.update { it.copy(payment = PaymentStep.Choosing, signInRequested = true) }
+            // Already started (another tap, another device) or paid: the booking says which.
+            ApiErrorCodes.CONFLICT -> {
+                _uiState.update { it.copy(payment = PaymentStep.Choosing) }
+                reread()
+            }
+            // Too little time left, or the date was called off: said, and the booking read for what it is now.
+            ApiErrorCodes.HOLD_EXPIRED, ApiErrorCodes.DEPARTURE_NOT_OPEN -> {
+                _uiState.update { it.copy(payment = PaymentStep.Choosing, paymentError = error) }
+                reread()
+            }
+            else -> _uiState.update { it.copy(payment = PaymentStep.Choosing, paymentError = error) }
+        }
+    }
+
+    /**
+     * The browser handed [HoldUiState.checkoutToOpen] back: closed, or come back through the return link (at once on
+     * Android, whose Custom Tab reports nothing). The booking is read now rather than at the next poll.
+     */
+    fun onCheckoutClosed() {
+        _uiState.update { it.copy(checkoutToOpen = null) }
+        if (_uiState.value.payment.isUnderWay) {
+            nextPollAt = clock.now()
+            reread()
+        }
+    }
+
+    /** "Open the payment page again": its tab was closed before paying. */
+    fun reopenCheckout() {
+        val state = _uiState.value
+        val url = state.checkoutUrl ?: return
+        if (state.payment == PaymentStep.AwaitingCheckout) _uiState.update { it.copy(checkoutToOpen = url) }
+    }
+
+    /** The screen has opened the sign-in sheet. */
+    fun onSignInShown() = _uiState.update { it.copy(signInRequested = false) }
 
     private fun scheduleNextCheck() {
         emptyChecks++
@@ -292,5 +545,16 @@ internal class HoldViewModel(
 
         /** Statuses in which the seats are still held for this booking. */
         val HELD_STATUSES = setOf("HELD", "PAYMENT_PENDING")
+
+        /** How often a payment under way is read again while the screen shows (M3-M1). */
+        val POLL = 3.seconds
+
+        /** The slower rhythm once the deadline passed with the payment unconfirmed ([PaymentStep.Late]). */
+        val LATE_POLL = 15.seconds
+
+        private const val EXPIRED = "EXPIRED"
+        private const val ACTION_REDIRECT = "REDIRECT"
     }
 }
+
+private fun AppError.isCode(code: String): Boolean = this is AppError.Api && this.code == code

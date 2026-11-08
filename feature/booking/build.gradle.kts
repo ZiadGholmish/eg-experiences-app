@@ -16,6 +16,10 @@ kotlin {
             // Logs a failed local save of the hold (M2-M4 review #6); the hold itself still goes on.
             implementation(libs.kermit)
         }
+        // The hosted checkout in a Custom Tab (M3-M1); iOS uses AuthenticationServices from the platform.
+        androidMain.dependencies {
+            implementation(libs.androidx.browser)
+        }
         // BookingApiServiceTest runs the real client (core:network's apiHttpClient) on a MockEngine.
         commonTest.dependencies {
             implementation(libs.ktor.client.mock)

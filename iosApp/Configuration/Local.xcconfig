@@ -9,6 +9,11 @@ APP_ENVIRONMENT = local
 // Android emulator.
 BASE_URL = http:/$()/localhost:8084/api/v1/
 
+// Checkout (M3-M1): no return link by default; to try one, set
+// PAYMENT_RETURN_URL = eg.bahr.app.local:/$()/checkout in Local.private.xcconfig (the local api lists that
+// prefix in PAYMENT_RETURN_URL_PREFIXES by default).
+PAYMENT_RETURN_URL =
+
 // A physical iPhone cannot reach the Mac's localhost. Override BASE_URL with
 // the Mac's LAN address in `Local.private.xcconfig`, which is gitignored — the
 // iOS counterpart of LOCAL_BASE_URL in local.properties. See

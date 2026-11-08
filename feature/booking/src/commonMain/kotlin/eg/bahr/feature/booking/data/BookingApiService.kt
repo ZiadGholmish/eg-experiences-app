@@ -8,7 +8,9 @@ import eg.bahr.feature.booking.model.BookingDto
 import eg.bahr.feature.booking.model.BookingTripDto
 import eg.bahr.feature.booking.model.HeldBookingDto
 import eg.bahr.feature.booking.model.HeldSeatsDto
+import eg.bahr.feature.booking.model.PaymentStartedDto
 import eg.bahr.feature.booking.model.PlaceHoldRequest
+import eg.bahr.feature.booking.model.StartPaymentRequest
 import io.ktor.client.HttpClient
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
@@ -80,5 +82,18 @@ internal class BookingApiService(
     ): AppResult<Unit> =
         callApi {
             client.delete("bookings/$ref/hold") { parameter("phone", phone) }
+        }
+
+    /**
+     * `startPayment` (M3-B2): needs the customer's token, which the client adds while signed in. Answers the hosted
+     * checkout to open (`REDIRECT`) or nothing to open (`WALLET_PENDING`); either way the outcome comes by polling
+     * [heldBooking]. `PAYMENT_DECLINED` and a 500 leave the booking HELD, so the person may try again.
+     */
+    suspend fun startPayment(
+        ref: String,
+        request: StartPaymentRequest,
+    ): AppResult<PaymentStartedDto> =
+        callApi {
+            client.post("bookings/$ref/payments") { setBody(request) }
         }
 }

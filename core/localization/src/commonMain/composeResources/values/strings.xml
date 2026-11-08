@@ -242,13 +242,38 @@
     <string name="booking_departs_from">Departs %1$s, %2$s, %3$s</string>
     <string name="booking_departs_at">Departs %1$s, %2$s</string>
     <string name="booking_pay_cta">Pay %1$s</string>
-    <string name="booking_pay_coming">Paying in the app arrives in the next update. Your seats stay held until the timer ends.</string>
     <string name="booking_leave_title">Leave and release your seats?</string>
     <string name="booking_leave_body">Someone else can book them straight away.</string>
     <string name="booking_leave_confirm">Release seats</string>
     <string name="booking_leave_stay">Keep my seats</string>
     <string name="booking_leave_failed">We couldn’t release your seats. They are freed on their own when the timer ends.</string>
     <string name="booking_leave_anyway">Leave anyway</string>
+    <!-- Checkout (M3-M1, HANDOFF screen 5): the two methods, their fields, the pay button and what happens after.
+         Copy from the prototype (payLbl, payVf, payVfNote, payCard, payCardNote, payVf2, payFoot) where it has
+         it. Card details are typed on the provider's page, never here (PLAN §9), so the card's second field is
+         the mobile number the payment needs. The prototype's "Free cancellation up to 72h" is left out of the
+         footnote: the booking does not carry the trip's policy. -->
+    <string name="booking_pay_with">Pay with</string>
+    <string name="booking_method_vf">Vodafone Cash</string>
+    <string name="booking_method_vf_note">You get an SMS to confirm</string>
+    <string name="booking_method_card">Card</string>
+    <string name="booking_method_card_note">Visa · Mastercard · Meeza</string>
+    <string name="booking_payer_vf_number">Vodafone Cash number</string>
+    <string name="booking_payer_card_name">Name on card</string>
+    <string name="booking_payer_card_note">You enter your card on the secure payment page.</string>
+    <string name="booking_pay_vf_cta">Send request to %1$s</string>
+    <string name="booking_pay_foot">Your reference arrives on this page and by SMS.</string>
+    <string name="booking_pay_awaiting_checkout">Finish paying on the secure page. We confirm here as soon as it goes through.</string>
+    <string name="booking_pay_awaiting_wallet">Check your phone and approve the Vodafone Cash request. We confirm here as soon as it goes through.</string>
+    <string name="booking_pay_confirming">We’re confirming your payment…</string>
+    <string name="booking_pay_late">The time for these seats ran out before your payment was confirmed. If the money arrives we still confirm your booking; if the seats are gone, it comes back to you on its own.</string>
+    <string name="booking_pay_reopen">Open the payment page</string>
+    <string name="booking_pay_waiting_cta">Waiting for your payment</string>
+    <string name="booking_pay_too_late">There isn’t enough time left to pay for these seats.</string>
+    <string name="booking_leave_paying_title">Leave while we confirm your payment?</string>
+    <string name="booking_leave_paying_body">Your payment carries on. Once it’s confirmed, you’ll find the booking in My trips.</string>
+    <string name="booking_leave_paying_confirm">Leave</string>
+    <string name="booking_leave_paying_stay">Stay here</string>
 
     <!-- Map (M4-M2, handoff screen 2; the prototype's mapBtn, listBtn, mapTitle, mapNote). Home's way in,
          the screen's title and its way back to the list, the card a tapped pin opens, and the note under
@@ -285,6 +310,7 @@
     <string name="error_departure_not_open">Booking just closed for this date. Pick another one.</string>
     <string name="error_validation">Check your details and try again.</string>
     <string name="error_rate_limited">Too many tries. Wait a minute and try again.</string>
+    <string name="error_payment_declined">Your payment didn’t go through. Try again, or pay another way.</string>
     <!-- Screen-reader state of a button whose action is in flight. -->
     <string name="a11y_busy">Loading</string>
     <string name="action_retry">Try again</string>

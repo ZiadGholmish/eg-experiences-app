@@ -55,3 +55,21 @@ internal fun recheckBackoff(emptyChecks: Int): Duration {
 }
 
 private const val MAX_BACKOFF_SHIFT = 4
+
+/** Statuses of a paid booking: the hold is over because it was bought (COMPLETED once the trip is past, M6-B5b). */
+internal val PAID_STATUSES = setOf("CONFIRMED", "COMPLETED")
+
+internal const val PAYMENT_PENDING = "PAYMENT_PENDING"
+
+/**
+ * The reminder after a read that called [ref] live (M3-M1 decision): "pay before the seats are released" is wrong
+ * once a payment is under way (PAYMENT_PENDING; the server's grace keeps the seats meanwhile), so it is cancelled
+ * then. A declined payment reads HELD again, and the next read schedules it afresh.
+ */
+internal suspend fun HoldReminderSchedule.onLiveRead(
+    ref: String,
+    booking: HeldBookingDto,
+    deadline: HoldDeadline,
+) {
+    if (booking.status == PAYMENT_PENDING) onEnded(ref) else onHeld(ref, deadline, booking.trip?.title, booking.partySize)
+}

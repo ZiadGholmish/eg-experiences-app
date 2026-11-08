@@ -3,6 +3,7 @@ package eg.bahr.feature.booking.data
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.network.MoneyDto
+import eg.bahr.core.network.auth.SessionState
 import eg.bahr.feature.booking.model.BookingDepartureDto
 import eg.bahr.feature.booking.model.BookingDeparturePlaceDto
 import eg.bahr.feature.booking.model.BookingDto
@@ -11,7 +12,11 @@ import eg.bahr.feature.booking.model.BookingTripDto
 import eg.bahr.feature.booking.model.BookingTripSummaryDto
 import eg.bahr.feature.booking.model.HeldBookingDto
 import eg.bahr.feature.booking.model.HeldSeatsDto
+import eg.bahr.feature.booking.model.PaymentActionDto
+import eg.bahr.feature.booking.model.PaymentStartedDto
 import eg.bahr.feature.booking.model.PlaceHoldRequest
+import eg.bahr.feature.booking.model.StartPaymentRequest
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.datetime.LocalDate
 
 /**
@@ -25,7 +30,25 @@ internal class FakeBookingRepository(
     var heldBooking: suspend (ref: String, phone: String) -> AppResult<HeldBookingDto> = { _, _ -> unset() },
     var releaseHold: suspend (ref: String, phone: String) -> AppResult<Unit> = { _, _ -> unset() },
     var bookingByRef: suspend (ref: String) -> AppResult<BookingDto> = { unset() },
+    var startPayment: suspend (ref: String, request: StartPaymentRequest) -> AppResult<PaymentStartedDto> = { _, _ -> unset() },
+    signedIn: Boolean = true,
 ) : BookingRepository {
+    /** Signed in by default: most checkout tests are about what happens once paying is allowed. */
+    override val session = MutableStateFlow<SessionState>(if (signedIn) SIGNED_IN else SessionState.SignedOut)
+
+    /** Every payment started, in order. */
+    val payments = mutableListOf<Pair<String, StartPaymentRequest>>()
+
+    override suspend fun currentSession(): SessionState = session.value
+
+    override suspend fun startPayment(
+        ref: String,
+        request: StartPaymentRequest,
+    ): AppResult<PaymentStartedDto> {
+        payments += ref to request
+        return startPayment.invoke(ref, request)
+    }
+
     val holdRequests = mutableListOf<PlaceHoldRequest>()
 
     /** `ref to phone` of every booking read and every release, in order. */
@@ -67,8 +90,10 @@ internal class FakeBookingRepository(
         return releaseHold.invoke(ref, phone)
     }
 
-    private companion object {
-        fun unset(): AppResult.Failure = AppResult.Failure(AppError.Unknown("FakeBookingRepository: call not stubbed"))
+    companion object {
+        val SIGNED_IN = SessionState.SignedIn(accountName = "Nada Hassan", profileComplete = true, providers = setOf("google"))
+
+        private fun unset(): AppResult.Failure = AppResult.Failure(AppError.Unknown("FakeBookingRepository: call not stubbed"))
     }
 }
 
@@ -149,4 +174,17 @@ internal object BookingFixtures {
         partySize = 2,
         total = MoneyDto(amount = 900, currencyCode = "EGP"),
     )
+
+    /** openapi `PaymentStarted`: the fake provider's hosted checkout (`REDIRECT`), or [walletPending]. */
+    fun paymentStarted(walletPending: Boolean = false) =
+        PaymentStartedDto(
+            paymentId = "0199c3a0-5eed-7000-8000-00000000a001",
+            action =
+                if (walletPending) {
+                    PaymentActionDto(type = "WALLET_PENDING")
+                } else {
+                    PaymentActionDto(type = "REDIRECT", url = "http://localhost:8084/fake-checkout/fake-0199c3a0")
+                },
+            holdExpiresAt = "2026-10-09T22:42:30+03:00",
+        )
 }

@@ -39,6 +39,7 @@ import eg.bahr.feature.booking.navigation.navigateToBooking
 import eg.bahr.feature.booking.navigation.navigateToBookingByRef
 import eg.bahr.feature.booking.navigation.navigateToHold
 import eg.bahr.feature.booking.navigation.navigateToHoldByRef
+import eg.bahr.feature.booking.navigation.navigateToPaidBooking
 import eg.bahr.feature.booking.navigation.openHeldSeats
 import eg.bahr.feature.booking.navigation.openHoldScreen
 import eg.bahr.feature.booking.navigation.returnToDateSelection
@@ -300,9 +301,12 @@ fun AppNavHost(
             )
 
             // Released or run out: back to date + party under it, which re-reads its dates. A hold just placed offers
-            // feature:notifications' pre-prompt (M3-M7): the "about to expire" reminder needs the permission.
+            // feature:notifications' pre-prompt (M3-M7): the "about to expire" reminder needs the permission. Paying
+            // (M3-M1) asks feature:auth's sign-in sheet over it when signed out, and hands over to the booking once paid.
             holdScreen(
                 onEnded = navController::returnToDateSelection,
+                onPaid = navController::navigateToPaidBooking,
+                onSignIn = { navController.navigateToSignIn() },
                 reminderPrompt = { onDone -> PushPromptSlot(onDone = onDone, reason = PushPromptReason.HoldReminder) },
             )
 

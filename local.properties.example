@@ -41,3 +41,9 @@ GOOGLE_SERVER_CLIENT_ID_PROD=
 
 # Push (Firebase, M3-M5) needs no setting here: drop the environment's google-services.json into
 # androidApp/src/<flavor>/ (local, dev or prod; gitignored). Without it the app builds with push off.
+
+# Checkout (M3-M1): the link the hosted checkout returns the browser to on the local flavor. Empty (the default)
+# sends none. To try the return, set it to the local app's own scheme, which the local api's
+# PAYMENT_RETURN_URL_PREFIXES lists by default (http://localhost:8084,eg.bahr.app.local://checkout):
+#   LOCAL_PAYMENT_RETURN_URL=eg.bahr.app.local://checkout
+LOCAL_PAYMENT_RETURN_URL=
