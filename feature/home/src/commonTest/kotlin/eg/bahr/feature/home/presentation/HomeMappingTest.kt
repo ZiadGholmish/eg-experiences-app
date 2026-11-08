@@ -5,6 +5,7 @@ import eg.bahr.feature.home.model.BannersSectionDto
 import eg.bahr.feature.home.model.HomeActionDto
 import eg.bahr.feature.home.model.HomeBannerDto
 import eg.bahr.feature.home.model.HomeNoteDto
+import eg.bahr.feature.home.model.HomeSectionDto
 import eg.bahr.feature.home.model.NoteSectionDto
 import eg.bahr.feature.home.navigation.HomeAction
 import kotlin.test.Test
@@ -70,25 +71,24 @@ class HomeMappingTest {
             items = listOf(HomeBannerDto("b", null, ImageDto("https://cdn.invalid/b.png", 900, 560), HomeActionDto("none"))),
         )
 
+    private fun blocks(vararg sections: HomeSectionDto) = parseHomeSections(sections.toList()) {}
+
     @Test
     fun `the notes that end Home go after the trip list - a note between sections stays in place`() {
-        val hero = banners("hero")
-        val middle = note("middle")
-        val rows = banners("rows")
-        val footer = note("footer")
-        val alsoFooter = note("also-footer")
+        val placed = HomePlacement.of(blocks(banners("hero"), note("middle"), banners("rows"), note("footer"), note("also-footer")))
 
-        val placed = HomePlacement.of(listOf(hero, middle, rows, footer, alsoFooter))
-
-        assertEquals(listOf(hero, middle, rows), placed.inline)
-        assertEquals(listOf(footer, alsoFooter), placed.trailing)
+        assertEquals(listOf("hero", "middle", "rows"), placed.inline.map { it.id })
+        assertEquals(listOf("footer", "also-footer"), placed.trailing.map { it.id })
     }
 
     @Test
     fun `no trailing note - nothing after the list - and Home of notes only is all footer`() {
-        val hero = banners("hero")
-        assertEquals(HomePlacement(listOf(note("a"), hero), emptyList()), HomePlacement.of(listOf(note("a"), hero)))
-        assertEquals(HomePlacement(emptyList(), listOf(note("a"))), HomePlacement.of(listOf(note("a"))))
+        val noteThenHero = HomePlacement.of(blocks(note("a"), banners("hero")))
+        assertEquals(listOf("a", "hero"), noteThenHero.inline.map { it.id })
+        assertEquals(emptyList(), noteThenHero.trailing)
+        val notesOnly = HomePlacement.of(blocks(note("a")))
+        assertEquals(emptyList(), notesOnly.inline)
+        assertEquals(listOf("a"), notesOnly.trailing.map { it.id })
         assertEquals(HomePlacement(emptyList(), emptyList()), HomePlacement.of(emptyList()))
     }
 }

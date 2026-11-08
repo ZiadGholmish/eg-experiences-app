@@ -377,6 +377,9 @@ object BahrSize {
     /** The trip thumbnail on the payment screen's summary card (62px in the handoff). */
     val thumbnail = 62.dp
 
+    /** A small trip thumbnail beside its title, as on a Home review card's trip line (MH-M1). */
+    val thumbnailSmall = 32.dp
+
     /** The thin progress bar over a list that is refreshing with its old cards still on screen (M4-M6). */
     val progressBar = 3.dp
 

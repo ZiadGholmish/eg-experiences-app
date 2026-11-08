@@ -1,15 +1,29 @@
 package eg.bahr.feature.home.navigation
 
 /**
- * What a tap on Home asks the app to do: a banner (openapi `HomeAction`), a category chip, or a trip
- * row's "See all" (`HomeSeeAll`, M4-M1b). Public because the app's NavHost decides where each goes; a
- * `none` banner (or one whose value is unusable) is simply not tappable and never produces one of these.
+ * What a tap on Home asks the app to do: a banner (openapi `HomeAction`), a category chip, a trip
+ * row's "See all" (`HomeSeeAll`, M4-M1b), or a host, departure or review card (MH-M1). Public because
+ * the app's NavHost decides where each goes; a `none` banner (or one whose value is unusable) is simply not tappable and never produces one of these.
  * Neither, for now, is a `url` banner: the app has no in-app browser to open it in yet.
  */
 sealed interface HomeAction {
-    /** `trip`: open the trip page of [slug]. */
+    /**
+     * `trip`: open the trip page of [slug]. [date] (`YYYY-MM-DD`, MH-M1) opens it on that date: a "leaving
+     * soon" card's. The page picks it only if its fresh dates still list it (seats are hints).
+     */
     data class OpenTrip(
         val slug: String,
+        val date: String? = null,
+    ) : HomeAction
+
+    /**
+     * A host card (MH-M1, `hosts` sections): the host's public page of [slug]. [name] and [avatar] (a URL) are
+     * what the card showed, for the page's header to draw before `getHost` answers.
+     */
+    data class OpenHost(
+        val slug: String,
+        val name: String? = null,
+        val avatar: String? = null,
     ) : HomeAction
 
     /**

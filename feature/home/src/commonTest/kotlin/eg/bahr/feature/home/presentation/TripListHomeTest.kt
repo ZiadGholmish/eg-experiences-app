@@ -46,7 +46,11 @@ class TripListHomeTest {
 
             advanceUntilIdle()
 
-            assertEquals(listOf(row, banners), vm.uiState.value.sections)
+            assertEquals(
+                listOf("r", "b"),
+                vm.uiState.value.sections
+                    .map { it.id },
+            )
             assertFalse(vm.uiState.value.awaitingHome)
         }
 
@@ -55,7 +59,7 @@ class TripListHomeTest {
         val empty = row.copy(items = emptyList())
         val logged = mutableListOf<String>()
 
-        assertEquals(listOf(banners), drawableSections(listOf(empty, banners)) { logged += it })
+        assertEquals(listOf("b"), parseHomeSections(listOf(empty, banners)) { logged += it }.map { it.id })
         assertEquals(1, logged.size)
     }
 
@@ -98,7 +102,12 @@ class TripListHomeTest {
 
             home.complete(AppResult.Success(HomeDto(listOf(banners))))
             runCurrent()
-            assertEquals(listOf(banners), vm.uiState.value.sections, "late sections are still shown")
+            assertEquals(
+                listOf("b"),
+                vm.uiState.value.sections
+                    .map { it.id },
+                "late sections are still shown",
+            )
             assertFalse(vm.uiState.value.awaitingHome)
         }
 
@@ -123,7 +132,11 @@ class TripListHomeTest {
 
             assertEquals(0L, currentTime, "the timer was cancelled: no virtual time passed")
             assertFalse(vm.uiState.value.awaitingHome)
-            assertEquals(listOf(row), vm.uiState.value.sections)
+            assertEquals(
+                listOf("r"),
+                vm.uiState.value.sections
+                    .map { it.id },
+            )
         }
 
     @Test
@@ -141,7 +154,12 @@ class TripListHomeTest {
             pending[0].complete(AppResult.Success(HomeDto(listOf(banners))))
             advanceUntilIdle()
 
-            assertEquals(listOf(row), vm.uiState.value.sections, "the first read's answer came last, and was dropped")
+            assertEquals(
+                listOf("r"),
+                vm.uiState.value.sections
+                    .map { it.id },
+                "the first read's answer came last, and was dropped",
+            )
         }
 
     @Test
@@ -157,6 +175,10 @@ class TripListHomeTest {
             advanceUntilIdle()
 
             assertEquals(2, repository.homeReads)
-            assertEquals(listOf(banners), vm.uiState.value.sections)
+            assertEquals(
+                listOf("b"),
+                vm.uiState.value.sections
+                    .map { it.id },
+            )
         }
 }

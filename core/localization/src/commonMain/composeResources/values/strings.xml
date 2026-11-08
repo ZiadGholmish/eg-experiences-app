@@ -35,6 +35,10 @@
     <!-- A hero slide's white price pill (M4-M7): the server's "from" price, the cheapest of what the
          slide leads to. %1$s is the formatted amount with its currency, e.g. "450 EGP". -->
     <string name="home_banner_price_from">From %1$s</string>
+    <!-- A host card on Home (MH-M1): how many reviews the rating beside it is over. %1$d is the count. -->
+    <string name="home_rating_count">(%1$d)</string>
+    <!-- A "leaving soon" card on Home (MH-M1): the bus's Cairo departure time. %1$s is e.g. "05:00". -->
+    <string name="home_departure_bus">Bus %1$s</string>
     <!-- Multi-day trips (M4-B0b): the badge on a card with nights > 0. -->
     <plurals name="trip_nights_badge">
         <item quantity="one">%1$d night</item>

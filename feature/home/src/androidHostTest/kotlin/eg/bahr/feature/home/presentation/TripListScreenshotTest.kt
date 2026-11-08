@@ -468,7 +468,7 @@ class TripListScreenshotTest {
                                 ).padding(vertical = BahrSpacing.lg),
                         verticalArrangement = Arrangement.spacedBy(BahrSpacing.lg),
                     ) {
-                        sections.forEach { section ->
+                        parseHomeSections(sections) {}.forEach { section ->
                             HomeSection(
                                 section,
                                 perPersonLabel = perPerson(language),

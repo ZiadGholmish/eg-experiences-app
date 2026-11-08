@@ -6,13 +6,22 @@ import eg.bahr.core.network.ApiConfig
 import eg.bahr.core.network.apiHttpClient
 import eg.bahr.feature.home.model.BannersSectionDto
 import eg.bahr.feature.home.model.CategoriesSectionDto
+import eg.bahr.feature.home.model.DeparturesSectionDto
 import eg.bahr.feature.home.model.HomeDto
 import eg.bahr.feature.home.model.HomeSectionsSerializer
 import eg.bahr.feature.home.model.HomeSeeAllDto
+import eg.bahr.feature.home.model.HostsSectionDto
 import eg.bahr.feature.home.model.NoteSectionDto
+import eg.bahr.feature.home.model.ReviewsSectionDto
 import eg.bahr.feature.home.model.SkippedSectionDto
 import eg.bahr.feature.home.model.TripsSectionDto
-import eg.bahr.feature.home.presentation.drawableSections
+import eg.bahr.feature.home.model.key
+import eg.bahr.feature.home.presentation.AssetsBlock
+import eg.bahr.feature.home.presentation.CardsBlock
+import eg.bahr.feature.home.presentation.HomeBlock
+import eg.bahr.feature.home.presentation.HomeCards
+import eg.bahr.feature.home.presentation.HomeLayout
+import eg.bahr.feature.home.presentation.parseHomeSections
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.request.HttpRequestData
@@ -21,6 +30,7 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.headersOf
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -146,8 +156,8 @@ class HomeApiServiceTest {
             assertEquals(0, blank.items.size)
             assertEquals(1, blank.droppedItems)
 
-            val drawn = drawableSections(sections) {}
-            assertEquals(listOf(sections[0], sections[1], sections[2], sections[4]), drawn)
+            val drawn = parseHomeSections(sections) {}
+            assertEquals(listOf(sections[0], sections[1], sections[2], sections[4]).map { it.key }, drawn.map { it.key })
         }
 
     @Test
@@ -212,7 +222,7 @@ class HomeApiServiceTest {
             assertEquals(1, row.droppedItems)
 
             val logged = mutableListOf<String>()
-            assertEquals(emptyList(), drawableSections(listOf(row)) { logged += it })
+            assertEquals(emptyList<HomeBlock>(), parseHomeSections(listOf(row)) { logged += it })
             assertEquals(2, logged.size, logged.toString())
         }
 
@@ -262,6 +272,56 @@ class HomeApiServiceTest {
             repository.home()
 
             assertEquals("The White Desert, overnight", cards.card("white-desert-overnight")?.title)
+        }
+
+    @Test
+    fun `hosts - departures and reviews decode field for field - a bad date costs only its card`() =
+        runTest {
+            val sections = home(HomePayloads.CARD_SECTIONS).sections
+
+            val hosts = assertIs<HostsSectionDto>(sections[0])
+            val ashraf = hosts.items.first()
+            assertEquals("ashraf-el-bahr", ashraf.slug)
+            assertEquals("person", ashraf.kind)
+            assertTrue(ashraf.verified)
+            assertEquals(42, ashraf.tripsRun)
+            assertEquals(4.8, ashraf.rating?.value)
+            assertEquals(37, ashraf.rating?.count)
+            assertEquals("https://cdn.invalid/ashraf.jpg", ashraf.avatar?.url)
+            assertNull(hosts.items[1].rating, "a host with no reviews has no rating")
+
+            val departures = assertIs<DeparturesSectionDto>(sections[1])
+            assertEquals(2, departures.columns)
+            val dawn = departures.items.single()
+            assertEquals(LocalDate(2026, 11, 14), dawn.date)
+            assertEquals(LocalTime(5, 0), dawn.departTime)
+            assertEquals(3, dawn.seatsRemaining)
+            assertEquals("burullus-dawn", dawn.trip.slug)
+            assertEquals(1, departures.droppedItems)
+
+            val review = assertIs<ReviewsSectionDto>(sections[2]).items.single()
+            assertEquals(5, review.rating)
+            assertEquals("Mona S.", review.author)
+            assertEquals(LocalDate(2026, 10, 20), review.dateISO)
+            assertTrue(review.verified)
+            assertNull(review.trip.image)
+        }
+
+    @Test
+    fun `the parser draws the card sections by layout - clamps columns - and drops a mismatch and an unknown layout`() =
+        runTest {
+            val logged = mutableListOf<String>()
+            val blocks = parseHomeSections(home(HomePayloads.CARD_SECTIONS).sections) { logged += it }
+
+            assertEquals(
+                listOf(HomeLayout.CardRail, HomeLayout.CardGrid, HomeLayout.CardList, HomeLayout.TileGrid),
+                blocks.map { it.layout },
+            )
+            assertIs<HomeCards.Hosts>(assertIs<CardsBlock>(blocks[0]).cards)
+            assertEquals(3, assertIs<AssetsBlock>(blocks[3]).columns, "5 columns clamp to 3")
+            assertTrue(logged.any { "cannot draw" in it }, logged.toString())
+            assertTrue(logged.any { "unknown layout 'mosaic'" in it }, logged.toString())
+            assertTrue(logged.any { "unreadable" in it }, logged.toString())
         }
 
     private companion object {

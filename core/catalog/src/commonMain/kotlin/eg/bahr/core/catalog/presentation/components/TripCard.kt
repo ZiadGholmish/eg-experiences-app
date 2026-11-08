@@ -3,6 +3,7 @@ package eg.bahr.core.catalog.presentation.components
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -106,7 +107,8 @@ fun TripCard(
             ScheduleRow(durationLabel = trip.durationLabel, timeRange = !trip.isMultiDay, next = trip.nextDeparture)
             val seats = trip.nextDeparture?.seatsLeft()
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Row(
+                // A narrow card (Home's card grid, MH-M1) puts "per person" under the price rather than breaking it mid-word.
+                FlowRow(
                     modifier = Modifier.weight(1f),
                     horizontalArrangement = Arrangement.spacedBy(BahrSpacing.xs),
                 ) {
@@ -120,6 +122,7 @@ fun TripCard(
                         text = perPersonLabel,
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
                         modifier = Modifier.alignByBaseline(),
                     )
                 }

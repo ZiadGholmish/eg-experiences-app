@@ -47,7 +47,6 @@ import eg.bahr.core.catalog.presentation.WaitlistTags
 import eg.bahr.core.catalog.presentation.components.CategoryTile
 import eg.bahr.core.catalog.presentation.components.Photo
 import eg.bahr.core.catalog.presentation.components.SectionTitle
-import eg.bahr.core.catalog.presentation.components.TripCard
 import eg.bahr.core.catalog.presentation.components.badgeTone
 import eg.bahr.core.catalog.presentation.components.knownSymbolIcon
 import eg.bahr.core.designsystem.components.BahrBadge
@@ -63,17 +62,14 @@ import eg.bahr.core.designsystem.theme.bahrSharedBounds
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.home_banner_price_from
 import eg.bahr.core.localization.generated.resources.trips_see_all
-import eg.bahr.feature.home.model.BannersSectionDto
-import eg.bahr.feature.home.model.CategoriesSectionDto
 import eg.bahr.feature.home.model.HomeBannerDto
 import eg.bahr.feature.home.model.HomeNoteDto
-import eg.bahr.feature.home.model.HomeSectionDto
-import eg.bahr.feature.home.model.NoteSectionDto
 import eg.bahr.feature.home.model.SeeAllType
-import eg.bahr.feature.home.model.SkippedSectionDto
 import eg.bahr.feature.home.model.TripsSectionDto
 import eg.bahr.feature.home.navigation.HomeAction
-import eg.bahr.feature.home.presentation.parseAspectRatio
+import eg.bahr.feature.home.presentation.CardsBlock
+import eg.bahr.feature.home.presentation.ChipsBlock
+import eg.bahr.feature.home.presentation.HomeBlock
 import eg.bahr.feature.home.presentation.showsForward
 import eg.bahr.feature.home.presentation.toHomeAction
 import kotlinx.coroutines.delay
@@ -81,64 +77,42 @@ import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 
 /*
- * Home's server-driven sections (PLAN §5c, M4-M1a): one composable per `type`. Rows scroll from the
- * start edge, so from the right in Arabic: LazyRow and HorizontalPager follow the layout direction.
+ * Home's server-driven sections (PLAN §5c, M4-M1a; MH-M1: drawn by layout). Each section is a title line over
+ * its layout's renderer, picked from the registry in HomeLayouts.kt. Rows scroll from the start edge, so from
+ * the right in Arabic: LazyRow and HorizontalPager follow the layout direction.
  */
 
-/** One section, drawn by its type, under its optional title. */
+/**
+ * One section: its optional title (with "See all" when it leads somewhere: a trips section only) over its
+ * layout. The callbacks are bundled once per change into the [HomeSectionContext] the renderers read.
+ */
 @Composable
 internal fun HomeSection(
-    section: HomeSectionDto,
+    section: HomeBlock,
     perPersonLabel: String,
     waitlistTags: WaitlistTags,
     onTripClick: (slug: String) -> Unit,
     onAction: (HomeAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    when (section) {
-        is BannersSectionDto ->
-            Titled(section.title, modifier) { BannerSection(section, onAction) }
-
-        is TripsSectionDto -> {
-            val seeAll = section.seeAllAction()
-            Titled(
-                section.title,
-                modifier,
-                seeAll = seeAll?.let { action -> { onAction(action) } },
-                // Only a title that leads somewhere morphs into a page header (M4-M6).
-                titleSharedKey = seeAll?.let { rowTitleSharedKey(section.id) },
-            ) {
-                TripRow(section, perPersonLabel, waitlistTags, onTripClick)
-            }
+    val context =
+        remember(perPersonLabel, waitlistTags, onTripClick, onAction) {
+            HomeSectionContext(perPersonLabel, waitlistTags, onTripClick, onAction)
         }
-
-        is CategoriesSectionDto ->
-            Titled(section.title, modifier) { CategoryTiles(section, onAction) }
-
-        // Where the server put it (M4-M7): its body replaced the footer copy the app used to carry.
-        is NoteSectionDto ->
-            section.items.firstOrNull()?.let { note ->
-                Titled(section.title, modifier) { NotePanel(note, Modifier.padding(horizontal = BahrSpacing.gutter)) }
-            }
-
-        // Dropped (and logged) by the view model; nothing to draw.
-        is SkippedSectionDto -> Unit
+    val seeAll = (section as? CardsBlock)?.seeAll
+    Titled(
+        section.title,
+        modifier,
+        seeAll = seeAll?.let { action -> { onAction(action) } },
+        // Only a title that leads somewhere morphs into a page header (M4-M6).
+        titleSharedKey = seeAll?.let { rowTitleSharedKey(section.id) },
+    ) {
+        HomeLayoutContent(section, context)
     }
 }
 
-/**
- * A section's content type in Home's list (M3-M11, Compose audit M1): one per drawing, so the list
- * reuses a scrolled-away section's composition only for one drawn the same way. A banner carousel
- * (a pager) and a banner row (a scrolling row) share nothing but their title.
- */
-internal fun homeSectionContentType(section: HomeSectionDto): String =
-    when (section) {
-        is BannersSectionDto -> if (section.layout == LAYOUT_ROW) "section-banner-row" else "section-banner-carousel"
-        is TripsSectionDto -> "section-trips"
-        is CategoriesSectionDto -> "section-categories"
-        is NoteSectionDto -> "section-note"
-        is SkippedSectionDto -> "section-skipped"
-    }
+/** A section's content type in Home's list (M3-M11, Compose audit M1): see [HomeBlock.contentType]. */
+internal fun homeSectionContentType(section: HomeBlock): String = section.contentType
 
 /**
  * A section under its title. [seeAll], when there is one, is a "See all" link at the end of the
@@ -200,30 +174,6 @@ internal fun TripsSectionDto.seeAllAction(): HomeAction? {
 }
 
 /**
- * `banners`: a pager for `carousel` (the contract's default for banners), a scrolling row for `row`.
- * The banner's size comes from the section's `aspectRatio`, else from the first image's own shape.
- */
-@Composable
-private fun BannerSection(
-    section: BannersSectionDto,
-    onAction: (HomeAction) -> Unit,
-) {
-    val ratio = parseAspectRatio(section.aspectRatio) ?: section.items.first().imageRatio()
-    if (section.layout == LAYOUT_ROW) {
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = BahrSpacing.gutter),
-            horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm),
-        ) {
-            items(section.items, key = { it.id }, contentType = { CONTENT_BANNER }) { banner ->
-                Banner(banner, ratio, onAction, Modifier.fillParentMaxWidth(ROW_ITEM_WIDTH_FRACTION))
-            }
-        }
-    } else {
-        BannerCarousel(section.items, ratio, onAction)
-    }
-}
-
-/**
  * The carousel: one banner a page, advancing every [BahrMotion.CarouselAdvance] ms. A finger on it
  * holds it still (the timer starts over when it lifts), and a swipe restarts the timer from the page
  * it settles on. Dots only when there is more than one banner.
@@ -234,7 +184,7 @@ private fun BannerSection(
  * modulo the banner count; the dots and their "Slide n of N" labels count banners, not pages.
  */
 @Composable
-private fun BannerCarousel(
+internal fun BannerCarousel(
     banners: List<HomeBannerDto>,
     ratio: Float,
     onAction: (HomeAction) -> Unit,
@@ -432,7 +382,7 @@ private fun ForwardCircle() {
  * the full width: a stand-in dot would read as a bullet.
  */
 @Composable
-private fun NotePanel(
+internal fun NotePanel(
     note: HomeNoteDto,
     modifier: Modifier = Modifier,
 ) {
@@ -462,32 +412,6 @@ private fun NotePanel(
     }
 }
 
-/** `trips`: compact trip cards in a row, in the order served (bookable, then sold out, then no date). */
-@Composable
-private fun TripRow(
-    section: TripsSectionDto,
-    perPersonLabel: String,
-    waitlistTags: WaitlistTags,
-    onTripClick: (slug: String) -> Unit,
-) {
-    LazyRow(
-        // Vertical room so the cards' shadows are not clipped by the row.
-        contentPadding = PaddingValues(horizontal = BahrSpacing.gutter, vertical = BahrSpacing.sm),
-        horizontalArrangement = Arrangement.spacedBy(BahrSpacing.md),
-    ) {
-        items(section.items, key = { it.slug }, contentType = { CONTENT_TRIP }) { trip ->
-            TripCard(
-                trip = trip,
-                perPersonLabel = perPersonLabel,
-                onClick = { onTripClick(trip.slug) },
-                modifier = Modifier.fillParentMaxWidth(ROW_ITEM_WIDTH_FRACTION),
-                compact = true,
-                waitlisted = waitlistTags.shows(trip),
-            )
-        }
-    }
-}
-
 /**
  * `categories`: the handoff's category row, one tinted tile per category with its caption under it,
  * scrolling from the start edge. The tile's colour is the category's `tone`. A tap opens that
@@ -495,15 +419,15 @@ private fun TripRow(
  * tile grows into the page's header (M4-M6).
  */
 @Composable
-private fun CategoryTiles(
-    section: CategoriesSectionDto,
+internal fun CategoryTiles(
+    section: ChipsBlock,
     onAction: (HomeAction) -> Unit,
 ) {
     LazyRow(
         contentPadding = PaddingValues(horizontal = BahrSpacing.gutter),
         horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm),
     ) {
-        items(section.items, key = { it.key }, contentType = { CONTENT_CATEGORY }) { category ->
+        items(section.categories, key = { it.key }, contentType = { CONTENT_CATEGORY }) { category ->
             val sharedKey = categoryTileSharedKey(section.id, category.key)
             Column(
                 modifier =
@@ -538,15 +462,8 @@ internal fun categoryTileSharedKey(
     category: String,
 ): String = "home-category-tile:$sectionId:$category"
 
-/** The first banner's own shape, when the section has no usable `aspectRatio`. */
-private fun HomeBannerDto.imageRatio(): Float =
-    if (image.width > 0 && image.height > 0) image.width.toFloat() / image.height else FALLBACK_BANNER_RATIO
-
-private const val LAYOUT_ROW = "row"
-
 // Each row holds one kind of item; named for clarity, as every lazy list here names its types.
-private const val CONTENT_BANNER = "banner"
-private const val CONTENT_TRIP = "trip"
+internal const val CONTENT_BANNER = "banner"
 private const val CONTENT_CATEGORY = "category"
 
 /** For tests: Home's banner carousel (the pager). */
@@ -565,6 +482,3 @@ private const val BANNER_TITLE_LINES = 2
 /** A hero slide's meta line and price pill stay on one line each, so the forward circle keeps its place. */
 private const val BANNER_META_LINES = 1
 private const val BANNER_PRICE_LINES = 1
-
-/** The handoff shoots hero slides at 16:10. */
-internal const val FALLBACK_BANNER_RATIO = 16f / 10f

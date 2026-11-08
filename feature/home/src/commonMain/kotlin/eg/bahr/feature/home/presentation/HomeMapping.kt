@@ -2,8 +2,6 @@ package eg.bahr.feature.home.presentation
 
 import eg.bahr.feature.home.model.HomeActionDto
 import eg.bahr.feature.home.model.HomeBannerDto
-import eg.bahr.feature.home.model.HomeSectionDto
-import eg.bahr.feature.home.model.NoteSectionDto
 import eg.bahr.feature.home.navigation.HomeAction
 
 /**
@@ -41,22 +39,3 @@ internal fun parseAspectRatio(ratio: String?): Float? {
  * that is not a button, the circle would promise a tap that does nothing (M4-M1a review #5b).
  */
 internal fun HomeBannerDto.showsForward(): Boolean = showForward && action.toHomeAction() != null
-
-/**
- * Where Home draws its sections (user decision 2026-10-11, M4-M7). The run of `note` sections that ends
- * `/home` (every note after the last section of another type) is Home's footer: the handoff puts that
- * panel under the last trip card, so [trailing] is drawn after the paged "All trips" list, once its last
- * page is in. Everything else, a note in the middle included, is [inline]: above the chips, in the
- * server's order. Client-only: the contract only orders the sections and has no place after the list.
- */
-internal data class HomePlacement(
-    val inline: List<HomeSectionDto>,
-    val trailing: List<HomeSectionDto>,
-) {
-    companion object {
-        fun of(sections: List<HomeSectionDto>): HomePlacement {
-            val footerStart = sections.indexOfLast { it !is NoteSectionDto } + 1
-            return HomePlacement(inline = sections.take(footerStart), trailing = sections.drop(footerStart))
-        }
-    }
-}

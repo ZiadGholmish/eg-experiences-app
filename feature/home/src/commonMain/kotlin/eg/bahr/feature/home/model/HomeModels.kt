@@ -5,6 +5,8 @@ import eg.bahr.core.catalog.model.HomeCategoryDto
 import eg.bahr.core.catalog.model.ImageDto
 import eg.bahr.core.catalog.model.TripCardDto
 import eg.bahr.core.network.MoneyDto
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
@@ -23,7 +25,8 @@ import kotlinx.serialization.json.jsonPrimitive
 
 /*
  * Wire shapes for `GET /api/v1/home` (`getHome`), field for field with `../docs/api/openapi.yaml`:
- * `Home`, `HomeSection`, `HomeBanner`, `HomeAction`, `HomeNote` (PLAN §5c). Trip rows reuse core:catalog's
+ * `Home`, `HomeSection`, `HomeBanner`, `HomeAction`, `HomeNote` (PLAN §5c), and since MH-B2 `HomeHost`,
+ * `HomeDeparture`, `HomeReview`, `HomeTripRef`. Trip rows reuse core:catalog's
  * [TripCardDto], category tiles its [HomeCategoryDto] (shared with the map's legend, M4-M1c).
  *
  * `HomeSection.items` is a `oneOf` with no discriminator of its own: the item shape follows the
@@ -52,6 +55,8 @@ internal data class BannersSectionDto(
     val title: String? = null,
     val layout: String,
     val aspectRatio: String? = null,
+    /** Grid layouts only (since MH-B1): items across, clamped to 2–3 when drawn. */
+    val columns: Int? = null,
     val items: List<HomeBannerDto>,
     /** How many of the served items did not decode and were left out (see [HomeSectionsSerializer]); logged. */
     @Transient
@@ -70,6 +75,8 @@ internal data class TripsSectionDto(
     val title: String? = null,
     val layout: String,
     val aspectRatio: String? = null,
+    /** Grid layouts only (since MH-B1): items across, clamped to 2–3 when drawn. */
+    val columns: Int? = null,
     val items: List<TripCardDto>,
     val totalItems: Int? = null,
     val seeAll: HomeSeeAllDto? = null,
@@ -102,6 +109,8 @@ internal data class CategoriesSectionDto(
     val title: String? = null,
     val layout: String,
     val aspectRatio: String? = null,
+    /** Grid layouts only (since MH-B1): items across, clamped to 2–3 when drawn. */
+    val columns: Int? = null,
     val items: List<HomeCategoryDto>,
     /** How many of the served items did not decode and were left out (see [HomeSectionsSerializer]); logged. */
     @Transient
@@ -120,6 +129,8 @@ internal data class NoteSectionDto(
     val title: String? = null,
     val layout: String? = null,
     val aspectRatio: String? = null,
+    /** Grid layouts only (since MH-B1): items across, clamped to 2–3 when drawn. */
+    val columns: Int? = null,
     val items: List<HomeNoteDto>,
     /** How many of the served items did not decode and were left out (see [HomeSectionsSerializer]); logged. */
     @Transient
@@ -140,6 +151,109 @@ internal data class HomeNoteDto(
     }
 }
 
+/** `type: hosts` (since MH-B2): featured hosts, each card opening the host's public page. No "See all". */
+@Serializable
+internal data class HostsSectionDto(
+    val id: String,
+    val type: String,
+    val title: String? = null,
+    val layout: String,
+    val aspectRatio: String? = null,
+    val columns: Int? = null,
+    val items: List<HomeHostDto>,
+    @Transient
+    val droppedItems: Int = 0,
+) : HomeSectionDto
+
+/**
+ * `type: departures` (since MH-B2): "leaving soon", the soonest dates with seats left across trips, one per
+ * trip, soonest first. Each card opens its trip's page on that date. No "See all".
+ */
+@Serializable
+internal data class DeparturesSectionDto(
+    val id: String,
+    val type: String,
+    val title: String? = null,
+    val layout: String,
+    val aspectRatio: String? = null,
+    val columns: Int? = null,
+    val items: List<HomeDepartureDto>,
+    @Transient
+    val droppedItems: Int = 0,
+) : HomeSectionDto
+
+/** `type: reviews` (since MH-B2): the newest approved reviews of published trips, each opening its trip. No "See all". */
+@Serializable
+internal data class ReviewsSectionDto(
+    val id: String,
+    val type: String,
+    val title: String? = null,
+    val layout: String,
+    val aspectRatio: String? = null,
+    val columns: Int? = null,
+    val items: List<HomeReviewDto>,
+    @Transient
+    val droppedItems: Int = 0,
+) : HomeSectionDto
+
+/**
+ * openapi `HomeHost`: an approved host. [kind] is the contract's `HostKind`, kept a string. [rating] is
+ * absent when the host has no reviews yet. No phone, as `HostProfile`.
+ */
+@Serializable
+internal data class HomeHostDto(
+    val slug: String,
+    val kind: String,
+    val name: String,
+    val avatar: ImageDto? = null,
+    val verified: Boolean = false,
+    val tripsRun: Int = 0,
+    val rating: HomeHostRatingDto? = null,
+)
+
+/** openapi `HomeHost.rating`: the mean (one decimal, from the server) over [count] reviews. */
+@Serializable
+internal data class HomeHostRatingDto(
+    val value: Double,
+    val count: Int,
+)
+
+/**
+ * openapi `HomeDeparture`: one bookable date. [id] is the departure; [departTime] is the bus's Cairo
+ * wall clock. [seatsRemaining] is a display hint (the hold decides). A date or time that does not parse
+ * costs this card only (see [HomeSectionsSerializer]).
+ */
+@Serializable
+internal data class HomeDepartureDto(
+    val id: String,
+    val date: LocalDate,
+    val departTime: LocalTime,
+    val seatsRemaining: Int,
+    val price: MoneyDto,
+    val trip: HomeTripRefDto,
+)
+
+/** openapi `HomeReview`: an approved review of [trip]. [body] is absent for a rating only. */
+@Serializable
+internal data class HomeReviewDto(
+    val id: String,
+    val rating: Int,
+    val author: String,
+    val tone: String? = null,
+    val dateISO: LocalDate,
+    val verified: Boolean = false,
+    val body: String? = null,
+    val trip: HomeTripRefDto,
+)
+
+/** openapi `HomeTripRef`: the trip a home card leads to (`getTrip` with [slug]). */
+@Serializable
+internal data class HomeTripRefDto(
+    val slug: String,
+    val title: String,
+    val image: ImageDto? = null,
+)
+
 /**
  * A section this build does not draw: a `type` it does not know (the contract adds types additively),
  * or a known type whose payload did not decode. Either way the rest of Home still shows; the view
@@ -158,6 +272,9 @@ internal val HomeSectionDto.key: String
             is TripsSectionDto -> id
             is CategoriesSectionDto -> id
             is NoteSectionDto -> id
+            is HostsSectionDto -> id
+            is DeparturesSectionDto -> id
+            is ReviewsSectionDto -> id
             is SkippedSectionDto -> "skipped:$type"
         }
 
@@ -194,6 +311,9 @@ internal object HomeSectionType {
     const val TRIPS = "trips"
     const val CATEGORIES = "categories"
     const val NOTE = "note"
+    const val HOSTS = "hosts"
+    const val DEPARTURES = "departures"
+    const val REVIEWS = "reviews"
 }
 
 /**
@@ -248,6 +368,21 @@ internal object HomeSectionsSerializer : KSerializer<List<HomeSectionDto>> {
 
                 HomeSectionType.NOTE ->
                     decodeKeepingItems(json, element, NoteSectionDto.serializer(), HomeNoteDto.serializer()) {
+                        copy(droppedItems = it)
+                    }
+
+                HomeSectionType.HOSTS ->
+                    decodeKeepingItems(json, element, HostsSectionDto.serializer(), HomeHostDto.serializer()) {
+                        copy(droppedItems = it)
+                    }
+
+                HomeSectionType.DEPARTURES ->
+                    decodeKeepingItems(json, element, DeparturesSectionDto.serializer(), HomeDepartureDto.serializer()) {
+                        copy(droppedItems = it)
+                    }
+
+                HomeSectionType.REVIEWS ->
+                    decodeKeepingItems(json, element, ReviewsSectionDto.serializer(), HomeReviewDto.serializer()) {
                         copy(droppedItems = it)
                     }
 

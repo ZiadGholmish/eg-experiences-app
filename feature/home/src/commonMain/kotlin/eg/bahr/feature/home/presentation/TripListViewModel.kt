@@ -21,13 +21,6 @@ import eg.bahr.core.catalog.presentation.distinctTrips
 import eg.bahr.core.catalog.presentation.isValidationFailure
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.feature.home.data.HomeRepository
-import eg.bahr.feature.home.model.BannersSectionDto
-import eg.bahr.feature.home.model.CategoriesSectionDto
-import eg.bahr.feature.home.model.HomeSectionDto
-import eg.bahr.feature.home.model.NoteSectionDto
-import eg.bahr.feature.home.model.SkippedSectionDto
-import eg.bahr.feature.home.model.TripsSectionDto
-import eg.bahr.feature.home.model.key
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -43,7 +36,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * Home: the server-driven [sections] (M4-M1a: banners, trip rows, categories; M4-M7: notes; in the server's order,
+ * Home: the server-driven [sections] (M4-M1a: banners, trip rows, categories; M4-M7: notes; MH-M1: hosts, departures,
+ * reviews, each drawn by its layout; in the server's order,
  * only the ones this build draws) above the full list of trips, which is paged
  * ([TripListViewModel.trips], M4-M1b) and so carries its own loading and error states.
  *
@@ -58,7 +52,8 @@ import kotlinx.coroutines.launch
  */
 internal data class TripListUiState(
     val awaitingHome: Boolean = true,
-    val sections: List<HomeSectionDto> = emptyList(),
+    /** Home's sections as drawn (MH-M1: layout resolved and checked, see [parseHomeSections]). */
+    val sections: List<HomeBlock> = emptyList(),
     /** Which cards carry the "Waiting list" tag (M4-M5), in the rows and the list alike. */
     val waitlistTags: WaitlistTags = WaitlistTags.None,
     val filter: String? = null,
@@ -207,7 +202,7 @@ internal class TripListViewModel(
                 homeWait?.cancel()
                 when (result) {
                     is AppResult.Success -> {
-                        val sections = drawableSections(result.data.sections) { log.w { it } }
+                        val sections = parseHomeSections(result.data.sections) { log.w { it } }
                         _uiState.update { it.copy(awaitingHome = false, sections = sections) }
                     }
 
@@ -231,37 +226,3 @@ internal class TripListViewModel(
         val log = Logger.withTag("Home")
     }
 }
-
-/**
- * The sections this build draws, in the server's order. A section of an unknown `type` (or one that
- * did not decode) is dropped and logged, as the contract asks, and so is an empty one (the server
- * omits those, so one would be a server bug, not something to draw a bare heading for).
- */
-internal fun drawableSections(
-    sections: List<HomeSectionDto>,
-    log: (String) -> Unit,
-): List<HomeSectionDto> =
-    sections.filter { section ->
-        val dropped =
-            when (section) {
-                is BannersSectionDto -> section.droppedItems
-                is TripsSectionDto -> section.droppedItems
-                is CategoriesSectionDto -> section.droppedItems
-                is NoteSectionDto -> section.droppedItems
-                is SkippedSectionDto -> 0
-            }
-        if (dropped > 0) log("Dropped $dropped unreadable item(s) from Home section ${section.key}")
-        val empty =
-            when (section) {
-                is BannersSectionDto -> section.items.isEmpty()
-                is TripsSectionDto -> section.items.isEmpty()
-                is CategoriesSectionDto -> section.items.isEmpty()
-                is NoteSectionDto -> section.items.isEmpty()
-                is SkippedSectionDto -> {
-                    log("Dropped a Home section of type ${section.type}: ${section.reason}")
-                    return@filter false
-                }
-            }
-        if (empty) log("Dropped an empty Home section")
-        !empty
-    }

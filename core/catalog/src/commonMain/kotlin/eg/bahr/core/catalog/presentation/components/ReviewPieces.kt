@@ -161,9 +161,12 @@ private fun ReviewPhotos(photos: List<ImageDto>) {
     }
 }
 
-/** "Verified trip" (M3-B7): the reviewer booked and took the trip through the app. Not a link, so no touch target. */
+/**
+ * "Verified trip" (M3-B7): the reviewer booked and took the trip through the app. Not a link, so no touch target.
+ * Public since MH-M1: Home's review cards are its second caller.
+ */
 @Composable
-private fun VerifiedTrip() {
+fun VerifiedTrip() {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(BahrSpacing.xs)) {
         Icon(
             BahrIcons.Verified.filled(),
@@ -181,10 +184,11 @@ private fun VerifiedTrip() {
 
 /**
  * A review's stars: [rating] filled, the rest outlined, read out once as "Rated 4 out of 5". A value
- * outside 1–5 is held to it, so a bad payload still draws five stars.
+ * outside 1–5 is held to it, so a bad payload still draws five stars. Public since MH-M1: Home's review cards are
+ * its second caller.
  */
 @Composable
-private fun ReviewStars(rating: Int) {
+fun ReviewStars(rating: Int) {
     val shown = rating.coerceIn(MIN_STARS, MAX_STARS)
     val spoken = stringResource(Res.string.host_rating_average, shown.toString())
     Row(

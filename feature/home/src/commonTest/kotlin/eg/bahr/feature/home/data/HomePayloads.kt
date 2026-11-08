@@ -178,4 +178,83 @@ internal object HomePayloads {
   }
 }
 """
+
+    /**
+     * MH-B1/MH-B2 in the contract's shape: the new card types (`hosts` as a rail, `departures` as a grid with
+     * one card whose date does not parse, `reviews` as a list), a tile grid asking for 5 columns, and what this
+     * build must drop: a hosts section laid out as a hero (shape mismatch) and banners in a layout it does not know.
+     */
+    const val CARD_SECTIONS = """
+{
+  "success": true,
+  "data": {
+    "sections": [
+      {
+        "id": "0199c3a0-5eed-7000-8000-000000000710",
+        "type": "hosts",
+        "title": "Featured hosts",
+        "layout": "card_rail",
+        "items": [
+          { "slug": "ashraf-el-bahr", "kind": "person", "name": "Ashraf El-Bahr",
+            "avatar": { "url": "https://cdn.invalid/ashraf.jpg", "width": 400, "height": 400 },
+            "verified": true, "tripsRun": 42, "rating": { "value": 4.8, "count": 37 } },
+          { "slug": "burullus-boats", "kind": "company", "name": "Burullus Boats", "verified": false, "tripsRun": 0 }
+        ]
+      },
+      {
+        "id": "0199c3a0-5eed-7000-8000-000000000711",
+        "type": "departures",
+        "title": "Leaving soon",
+        "layout": "card_grid",
+        "columns": 2,
+        "items": [
+          { "id": "0199c3a0-5eed-7000-8000-000000000801", "date": "2026-11-14", "departTime": "05:00", "seatsRemaining": 3,
+            "price": { "amount": 450, "currency": "EGP" },
+            "trip": { "slug": "burullus-dawn", "title": "Dawn on Lake Burullus",
+              "image": { "url": "https://cdn.invalid/dawn.jpg", "width": 1200, "height": 750 } } },
+          { "id": "0199c3a0-5eed-7000-8000-000000000802", "date": "14 Nov", "departTime": "05:00", "seatsRemaining": 3,
+            "price": { "amount": 450, "currency": "EGP" }, "trip": { "slug": "x", "title": "X" } }
+        ]
+      },
+      {
+        "id": "0199c3a0-5eed-7000-8000-000000000712",
+        "type": "reviews",
+        "title": "What travellers say",
+        "layout": "card_list",
+        "items": [
+          { "id": "0199c3a0-5eed-7000-8000-000000000901", "rating": 5, "body": "The flamingos at sunrise were worth the 4 am start.",
+            "author": "Mona S.", "tone": "secondary", "dateISO": "2026-10-20", "verified": true,
+            "trip": { "slug": "burullus-dawn", "title": "Dawn on Lake Burullus" } }
+        ]
+      },
+      {
+        "id": "0199c3a0-5eed-7000-8000-000000000713",
+        "type": "banners",
+        "layout": "tile_grid",
+        "columns": 5,
+        "aspectRatio": "1:1",
+        "items": [
+          { "id": "0199c3a0-5eed-7000-8000-000000000a01", "image": { "url": "https://cdn.invalid/t.jpg", "width": 600, "height": 600 },
+            "action": { "type": "none" } }
+        ]
+      },
+      {
+        "id": "0199c3a0-5eed-7000-8000-000000000714",
+        "type": "hosts",
+        "layout": "hero",
+        "items": [ { "slug": "ashraf-el-bahr", "kind": "person", "name": "Ashraf", "verified": true, "tripsRun": 1 } ]
+      },
+      {
+        "id": "0199c3a0-5eed-7000-8000-000000000715",
+        "type": "banners",
+        "layout": "mosaic",
+        "items": [
+          { "id": "0199c3a0-5eed-7000-8000-000000000a02", "image": { "url": "https://cdn.invalid/t.jpg", "width": 600, "height": 600 },
+            "action": { "type": "none" } }
+        ]
+      }
+    ]
+  }
+}
+"""
 }

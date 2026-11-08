@@ -189,11 +189,14 @@ fun AppNavHost(
                 header = { gap -> ContinueBookingSlot(onOpen = { navController.navigateToHold(it) }, modifier = gap) },
                 onHomeAction = { action ->
                     when (action) {
-                        is HomeAction.OpenTrip -> navController.navigateToTripDetail(action.slug)
+                        // A "leaving soon" card names its date (MH-M1): the trip page opens on it if still listed.
+                        is HomeAction.OpenTrip -> navController.navigateToTripDetail(TripDetailRoute(action.slug, action.date))
                         // A category chip, a `category` banner, or a category row's "See all" (M4-M1b).
                         is HomeAction.OpenCategory -> navController.navigateToCategoryTrips(action.key, action.title, action.sharedKey)
                         // Any other row's "See all": that row's whole list.
                         is HomeAction.OpenSection -> navController.navigateToSectionTrips(action.sectionId, action.title, action.sharedKey)
+                        // A host card (MH-M1): the host's public page, its header drawn from the card at once.
+                        is HomeAction.OpenHost -> navController.navigateToHostProfile(action.slug, action.name, action.avatar)
                     }
                 },
                 // Search opens full screen in this tab (M3-M0b); the map is a tab (M4-M8), which the pill switches to.
