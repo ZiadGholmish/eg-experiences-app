@@ -17,8 +17,8 @@ import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.designsystem.theme.BahrThemeName
 import eg.bahr.core.localization.ProvideAppLanguage
 import eg.bahr.core.testing.captureScreenshot
+import eg.bahr.feature.booking.data.BookingFixtures
 import eg.bahr.feature.booking.data.FakeBookingRepository
-import eg.bahr.feature.booking.model.BookingDto
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -51,19 +51,29 @@ class BookingConfirmedScreenshotTest {
     @Test
     fun loadedDarkEnglish() = shoot(AppLanguage.ENGLISH, BahrThemeName.Dark)
 
+    /** A test-cash booking (MV-M4): "Paid with Test cash" and a "Test" badge by the status. */
+    @Test
+    fun testCashArabic() = shoot(AppLanguage.ARABIC, method = "test_cash")
+
+    @Test
+    fun testCashEnglish() = shoot(AppLanguage.ENGLISH, method = "test_cash")
+
+    /**
+     * The contract's `Booking` (since MV-M4; before, a Java-era flat shape). Without [method] the page is the one shot
+     * before the switch, pixel for pixel.
+     */
     private fun shoot(
         language: AppLanguage,
         theme: BahrThemeName = BahrThemeName.LakeBurullus,
+        method: String? = null,
     ) {
         val arabic = language == AppLanguage.ARABIC
         val booking =
-            BookingDto(
-                ref = REF,
+            BookingFixtures.heldBooking(
                 status = "CONFIRMED",
-                departureId = 1,
-                tripTitle = if (arabic) "الفجر على بحيرة البرلس" else "Dawn on Lake Burullus",
-                meetingPoint = if (arabic) "عبد المنعم رياض" else "Abdel Moneim Riad",
-                partySize = 2,
+                title = if (arabic) "الفجر على بحيرة البرلس" else "Dawn on Lake Burullus",
+                placeName = if (arabic) "عبد المنعم رياض" else "Abdel Moneim Riad",
+                method = method,
             )
         val viewModel = BookingConfirmedViewModel(REF, FakeBookingRepository(bookingByRef = { AppResult.Success(booking) }))
         compose.setContent {
@@ -84,7 +94,12 @@ class BookingConfirmedScreenshotTest {
         }
         // The check's file is read off the main thread: idle alone would shoot its empty box.
         compose.waitUntil(LOTTIE_LOAD_TIMEOUT_MS) { compose.onAllNodesWithTag(BAHR_LOTTIE_READY_TAG).fetchSemanticsNodes().isNotEmpty() }
-        val name = if (theme == BahrThemeName.Dark) "booking_confirmed_dark" else "booking_confirmed"
+        val name =
+            when {
+                method != null -> "booking_confirmed_$method"
+                theme == BahrThemeName.Dark -> "booking_confirmed_dark"
+                else -> "booking_confirmed"
+            }
         compose.captureScreenshot("${name}_${language.tag}")
     }
 

@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.feature.booking.data.BookingRepository
-import eg.bahr.feature.booking.model.BookingDto
+import eg.bahr.feature.booking.model.HeldBookingDto
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,7 +14,8 @@ import kotlinx.coroutines.launch
 
 internal data class BookingConfirmedUiState(
     val isLoading: Boolean = true,
-    val booking: BookingDto? = null,
+    /** openapi `Booking` (the contract shape since MV-M4; see [HeldBookingDto]). */
+    val booking: HeldBookingDto? = null,
     val error: AppError? = null,
 )
 

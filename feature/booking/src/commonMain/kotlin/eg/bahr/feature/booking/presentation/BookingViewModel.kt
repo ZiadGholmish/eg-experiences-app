@@ -221,6 +221,7 @@ internal class BookingViewModel(
                             totalAmount = seats.total.amount,
                             totalCurrency = seats.total.currencyCode,
                             guestPhone = request.guest.phone,
+                            paymentMethods = seats.paymentMethods,
                         )
                     // Stored before the hold screen opens, so there is never a live hold on screen
                     // that a restart would forget.

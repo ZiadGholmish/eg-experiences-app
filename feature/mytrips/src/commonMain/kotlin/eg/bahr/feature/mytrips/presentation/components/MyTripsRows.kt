@@ -36,6 +36,11 @@ import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.designsystem.theme.bahrShadow
 import eg.bahr.core.localization.generated.resources.Res
+import eg.bahr.core.localization.generated.resources.booking_method_card
+import eg.bahr.core.localization.generated.resources.booking_method_test_badge
+import eg.bahr.core.localization.generated.resources.booking_method_test_cash
+import eg.bahr.core.localization.generated.resources.booking_method_vf
+import eg.bahr.core.localization.generated.resources.booking_paid_with
 import eg.bahr.core.localization.generated.resources.format_pair
 import eg.bahr.core.localization.generated.resources.mytrips_date_closed
 import eg.bahr.core.localization.generated.resources.mytrips_party_count
@@ -75,6 +80,7 @@ internal fun BookingRow(
 ) {
     val status = BookingStatus.of(booking.status)
     val (label, tone) = status.badge()
+    val method = paidMethodName(booking.method)
     TripRow(
         image = booking.trip?.cardImage,
         title = booking.trip?.title,
@@ -82,6 +88,9 @@ internal fun BookingRow(
         party = booking.partySize,
         badge = label?.let { BahrBadge.Props(text = stringResource(it), tone = tone) },
         onClick = onClick,
+        // How it was paid (MV-M4); a test booking also wears a "Test" badge, as on the confirmation.
+        paidWith = method?.let { stringResource(Res.string.booking_paid_with, stringResource(it)) },
+        testBadge = booking.method == TEST_CASH,
         // A finished trip (M3-M4): "Rate your trip" while it may be reviewed, then where its review stands.
         review = booking.review?.let { ReviewStatus.of(it.status).badge() },
         onRateTrip = if (booking.canReview && booking.review == null) onRateTrip else null,
@@ -140,6 +149,8 @@ private fun TripRow(
     onClick: () -> Unit,
     review: Pair<StringResource, BahrBadge.Tone>? = null,
     onRateTrip: (() -> Unit)? = null,
+    paidWith: String? = null,
+    testBadge: Boolean = false,
 ) {
     val x = BahrTheme.colors
     val shape = BahrTheme.shapes.extraLarge
@@ -170,9 +181,20 @@ private fun TripRow(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            if (badge != null || review != null) {
+            paidWith?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testTag(PAID_WITH_TAG),
+                )
+            }
+            if (badge != null || review != null || testBadge) {
                 Row(horizontalArrangement = Arrangement.spacedBy(BahrSpacing.xs)) {
                     badge?.let { BahrBadge(props = it) }
+                    if (testBadge) {
+                        BahrBadge(props = BahrBadge.Props(stringResource(Res.string.booking_method_test_badge), BahrBadge.Tone.Quaternary))
+                    }
                     review?.let { (text, tone) -> BahrBadge(props = BahrBadge.Props(stringResource(text), tone)) }
                 }
             }
@@ -195,6 +217,23 @@ private fun TripRow(
 
 /** For tests: a row's "Rate your trip". */
 internal const val RATE_TRIP_TAG = "mytrips_rate_trip"
+
+/** For tests: a row's "Paid with …". */
+internal const val PAID_WITH_TAG = "mytrips_paid_with"
+
+// openapi `PaymentMethod` values; `test_cash` (MV-B2) marks a test booking, local and dev only.
+private const val VODAFONE_CASH = "vodafone_cash"
+private const val CARD = "card"
+private const val TEST_CASH = "test_cash"
+
+/** The name of the method a booking was paid with (openapi `Booking.method`), or null when absent or unknown. */
+private fun paidMethodName(method: String?): StringResource? =
+    when (method) {
+        VODAFONE_CASH -> Res.string.booking_method_vf
+        CARD -> Res.string.booking_method_card
+        TEST_CASH -> Res.string.booking_method_test_cash
+        else -> null
+    }
 
 /** Where moderation has the booking's review. Not published is the quiet neutral tone, not an error. */
 private fun ReviewStatus.badge(): Pair<StringResource, BahrBadge.Tone> =

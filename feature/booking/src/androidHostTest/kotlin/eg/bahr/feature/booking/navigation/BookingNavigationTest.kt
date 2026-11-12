@@ -6,6 +6,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
 import kotlinx.serialization.Serializable
 import org.junit.Before
 import org.junit.Rule
@@ -14,6 +15,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -205,6 +207,20 @@ class BookingNavigationTest {
         assertFalse(nav.currentBackStack.value.any { it.destination.hasRoute<OpenHoldRoute>() })
         // Back from the held seats is where the tap landed.
         assertTrue(nav.previousBackStackEntry?.destination?.hasRoute<ListStub>() == true)
+    }
+
+    /** MV-M4: the server's accepted methods ride on the route, so test cash shows from the first frame; none stays none. */
+    @Test
+    fun `the held seats' route keeps the accepted methods`() {
+        val withTestCash = hold.copy(paymentMethods = listOf("card", "vodafone_cash", "test_cash"))
+        onNav { navigateToHold(withTestCash) }
+        assertEquals(withTestCash, nav.currentBackStackEntry?.toRoute<HoldRoute>())
+    }
+
+    @Test
+    fun `a route without accepted methods reads none - not an empty list`() {
+        onNav { navigateToHold(hold) }
+        assertNull(nav.currentBackStackEntry?.toRoute<HoldRoute>()?.paymentMethods)
     }
 }
 

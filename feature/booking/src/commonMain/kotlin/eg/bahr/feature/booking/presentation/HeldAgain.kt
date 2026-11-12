@@ -43,6 +43,7 @@ internal fun reopenedHold(
         totalCurrency = booking.total.currencyCode,
         guestPhone = stored.guestPhone,
         holdLengthSeconds = HoldDeadline.length(stored.holdExpiresAt, stored.serverNow)?.inWholeSeconds,
+        paymentMethods = booking.paymentMethods,
     )
 
 /** NOT_FOUND: an unknown ref, or a phone that does not match (the server answers both the same way). */

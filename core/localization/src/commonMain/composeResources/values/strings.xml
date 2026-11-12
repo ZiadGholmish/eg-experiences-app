@@ -262,6 +262,14 @@
     <string name="booking_method_vf_note">You get an SMS to confirm</string>
     <string name="booking_method_card">Card</string>
     <string name="booking_method_card_note">Visa · Mastercard · Meeza</string>
+    <!-- MV-M4: test cash, offered only where the server lists it (local and dev); moves no money. -->
+    <string name="booking_method_test">Pay cash (test)</string>
+    <string name="booking_method_test_note">Test only: confirms at once, no money taken</string>
+    <string name="booking_method_test_badge">Test</string>
+    <string name="booking_pay_test_cta">Confirm (test)</string>
+    <!-- How a booking was paid (openapi Booking.method), on the confirmation and in My trips. -->
+    <string name="booking_method_test_cash">Test cash</string>
+    <string name="booking_paid_with">Paid with %1$s</string>
     <string name="booking_payer_vf_number">Vodafone Cash number</string>
     <string name="booking_payer_card_name">Name on card</string>
     <string name="booking_payer_card_note">You enter your card on the secure payment page.</string>

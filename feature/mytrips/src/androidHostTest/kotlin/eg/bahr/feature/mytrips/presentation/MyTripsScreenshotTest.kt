@@ -23,6 +23,7 @@ import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -45,6 +46,7 @@ import eg.bahr.core.network.auth.SessionState
 import eg.bahr.core.testing.captureScreenshot
 import eg.bahr.feature.mytrips.data.MyTripsFixtures
 import eg.bahr.feature.mytrips.model.MyBookingDto
+import eg.bahr.feature.mytrips.presentation.components.PAID_WITH_TAG
 import eg.bahr.feature.mytrips.presentation.components.RATE_TRIP_TAG
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
@@ -153,6 +155,44 @@ class MyTripsScreenshotTest {
     @Test
     fun allSectionsDarkEnglish() =
         shoot("mytrips_all_sections_dark", AppLanguage.ENGLISH, allSections, MyTripsFixtures.past(), theme = BahrThemeName.Dark)
+
+    /**
+     * MV-M4: "Paid with …" on each paid booking whose method the app knows, and a "Test" badge on a test-cash one; none
+     * on an unknown method or a host-entered booking.
+     */
+    private val paidWith =
+        MyTripsUiState(
+            session = signedIn,
+            upcoming = SectionLoad.Loaded(MyTripsFixtures.paidWithMethods()),
+            waitlist = SectionLoad.Loaded(emptyList()),
+            pastTotal = 0,
+        )
+
+    @Config(qualifiers = "en-w360dp-h1000dp-xhdpi")
+    @Test
+    fun paidWithArabic() = shoot("mytrips_paid_with", AppLanguage.ARABIC, paidWith, emptyList())
+
+    @Config(qualifiers = "en-w360dp-h1000dp-xhdpi")
+    @Test
+    fun paidWithEnglish() = shoot("mytrips_paid_with", AppLanguage.ENGLISH, paidWith, emptyList())
+
+    @Config(qualifiers = "en-w360dp-h1000dp-xhdpi")
+    @Test
+    fun `the method shows on a paid booking the app knows the method of - not on an unknown one or none`() {
+        compose.setContent {
+            Themed(AppLanguage.ENGLISH) {
+                MyTripsContent(
+                    state = paidWith,
+                    past = flowOf(PagingData.from(emptyList<MyBookingDto>(), loaded)).collectAsLazyPagingItems(),
+                    actions = MyTripsActions(),
+                )
+            }
+        }
+        // Unmerged: each row is one button, which merges its lines into itself.
+        compose.onAllNodesWithTag(PAID_WITH_TAG, useUnmergedTree = true).assertCountEquals(KNOWN_METHODS)
+        compose.onNodeWithText("Paid with Test cash", useUnmergedTree = true).assertExists()
+        compose.onAllNodesWithText("Test", useUnmergedTree = true).assertCountEquals(1)
+    }
 
     /**
      * Nothing upcoming, no waiting list: Past alone, no empty headers above it. M3-M4's "Rate your trip" on a finished
@@ -408,3 +448,6 @@ private const val UPCOMING_SECOND_ROW_INDEX = 3
 
 /** More past bookings than the first page shows: the header counts the server's total. */
 private const val PAST_TOTAL = 14L
+
+/** `MyTripsFixtures.paidWithMethods`: test cash, card and Vodafone Cash; the unknown and the absent one show none. */
+private const val KNOWN_METHODS = 3

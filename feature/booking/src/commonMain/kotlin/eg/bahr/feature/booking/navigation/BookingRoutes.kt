@@ -28,6 +28,10 @@ data class BookingRoute(
  * fresh pair, and the hold's full length, the progress bar's 100 %, in [holdLengthSeconds], since a
  * fresh pair no longer measures it. Null when the pair is the placement's own (the bar then measures
  * `holdExpiresAt − serverNow`).
+ *
+ * [paymentMethods] is the server's `HeldSeats.paymentMethods` / `Booking.paymentMethods` (MV-B2), as wire strings, so
+ * test cash shows from the first frame where the server takes it; the screen's own read of a HELD booking refreshes it.
+ * Null when the server sent none (an older server: card and Vodafone Cash).
  */
 @Serializable
 data class HoldRoute(
@@ -38,6 +42,7 @@ data class HoldRoute(
     val totalCurrency: String,
     val guestPhone: String,
     val holdLengthSeconds: Long? = null,
+    val paymentMethods: List<String>? = null,
 )
 
 /**

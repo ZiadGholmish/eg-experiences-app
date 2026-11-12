@@ -94,6 +94,33 @@ internal object MyTripsFixtures {
             ),
         )
 
+    /**
+     * Upcoming bookings with `method`, served since MV-B2 (MV-M4): one paid with test cash (a test booking), one with
+     * card, one with Vodafone Cash, one with a method added after this app (shows none) and one host-entered (none).
+     */
+    fun paidWithMethods() =
+        listOf(
+            MyBookingDto(ref = "BRL-T1T1T1T1", status = "CONFIRMED", date = "2026-10-24", partySize = 2, trip = dawn, method = "test_cash"),
+            MyBookingDto(ref = "BRL-C2C2C2C2", status = "CONFIRMED", date = "2026-10-31", partySize = 1, trip = murals, method = "card"),
+            MyBookingDto(
+                ref = "BRL-V3V3V3V3",
+                status = "CONFIRMED",
+                date = "2026-11-07",
+                partySize = 3,
+                trip = dawn,
+                method = "vodafone_cash",
+            ),
+            MyBookingDto(
+                ref = "BRL-F4F4F4F4",
+                status = "CONFIRMED",
+                date = "2026-11-14",
+                partySize = 1,
+                trip = murals,
+                method = "instapay",
+            ),
+            MyBookingDto(ref = "BRL-H5H5H5H5", status = "CONFIRMED", date = "2026-11-21", partySize = 2, trip = dawn),
+        )
+
     fun past() =
         listOf(
             MyBookingDto(ref = "BRL-2A4B6C8D", status = "COMPLETED", date = "2026-09-12", partySize = 3, trip = dawn),

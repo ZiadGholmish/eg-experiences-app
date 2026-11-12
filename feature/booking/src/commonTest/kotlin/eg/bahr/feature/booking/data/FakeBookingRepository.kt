@@ -6,7 +6,6 @@ import eg.bahr.core.network.MoneyDto
 import eg.bahr.core.network.auth.SessionState
 import eg.bahr.feature.booking.model.BookingDepartureDto
 import eg.bahr.feature.booking.model.BookingDeparturePlaceDto
-import eg.bahr.feature.booking.model.BookingDto
 import eg.bahr.feature.booking.model.BookingPolicyDto
 import eg.bahr.feature.booking.model.BookingTripDto
 import eg.bahr.feature.booking.model.BookingTripSummaryDto
@@ -29,7 +28,7 @@ internal class FakeBookingRepository(
     var placeHold: suspend (request: PlaceHoldRequest) -> AppResult<HeldSeatsDto> = { unset() },
     var heldBooking: suspend (ref: String, phone: String) -> AppResult<HeldBookingDto> = { _, _ -> unset() },
     var releaseHold: suspend (ref: String, phone: String) -> AppResult<Unit> = { _, _ -> unset() },
-    var bookingByRef: suspend (ref: String) -> AppResult<BookingDto> = { unset() },
+    var bookingByRef: suspend (ref: String) -> AppResult<HeldBookingDto> = { unset() },
     var startPayment: suspend (ref: String, request: StartPaymentRequest) -> AppResult<PaymentStartedDto> = { _, _ -> unset() },
     signedIn: Boolean = true,
 ) : BookingRepository {
@@ -72,7 +71,7 @@ internal class FakeBookingRepository(
     override suspend fun bookingByRef(
         ref: String,
         phone: String?,
-    ): AppResult<BookingDto> = bookingByRef.invoke(ref)
+    ): AppResult<HeldBookingDto> = bookingByRef.invoke(ref)
 
     override suspend fun heldBooking(
         ref: String,
@@ -160,6 +159,8 @@ internal object BookingFixtures {
         city: String = "القاهرة",
         placeName: String = "موقف عبد المنعم رياض",
         returnDate: LocalDate? = null,
+        paymentMethods: List<String>? = null,
+        method: String? = null,
     ) = HeldBookingDto(
         ref = "BRL-7K4M2X9P",
         status = status,
@@ -173,7 +174,21 @@ internal object BookingFixtures {
         returnDate = returnDate,
         partySize = 2,
         total = MoneyDto(amount = 900, currencyCode = "EGP"),
+        method = method,
+        // As the server: the accepted methods only on a HELD booking (MV-B2).
+        paymentMethods = paymentMethods.takeIf { status == "HELD" },
     )
+
+    /** What a local or dev server takes (MV-B2): the two real methods, then test cash. Its order, card first. */
+    val WITH_TEST_CASH = listOf("card", "vodafone_cash", "test_cash")
+
+    /** openapi `PaymentStarted` with `action.type` CONFIRMED: test cash, the booking already paid (MV-B2). */
+    fun testCashConfirmed() =
+        PaymentStartedDto(
+            paymentId = "0199c3a0-5eed-7000-8000-00000000a002",
+            action = PaymentActionDto(type = "CONFIRMED"),
+            holdExpiresAt = "2026-10-09T22:42:30+03:00",
+        )
 
     /** openapi `PaymentStarted`: the fake provider's hosted checkout (`REDIRECT`), or [walletPending]. */
     fun paymentStarted(walletPending: Boolean = false) =

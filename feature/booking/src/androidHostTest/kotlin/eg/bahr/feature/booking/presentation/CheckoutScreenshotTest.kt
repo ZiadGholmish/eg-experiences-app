@@ -24,6 +24,7 @@ import eg.bahr.feature.booking.di.CheckoutConfig
 import eg.bahr.feature.booking.model.PaymentStartedDto
 import eg.bahr.feature.booking.navigation.HoldRoute
 import eg.bahr.feature.booking.presentation.components.METHOD_CARD_TAG
+import eg.bahr.feature.booking.presentation.components.METHOD_TEST_CASH_TAG
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -101,6 +102,10 @@ class CheckoutScreenshotTest {
 
     @Test fun tooLateArabic() = snapTooLate(AppLanguage.ARABIC)
 
+    @Test fun testCashArabic() = snapTestCash(AppLanguage.ARABIC)
+
+    @Test fun testCashEnglish() = snapTestCash(AppLanguage.ENGLISH)
+
     @Test fun tooLateEnglish() = snapTooLate(AppLanguage.ENGLISH)
 
     private fun snapVodafoneCash(language: AppLanguage) {
@@ -162,9 +167,22 @@ class CheckoutScreenshotTest {
         capture("checkout_too_late", language)
     }
 
+    /**
+     * A server that takes test cash (MV-M4): its row last, with the "Test" badge, picked; the fields are the full name and
+     * a mobile number, and the pay button says the total.
+     */
+    private fun snapTestCash(language: AppLanguage) {
+        val route = hold.copy(paymentMethods = BookingFixtures.WITH_TEST_CASH)
+        show(language, viewModel(language, route = route, paymentMethods = BookingFixtures.WITH_TEST_CASH), route)
+        compose.onNodeWithTag(METHOD_TEST_CASH_TAG).performClick()
+        capture("checkout_test_cash", language)
+    }
+
     private fun viewModel(
         language: AppLanguage,
         payment: AppResult<PaymentStartedDto> = AppResult.Success(BookingFixtures.paymentStarted()),
+        route: HoldRoute = hold,
+        paymentMethods: List<String>? = null,
     ): HoldViewModel {
         val arabic = language == AppLanguage.ARABIC
         val repository =
@@ -178,6 +196,7 @@ class CheckoutScreenshotTest {
                             dayLabel = if (arabic) "السبت 10 أكتوبر" else "Sat 10 Oct",
                             city = if (arabic) "القاهرة" else "Cairo",
                             placeName = if (arabic) "عبد المنعم رياض" else "Abdel Moneim Riad",
+                            paymentMethods = paymentMethods,
                         ),
                     )
                 },
@@ -190,19 +209,20 @@ class CheckoutScreenshotTest {
                         providers = setOf("google"),
                     )
             }
-        return HoldViewModel(hold, repository, FakeActiveHoldStore(), clock, checkout = CheckoutConfig("eg.bahr.app://checkout"))
+        return HoldViewModel(route, repository, FakeActiveHoldStore(), clock, checkout = CheckoutConfig("eg.bahr.app://checkout"))
     }
 
     private fun show(
         language: AppLanguage,
         viewModel: HoldViewModel,
+        route: HoldRoute = hold,
     ) {
         compose.setContent {
             ProvideAppLanguage(language) {
                 BahrTheme(locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English) {
                     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
                         // The hosted checkout never opens in a test: the browser hands straight back.
-                        HoldScreen(hold = hold, onEnded = {}, viewModel = viewModel, browser = { _, _ -> })
+                        HoldScreen(hold = route, onEnded = {}, viewModel = viewModel, browser = { _, _ -> })
                     }
                 }
             }

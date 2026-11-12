@@ -106,35 +106,19 @@ internal data class HeldSeatsDto(
     val holdExpiresAt: String,
     val serverNow: String,
     val seatsRemaining: Int? = null,
-)
-
-/**
- * The confirmation screen's booking. Still the Java-era flat shape (`departureId: Long`, no
- * `serverNow`, no nested `trip`/`departure`/`host`), which does not decode the contract's `Booking`;
- * the confirmation screen that reads it is unreachable until M3 rewrites it on the contract.
- */
-@Serializable
-internal data class BookingDto(
-    val ref: String,
-    val status: String,
-    val departureId: Long,
-    val tripTitle: String? = null,
-    val departurePoint: String? = null,
-    val meetingPoint: String? = null,
-    val departureDate: String? = null,
-    val departTime: String? = null,
-    val partySize: Int = 0,
-    val guestName: String? = null,
-    val pricePerPerson: MoneyDto? = null,
-    val total: MoneyDto? = null,
-    val holdExpiresAt: String? = null,
-    val confirmedAt: String? = null,
+    /**
+     * Since MV-B2: the methods `startPayment` takes now (`card`, `vodafone_cash`, `test_cash` where the server takes
+     * it). Strings, not an enum, so a method added later cannot fail the decode; unknown ones are dropped when read
+     * (`PaymentMethod.offered`). Absent (an older server): card and Vodafone Cash.
+     */
+    val paymentMethods: List<String>? = null,
 )
 
 /**
  * openapi `Booking` (`GET /bookings/{ref}`), read by the held-seats screen to re-sync its countdown
- * and to show the trip summary, and by Home's "Continue your booking" card. Separate from
- * [BookingDto], the Java-era shape the M3 confirmation screen still uses, so that rewrite stays M3's.
+ * and to show the trip summary, by Home's "Continue your booking" card, and since MV-M4 by the
+ * confirmation screen (which until then decoded a Java-era flat shape that the contract's `Booking`
+ * never matched, so a paid booking ended on its error view: M3-M1 review #7).
  *
  * **A partial copy of the contract's `Booking`, on purpose:** only the fields these screens read.
  * Left out: `host`, `calendar`, `Place.lat`/`lng` and `Image.variants` (unknown keys are ignored on
@@ -144,7 +128,7 @@ internal data class BookingDto(
  * [status] is a string, not an enum: anything other than `HELD` / `PAYMENT_PENDING` means the seats
  * are no longer held for this booking, and a status added later must not fail the decode. A released
  * hold reads `CANCELLED`; one past its deadline reads `EXPIRED` with no [holdExpiresAt].
- * `host` is left out: it is only served on a paid booking, which this screen never shows.
+ * `host` is left out: the confirmation screen does not show it yet (M3-M2's full ticket).
  */
 @Serializable
 internal data class HeldBookingDto(
@@ -161,7 +145,10 @@ internal data class HeldBookingDto(
     val partySize: Int,
     val total: MoneyDto,
     val paid: MoneyDto? = null,
+    /** Since MV-B2: how it was paid (`card`, `vodafone_cash`, `test_cash`); absent while unpaid. A string, as [status]. */
     val method: String? = null,
+    /** Since MV-B2, only while HELD: as [HeldSeatsDto.paymentMethods], for a hold reopened or read again. */
+    val paymentMethods: List<String>? = null,
 )
 
 /** openapi `Booking.trip`. */
@@ -204,7 +191,7 @@ internal val HeldBookingDto.laterReturnDate: LocalDate? get() = returnDate?.take
 
 /**
  * openapi `StartPaymentRequest` (`startPayment`, M3-B2). [method] is the contract's lower-case wire value (`card`,
- * `vodafone_cash`). [returnUrl] is where the hosted checkout sends the browser back to (the app's own link, which the
+ * `vodafone_cash`, and since MV-B2 `test_cash`). [payer] is required for every method, test cash included. [returnUrl] is where the hosted checkout sends the browser back to (the app's own link, which the
  * server must allow); left out, the provider's default page. [guestPhone] is the phone the hold was made under: it
  * proves a hold not yet on the signed-in account is this person's, in the body so it never reaches access logs.
  */
@@ -236,8 +223,9 @@ internal data class PaymentStartedDto(
 
 /**
  * openapi `PaymentStarted.action`. [type] is a string, not an enum, so an action added to the contract later cannot
- * fail the decode: `REDIRECT` opens [url] (the hosted checkout), `WALLET_PENDING` has nothing to open, anything else
- * is treated as nothing to open.
+ * fail the decode: `REDIRECT` opens [url] (the hosted checkout), `WALLET_PENDING` has nothing to open, `CONFIRMED`
+ * (MV-B2, test cash) means the booking is already paid (nothing to open, nothing to poll), anything else is treated as
+ * nothing to open.
  */
 @Serializable
 internal data class PaymentActionDto(

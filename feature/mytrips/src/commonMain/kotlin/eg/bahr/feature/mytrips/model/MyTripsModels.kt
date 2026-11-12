@@ -23,6 +23,11 @@ internal data class MyBookingDto(
     val canReview: Boolean = false,
     /** Since M3-B7, `listMyBookings` only: the review written for this booking, if any. */
     val review: MyBookingReviewDto? = null,
+    /**
+     * Since MV-B2: how the booking was paid (`card`, `vodafone_cash`, `test_cash`); absent while unpaid and on a booking
+     * the host entered. A string, so a method added later cannot fail the decode; an unknown one shows nothing.
+     */
+    val method: String? = null,
 )
 
 /** openapi `Booking.review` (M3-B7): the booking's review and where moderation has it. */

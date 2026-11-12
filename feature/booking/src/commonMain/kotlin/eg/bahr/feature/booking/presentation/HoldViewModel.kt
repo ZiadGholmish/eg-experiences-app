@@ -77,7 +77,12 @@ internal data class HoldUiState(
     val releaseError: AppError? = null,
     /** The screen has passed the end on ([HoldViewModel.onEndReported]); it must not pass it on twice. */
     val isEndReported: Boolean = false,
-    /** Checkout (M3-M1) from here on. Vodafone Cash by default (HANDOFF screen 5). */
+    /**
+     * The methods offered, in order (MV-M4): the server's list ([HoldRoute.paymentMethods], then each HELD read), card
+     * and Vodafone Cash when it sends none. Test cash only when the server lists it.
+     */
+    val methods: List<PaymentMethod> = PaymentMethod.DEFAULT_OFFERED,
+    /** Checkout (M3-M1) from here on. Vodafone Cash by default (HANDOFF screen 5), always one of [methods]. */
     val method: PaymentMethod = PaymentMethod.VodafoneCash,
     val payer: PayerForm = PayerForm(),
     /** A pay tap found a field wrong: the fields say which from then on. */
@@ -177,7 +182,7 @@ internal class HoldViewModel(
                 totalCurrency = hold.totalCurrency,
                 payer = PayerForm.prefilled(hold.guestPhone),
                 checkoutReturnUrl = checkout.returnUrlFor(hold.ref),
-            ),
+            ).withMethods(PaymentMethod.offered(hold.paymentMethods)),
         )
     val uiState: StateFlow<HoldUiState> = _uiState.asStateFlow()
 
@@ -341,15 +346,12 @@ internal class HoldViewModel(
         val stillHeld = fresh != null
         val started = _uiState.value.payment.isUnderWay
         _uiState.update { it.copy(booking = booking, checkError = null) }
+        // Only a HELD read carries the accepted methods (MV-B2): absent on PAYMENT_PENDING and later means "not sent
+        // now", not "an older server", so test cash must not come and go with the polls.
+        if (booking.status == HELD) _uiState.update { it.withMethods(PaymentMethod.offered(booking.paymentMethods)) }
         failedPolls = 0
         when {
-            booking.status in PAID_STATUSES -> {
-                // Bought: cleared before the phase change, as below, so the view model's end cannot cut it short.
-                activeHold.clear(hold.ref)
-                reminders.onEnded(hold.ref)
-                stopAll()
-                _uiState.update { it.copy(phase = HoldPhase.Paid, isLeaveConfirmVisible = false) }
-            }
+            booking.status in PAID_STATUSES -> onPaid()
             booking.status == PAYMENT_PENDING -> onPaymentPending(booking, receivedAt)
             started && booking.status == EXPIRED -> {
                 // The deadline passed with the payment unconfirmed. Late money still confirms it (or is refunded),
@@ -410,6 +412,17 @@ internal class HoldViewModel(
         nextPollAt = receivedAt + POLL
     }
 
+    /**
+     * Bought: by a read that says so, or at once by test cash (MV-M4). The stored hold and its reminder are cleared
+     * before the phase change, so the view model's end cannot cut them short.
+     */
+    private suspend fun onPaid() {
+        activeHold.clear(hold.ref)
+        reminders.onEnded(hold.ref)
+        stopAll()
+        _uiState.update { it.copy(phase = HoldPhase.Paid, isLeaveConfirmVisible = false) }
+    }
+
     /** HELD after a payment was started here: the provider declined it, so the form is back, saying so. */
     private fun HoldUiState.afterHeldAgain(started: Boolean): HoldUiState =
         if (started) copy(payment = PaymentStep.Choosing, declined = true, checkoutUrl = null, checkoutToOpen = null) else this
@@ -417,7 +430,7 @@ internal class HoldViewModel(
     // ---- Checkout (M3-M1) ----
 
     fun selectMethod(method: PaymentMethod) {
-        if (_uiState.value.payment != PaymentStep.Choosing) return
+        if (_uiState.value.payment != PaymentStep.Choosing || method !in _uiState.value.methods) return
         _uiState.update { it.copy(method = method, paymentError = null) }
     }
 
@@ -462,10 +475,16 @@ internal class HoldViewModel(
         }
     }
 
-    private fun onPaymentStarted(started: PaymentStartedDto) {
+    private suspend fun onPaymentStarted(started: PaymentStartedDto) {
         // A read sent while it was starting (the screen came back to the front) is dropped, and frees the slot.
         paymentGeneration++
         reread?.cancel()
+        // Test cash (MV-B2): already CONFIRMED when the call returns. Nothing to open, nothing to poll: straight to the
+        // confirmation, which reads the booking for the ticket.
+        if (started.action.type == ACTION_CONFIRMED) {
+            onPaid()
+            return
+        }
         // Nothing to remind about while the payment completes (M3-M1 decision); a decline brings it back.
         reminders.onEnded(hold.ref)
         val url = started.action.url?.takeIf { started.action.type == ACTION_REDIRECT && it.isNotBlank() }
@@ -493,8 +512,9 @@ internal class HoldViewModel(
                 _uiState.update { it.copy(payment = PaymentStep.Choosing) }
                 reread()
             }
-            // Too little time left, or the date was called off: said, and the booking read for what it is now.
-            ApiErrorCodes.HOLD_EXPIRED, ApiErrorCodes.DEPARTURE_NOT_OPEN -> {
+            // Too little time left, or the date was called off: said, and the booking read for what it is now. So is a
+            // refused request (MV-M4): test cash switched off since the list was read drops out with the read.
+            ApiErrorCodes.HOLD_EXPIRED, ApiErrorCodes.DEPARTURE_NOT_OPEN, ApiErrorCodes.VALIDATION_FAILED -> {
                 _uiState.update { it.copy(payment = PaymentStep.Choosing, paymentError = error) }
                 reread()
             }
@@ -553,8 +573,24 @@ internal class HoldViewModel(
         val LATE_POLL = 15.seconds
 
         private const val EXPIRED = "EXPIRED"
+        private const val HELD = "HELD"
         private const val ACTION_REDIRECT = "REDIRECT"
+        private const val ACTION_CONFIRMED = "CONFIRMED"
     }
+}
+
+/**
+ * [offered] as the methods shown; the picked one stays if still offered, else Vodafone Cash, else the first offered.
+ * Test cash comes after the real methods, so it is picked for the person only when nothing else is offered.
+ */
+private fun HoldUiState.withMethods(offered: List<PaymentMethod>): HoldUiState {
+    val picked =
+        when {
+            method in offered -> method
+            PaymentMethod.VodafoneCash in offered -> PaymentMethod.VodafoneCash
+            else -> offered.first()
+        }
+    return copy(methods = offered, method = picked)
 }
 
 private fun AppError.isCode(code: String): Boolean = this is AppError.Api && this.code == code

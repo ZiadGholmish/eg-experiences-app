@@ -2,6 +2,7 @@ package eg.bahr.feature.booking.presentation
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -12,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import eg.bahr.core.designsystem.components.BahrBadge
 import eg.bahr.core.designsystem.components.BahrErrorView
@@ -25,11 +27,23 @@ import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.action_retry
 import eg.bahr.core.localization.generated.resources.booking_confirmed
+import eg.bahr.core.localization.generated.resources.booking_method_card
+import eg.bahr.core.localization.generated.resources.booking_method_test_badge
+import eg.bahr.core.localization.generated.resources.booking_method_test_cash
+import eg.bahr.core.localization.generated.resources.booking_method_vf
+import eg.bahr.core.localization.generated.resources.booking_paid_with
 import eg.bahr.core.localization.generated.resources.booking_your_ref
+import eg.bahr.core.localization.generated.resources.mytrips_status_cancelled
+import eg.bahr.core.localization.generated.resources.mytrips_status_completed
+import eg.bahr.core.localization.generated.resources.mytrips_status_confirmed
+import eg.bahr.core.localization.generated.resources.mytrips_status_expired
+import eg.bahr.core.localization.generated.resources.mytrips_status_held
+import eg.bahr.core.localization.generated.resources.mytrips_status_paying
 import eg.bahr.core.localization.generated.resources.trip_meeting_point
 import eg.bahr.core.localization.generated.resources.trips_title
 import eg.bahr.core.localization.isRetryable
 import eg.bahr.core.localization.localizedMessage
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -68,7 +82,20 @@ internal fun BookingConfirmedScreen(
                     // On the page's `background`: the gap round the disc and the tick take its colour.
                     props = BahrLottie.Props(BahrLottie.Animation.SuccessCheck, ground = BahrLottie.Ground.Background),
                 )
-                BahrBadge(props = BahrBadge.Props(text = booking.status, tone = BahrBadge.Tone.Success))
+                val method = PaymentMethod.of(booking.method)
+                Row(horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm)) {
+                    // The status in the person's language, never the server's word (MV-M4 review #1); none for a status
+                    // added after this app.
+                    statusBadge(booking.status)?.let { (label, tone) ->
+                        BahrBadge(props = BahrBadge.Props(text = stringResource(label), tone = tone))
+                    }
+                    // A test booking (MV-M4) says so where it is shown: no money moved for it.
+                    if (method == PaymentMethod.TestCash) {
+                        BahrBadge(
+                            props = BahrBadge.Props(stringResource(Res.string.booking_method_test_badge), BahrBadge.Tone.Quaternary),
+                        )
+                    }
+                }
                 Text(
                     text = stringResource(Res.string.booking_confirmed),
                     style = MaterialTheme.typography.headlineMedium,
@@ -82,14 +109,23 @@ internal fun BookingConfirmedScreen(
                 // it is the largest thing on the screen.
                 Text(text = booking.ref, style = BahrTheme.type.display)
 
-                booking.tripTitle?.let {
+                booking.trip?.title?.let {
                     Text(text = it, style = MaterialTheme.typography.titleMedium)
                 }
-                booking.meetingPoint?.let { point ->
+                booking.departure?.placeName?.let { point ->
                     Text(
                         text = "${stringResource(Res.string.trip_meeting_point)}: $point",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                // How it was paid (openapi `Booking.method`, served since MV-B2); absent while unpaid, or unknown.
+                method?.let {
+                    Text(
+                        text = stringResource(Res.string.booking_paid_with, stringResource(it.paidName)),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.testTag(CONFIRMED_METHOD_TAG),
                     )
                 }
 
@@ -125,6 +161,41 @@ private fun ConfirmedSkeleton(modifier: Modifier) {
         BahrSkeletonLine(props = BahrSkeletonLine.Props(widthFraction = SKELETON_MEETING_WIDTH))
     }
 }
+
+/** The method's name on a paid booking: "Paid with Vodafone Cash / Card / Test cash". */
+private val PaymentMethod.paidName: StringResource
+    get() =
+        when (this) {
+            PaymentMethod.VodafoneCash -> Res.string.booking_method_vf
+            PaymentMethod.Card -> Res.string.booking_method_card
+            PaymentMethod.TestCash -> Res.string.booking_method_test_cash
+        }
+
+/**
+ * The booking's status as a badge: the labels and tones My trips gives it, so a booking reads the same in both places.
+ * A booking opened by its reference (a notification) may be done, cancelled or expired, not only booked. Null for a
+ * status this app does not know.
+ */
+private fun statusBadge(status: String): Pair<StringResource, BahrBadge.Tone>? =
+    when (status) {
+        STATUS_HELD -> Res.string.mytrips_status_held to BahrBadge.Tone.Secondary
+        PAYMENT_PENDING -> Res.string.mytrips_status_paying to BahrBadge.Tone.Secondary
+        STATUS_CONFIRMED -> Res.string.mytrips_status_confirmed to BahrBadge.Tone.Success
+        STATUS_COMPLETED -> Res.string.mytrips_status_completed to BahrBadge.Tone.Primary
+        STATUS_CANCELLED -> Res.string.mytrips_status_cancelled to BahrBadge.Tone.Quaternary
+        STATUS_EXPIRED -> Res.string.mytrips_status_expired to BahrBadge.Tone.Quaternary
+        else -> null
+    }
+
+// openapi `Booking.status` values (PAYMENT_PENDING is HeldAgain's).
+private const val STATUS_HELD = "HELD"
+private const val STATUS_CONFIRMED = "CONFIRMED"
+private const val STATUS_COMPLETED = "COMPLETED"
+private const val STATUS_CANCELLED = "CANCELLED"
+private const val STATUS_EXPIRED = "EXPIRED"
+
+/** For tests: the "Paid with …" line. */
+internal const val CONFIRMED_METHOD_TAG = "confirmed_method"
 
 // The skeleton's line lengths, as shares of the page width: the status pill, the reference, the
 // trip's title and the meeting point.

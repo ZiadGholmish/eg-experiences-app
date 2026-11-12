@@ -279,6 +279,64 @@ class BookingApiServiceTest {
             assertEquals(402, error.httpStatus)
         }
 
+    @Test
+    fun `held seats carry the accepted methods - test cash where the server takes it - MV-B2`() =
+        runTest {
+            val held = (service(HELD_WITH_METHODS, HttpStatusCode.Created).placeHold(request) as AppResult.Success).data
+
+            assertEquals(listOf("card", "vodafone_cash", "test_cash"), held.paymentMethods)
+            // An older server sends none: the screen then offers card and Vodafone Cash.
+            requests.clear()
+            assertNull((service(HELD, HttpStatusCode.Created).placeHold(request) as AppResult.Success).data.paymentMethods)
+        }
+
+    @Test
+    fun `a method this app does not know does not fail the decode`() =
+        runTest {
+            val booking = (service(BOOKING_HELD_FUTURE_METHOD).heldBooking("BRL-Y4GHX1PW", "+201000000777") as AppResult.Success).data
+
+            assertEquals(listOf("card", "instapay"), booking.paymentMethods)
+        }
+
+    @Test
+    fun `test cash starts with the contract's body and answers CONFIRMED with nothing to open`() =
+        runTest {
+            val request =
+                StartPaymentRequest(
+                    method = "test_cash",
+                    payer = PayerRequest(name = "Nada Hassan", phone = "01001234567"),
+                    guestPhone = "+201001234567",
+                )
+            val result = service(TEST_CASH_CONFIRMED, HttpStatusCode.Created).startPayment("BRL-7K4M2X9P", request)
+
+            val body =
+                Json
+                    .parseToJsonElement(
+                        (requests.single().body as OutgoingContent.ByteArrayContent).bytes().decodeToString(),
+                    ).jsonObject
+            assertEquals("test_cash", body["method"]?.jsonPrimitive?.content)
+            val started = (result as AppResult.Success).data
+            assertEquals("CONFIRMED", started.action.type)
+            assertNull(started.action.url)
+        }
+
+    @Test
+    fun `the confirmation reads the contract's Booking - paid - with its method`() =
+        runTest {
+            val result = service(BOOKING_CONFIRMED_TEST_CASH).bookingByRef("BRL-Y4GHX1PW")
+
+            assertEquals("/api/v1/bookings/BRL-Y4GHX1PW", requests.single().url.encodedPath)
+            // Signed in, the token proves it: no phone in the query.
+            assertEquals("", requests.single().url.encodedQuery)
+            val booking = (result as AppResult.Success).data
+            assertEquals("CONFIRMED", booking.status)
+            assertEquals("test_cash", booking.method)
+            assertEquals(MoneyDto(450, "EGP"), booking.paid)
+            assertEquals("Dawn on Lake Burullus", booking.trip?.title)
+            assertNull(booking.holdExpiresAt)
+            assertNull(booking.paymentMethods, "only while HELD")
+        }
+
     private object NoSession : SessionStore {
         override suspend fun read(): StoredSession? = null
 
@@ -309,6 +367,45 @@ class BookingApiServiceTest {
             "trip":{"slug":"burullus-dawn","title":"Dawn on Lake Burullus"},"date":"2026-11-07","dayLabel":"Sat 7 Nov",
             "departure":{"placeName":"Abdel Moneim Riad","city":"Cairo","timeLocal":"05:00"},"returnTime":"22:00",
             "partySize":1,"total":{"amount":450,"currency":"EGP"}}}
+            """.trimIndent()
+
+        /**
+         * [HELD] from a server that takes test cash (MV-B2): `paymentMethods`, in the server's order. A getter: [HELD] is
+         * declared further down, and a companion's vals initialise in order.
+         */
+        val HELD_WITH_METHODS
+            get() =
+                HELD.replace(
+                    "\"seatsRemaining\":10}",
+                    "\"seatsRemaining\":10,\"paymentMethods\":[\"card\",\"vodafone_cash\",\"test_cash\"]}",
+                )
+
+        /** [BOOKING_HELD] listing a method added to the contract after this app was built. */
+        val BOOKING_HELD_FUTURE_METHOD
+            get() =
+                BOOKING_HELD.replace("\"partySize\":1,", "\"partySize\":1,\"paymentMethods\":[\"card\",\"instapay\"],")
+
+        /**
+         * `getBooking` on a booking paid with test cash (MV-B2), the shape the confirmation reads: CONFIRMED, `paid`,
+         * `method`, the host; no `holdExpiresAt`, no `paymentMethods`.
+         */
+        val BOOKING_CONFIRMED_TEST_CASH =
+            """
+            {"success":true,"data":{"ref":"BRL-Y4GHX1PW","status":"CONFIRMED","serverNow":"2026-10-09T23:06:10.112+03:00",
+            "trip":{"slug":"burullus-dawn","title":"Dawn on Lake Burullus"},"date":"2026-11-07","dayLabel":"Sat 7 Nov",
+            "departure":{"placeName":"Abdel Moneim Riad","city":"Cairo","timeLocal":"05:00","arriveBy":"04:45"},
+            "returnTime":"22:00","returnDate":"2026-11-07","partySize":1,"total":{"amount":450,"currency":"EGP"},
+            "paid":{"amount":450,"currency":"EGP"},"method":"test_cash",
+            "host":{"name":"Ashraf El Bahr","phone":"+201001234567","whatsappUrl":"https://wa.me/201001234567"},
+            "calendar":{"start":"2026-11-07T05:00:00+02:00","end":"2026-11-07T22:00:00+02:00","title":"Dawn on Lake Burullus",
+            "location":"Abdel Moneim Riad, Cairo"}}}
+            """.trimIndent()
+
+        /** `PaymentStarted` for test cash (MV-B2): already CONFIRMED, no url. */
+        val TEST_CASH_CONFIRMED =
+            """
+            {"success":true,"data":{"paymentId":"0199c3a0-5eed-7000-8000-00000000a003",
+            "action":{"type":"CONFIRMED","url":null},"holdExpiresAt":"2026-10-09T22:42:30.549567+03:00"}}
             """.trimIndent()
 
         /** The contract's `PaymentStarted` as the fake provider answers it (M3-B2): a hosted checkout to open. */

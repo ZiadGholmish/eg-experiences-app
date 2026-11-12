@@ -66,6 +66,7 @@ import eg.bahr.core.localization.generated.resources.booking_pay_foot
 import eg.bahr.core.localization.generated.resources.booking_pay_late
 import eg.bahr.core.localization.generated.resources.booking_pay_reopen
 import eg.bahr.core.localization.generated.resources.booking_pay_step_title
+import eg.bahr.core.localization.generated.resources.booking_pay_test_cta
 import eg.bahr.core.localization.generated.resources.booking_pay_vf_cta
 import eg.bahr.core.localization.generated.resources.booking_pay_waiting_cta
 import eg.bahr.core.localization.generated.resources.booking_summary_party
@@ -88,7 +89,8 @@ import org.koin.core.parameter.parametersOf
 /**
  * The held seats (HANDOFF screen 5, "Payment", step 2 of 3): the countdown panel, the trip summary
  * and the total, then the checkout (M3-M1): "Pay with" (Vodafone Cash, the default, or card), the
- * picked method's fields and the pay button. Paying opens the provider's hosted checkout ([browser]);
+ * picked method's fields and the pay button; since MV-M4 also test cash, last, where the server lists it, which
+ * confirms at once and hands over with [onPaid] without any checkout. Paying opens the provider's hosted checkout ([browser]);
  * the screen then waits for the booking to read CONFIRMED and hands over with [onPaid]. Paying needs
  * a sign-in: [onSignIn] opens the sign-in sheet, and the screen is back under it afterwards.
  *
@@ -189,7 +191,7 @@ internal fun HoldScreen(
             if (!state.payment.isUnderWay) {
                 val editable = state.payment == PaymentStep.Choosing && !state.phase.isEnded
                 PaymentProblem(error = state.paymentError, declined = state.declined)
-                PaymentMethods(selected = state.method, enabled = editable, onSelect = viewModel::selectMethod)
+                PaymentMethods(methods = state.methods, selected = state.method, enabled = editable, onSelect = viewModel::selectMethod)
                 PayerFields(
                     method = state.method,
                     payer = state.payer,
@@ -206,6 +208,7 @@ internal fun HoldScreen(
             totalAmount = state.totalAmount,
             totalCurrency = state.totalCurrency,
             phone = state.payer.takeIf { state.method == PaymentMethod.VodafoneCash && it.phoneValid }?.cleanPhone,
+            testCash = state.method == PaymentMethod.TestCash,
             onPay = viewModel::pay,
             onReopen = viewModel::reopenCheckout,
         )
@@ -385,6 +388,7 @@ private fun PayBar(
     phone: String?,
     onPay: () -> Unit,
     onReopen: () -> Unit,
+    testCash: Boolean = false,
 ) {
     val total = BahrFormat.money(totalAmount, totalCurrency, BahrTheme.locale.isArabic)
     val text =
@@ -392,10 +396,11 @@ private fun PayBar(
             PayBarLook.Reopen -> stringResource(Res.string.booking_pay_reopen)
             PayBarLook.Waiting -> stringResource(Res.string.booking_pay_waiting_cta)
             else ->
-                if (phone != null) {
-                    stringResource(Res.string.booking_pay_vf_cta, BahrFormat.ltr(phone))
-                } else {
-                    stringResource(Res.string.booking_pay_cta, total)
+                when {
+                    // Test cash takes no money (MV-M4 review #4): "Pay 900 EGP" would say otherwise.
+                    testCash -> stringResource(Res.string.booking_pay_test_cta)
+                    phone != null -> stringResource(Res.string.booking_pay_vf_cta, BahrFormat.ltr(phone))
+                    else -> stringResource(Res.string.booking_pay_cta, total)
                 }
         }
     StickyActionBar {

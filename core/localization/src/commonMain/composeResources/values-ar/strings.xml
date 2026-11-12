@@ -285,6 +285,14 @@
     <string name="booking_method_vf_note">هتوصلك رسالة للتأكيد</string>
     <string name="booking_method_card">كارت</string>
     <string name="booking_method_card_note">فيزا · ماستركارد · ميزة</string>
+    <!-- MV-M4: test cash, offered only where the server lists it (local and dev); moves no money. -->
+    <string name="booking_method_test">ادفع كاش (تجربة)</string>
+    <string name="booking_method_test_note">للتجربة بس: الحجز بيتأكد على طول ومن غير فلوس</string>
+    <string name="booking_method_test_badge">تجربة</string>
+    <string name="booking_pay_test_cta">تأكيد (تجربة)</string>
+    <!-- How a booking was paid (openapi Booking.method), on the confirmation and in My trips. -->
+    <string name="booking_method_test_cash">كاش (تجربة)</string>
+    <string name="booking_paid_with">اتدفع بـ%1$s</string>
     <string name="booking_payer_vf_number">رقم فودافون كاش</string>
     <string name="booking_payer_card_name">الاسم على الكارت</string>
     <string name="booking_payer_card_note">هتكتب بيانات الكارت في صفحة الدفع الآمنة.</string>

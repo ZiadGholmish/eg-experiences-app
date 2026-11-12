@@ -4,7 +4,6 @@ import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.network.auth.withInstallSecret
 import eg.bahr.core.network.callApi
 import eg.bahr.feature.booking.model.BookingDepartureDto
-import eg.bahr.feature.booking.model.BookingDto
 import eg.bahr.feature.booking.model.BookingTripDto
 import eg.bahr.feature.booking.model.HeldBookingDto
 import eg.bahr.feature.booking.model.HeldSeatsDto
@@ -55,7 +54,7 @@ internal class BookingApiService(
     suspend fun bookingByRef(
         ref: String,
         phone: String? = null,
-    ): AppResult<BookingDto> =
+    ): AppResult<HeldBookingDto> =
         callApi {
             client.get("bookings/$ref") {
                 phone?.let { parameter("phone", it) }
