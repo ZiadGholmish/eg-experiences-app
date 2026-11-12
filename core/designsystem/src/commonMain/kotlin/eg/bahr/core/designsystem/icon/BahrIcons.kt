@@ -114,6 +114,7 @@ import eg.bahr.core.designsystem.generated.resources.ic_settings
 import eg.bahr.core.designsystem.generated.resources.ic_settings_filled
 import eg.bahr.core.designsystem.generated.resources.ic_smartphone
 import eg.bahr.core.designsystem.generated.resources.ic_smartphone_filled
+import eg.bahr.core.designsystem.generated.resources.ic_sort
 import eg.bahr.core.designsystem.generated.resources.ic_star
 import eg.bahr.core.designsystem.generated.resources.ic_star_filled
 import eg.bahr.core.designsystem.generated.resources.ic_storefront
@@ -265,6 +266,9 @@ enum class BahrIcons(
 
     /** A review that was not published (M3-M6, the notifications page). */
     VisibilityOff(Res.drawable.ic_visibility_off, Res.drawable.ic_visibility_off_filled),
+
+    /** The hosts directory's sort menu (MV-M1). Directional upstream: its bars line up at the start. */
+    Sort(Res.drawable.ic_sort, Res.drawable.ic_sort),
     ;
 
     /** FILL 0, the prototype's default (`class="ms"`). */

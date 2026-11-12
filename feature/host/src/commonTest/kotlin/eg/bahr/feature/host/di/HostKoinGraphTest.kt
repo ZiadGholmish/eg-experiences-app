@@ -11,6 +11,7 @@ import eg.bahr.core.testing.jsonMockEngine
 import eg.bahr.core.testing.runKoinGraphTest
 import eg.bahr.feature.host.data.HostRepository
 import eg.bahr.feature.host.presentation.HostProfileViewModel
+import eg.bahr.feature.host.presentation.HostsViewModel
 import io.ktor.client.HttpClient
 import org.koin.core.Koin
 import org.koin.core.parameter.parametersOf
@@ -45,5 +46,8 @@ class HostKoinGraphTest {
         withGraph { koin ->
             koin.get<HostRepository>()
             koin.get<HostProfileViewModel> { parametersOf("red-sea-days", "Red Sea Days", null) }
+            // MV-M1: the hosts directory, bare (the tab) and with search's text and an order.
+            koin.get<HostsViewModel> { parametersOf(null, null) }
+            koin.get<HostsViewModel> { parametersOf("hoda", "most_trips") }
         }
 }

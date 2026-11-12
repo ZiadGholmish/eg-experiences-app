@@ -10,7 +10,8 @@ import kotlinx.serialization.Serializable
 
 /*
  * Search's public surface (split from feature:trips, M3-M16): its destination for the app's NavHost, and how to
- * reach it. A trip tapped in the results is the caller's lambda, so this feature never imports another feature.
+ * reach it. A trip tapped in the results is the caller's lambda, so this feature never imports another feature;
+ * so are a matching host and "See all hosts" (MV-M1).
  */
 
 /** Search (M4-M3), opened from Home's search entry. */
@@ -30,13 +31,30 @@ data object SearchTripsRoute
 fun NavGraphBuilder.searchTripsScreen(
     onBack: () -> Unit,
     onTripClick: (slug: String) -> Unit,
+    onHostClick: (host: SearchHost) -> Unit = {},
+    onSeeAllHosts: (q: String) -> Unit = {},
 ) {
     composable<SearchTripsRoute> {
         BahrDestination(this) {
-            SearchTripsScreen(onBack = onBack, onTripClick = onTripClick)
+            SearchTripsScreen(
+                onBack = onBack,
+                onTripClick = onTripClick,
+                onHostClick = { host -> onHostClick(SearchHost(host.slug, host.name, host.avatar?.url)) },
+                onSeeAllHosts = onSeeAllHosts,
+            )
         }
     }
 }
+
+/**
+ * A host card tapped in the results (MV-M1): its [slug], and the [name] and [avatar] (a URL) it showed, for the
+ * host page's header to draw before `getHost` answers.
+ */
+data class SearchHost(
+    val slug: String,
+    val name: String,
+    val avatar: String?,
+)
 
 /** Single-top: a quick double tap on Home's field or the Map button opens one search. */
 fun NavController.navigateToSearchTrips(builder: NavOptionsBuilder.() -> Unit = { launchSingleTop = true }) =

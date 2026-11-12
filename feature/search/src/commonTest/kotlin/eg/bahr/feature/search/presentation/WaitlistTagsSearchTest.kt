@@ -6,6 +6,7 @@ import eg.bahr.core.testing.FakeWaitlistJoinsStore
 import eg.bahr.core.testing.FixedClock
 import eg.bahr.core.testing.runViewModelTest
 import eg.bahr.core.testing.storedJoin
+import eg.bahr.feature.search.data.FakeHostListRepository
 import eg.bahr.feature.search.data.FakeRecentSearchesStore
 import eg.bahr.feature.search.data.FakeTripListRepository
 import eg.bahr.feature.search.data.LastSearch
@@ -41,7 +42,7 @@ class WaitlistTagsSearchTest {
             val memory = WaitlistMemory(store, FixedClock())
             val repository = FakeTripListRepository(listTrips = { page(listOf(card())) })
 
-            val search = SearchTripsViewModel(repository, FakeRecentSearchesStore(), memory, LastSearch())
+            val search = SearchTripsViewModel(repository, FakeRecentSearchesStore(), memory, LastSearch(), FakeHostListRepository())
             advanceUntilIdle()
 
             assertTrue(

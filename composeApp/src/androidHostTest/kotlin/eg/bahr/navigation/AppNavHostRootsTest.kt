@@ -18,6 +18,11 @@ import eg.bahr.feature.booking.navigation.navigateToBookingByRef
 import eg.bahr.feature.booking.navigation.navigateToBookingConfirmed
 import eg.bahr.feature.booking.navigation.navigateToHold
 import eg.bahr.feature.home.navigation.TripListRoute
+import eg.bahr.feature.host.navigation.HostProfileRoute
+import eg.bahr.feature.host.navigation.HostsRoute
+import eg.bahr.feature.host.navigation.HostsTabRoute
+import eg.bahr.feature.host.navigation.navigateToHostProfile
+import eg.bahr.feature.host.navigation.navigateToHosts
 import eg.bahr.feature.map.navigation.TripMapRoute
 import eg.bahr.feature.mytrips.navigation.MyTripsRoute
 import eg.bahr.feature.notifications.navigation.NotificationsRoute
@@ -129,6 +134,27 @@ class AppNavHostRootsTest {
         assertTrue(nav.isAt(AppTab.Home))
     }
 
+    /**
+     * MV-M1: the hosts directory is the Hosts tab's root, and the same list pushed from Home's hosts "See all",
+     * search is no tab's root (bar hidden). A host opened from it keeps the list under it.
+     */
+    @Test
+    fun `the hosts list pushed over Home is no root - the Hosts tab's root is`() {
+        show(start = TripListRoute)
+        onUi { nav.navigateToHosts() }
+        AppTab.entries.forEach { assertFalse(nav.isAt(it), "pushed list is no tab's root: ${it.name}") }
+        onUi { nav.navigateToHostProfile(SLUG) }
+        onUi { nav.popBackStack() }
+        assertEquals(listOf(TripListRoute::class.simpleName, HostsRoute::class.simpleName), screens())
+
+        show(start = AppTab.Hosts.rootRoute)
+        assertTrue(nav.isAt(AppTab.Hosts))
+        onUi { nav.navigateToHostProfile(SLUG) }
+        assertFalse(nav.isAt(AppTab.Hosts), "a host's page hides the bar")
+        onUi { nav.popBackStack() }
+        assertTrue(nav.isAt(AppTab.Hosts))
+    }
+
     @Test
     fun `Edit personal info is pushed over Profile - not a root`() {
         show(start = ProfileRoute)
@@ -226,6 +252,9 @@ class AppNavHostRootsTest {
                         composable<TripListRoute> {}
                         composable<SearchTripsRoute> {}
                         composable<TripMapRoute> {}
+                        composable<HostsTabRoute> {}
+                        composable<HostsRoute> {}
+                        composable<HostProfileRoute> {}
                         composable<MyTripsRoute> {}
                         composable<NotificationsRoute> {}
                         composable<ProfileRoute> {}

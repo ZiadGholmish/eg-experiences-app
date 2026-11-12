@@ -3,6 +3,7 @@ package eg.bahr.navigation
 import eg.bahr.core.designsystem.icon.BahrIcons
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.tab_home
+import eg.bahr.core.localization.generated.resources.tab_hosts
 import eg.bahr.core.localization.generated.resources.tab_map
 import eg.bahr.core.localization.generated.resources.tab_my_trips
 import eg.bahr.core.localization.generated.resources.tab_profile
@@ -16,7 +17,9 @@ import org.jetbrains.compose.resources.StringResource
  * (feature:mytrips) · Alerts (feature:notifications) · Profile (feature:settings, which was the Settings
  * tab). The Search tab went: search opens full screen from Home's search field and the Map header, in
  * that tab's own stack. M3-M6a (user, 2026-10-23): the Alerts tab went too; its page is pushed from a bell
- * in Home's top bar, so the bar is Home · Map · My trips · Profile. Android draws the bar in Compose
+ * in Home's top bar, so the bar is Home · Map · My trips · Profile. MV-M1 (user, 2026-11-12): the hosts directory
+ * gets its own tab, after Map: Home · Map · Hosts · My trips · Profile (the browsing tabs first, then the user's own).
+ * Android draws the bar in Compose
  * ([AppTabs]); iOS keeps its native SwiftUI `TabView` (user decision 2026-10-14), fed from here.
  *
  * Public because Swift names the tabs: it asks for one Compose root per tab (`TabViewController(tab:)`).
@@ -24,6 +27,7 @@ import org.jetbrains.compose.resources.StringResource
 enum class AppTab {
     Home,
     Map,
+    Hosts,
     MyTrips,
     Profile,
 }
@@ -34,6 +38,7 @@ internal val AppTab.title: StringResource
         when (this) {
             AppTab.Home -> Res.string.tab_home
             AppTab.Map -> Res.string.tab_map
+            AppTab.Hosts -> Res.string.tab_hosts
             AppTab.MyTrips -> Res.string.tab_my_trips
             AppTab.Profile -> Res.string.tab_profile
         }
@@ -44,6 +49,7 @@ internal val AppTab.icon: BahrIcons
         when (this) {
             AppTab.Home -> BahrIcons.Home
             AppTab.Map -> BahrIcons.Map
+            AppTab.Hosts -> BahrIcons.Groups
             AppTab.MyTrips -> BahrIcons.ConfirmationNumber
             AppTab.Profile -> BahrIcons.Person
         }

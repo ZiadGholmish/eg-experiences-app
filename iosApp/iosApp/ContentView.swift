@@ -36,7 +36,7 @@ enum SharedApp {
     }
 }
 
-/// The app's tabs (M4-M8; since M3-M6a Home · Map · My trips · Profile, Alerts being a bell on Home): a native `TabView` (Liquid Glass on iOS 26), one Compose root per tab.
+/// The app's tabs (M4-M8; since M3-M6a Home · Map · My trips · Profile, Alerts being a bell on Home; MV-M1 adds Hosts after Map): a native `TabView` (Liquid Glass on iOS 26), one Compose root per tab.
 ///
 /// The bar's labels and direction follow the app language, which the shared code sends with the labels
 /// already translated (core:localization), so no string is kept here. A switch in Profile re-sends

@@ -53,7 +53,10 @@ internal data class AssetsBlock(
     override val contentType: String get() = "section-${layout.key}"
 }
 
-/** Card sections. [seeAll]: where the title's "See all" leads, only ever for trips (null: none). */
+/**
+ * Card sections. [seeAll]: where the title's "See all" leads (null: none): a trips row's own list, or, for hosts,
+ * the hosts directory (MV-M1). Departures and reviews have none.
+ */
 internal data class CardsBlock(
     override val id: String,
     override val title: String?,
@@ -196,7 +199,9 @@ private fun HomeSectionDto.toBlock(
         is TripsSectionDto ->
             items.distinct { it.slug }?.let { CardsBlock(id, title, layout, HomeCards.Trips(it), columns, seeAllAction()) }
 
-        is HostsSectionDto -> items.distinct { it.slug }?.let { CardsBlock(id, title, layout, HomeCards.Hosts(it), columns) }
+        // The contract gives hosts no `seeAll` (MH-B2); every hosts row is a slice of the directory (MV-M1).
+        is HostsSectionDto ->
+            items.distinct { it.slug }?.let { CardsBlock(id, title, layout, HomeCards.Hosts(it), columns, HomeAction.OpenHosts) }
         is DeparturesSectionDto -> items.distinct { it.id }?.let { CardsBlock(id, title, layout, HomeCards.Departures(it), columns) }
         is ReviewsSectionDto -> items.distinct { it.id }?.let { CardsBlock(id, title, layout, HomeCards.Reviews(it), columns) }
         is CategoriesSectionDto -> items.distinct { it.key }?.let { ChipsBlock(id, title, layout, it) }

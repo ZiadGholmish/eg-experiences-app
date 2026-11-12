@@ -3,16 +3,18 @@ import SwiftUI
 import UIKit
 
 /// The bottom bar's tabs (M4-M8; since M3-M6a Home · Map · My trips · Profile: Alerts moved to a bell in Home's top bar,
-/// which is Compose), as Swift names them. A selection stored by an older build as "alerts" restores as Home. The order, and everything about what a tab
+/// which is Compose; since MV-M1 Home · Map · Hosts · My trips · Profile), as Swift names them. The cases must stay in
+/// `AppTab.entries` order: the shared code sends the titles by index. A selection stored by an older build as "alerts" restores as Home. The order, and everything about what a tab
 /// shows, is the shared code's (`AppTab` in composeApp); this only maps each one to an SF Symbol and a
 /// stable string for the stored selection.
 enum BahrTab: String, CaseIterable {
-    case home, map, mytrips, profile
+    case home, map, hosts, mytrips, profile
 
     var kotlin: AppTab {
         switch self {
         case .home: return .home
         case .map: return .map
+        case .hosts: return .hosts
         case .mytrips: return .mytrips
         case .profile: return .profile
         }
@@ -21,6 +23,7 @@ enum BahrTab: String, CaseIterable {
     init(_ tab: AppTab) {
         switch tab {
         case .map: self = .map
+        case .hosts: self = .hosts
         case .mytrips: self = .mytrips
         case .profile: self = .profile
         default: self = .home
@@ -28,11 +31,12 @@ enum BahrTab: String, CaseIterable {
     }
 
     /// SF Symbols, the iOS counterpart of the Android bar's Material Symbols (the handoff's `home`, `map`,
-    /// `confirmation_number`, `person`).
+    /// `confirmation_number`, `person`; MV-M1's `groups`).
     var symbol: String {
         switch self {
         case .home: return "house"
         case .map: return "map"
+        case .hosts: return "person.2"
         case .mytrips: return "ticket"
         case .profile: return "person"
         }

@@ -104,8 +104,9 @@ internal fun HomeSection(
         section.title,
         modifier,
         seeAll = seeAll?.let { action -> { onAction(action) } },
-        // Only a title that leads somewhere morphs into a page header (M4-M6).
-        titleSharedKey = seeAll?.let { rowTitleSharedKey(section.id) },
+        // Only a title that leads to a trip list morphs into its header (M4-M6); the hosts directory has no
+        // heading to morph into (MV-M1).
+        titleSharedKey = seeAll?.takeUnless { it is HomeAction.OpenHosts }?.let { rowTitleSharedKey(section.id) },
     ) {
         HomeLayoutContent(section, context)
     }

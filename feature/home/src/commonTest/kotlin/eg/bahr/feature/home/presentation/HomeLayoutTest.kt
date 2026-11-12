@@ -14,6 +14,7 @@ import eg.bahr.feature.home.model.HostsSectionDto
 import eg.bahr.feature.home.model.NoteSectionDto
 import eg.bahr.feature.home.model.SkippedSectionDto
 import eg.bahr.feature.home.model.TripsSectionDto
+import eg.bahr.feature.home.navigation.HomeAction
 import eg.bahr.feature.home.presentation.components.homeLayoutRenderer
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -164,11 +165,16 @@ class HomeLayoutTest {
         assertTrue(log.single().contains("repeated"))
     }
 
+    /**
+     * A trips row's "See all" is the server's (none here: no total, no target); a hosts row's is the app's own, the
+     * hosts directory (MV-M1: the contract gives hosts sections no `seeAll`).
+     */
     @Test
-    fun `only a trips section has a see all - and each card section has its own content type`() {
+    fun `a hosts section sees all hosts - and each card section has its own content type`() {
         val blocks = parse(trips("card_rail"), hosts("card_rail"))
 
         assertEquals(listOf("section-card_rail-trip", "section-card_rail-host"), blocks.map { it.contentType })
-        assertNull(assertIs<CardsBlock>(blocks[1]).seeAll)
+        assertNull(assertIs<CardsBlock>(blocks[0]).seeAll)
+        assertEquals(HomeAction.OpenHosts, assertIs<CardsBlock>(blocks[1]).seeAll)
     }
 }

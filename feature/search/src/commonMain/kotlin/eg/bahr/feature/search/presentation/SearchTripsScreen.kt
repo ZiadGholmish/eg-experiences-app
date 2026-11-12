@@ -18,26 +18,16 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.text.input.InputTransformation
-import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
-import androidx.compose.foundation.text.input.delete
-import androidx.compose.foundation.text.input.maxLength
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
-import androidx.compose.foundation.text.input.then
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,11 +43,12 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
+import eg.bahr.core.catalog.model.HostCardDto
 import eg.bahr.core.catalog.presentation.components.FacetFilterChips
+import eg.bahr.core.catalog.presentation.components.HostDirectoryCard
 import eg.bahr.core.catalog.presentation.components.ListHeading
 import eg.bahr.core.catalog.presentation.components.PagedListStatus
 import eg.bahr.core.catalog.presentation.components.RefreshBar
@@ -68,6 +59,7 @@ import eg.bahr.core.catalog.presentation.components.selectedOrder
 import eg.bahr.core.catalog.presentation.rememberThrottled
 import eg.bahr.core.designsystem.components.BahrBackButton
 import eg.bahr.core.designsystem.components.BahrLottie
+import eg.bahr.core.designsystem.components.BahrSearchField
 import eg.bahr.core.designsystem.components.navigationBarsSpacer
 import eg.bahr.core.designsystem.icon.BahrIcons
 import eg.bahr.core.designsystem.theme.BahrSize
@@ -77,6 +69,8 @@ import eg.bahr.core.designsystem.theme.reducedMotion
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.search_clear
 import eg.bahr.core.localization.generated.resources.search_hint
+import eg.bahr.core.localization.generated.resources.search_hosts_see_all
+import eg.bahr.core.localization.generated.resources.search_hosts_title
 import eg.bahr.core.localization.generated.resources.search_no_results
 import eg.bahr.core.localization.generated.resources.search_recent_clear
 import eg.bahr.core.localization.generated.resources.search_recent_title
@@ -104,12 +98,17 @@ import org.koin.compose.viewmodel.koinViewModel
  * no Back. As a tab it does not take the focus on the way in ([focusOnEntry] false; switching tabs
  * must not throw the keyboard up); it takes it on each [focusRequests] signal instead (Home's search
  * entry). [scrollToTop] (a re-tap of the selected tab) scrolls the results back to the top.
+ *
+ * MV-M1: up to three hosts whose name matches sit above the trips; a card opens the host's page ([onHostClick]),
+ * "See all hosts" the hosts directory with the same text ([onSeeAllHosts]).
  */
 @Composable
 internal fun SearchTripsScreen(
     onBack: (() -> Unit)?,
     onTripClick: (slug: String) -> Unit,
     modifier: Modifier = Modifier,
+    onHostClick: (HostCardDto) -> Unit = {},
+    onSeeAllHosts: (q: String) -> Unit = {},
     focusOnEntry: Boolean = true,
     focusRequests: Flow<Unit> = emptyFlow(),
     scrollToTop: Flow<Unit> = emptyFlow(),
@@ -195,6 +194,19 @@ internal fun SearchTripsScreen(
             // "0 trips" line over four 0-count chips would only say it twice (M4-M3 review S1). With a
             // chip active they stay, so the search can be widened.
             val nothingMatches = state.filter == null && status == PagedListStatus.Empty
+            // MV-M1: the hosts whose name matches, above the trips, with the whole list behind "See all hosts".
+            if (state.hosts.isNotEmpty()) {
+                item(key = KEY_HOSTS, contentType = KEY_HOSTS) {
+                    SearchHosts(
+                        hosts = state.hosts,
+                        onHostClick = { host ->
+                            viewModel.onResultOpened()
+                            onHostClick(host)
+                        },
+                        onSeeAll = { onSeeAllHosts(query) },
+                    )
+                }
+            }
             if (!nothingMatches) {
                 item(key = KEY_COUNT, contentType = KEY_COUNT) {
                     ListHeading(
@@ -249,10 +261,9 @@ internal fun SearchTripsScreen(
 }
 
 /**
- * Back (none on the tab root), then the field: a search icon, the placeholder, × once there is text. The field holds at
- * most [SearchLimits.MAX_QUERY_LENGTH] characters, the contract's limit, and no control characters; text is drawn in its own
- * direction, so Arabic typed into the English app reads right to left. Carries the status-bar inset
- * (edge-to-edge; each screen handles its own top inset).
+ * Back (none on the tab root), then the field (core:designsystem's [BahrSearchField] since MV-M1: a search icon, the
+ * placeholder, × once there is text), holding at most [SearchLimits.MAX_QUERY_LENGTH] characters, the contract's limit,
+ * and no control characters. Carries the status-bar inset (edge-to-edge; each screen handles its own top inset).
  */
 @Composable
 private fun SearchBar(
@@ -262,8 +273,6 @@ private fun SearchBar(
     onSearch: () -> Unit,
     onClear: () -> Unit,
 ) {
-    // Only whether there is text, so a keystroke recomposes the bar only when that flips (Compose audit L13).
-    val hasText by remember(field) { derivedStateOf { field.text.isNotEmpty() } }
     Row(
         modifier =
             Modifier
@@ -280,46 +289,56 @@ private fun SearchBar(
         horizontalArrangement = Arrangement.spacedBy(BahrSpacing.md),
     ) {
         onBack?.let { BahrBackButton(props = BahrBackButton.Props(onClick = it)) }
-        OutlinedTextField(
-            state = field,
+        BahrSearchField(
             modifier = Modifier.weight(1f).focusRequester(focus).testTag(SEARCH_FIELD_TAG),
-            placeholder = { Text(stringResource(Res.string.search_hint), maxLines = 1, overflow = TextOverflow.Ellipsis) },
-            leadingIcon = {
-                Icon(
-                    BahrIcons.Search.outlined(),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(BahrSize.iconLarge),
-                )
-            },
-            trailingIcon =
-                if (hasText) {
-                    {
-                        IconButton(onClick = onClear) {
-                            Icon(
-                                BahrIcons.Close.outlined(),
-                                contentDescription = stringResource(Res.string.search_clear),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(BahrSize.iconLarge),
-                            )
-                        }
-                    }
-                } else {
-                    null
-                },
-            inputTransformation = StripControlCharacters.then(InputTransformation.maxLength(SearchLimits.MAX_QUERY_LENGTH)),
-            lineLimits = TextFieldLineLimits.SingleLine,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            onKeyboardAction = { onSearch() },
-            shape = BahrTheme.shapes.full,
-            // White on the off-white page (M4-M12), where the handoff's `surfaceLowest` would vanish.
-            colors =
-                OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.surface,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+            props =
+                BahrSearchField.Props(
+                    state = field,
+                    placeholder = stringResource(Res.string.search_hint),
+                    clearLabel = stringResource(Res.string.search_clear),
+                    maxLength = SearchLimits.MAX_QUERY_LENGTH,
+                    onSearch = onSearch,
+                    onClear = onClear,
                 ),
         )
+    }
+}
+
+/**
+ * MV-M1: "Hosts" with "See all hosts" at the end of its line (primary, as Home's "See all": coral is for the
+ * screen's primary action only), then up to three host cards. A plain column: three at most, never paged.
+ */
+@Composable
+private fun SearchHosts(
+    hosts: List<HostCardDto>,
+    onHostClick: (HostCardDto) -> Unit,
+    onSeeAll: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(BahrSpacing.sm)) {
+        Row(
+            // The link's own touch padding stands in for most of the end gutter.
+            modifier = Modifier.fillMaxWidth().padding(start = BahrSpacing.gutter, end = BahrSpacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(Res.string.search_hosts_title),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f).semantics { heading() },
+            )
+            TextButton(onClick = onSeeAll, modifier = Modifier.heightIn(min = BahrSpacing.minTouch).testTag(SEE_ALL_HOSTS_TAG)) {
+                Text(
+                    text = stringResource(Res.string.search_hosts_see_all),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
+        Column(
+            modifier = Modifier.padding(horizontal = BahrSpacing.gutter),
+            verticalArrangement = Arrangement.spacedBy(BahrSpacing.md),
+        ) {
+            hosts.forEach { host -> HostDirectoryCard(host = host, onClick = { onHostClick(host) }) }
+        }
     }
 }
 
@@ -394,29 +413,18 @@ private fun LazyListScope.recentSearches(
     }
 }
 
-/**
- * Typed or pasted control characters never reach the field (the server refuses them); stripped
- * before the length cap, so a paste is measured without them.
- *
- * Each one is deleted where it is, last first so the earlier indices still hold, rather than the
- * whole text replaced: the buffer moves the cursor with each deletion, so a paste in the middle of
- * the text leaves the cursor after the pasted part, not at the end (M4-M3 review S2).
- */
-private val StripControlCharacters =
-    InputTransformation {
-        for (at in length - 1 downTo 0) {
-            if (charAt(at).isStrippedControl()) delete(at, at + 1)
-        }
-    }
-
 /** For tests: the search field. */
 internal const val SEARCH_FIELD_TAG = "search_field"
+
+/** For tests: "See all hosts" over the matching hosts (MV-M1). */
+internal const val SEE_ALL_HOSTS_TAG = "see_all_hosts"
 
 /** The gap between the list's items. */
 private val LIST_GAP = BahrSpacing.lg
 
 // Keys of the single items, each also its item's content type (one drawing each, M3-M11).
 private const val KEY_COUNT = "count"
+private const val KEY_HOSTS = "hosts"
 private const val KEY_CHIPS = "chips"
 private const val KEY_START = "start"
 private const val KEY_RECENT_TITLE = "recent-title"

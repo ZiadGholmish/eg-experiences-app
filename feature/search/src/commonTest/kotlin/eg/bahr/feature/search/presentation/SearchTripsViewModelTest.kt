@@ -8,6 +8,7 @@ import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.network.ApiErrorCodes
 import eg.bahr.core.testing.runViewModelTest
+import eg.bahr.feature.search.data.FakeHostListRepository
 import eg.bahr.feature.search.data.FakeRecentSearchesStore
 import eg.bahr.feature.search.data.FakeTripListRepository
 import eg.bahr.feature.search.data.LastSearch
@@ -48,7 +49,8 @@ class SearchTripsViewModelTest {
         repository: FakeTripListRepository = repository(),
         recents: FakeRecentSearchesStore = FakeRecentSearchesStore(),
         last: LastSearch = LastSearch(),
-    ) = SearchTripsViewModel(repository, recents, waitlistMemory(), last).also { runCurrent() }
+        hosts: FakeHostListRepository = FakeHostListRepository(),
+    ) = SearchTripsViewModel(repository, recents, waitlistMemory(), last, hosts).also { runCurrent() }
 
     /**
      * M3-M0b (user decision 2026-10-14): search is a page now, not a tab, and reopening it shows the last

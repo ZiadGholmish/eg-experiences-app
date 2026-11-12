@@ -532,4 +532,28 @@
     <string name="review_error_photo_type">في صورة مش نافعة. شيلها وجرّب تاني.</string>
     <string name="review_error_too_large">الصور كبيرة على الإرسال. شيل واحدة وجرّب تاني.</string>
     <string name="review_verified">رحلة موثّقة</string>
+    <!-- MV-M1: دليل المضيفين (تاب لوحده، "شوف الكل" بتاع المضيفين في الرئيسية، البحث). زرار الترتيب
+         بيقول "الترتيب: <الترتيب>"؛ شرايح النوع بتفلتر أفراد ولا شركات؛ شرايح المحافظات جاية من السيرفر. -->
+    <string name="tab_hosts">المضيفين</string>
+    <string name="hosts_title">المضيفين</string>
+    <string name="hosts_search_hint">دوّر على مضيف بالاسم</string>
+    <string name="hosts_sort">الترتيب: %1$s</string>
+    <string name="hosts_sort_top_rated">الأعلى تقييمًا</string>
+    <string name="hosts_sort_most_trips">الأكتر رحلات</string>
+    <string name="hosts_sort_newest">الأحدث</string>
+    <string name="hosts_kind_people">أفراد</string>
+    <string name="hosts_kind_companies">شركات</string>
+    <string name="hosts_clear_filters">امسح الكل</string>
+    <string name="hosts_empty_search">مفيش مضيفين بالبحث ده.</string>
+    <string name="hosts_empty">مفيش مضيفين لسه.</string>
+    <plurals name="hosts_count">
+        <item quantity="zero">مفيش مضيفين</item>
+        <item quantity="one">مضيف واحد</item>
+        <item quantity="two">مضيفين اتنين</item>
+        <item quantity="few">%1$d مضيفين</item>
+        <item quantity="many">%1$d مضيف</item>
+        <item quantity="other">%1$d مضيف</item>
+    </plurals>
+    <string name="search_hosts_title">المضيفين</string>
+    <string name="search_hosts_see_all">شوف كل المضيفين</string>
 </resources>

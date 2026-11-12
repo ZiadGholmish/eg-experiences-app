@@ -2,6 +2,8 @@ package eg.bahr.feature.host.data
 
 import eg.bahr.core.catalog.model.BadgeDto
 import eg.bahr.core.catalog.model.FacetDto
+import eg.bahr.core.catalog.model.HostListQuery
+import eg.bahr.core.catalog.model.HostPageDto
 import eg.bahr.core.catalog.model.NextDepartureDto
 import eg.bahr.core.catalog.model.TripCardDto
 import eg.bahr.core.catalog.model.TripPageDto
@@ -23,10 +25,16 @@ internal class FakeHostRepository(
     /** The narrowed list (category page, search, a host's trips); defaults to [listTrips], which ignores the query. */
     var listFiltered: (suspend (query: TripQuery) -> AppResult<TripPageDto>)? = null,
     var hostBySlug: suspend (slug: String) -> AppResult<HostProfileDto> = { unset() },
+    /** The hosts directory (MV-M1): one page of `GET /hosts` for a query and page. */
+    var listHosts: suspend (query: HostListQuery, page: Int) -> AppResult<HostPageDto> = { _, _ -> unset() },
+    /** The directory's kind-of-trip chips (MV-M1). */
+    var tripCategories: suspend () -> AppResult<List<FacetDto>> = { AppResult.Success(emptyList()) },
 ) : HostRepository {
     val requestedPages = mutableListOf<Int>()
     val requestedQueries = mutableListOf<TripQuery>()
     val hostReads = mutableListOf<String>()
+    val hostRequests = mutableListOf<HostListRequest>()
+    var categoryReads = 0
 
     override suspend fun listTrips(
         page: Int,
@@ -41,6 +49,20 @@ internal class FakeHostRepository(
         return listFiltered?.invoke(query) ?: listTrips.invoke(page)
     }
 
+    override suspend fun listHosts(
+        query: HostListQuery,
+        page: Int,
+        size: Int,
+    ): AppResult<HostPageDto> {
+        hostRequests += HostListRequest(query, page, size)
+        return listHosts.invoke(query, page)
+    }
+
+    override suspend fun tripCategories(): AppResult<List<FacetDto>> {
+        categoryReads++
+        return tripCategories.invoke()
+    }
+
     override suspend fun hostBySlug(slug: String): AppResult<HostProfileDto> {
         hostReads += slug
         return hostBySlug.invoke(slug)
@@ -50,6 +72,13 @@ internal class FakeHostRepository(
         fun unset(): AppResult.Failure = AppResult.Failure(AppError.Unknown("FakeHostRepository: call not stubbed"))
     }
 }
+
+/** One `GET /hosts` call as the fake saw it (MV-M1). */
+internal data class HostListRequest(
+    val query: HostListQuery,
+    val page: Int,
+    val size: Int,
+)
 
 /** One `GET /trips` call as the fake saw it. */
 internal data class TripQuery(

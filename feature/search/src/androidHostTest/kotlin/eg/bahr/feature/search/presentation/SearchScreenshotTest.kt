@@ -13,6 +13,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithTag
+import eg.bahr.core.catalog.model.GovernorateDto
+import eg.bahr.core.catalog.model.HostCardDto
+import eg.bahr.core.catalog.model.HostCardRatingDto
 import eg.bahr.core.catalog.model.NextDepartureDto
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.common.result.AppError
@@ -24,6 +28,7 @@ import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.designsystem.theme.BahrThemeName
 import eg.bahr.core.localization.ProvideAppLanguage
 import eg.bahr.core.testing.captureScreenshot
+import eg.bahr.feature.search.data.FakeHostListRepository
 import eg.bahr.feature.search.data.FakeRecentSearchesStore
 import eg.bahr.feature.search.data.FakeTripListRepository
 import eg.bahr.feature.search.data.LastSearch
@@ -78,7 +83,7 @@ class SearchScreenshotTest {
 
     private fun recents(language: AppLanguage) {
         val store = FakeRecentSearchesStore(listOf("فلوكة", "birds", "بلطيم", "kayak"))
-        val vm = SearchTripsViewModel(FakeTripListRepository(), store, waitlistMemory(), LastSearch())
+        val vm = SearchTripsViewModel(FakeTripListRepository(), store, waitlistMemory(), LastSearch(), FakeHostListRepository())
         snap("search_recents", language, vm)
     }
 
@@ -88,7 +93,13 @@ class SearchScreenshotTest {
         snap(
             "search_start",
             AppLanguage.ARABIC,
-            SearchTripsViewModel(FakeTripListRepository(), FakeRecentSearchesStore(), waitlistMemory(), LastSearch()),
+            SearchTripsViewModel(
+                FakeTripListRepository(),
+                FakeRecentSearchesStore(),
+                waitlistMemory(),
+                LastSearch(),
+                FakeHostListRepository(),
+            ),
         )
 
     @Test
@@ -96,7 +107,13 @@ class SearchScreenshotTest {
         snap(
             "search_start",
             AppLanguage.ENGLISH,
-            SearchTripsViewModel(FakeTripListRepository(), FakeRecentSearchesStore(), waitlistMemory(), LastSearch()),
+            SearchTripsViewModel(
+                FakeTripListRepository(),
+                FakeRecentSearchesStore(),
+                waitlistMemory(),
+                LastSearch(),
+                FakeHostListRepository(),
+            ),
         )
 
     /** A search waiting for its first page: the spinner under the field, the text kept. */
@@ -124,6 +141,7 @@ class SearchScreenshotTest {
                 FakeRecentSearchesStore(),
                 waitlistMemory(),
                 LastSearch(),
+                FakeHostListRepository(),
             )
         vm.searchRecent(text)
         snap(if (theme == BahrThemeName.Dark) "search_loading_dark" else "search_loading", language, vm, theme)
@@ -145,9 +163,62 @@ class SearchScreenshotTest {
         val counts = mapOf("all" to 2, "weekend" to 2, "under_400" to 1, "half_day" to 0)
         val chips = facets(arabic = arabic).map { it.copy(count = counts[it.key] ?: it.count) }
         val repository = FakeTripListRepository(listFiltered = { page(cards(arabic), facets = chips, totalItems = 2) })
-        val vm = SearchTripsViewModel(repository, FakeRecentSearchesStore(), waitlistMemory(), LastSearch())
+        val vm = SearchTripsViewModel(repository, FakeRecentSearchesStore(), waitlistMemory(), LastSearch(), FakeHostListRepository())
         vm.searchRecent(text)
         snap("search_results", language, vm)
+    }
+
+    /**
+     * MV-M1: a host's name typed: up to three matching hosts above the trips, under "Hosts" with "See all hosts" (the
+     * host's trips match the name too, as `listTrips` matches host names).
+     */
+    @Test
+    fun withHostsArabic() = withHosts(AppLanguage.ARABIC, "هدى")
+
+    @Test
+    fun withHostsEnglish() = withHosts(AppLanguage.ENGLISH, "Hoda")
+
+    @Test
+    fun withHostsDarkArabic() = withHosts(AppLanguage.ARABIC, "هدى", BahrThemeName.Dark)
+
+    @Test
+    fun withHostsDarkEnglish() = withHosts(AppLanguage.ENGLISH, "Hoda", BahrThemeName.Dark)
+
+    private fun withHosts(
+        language: AppLanguage,
+        text: String,
+        theme: BahrThemeName = BahrThemeName.LakeBurullus,
+    ) {
+        val arabic = language == AppLanguage.ARABIC
+        val repository =
+            FakeTripListRepository(listFiltered = { page(cards(arabic).take(1), facets = facets(arabic = arabic), totalItems = 1) })
+        val hosts =
+            FakeHostListRepository(
+                listHosts = {
+                    FakeHostListRepository.hosts(
+                        HostCardDto(
+                            slug = "hoda-eissa",
+                            kind = "person",
+                            name = if (arabic) "هدى عيسى" else "Hoda Eissa",
+                            verified = true,
+                            rating = HostCardRatingDto(4.8, 9),
+                            publishedTrips = 2,
+                            governorates = listOf(GovernorateDto("kafr-el-sheikh", if (arabic) "كفر الشيخ" else "Kafr El Sheikh")),
+                        ),
+                        HostCardDto(
+                            slug = "hoda-boats",
+                            kind = "company",
+                            name = if (arabic) "مراكب هدى" else "Hoda Boats",
+                            publishedTrips = 1,
+                            governorates = listOf(GovernorateDto("red-sea", if (arabic) "البحر الأحمر" else "Red Sea")),
+                        ),
+                    )
+                },
+            )
+        val vm = SearchTripsViewModel(repository, FakeRecentSearchesStore(), waitlistMemory(), LastSearch(), hosts)
+        vm.searchRecent(text)
+        snap(if (theme == BahrThemeName.Dark) "search_with_hosts_dark" else "search_with_hosts", language, vm, theme)
+        compose.onNodeWithTag(SEE_ALL_HOSTS_TAG).assertExists()
     }
 
     /**
@@ -174,7 +245,7 @@ class SearchScreenshotTest {
         val arabic = language == AppLanguage.ARABIC
         val zero = facets(arabic = arabic).map { it.copy(count = 0) }
         val repository = FakeTripListRepository(listFiltered = { page(emptyList(), facets = zero, totalItems = 0, totalPages = 0) })
-        val vm = SearchTripsViewModel(repository, FakeRecentSearchesStore(), waitlistMemory(), LastSearch())
+        val vm = SearchTripsViewModel(repository, FakeRecentSearchesStore(), waitlistMemory(), LastSearch(), FakeHostListRepository())
         vm.searchRecent(text)
         snap(if (theme == BahrThemeName.Dark) "search_no_results_dark" else "search_no_results", language, vm, theme, lottie = true)
     }
@@ -201,7 +272,7 @@ class SearchScreenshotTest {
                     page(cards(arabic), facets = facets(arabic = arabic), totalItems = 2)
                 },
             )
-        val vm = SearchTripsViewModel(repository, FakeRecentSearchesStore(), waitlistMemory(), LastSearch())
+        val vm = SearchTripsViewModel(repository, FakeRecentSearchesStore(), waitlistMemory(), LastSearch(), FakeHostListRepository())
         vm.searchRecent(text)
         shoot("search_refreshing", language, act = { vm.selectFilter("weekend") }) {
             SearchTripsScreen(onBack = {}, onTripClick = {}, viewModel = vm)
@@ -220,7 +291,7 @@ class SearchScreenshotTest {
         text: String,
     ) {
         val repository = FakeTripListRepository(listFiltered = { AppResult.Failure(AppError.Network) })
-        val vm = SearchTripsViewModel(repository, FakeRecentSearchesStore(), waitlistMemory(), LastSearch())
+        val vm = SearchTripsViewModel(repository, FakeRecentSearchesStore(), waitlistMemory(), LastSearch(), FakeHostListRepository())
         vm.searchRecent(text)
         snap("search_error", language, vm)
     }

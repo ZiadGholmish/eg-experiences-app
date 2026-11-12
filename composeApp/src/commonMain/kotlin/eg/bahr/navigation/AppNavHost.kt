@@ -47,8 +47,11 @@ import eg.bahr.feature.home.navigation.HomeAction
 import eg.bahr.feature.home.navigation.TripListRoute
 import eg.bahr.feature.home.navigation.navigateToTripList
 import eg.bahr.feature.home.navigation.tripListScreen
+import eg.bahr.feature.host.navigation.HostsTabRoute
 import eg.bahr.feature.host.navigation.hostProfileScreen
+import eg.bahr.feature.host.navigation.hostsScreen
 import eg.bahr.feature.host.navigation.navigateToHostProfile
+import eg.bahr.feature.host.navigation.navigateToHosts
 import eg.bahr.feature.map.navigation.TripMapRoute
 import eg.bahr.feature.map.navigation.tripMapScreen
 import eg.bahr.feature.mytrips.navigation.MyTripsRoute
@@ -91,8 +94,8 @@ import org.koin.compose.koinInject
  *
  * Every tab has the same graph and its own NavController, so each keeps its own back stack: a trip
  * opened from the map stays in the Map tab while Home keeps its scroll. Only the start differs: Home
- * (after splash, once per process), the map, My trips, Profile (M3-M0b; Alerts left the bar in
- * M3-M6a). Android composes the selected tab's NavHost under its Compose bar ([AppTabs]); iOS hosts
+ * (after splash, once per process), the map, the hosts directory (MV-M1), My trips, Profile (M3-M0b; Alerts left
+ * the bar in M3-M6a). Android composes the selected tab's NavHost under its Compose bar ([AppTabs]); iOS hosts
  * one per tab, each in its own Compose root under SwiftUI's `TabView`, fed by `IosTabs`. Search is no
  * tab since M3-M0b: it is pushed in the tab that opened it (Home's field, the Map header), bar hidden, and reopens on the last search.
  *
@@ -197,6 +200,8 @@ fun AppNavHost(
                         is HomeAction.OpenSection -> navController.navigateToSectionTrips(action.sectionId, action.title, action.sharedKey)
                         // A host card (MH-M1): the host's public page, its header drawn from the card at once.
                         is HomeAction.OpenHost -> navController.navigateToHostProfile(action.slug, action.name, action.avatar)
+                        // A hosts row's "See all" (MV-M1): the hosts directory in Home's stack, top rated first.
+                        HomeAction.OpenHosts -> navController.navigateToHosts()
                     }
                 },
                 // Search opens full screen in this tab (M3-M0b); the map is a tab (M4-M8), which the pill switches to.
@@ -222,6 +227,17 @@ fun AppNavHost(
             searchTripsScreen(
                 onBack = { navController.popBackStack() },
                 onTripClick = navController::navigateToTripDetail,
+                // MV-M1: a matching host opens their page; "See all hosts" the directory with the same text.
+                onHostClick = { host -> navController.navigateToHostProfile(host.slug, host.name, host.avatar) },
+                onSeeAllHosts = { q -> navController.navigateToHosts(q = q) },
+            )
+
+            // The hosts directory (MV-M1): the Hosts tab's root, and pushed from Home's hosts "See all" and
+            // search's "See all hosts". A host opens their page on top, so Back returns to the list with its filters.
+            hostsScreen(
+                onBack = { navController.popBackStack() },
+                onHostClick = { slug, name, avatar -> navController.navigateToHostProfile(slug, name, avatar) },
+                scrollToTop = scrollRequests,
             )
 
             // The Profile tab's root (M3-M0b; Settings before): feature:auth's sign-in buttons when signed
@@ -339,6 +355,7 @@ internal val AppTab.rootRoute: Any
         when (this) {
             AppTab.Home -> TripListRoute
             AppTab.Map -> TripMapRoute
+            AppTab.Hosts -> HostsTabRoute
             AppTab.MyTrips -> MyTripsRoute
             AppTab.Profile -> ProfileRoute
         }
@@ -348,6 +365,7 @@ internal fun AppTab.isRoot(destination: NavDestination): Boolean =
     when (this) {
         AppTab.Home -> destination.hasRoute<TripListRoute>()
         AppTab.Map -> destination.hasRoute<TripMapRoute>()
+        AppTab.Hosts -> destination.hasRoute<HostsTabRoute>()
         AppTab.MyTrips -> destination.hasRoute<MyTripsRoute>()
         AppTab.Profile -> destination.hasRoute<ProfileRoute>()
     }

@@ -1,4 +1,5 @@
 // A host's public page (M4-M10), opened from the trip page's host card; split from feature:trips (M3-M16).
+// The hosts directory beside it (MV-M1).
 plugins {
     id("bahr.kmp.feature")
     id("bahr.kmp.screenshots")
@@ -7,7 +8,9 @@ plugins {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            // The host's trips, paged (M4-M1b).
+            // Logs a stale directory filter it drops, or kinds of trip that did not load (MV-M1).
+            implementation(libs.kermit)
+            // The host's trips, paged (M4-M1b), and the hosts directory (MV-M1).
             implementation(libs.androidx.paging.common)
             implementation(libs.androidx.paging.compose)
             // `GET /trips?host=`, the trip card, the review and rating pieces the trip page and reviews share.

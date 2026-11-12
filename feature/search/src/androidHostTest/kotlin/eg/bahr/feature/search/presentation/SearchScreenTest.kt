@@ -20,10 +20,12 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextInputSelection
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextRange
+import eg.bahr.core.catalog.model.HostCardDto
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.designsystem.theme.BahrLocale
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.localization.ProvideAppLanguage
+import eg.bahr.feature.search.data.FakeHostListRepository
 import eg.bahr.feature.search.data.FakeRecentSearchesStore
 import eg.bahr.feature.search.data.FakeTripListRepository
 import eg.bahr.feature.search.data.LastSearch
@@ -67,7 +69,14 @@ class SearchScreenTest {
     @Test
     fun `a recent search fills the field and shows its results - x goes back to the recents`() {
         val repository = FakeTripListRepository(listFiltered = { q -> page(listOf(trip(1, title = "A trip for ${q.q}"))) })
-        val vm = SearchTripsViewModel(repository, FakeRecentSearchesStore(listOf("birds", "kayak")), waitlistMemory(), LastSearch())
+        val vm =
+            SearchTripsViewModel(
+                repository,
+                FakeRecentSearchesStore(listOf("birds", "kayak")),
+                waitlistMemory(),
+                LastSearch(),
+                FakeHostListRepository(),
+            )
         show(vm)
         compose.onNodeWithTag(SEARCH_FIELD_TAG).assertIsFocused()
 
@@ -89,7 +98,14 @@ class SearchScreenTest {
 
     @Test
     fun `typed or pasted control characters never reach the field`() {
-        val vm = SearchTripsViewModel(FakeTripListRepository(), FakeRecentSearchesStore(), waitlistMemory(), LastSearch())
+        val vm =
+            SearchTripsViewModel(
+                FakeTripListRepository(),
+                FakeRecentSearchesStore(),
+                waitlistMemory(),
+                LastSearch(),
+                FakeHostListRepository(),
+            )
         show(vm)
 
         compose.onNodeWithTag(SEARCH_FIELD_TAG).performTextInput("bi\u0000rd\u001Bs")
@@ -101,7 +117,14 @@ class SearchScreenTest {
 
     @Test
     fun `a control character pasted mid-text is dropped where it is and the cursor stays after the paste`() {
-        val vm = SearchTripsViewModel(FakeTripListRepository(), FakeRecentSearchesStore(), waitlistMemory(), LastSearch())
+        val vm =
+            SearchTripsViewModel(
+                FakeTripListRepository(),
+                FakeRecentSearchesStore(),
+                waitlistMemory(),
+                LastSearch(),
+                FakeHostListRepository(),
+            )
         show(vm)
         val field = compose.onNodeWithTag(SEARCH_FIELD_TAG)
         field.performTextInput("bird")
@@ -117,7 +140,14 @@ class SearchScreenTest {
 
     @Test
     fun `the field refuses a paste longer than the cap`() {
-        val vm = SearchTripsViewModel(FakeTripListRepository(), FakeRecentSearchesStore(), waitlistMemory(), LastSearch())
+        val vm =
+            SearchTripsViewModel(
+                FakeTripListRepository(),
+                FakeRecentSearchesStore(),
+                waitlistMemory(),
+                LastSearch(),
+                FakeHostListRepository(),
+            )
         show(vm)
 
         compose.onNodeWithTag(SEARCH_FIELD_TAG).performTextInput("a".repeat(SearchLimits.MAX_QUERY_LENGTH + 1))
@@ -131,7 +161,14 @@ class SearchScreenTest {
 
     @Test
     fun `coming back to search does not take the focus again`() {
-        val vm = SearchTripsViewModel(FakeTripListRepository(), FakeRecentSearchesStore(), waitlistMemory(), LastSearch())
+        val vm =
+            SearchTripsViewModel(
+                FakeTripListRepository(),
+                FakeRecentSearchesStore(),
+                waitlistMemory(),
+                LastSearch(),
+                FakeHostListRepository(),
+            )
         var shown by mutableStateOf(true)
         compose.setContent {
             ProvideAppLanguage(AppLanguage.ENGLISH) {
@@ -158,7 +195,14 @@ class SearchScreenTest {
 
     @Test
     fun `as the Search tab it waits for Home's entry to take the focus - with no Back`() {
-        val vm = SearchTripsViewModel(FakeTripListRepository(), FakeRecentSearchesStore(), waitlistMemory(), LastSearch())
+        val vm =
+            SearchTripsViewModel(
+                FakeTripListRepository(),
+                FakeRecentSearchesStore(),
+                waitlistMemory(),
+                LastSearch(),
+                FakeHostListRepository(),
+            )
         val requests = Channel<Unit>(Channel.CONFLATED)
         compose.setContent {
             ProvideAppLanguage(AppLanguage.ENGLISH) {
@@ -181,6 +225,46 @@ class SearchScreenTest {
         compose.waitForIdle()
 
         compose.onNodeWithTag(SEARCH_FIELD_TAG).assertIsFocused()
+    }
+
+    /** MV-M1: a matching host opens their page, and "See all hosts" the directory with the text searched. */
+    @Test
+    fun `a matching host opens - and See all hosts carries the search text`() {
+        val hosts =
+            FakeHostListRepository(
+                listHosts = { FakeHostListRepository.hosts(HostCardDto(slug = "hoda-eissa", name = "Hoda Eissa", publishedTrips = 1)) },
+            )
+        val vm =
+            SearchTripsViewModel(
+                FakeTripListRepository(listFiltered = { page(listOf(trip(1))) }),
+                FakeRecentSearchesStore(),
+                waitlistMemory(),
+                LastSearch(),
+                hosts,
+            )
+        val opened = mutableListOf<String>()
+        val seeAll = mutableListOf<String>()
+        compose.setContent {
+            ProvideAppLanguage(AppLanguage.ENGLISH) {
+                BahrTheme(locale = BahrLocale.English) {
+                    SearchTripsScreen(
+                        onBack = {},
+                        onTripClick = {},
+                        onHostClick = { opened += it.slug },
+                        onSeeAllHosts = { seeAll += it },
+                        viewModel = vm,
+                    )
+                }
+            }
+        }
+        compose.runOnIdle { vm.searchRecent("hoda") }
+        compose.waitForIdle()
+
+        compose.onNodeWithText("Hoda Eissa").performClick()
+        compose.onNodeWithTag(SEE_ALL_HOSTS_TAG).performClick()
+
+        assertEquals(listOf("hoda-eissa"), opened)
+        assertEquals(listOf("hoda"), seeAll)
     }
 
     private fun show(vm: SearchTripsViewModel) {

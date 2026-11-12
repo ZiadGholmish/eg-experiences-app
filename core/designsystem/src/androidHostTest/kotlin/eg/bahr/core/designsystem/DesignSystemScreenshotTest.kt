@@ -58,8 +58,8 @@ import eg.bahr.core.localization.generated.resources.auth_delete_title
 import eg.bahr.core.localization.generated.resources.booking_confirm
 import eg.bahr.core.localization.generated.resources.booking_hold_label
 import eg.bahr.core.localization.generated.resources.error_no_seats_available
-import eg.bahr.core.localization.generated.resources.tab_alerts
 import eg.bahr.core.localization.generated.resources.tab_home
+import eg.bahr.core.localization.generated.resources.tab_hosts
 import eg.bahr.core.localization.generated.resources.tab_map
 import eg.bahr.core.localization.generated.resources.tab_my_trips
 import eg.bahr.core.localization.generated.resources.tab_profile
@@ -204,8 +204,9 @@ class DesignSystemScreenshotTest {
 
     /**
      * The bottom bar (M3-M0b, handoff §1, option 1b; both platforms): each tab selected in turn, filled
-     * icon on the `navIndicator` pill and a heavier label, the others outlined and muted; Alerts with a
-     * count (3 on the first bar, 9+ when selected). In Arabic the tabs run from the right (Home first at
+     * icon on the `navIndicator` pill and a heavier label, the others outlined and muted; one tab with a
+     * count (3 on the first bar, 9+ when selected). Since MV-M1 the app's five tabs (Home · Map · Hosts · My trips ·
+     * Profile) at 360dp, the narrowest phone the app is laid out for, so a truncated Arabic label shows here. In Arabic the tabs run from the right (Home first at
      * the right edge) without the list being reversed, and the badge sits on the icon's top-end corner.
      */
     @Test
@@ -220,15 +221,15 @@ class DesignSystemScreenshotTest {
             listOf(
                 BahrIcons.Home to stringResource(L10n.string.tab_home),
                 BahrIcons.Map to stringResource(L10n.string.tab_map),
+                BahrIcons.Groups to stringResource(L10n.string.tab_hosts),
                 BahrIcons.ConfirmationNumber to stringResource(L10n.string.tab_my_trips),
-                BahrIcons.Notifications to stringResource(L10n.string.tab_alerts),
                 BahrIcons.Person to stringResource(L10n.string.tab_profile),
             )
         tabs.indices.forEach { selected ->
             val badge =
                 when (selected) {
                     0 -> BADGE_FEW
-                    ALERTS -> BADGE_MANY
+                    BADGED -> BADGE_MANY
                     else -> null
                 }
             BahrNavigationBar(
@@ -236,7 +237,7 @@ class DesignSystemScreenshotTest {
                     BahrNavigationBar.Props(
                         items =
                             tabs.mapIndexed { index, (icon, label) ->
-                                BahrNavigationBar.Item(label, icon, index == selected, badgeCount = badge.takeIf { index == ALERTS })
+                                BahrNavigationBar.Item(label, icon, index == selected, badgeCount = badge.takeIf { index == BADGED })
                             },
                     ),
             )
@@ -359,7 +360,9 @@ class DesignSystemScreenshotTest {
 
     private companion object {
         const val LARGE_FONT_SCALE = 2f
-        const val ALERTS = 3
+
+        /** The tab the bars draw a count on (My trips): no tab carries one today, the bar keeps the support. */
+        const val BADGED = 3
         const val BADGE_FEW = 3
         const val BADGE_MANY = 12
         const val STEPPER_MAX = 6

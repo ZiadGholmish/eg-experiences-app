@@ -520,4 +520,25 @@
     <string name="review_error_too_large">The photos are too big to send. Remove one and try again.</string>
     <!-- A review card: the reviewer booked and took the trip through the app (M3-B7). -->
     <string name="review_verified">Verified trip</string>
+    <!-- MV-M1: the hosts directory (its own tab, Home's hosts "See all", search). The sort menu's
+         button reads "Sort: <order>"; the kind chips filter people or companies; the region chips come
+         from the server. hosts_count is the list's total. -->
+    <string name="tab_hosts">Hosts</string>
+    <string name="hosts_title">Hosts</string>
+    <string name="hosts_search_hint">Search hosts by name</string>
+    <string name="hosts_sort">Sort: %1$s</string>
+    <string name="hosts_sort_top_rated">Top rated</string>
+    <string name="hosts_sort_most_trips">Most trips</string>
+    <string name="hosts_sort_newest">Newest</string>
+    <string name="hosts_kind_people">Individuals</string>
+    <string name="hosts_kind_companies">Companies</string>
+    <string name="hosts_clear_filters">Clear all</string>
+    <string name="hosts_empty_search">No hosts match this search.</string>
+    <string name="hosts_empty">No hosts yet.</string>
+    <plurals name="hosts_count">
+        <item quantity="one">%1$d host</item>
+        <item quantity="other">%1$d hosts</item>
+    </plurals>
+    <string name="search_hosts_title">Hosts</string>
+    <string name="search_hosts_see_all">See all hosts</string>
 </resources>

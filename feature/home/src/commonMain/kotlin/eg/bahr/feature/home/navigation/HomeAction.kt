@@ -2,7 +2,7 @@ package eg.bahr.feature.home.navigation
 
 /**
  * What a tap on Home asks the app to do: a banner (openapi `HomeAction`), a category chip, a trip
- * row's "See all" (`HomeSeeAll`, M4-M1b), or a host, departure or review card (MH-M1). Public because
+ * row's "See all" (`HomeSeeAll`, M4-M1b), a host, departure or review card (MH-M1), or a hosts row's "See all" (MV-M1). Public because
  * the app's NavHost decides where each goes; a `none` banner (or one whose value is unusable) is simply not tappable and never produces one of these.
  * Neither, for now, is a `url` banner: the app has no in-app browser to open it in yet.
  */
@@ -25,6 +25,12 @@ sealed interface HomeAction {
         val name: String? = null,
         val avatar: String? = null,
     ) : HomeAction
+
+    /**
+     * A `hosts` section's "See all" (MV-M1): the hosts directory, top rated first. Client-side: the contract gives
+     * hosts sections no `seeAll` (MH-B2), and the directory is the whole list behind any of them.
+     */
+    data object OpenHosts : HomeAction
 
     /**
      * `category`: the category page for [key] (the `category` filter of `GET /trips`). [title] is the

@@ -44,6 +44,8 @@ ICONS=(
   bolt do_not_disturb_on
   # M3-M6: the notifications page (row types, Mark all as read, the error state, the row menu).
   check_circle cloud_off done_all mark_email_read mark_email_unread visibility_off
+  # MV-M1: the hosts directory's sort menu.
+  sort
 )
 
 TMP="$(mktemp -d)"

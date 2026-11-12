@@ -1,5 +1,7 @@
 package eg.bahr.core.catalog.data
 
+import eg.bahr.core.catalog.model.FacetDto
+import eg.bahr.core.catalog.model.FacetType
 import eg.bahr.core.catalog.model.TripCardDto
 import eg.bahr.core.catalog.model.TripPageDto
 import eg.bahr.core.common.result.AppResult
@@ -21,7 +23,22 @@ interface TripListRepository {
         q: String? = null,
         host: String? = null,
     ): AppResult<TripPageDto>
+
+    /**
+     * The kinds of trip (MV-M1, the hosts directory's category chips): `listTrips`' `category` facets, which the
+     * contract serves as Home's categories (same keys, labels, icons and tones), in Home's order. Their counts
+     * are trips, not hosts. A default over [listTrips] so the features' fakes need nothing new; the real
+     * repository asks for one card only.
+     */
+    suspend fun tripCategories(): AppResult<List<FacetDto>> = listTrips().categoryFacets()
 }
+
+/** The `category` chips of a `listTrips` answer, those with a key. */
+internal fun AppResult<TripPageDto>.categoryFacets(): AppResult<List<FacetDto>> =
+    when (this) {
+        is AppResult.Success -> AppResult.Success(data.facets.filter { it.type == FacetType.CATEGORY && !it.key.isNullOrBlank() })
+        is AppResult.Failure -> this
+    }
 
 /** Reads [TripListApiService] and remembers every card it loads in [cards]. */
 internal class DefaultTripListRepository(
@@ -38,6 +55,13 @@ internal class DefaultTripListRepository(
         api.listTrips(page = page, category = category, filter = filter, q = q, host = host).also { result ->
             if (result is AppResult.Success) cards.remember(result.data.items)
         }
+
+    // The facets come with any page; one card is the least the endpoint serves (size 1..50).
+    override suspend fun tripCategories(): AppResult<List<FacetDto>> = api.listTrips(size = CATEGORIES_PAGE_SIZE).categoryFacets()
+
+    private companion object {
+        const val CATEGORIES_PAGE_SIZE = 1
+    }
 }
 
 /**

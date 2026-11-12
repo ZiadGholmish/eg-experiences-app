@@ -96,6 +96,17 @@ class TripFacetsApiServiceTest {
             assertEquals(3L, page.totalItems)
         }
 
+    /** MV-M1: the hosts directory's kind-of-trip chips are these facets, read with one card (the least the endpoint serves). */
+    @Test
+    fun `the kinds of trip are the category facets - asked for with one card`() =
+        runTest {
+            val categories = DefaultTripListRepository(service(FILTERED), TripCardCache()).tripCategories()
+
+            assertEquals("1", requests.single().url.parameters["size"])
+            val chips = assertIs<AppResult.Success<List<FacetDto>>>(categories).data
+            assertEquals(listOf("on_the_boat"), chips.map { it.key })
+        }
+
     @Test
     fun `a refused category key is VALIDATION_FAILED`() =
         runTest {

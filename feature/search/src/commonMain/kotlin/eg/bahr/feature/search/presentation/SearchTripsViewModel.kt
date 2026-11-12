@@ -8,6 +8,9 @@ import androidx.paging.Pager
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import co.touchlab.kermit.Logger
+import eg.bahr.core.catalog.data.FIRST_PAGE
+import eg.bahr.core.catalog.data.HostListRepository
+import eg.bahr.core.catalog.data.SEARCH_HOSTS_SIZE
 import eg.bahr.core.catalog.data.TripListPagingSource
 import eg.bahr.core.catalog.data.TripListRepository
 import eg.bahr.core.catalog.data.TripPagingConfig
@@ -15,6 +18,8 @@ import eg.bahr.core.catalog.data.WaitlistMemory
 import eg.bahr.core.catalog.model.FILTER_ALL
 import eg.bahr.core.catalog.model.FacetDto
 import eg.bahr.core.catalog.model.FacetType
+import eg.bahr.core.catalog.model.HostCardDto
+import eg.bahr.core.catalog.model.HostListQuery
 import eg.bahr.core.catalog.model.TripCardDto
 import eg.bahr.core.catalog.model.TripPageDto
 import eg.bahr.core.catalog.presentation.Throttle
@@ -33,6 +38,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -59,6 +65,9 @@ internal const val MIN_QUERY_LENGTH = 2
  * [filter] is the active filter chip's key, null for "all". [facets] and [totalItems] come from the
  * current search's first page; the chips stay from the previous search until the new one answers,
  * so they do not blink out while typing.
+ *
+ * MV-M1: [hosts] are the first few hosts whose name matches [query] (`GET /hosts?q=&size=3`), shown above the trips
+ * with "See all hosts"; empty with no search, none matching, or when that read failed (the trips do not depend on it).
  */
 internal data class SearchTripsUiState(
     val text: String = "",
@@ -68,6 +77,7 @@ internal data class SearchTripsUiState(
     val totalItems: Long? = null,
     val recents: List<String> = emptyList(),
     val waitlistTags: WaitlistTags = WaitlistTags.None,
+    val hosts: List<HostCardDto> = emptyList(),
 ) {
     /** The filter chips, in the served order. The category chips are not drawn on the search page. */
     val filterChips: List<FacetDto>
@@ -113,6 +123,7 @@ internal class SearchTripsViewModel(
     private val recentSearches: RecentSearchesStore,
     waitlists: WaitlistMemory,
     private val last: LastSearch,
+    private val hostLists: HostListRepository,
 ) : ViewModel() {
     // Reopened (M3-M0b, user decision 2026-10-14): the last search comes back, searched at once.
     private val _uiState =
@@ -163,6 +174,40 @@ internal class SearchTripsViewModel(
                 .collect { recents -> _uiState.update { it.copy(recents = recents) } }
         }
         collectWaitlistTags(waitlists) { tags -> _uiState.update { it.copy(waitlistTags = tags) } }
+        viewModelScope.launch {
+            // The same search's hosts, beside its trips (MV-B1: one contract, no combined endpoint). A new search
+            // cancels the read in flight; Retry reads them again with the trips. The filter chips are trips' only.
+            combine(_uiState.map { it.query }.distinctUntilChanged(), attempts) { query, _ -> query }
+                .collectLatest(::loadHosts)
+        }
+    }
+
+    /**
+     * The first [SEARCH_HOSTS_SIZE] hosts matching [query], best rated first. The ones shown stay until the new
+     * answer, so the block does not blink while typing; a failure only hides the block (and is logged).
+     */
+    private suspend fun loadHosts(query: String?) {
+        if (query == null) {
+            _uiState.update { it.copy(hosts = emptyList()) }
+            return
+        }
+        val result = hostLists.listHosts(HostListQuery(q = query), page = FIRST_PAGE, size = SEARCH_HOSTS_SIZE)
+        _uiState.update { state ->
+            when {
+                state.query != query -> state
+                result is AppResult.Success ->
+                    state.copy(
+                        hosts =
+                            result.data.items
+                                .distinctBy { it.slug }
+                                .take(SEARCH_HOSTS_SIZE),
+                    )
+                else -> {
+                    log.w { "Hosts for the search not loaded: $result" }
+                    state.copy(hosts = emptyList())
+                }
+            }
+        }
     }
 
     /** The field changed. Longer than the contract allows is refused, never cut (a cut can split a character). */

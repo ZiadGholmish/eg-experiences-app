@@ -54,12 +54,15 @@ class AppTabsTest {
 
     private val tabs = AppTabsState(splashDone = true)
 
-    /** M3-M6a (user, 2026-10-23): Alerts left the bar for a bell on Home; four tabs, in reading order. */
+    /**
+     * M3-M6a (user, 2026-10-23): Alerts left the bar for a bell on Home. MV-M1 (user, 2026-11-12): Hosts joined it;
+     * five tabs, in reading order, all shown at 360dp.
+     */
     @Test
-    fun `the bar is Home - Map - My trips - Profile`() {
+    fun `the bar is Home - Map - Hosts - My trips - Profile`() {
         setContent()
 
-        assertEquals(listOf(AppTab.Home, AppTab.Map, AppTab.MyTrips, AppTab.Profile), AppTab.entries)
+        assertEquals(listOf(AppTab.Home, AppTab.Map, AppTab.Hosts, AppTab.MyTrips, AppTab.Profile), AppTab.entries)
         AppTab.entries.forEach { compose.onNodeWithTag(it.testTag).assertIsDisplayed() }
         compose.onNodeWithTag("tab_alerts").assertDoesNotExist()
     }
