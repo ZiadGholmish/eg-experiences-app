@@ -49,6 +49,15 @@ class BahrLottieFramesTest {
         assertFalse(asksForFrames(), "at rest, no more frames")
     }
 
+    /** MV-M5: the confirmation's celebration rests too (its file is cut at the comp's own end). */
+    @Test
+    fun bookingConfirmedStopsAskingForFramesAtRest() {
+        show(BahrLottie.Playback.Once, animation = BahrLottie.Animation.BookingConfirmed)
+        assertTrue(asksForFrames(), "it plays")
+        compose.mainClock.advanceTimeBy(LONGER_THAN_ANY_ANIMATION_MS)
+        assertFalse(asksForFrames(), "at rest, no more frames")
+    }
+
     /** M3-M8b: the done moments' check, the longest file, rests too. */
     @Test
     fun successCheckStopsAskingForFramesAtRest() {

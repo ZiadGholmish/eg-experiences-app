@@ -12,7 +12,7 @@ import eg.bahr.feature.booking.data.BookingFixtures
 import eg.bahr.feature.booking.data.FakeActiveHoldStore
 import eg.bahr.feature.booking.data.FakeBookingRepository
 import eg.bahr.feature.booking.data.RecordingHoldReminderSchedule
-import eg.bahr.feature.booking.model.HeldBookingDto
+import eg.bahr.feature.booking.model.BookingDto
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -62,7 +62,7 @@ class ContinueBookingViewModelTest {
      * The server's answer at the current virtual time, [sinceHold] after the hold was placed: held
      * until its deadline, then EXPIRED (with no deadline, as the contract has it).
      */
-    private fun TestScope.serverAnswer(sinceHold: Duration = Duration.ZERO): AppResult<HeldBookingDto> {
+    private fun TestScope.serverAnswer(sinceHold: Duration = Duration.ZERO): AppResult<BookingDto> {
         val serverNow = placedAt + sinceHold + elapsed()
         val expires = placedAt + 15.minutes
         return AppResult.Success(

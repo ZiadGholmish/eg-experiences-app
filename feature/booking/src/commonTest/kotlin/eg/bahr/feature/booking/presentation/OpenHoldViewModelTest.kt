@@ -88,7 +88,7 @@ class OpenHoldViewModelTest {
     @Test
     fun `no answer keeps the hold and offers to try again`() =
         runViewModelTest {
-            var answer: AppResult<eg.bahr.feature.booking.model.HeldBookingDto> = AppResult.Failure(AppError.Network)
+            var answer: AppResult<eg.bahr.feature.booking.model.BookingDto> = AppResult.Failure(AppError.Network)
             val store = FakeActiveHoldStore(stored)
             val vm = vm(FakeBookingRepository(heldBooking = { _, _ -> answer }), store)
             advanceUntilIdle()

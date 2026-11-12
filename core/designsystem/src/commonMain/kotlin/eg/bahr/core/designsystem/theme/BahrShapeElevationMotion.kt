@@ -25,6 +25,8 @@ data class BahrShapes(
     val card: RoundedCornerShape = RoundedCornerShape(22.dp),
     val hero: RoundedCornerShape = RoundedCornerShape(24.dp),
     val sheet: RoundedCornerShape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
+    /** A header that runs to the top edge (HANDOFF §6, the booking confirmation's: 30px bottom radius), the sheet's mirror. */
+    val header: RoundedCornerShape = RoundedCornerShape(bottomStart = 30.dp, bottomEnd = 30.dp),
     /** 100px in tokens.json; Compose clamps a radius to half the side, so this is always a pill. */
     val full: RoundedCornerShape = RoundedCornerShape(100.dp),
 )
@@ -310,7 +312,7 @@ object BahrSize {
     val lottieHero = 112.dp
 
     /**
-     * A done moment's animation box (M3-M8b, BahrLottie's SuccessCheck: booking confirmed, seats held,
+     * A done moment's animation box (M3-M8b, BahrLottie's SuccessCheck: joined the waiting list, review sent,
      * profile saved). Its disc and ring fill about 70% of the canvas, so the disc reads near [stateDisc].
      */
     val lottieMoment = 96.dp
@@ -320,6 +322,13 @@ object BahrSize {
      * the size of the [avatarSmall] disc it replaced, with room for the halo.
      */
     val lottieInline = 44.dp
+
+    /**
+     * The booking-confirmed celebration's box (MV-M5, BahrLottie's BookingConfirmed), its width: the canvas is 5:4 and
+     * its ring about half the height, so the disc draws a little under [stateDisc] with room round it for the confetti,
+     * kept this small so the whole ticket (reference to the host's phone) fits one screenshot of a 360 x 740 phone.
+     */
+    val lottieCelebration = 136.dp
 
     /** Profile's initials avatar (account handoff §2: 60px). */
     val avatarProfile = 60.dp

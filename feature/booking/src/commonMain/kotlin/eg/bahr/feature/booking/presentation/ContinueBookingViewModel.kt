@@ -8,7 +8,7 @@ import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.datastore.ActiveHoldStore
 import eg.bahr.core.datastore.StoredHold
 import eg.bahr.feature.booking.data.BookingRepository
-import eg.bahr.feature.booking.model.HeldBookingDto
+import eg.bahr.feature.booking.model.BookingDto
 import eg.bahr.feature.booking.navigation.HoldRoute
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -29,7 +29,7 @@ import kotlin.time.Instant
  */
 internal data class ContinueBookingUiState(
     /** The fresh `GET /bookings/{ref}`: the trip title, date and party on the card. */
-    val booking: HeldBookingDto? = null,
+    val booking: BookingDto? = null,
     /** Seconds left, rounded up; drives `mm:ss`. */
     val secondsLeft: Int = 0,
     /** Share of the hold still left, 1 → 0, as on the hold screen. */
@@ -69,7 +69,7 @@ internal class ContinueBookingViewModel(
 
     private class Shown(
         val stored: StoredHold,
-        val booking: HeldBookingDto,
+        val booking: BookingDto,
         /** The live deadline exactly as the server sent it (`liveDeadline` has parsed it). */
         val holdExpiresAt: String,
         val serverNow: Instant,
@@ -175,7 +175,7 @@ internal class ContinueBookingViewModel(
 
     private suspend fun onBookingRead(
         stored: StoredHold,
-        booking: HeldBookingDto,
+        booking: BookingDto,
     ) {
         val receivedAt = clock.now()
         val fresh = booking.liveDeadline(receivedAt)

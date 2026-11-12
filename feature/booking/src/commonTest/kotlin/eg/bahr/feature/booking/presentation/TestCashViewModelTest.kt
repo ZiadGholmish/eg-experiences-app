@@ -10,7 +10,7 @@ import eg.bahr.feature.booking.data.FakeActiveHoldStore
 import eg.bahr.feature.booking.data.FakeBookingRepository
 import eg.bahr.feature.booking.data.RecordingHoldReminderSchedule
 import eg.bahr.feature.booking.di.CheckoutConfig
-import eg.bahr.feature.booking.model.HeldBookingDto
+import eg.bahr.feature.booking.model.BookingDto
 import eg.bahr.feature.booking.model.PaymentStartedDto
 import eg.bahr.feature.booking.navigation.HoldRoute
 import kotlinx.coroutines.test.TestScope
@@ -59,7 +59,7 @@ class TestCashViewModelTest {
             override fun now(): Instant = deviceStart + elapsed()
         }
 
-    private fun TestScope.serverAnswer(): AppResult<HeldBookingDto> =
+    private fun TestScope.serverAnswer(): AppResult<BookingDto> =
         AppResult.Success(
             BookingFixtures.heldBooking(
                 status = status,

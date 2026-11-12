@@ -8,7 +8,7 @@ import eg.bahr.feature.booking.data.BookingFixtures
 import eg.bahr.feature.booking.data.FakeActiveHoldStore
 import eg.bahr.feature.booking.data.FakeBookingRepository
 import eg.bahr.feature.booking.data.RecordingHoldReminderSchedule
-import eg.bahr.feature.booking.model.HeldBookingDto
+import eg.bahr.feature.booking.model.BookingDto
 import eg.bahr.feature.booking.navigation.HoldRoute
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -58,7 +58,7 @@ class HoldViewModelTest {
         }
 
     /** The server's answer at the current virtual time: still held until its deadline, then EXPIRED. */
-    private fun TestScope.serverAnswer(deadline: Duration = 15.minutes): AppResult<HeldBookingDto> {
+    private fun TestScope.serverAnswer(deadline: Duration = 15.minutes): AppResult<BookingDto> {
         val serverNow = placedAt + elapsed()
         val expires = placedAt + deadline
         return AppResult.Success(

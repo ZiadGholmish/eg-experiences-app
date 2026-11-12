@@ -199,8 +199,6 @@
     <string name="booking_hold_label">Seats held for</string>
     <string name="booking_confirm">Confirm booking</string>
     <string name="booking_total">Total</string>
-    <string name="booking_your_ref">Your reference</string>
-    <string name="booking_confirmed">You’re booked</string>
     <string name="booking_cancel">Cancel booking</string>
 
     <!-- Date + party (HANDOFF screen 4). Copy from the prototype; D1: no child fare, so no child note. -->
@@ -270,6 +268,38 @@
     <!-- How a booking was paid (openapi Booking.method), on the confirmation and in My trips. -->
     <string name="booking_method_test_cash">Test cash</string>
     <string name="booking_paid_with">Paid with %1$s</string>
+
+    <!-- The booking's ticket (HANDOFF §6, MV-M5): the confirmation screen, also opened by reference from a
+         notification, so the header follows the booking's status. Copy from the prototype (cf*). -->
+    <string name="ticket_overline_confirmed">Booked — reference</string>
+    <string name="ticket_overline_completed">Trip done — reference</string>
+    <string name="ticket_overline_called_off">Trip called off — reference</string>
+    <string name="ticket_overline_cancelled">Cancelled — reference</string>
+    <string name="ticket_overline_expired">Expired — reference</string>
+    <string name="ticket_overline_unpaid">Not paid yet — reference</string>
+    <string name="ticket_overline_unknown">Booking — reference</string>
+    <string name="ticket_show_host">Show this screen, or just the reference, to %1$s at the bus.</string>
+    <string name="ticket_show_host_unnamed">Show this screen, or just the reference, to the host at the bus.</string>
+    <string name="ticket_note_completed">Thanks for travelling with us.</string>
+    <string name="ticket_note_called_off">The trip on this date was called off.</string>
+    <string name="ticket_note_cancelled">This booking was cancelled. It has no seat on the bus.</string>
+    <string name="ticket_note_expired">The time to pay ran out and the seats went back.</string>
+    <string name="ticket_note_unpaid">This booking isn’t confirmed until it’s paid.</string>
+    <string name="ticket_row_date">Date</string>
+    <string name="ticket_row_departure">Departure</string>
+    <string name="ticket_row_return">Return</string>
+    <string name="ticket_row_party">Party</string>
+    <string name="ticket_row_paid">Paid</string>
+    <string name="ticket_row_owed_to_host">To pay the host</string>
+    <string name="ticket_row_host">Host</string>
+    <!-- Two parts of one row value: a time and a place, a date and a time, a place and its city. -->
+    <string name="ticket_value_dash">%1$s — %2$s</string>
+    <string name="ticket_value_comma">%1$s, %2$s</string>
+    <string name="ticket_value_dot">%1$s · %2$s</string>
+    <string name="ticket_where_to_stand">Where to stand</string>
+    <string name="ticket_whatsapp_host">Message %1$s on WhatsApp</string>
+    <string name="ticket_whatsapp_host_unnamed">Message the host on WhatsApp</string>
+    <string name="ticket_screenshot_note">Screenshot this — there is no signal for part of the drive.</string>
     <string name="booking_payer_vf_number">Vodafone Cash number</string>
     <string name="booking_payer_card_name">Name on card</string>
     <string name="booking_payer_card_note">You enter your card on the secure payment page.</string>

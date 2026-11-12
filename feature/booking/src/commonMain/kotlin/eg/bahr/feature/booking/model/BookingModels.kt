@@ -120,18 +120,20 @@ internal data class HeldSeatsDto(
  * confirmation screen (which until then decoded a Java-era flat shape that the contract's `Booking`
  * never matched, so a paid booking ended on its error view: M3-M1 review #7).
  *
+ * Named for the contract's schema since MV-M5 (it was `HeldBookingDto`, from when only the held-seats screen read it).
+ *
  * **A partial copy of the contract's `Booking`, on purpose:** only the fields these screens read.
- * Left out: `host`, `calendar`, `Place.lat`/`lng` and `Image.variants` (unknown keys are ignored on
- * decode, so the full payload still parses). Whoever needs one of them adds it here, nullable with a
- * default, field-for-field with `openapi.yaml`.
+ * Left out: `calendar` (declared by the contract but not served yet: MV-M5 contract gap), `canReview`/`review`
+ * (`listMyBookings` only), `Place.lat`/`lng` and `Image.variants` (unknown keys are ignored on decode, so the full
+ * payload still parses). Whoever needs one of them adds it here, nullable with a default, field-for-field with
+ * `openapi.yaml`.
  *
  * [status] is a string, not an enum: anything other than `HELD` / `PAYMENT_PENDING` means the seats
  * are no longer held for this booking, and a status added later must not fail the decode. A released
  * hold reads `CANCELLED`; one past its deadline reads `EXPIRED` with no [holdExpiresAt].
- * `host` is left out: the confirmation screen does not show it yet (M3-M2's full ticket).
  */
 @Serializable
-internal data class HeldBookingDto(
+internal data class BookingDto(
     val ref: String,
     val status: String,
     val holdExpiresAt: String? = null,
@@ -149,6 +151,23 @@ internal data class HeldBookingDto(
     val method: String? = null,
     /** Since MV-B2, only while HELD: as [HeldSeatsDto.paymentMethods], for a hold reopened or read again. */
     val paymentMethods: List<String>? = null,
+    /** Since M6-B3: the date itself was called off, whatever [status] says; the ticket says so rather than "cancelled". */
+    val dateCalledOff: Boolean? = null,
+    /**
+     * Since M5-B3, on a booking the host entered only: true when the guest paid the host, false when they still owe the
+     * host [total] (the ticket then must not say "Paid"). Absent on an app booking.
+     */
+    val hostPaid: Boolean? = null,
+    /** Only on a paid booking (CONFIRMED, COMPLETED): D4, the host's phone is shown once paid. */
+    val host: BookingHostDto? = null,
+)
+
+/** openapi `Booking.host`. [phone] is openapi `Phone` (Western digits, shown as sent); [whatsappUrl] opens a chat with the host. */
+@Serializable
+internal data class BookingHostDto(
+    val name: String? = null,
+    val phone: String? = null,
+    val whatsappUrl: String? = null,
 )
 
 /** openapi `Booking.trip`. */
@@ -185,9 +204,9 @@ internal val BookingDepartureDto.laterReturnDate: LocalDate? get() = returnDate?
 
 /**
  * The same for a booking. `Booking` carries no `nights`, so a multi-day booking is one whose
- * [HeldBookingDto.returnDate] is after its [HeldBookingDto.date].
+ * [BookingDto.returnDate] is after its [BookingDto.date].
  */
-internal val HeldBookingDto.laterReturnDate: LocalDate? get() = returnDate?.takeIf { it > date }
+internal val BookingDto.laterReturnDate: LocalDate? get() = returnDate?.takeIf { it > date }
 
 /**
  * openapi `StartPaymentRequest` (`startPayment`, M3-B2). [method] is the contract's lower-case wire value (`card`,

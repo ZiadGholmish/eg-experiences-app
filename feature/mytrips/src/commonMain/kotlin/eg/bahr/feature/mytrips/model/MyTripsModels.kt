@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 
 /**
  * openapi `Booking`, as `listMyBookings` serves it: only the fields My trips shows. A partial copy on
- * purpose (as feature:booking's `HeldBookingDto`); the parser ignores the rest (`host`, `calendar`, …).
+ * purpose (as feature:booking's `BookingDto`); the parser ignores the rest (`host`, `calendar`, …).
  */
 @Serializable
 internal data class MyBookingDto(
