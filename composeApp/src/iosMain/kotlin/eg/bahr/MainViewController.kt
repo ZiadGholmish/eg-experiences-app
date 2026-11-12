@@ -2,6 +2,7 @@ package eg.bahr
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.window.ComposeUIViewController
+import eg.bahr.core.catalog.presentation.media.IosMediaChrome
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.common.push.PushChannel
 import eg.bahr.core.datastore.APP_PREFERENCES_FILE
@@ -90,6 +91,12 @@ interface AppTabBar {
         tab: AppTab,
         hidden: Boolean,
     )
+
+    /**
+     * The full-screen photo and video viewer (MV-M3) opened ([fullScreen] true) or closed: hide the status bar and the
+     * home indicator while it is open. The status bar is the SwiftUI app's, which the Compose roots cannot hide.
+     */
+    fun setFullScreen(fullScreen: Boolean)
 }
 
 /**
@@ -151,6 +158,8 @@ fun startApp(
     // The stored appearance before any Compose root or the bar draws (M3-M0b review R4-1).
     KoinPlatform.getKoin().seedStoredAppearance()
     IosTabs.start(tabBar, selectedTab)
+    // The viewer's status bar (MV-M3): core:catalog cannot reach Swift, so it goes through here.
+    IosMediaChrome.onFullScreen = tabBar::setFullScreen
 }
 
 /** A non-blank Info.plist string, or null: the xcconfigs leave a setting empty when an environment has none. */

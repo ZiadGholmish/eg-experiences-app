@@ -2,6 +2,7 @@ package eg.bahr.feature.tripdetails.model
 
 import eg.bahr.core.catalog.model.BadgeDto
 import eg.bahr.core.catalog.model.ImageDto
+import eg.bahr.core.catalog.model.ImageVariantDto
 import eg.bahr.core.catalog.model.LocationDto
 import eg.bahr.core.catalog.model.NextDepartureDto
 import eg.bahr.core.catalog.model.RatingDto
@@ -61,6 +62,27 @@ internal data class TripDetailDto(
     val gallery: List<ImageDto> = emptyList(),
     val og: OpenGraphDto? = null,
     val shareUrl: String? = null,
+    val media: List<TripMediaDto>? = null,
+)
+
+/**
+ * openapi `TripMedia` (M5-B4; drawn since MV-M3): one item of [TripDetailDto.media], the whole gallery, photos and videos
+ * in the back-office's order. Flat, as the contract has it: a `photo` is an `Image` ([url] its original, [variants]); a
+ * `video` is a progressive MP4 at [url], [width] × [height] as displayed, [durationSeconds] long, shown as [poster] until
+ * it plays ([lqip] is the poster's). [kind] is kept as a string: a kind this build does not know is skipped, as the
+ * contract asks. `media` is absent from servers before M5-B4, and then the page falls back to `gallery`.
+ */
+@Serializable
+internal data class TripMediaDto(
+    val kind: String,
+    val url: String,
+    val width: Int,
+    val height: Int,
+    val alt: String? = null,
+    val lqip: String? = null,
+    val variants: List<ImageVariantDto> = emptyList(),
+    val durationSeconds: Int? = null,
+    val poster: ImageDto? = null,
 )
 
 /** openapi `Place` + `timeLocal`/`arriveBy` ("HH:mm", Cairo): the facts grid's "Bus leaves" cell. */

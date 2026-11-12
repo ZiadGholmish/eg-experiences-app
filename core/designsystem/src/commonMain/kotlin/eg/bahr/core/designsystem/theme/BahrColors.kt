@@ -114,7 +114,16 @@ data class BahrExtendedColors(
     val unread: Color,
     /** The sign-in buttons' colours, set by Apple and Google, never by a Bahr theme (`brand`, Oct 2026). */
     val brand: BahrBrandColors,
+    /**
+     * The full-screen photo and video viewer's ground and what sits on it (MV-M3): black and white in every theme and
+     * mode, as a photo is judged against black. Code-only, not tokens (the handoff has no viewer).
+     */
+    val mediaGround: Color = Color(MEDIA_GROUND),
+    val onMediaGround: Color = Color(ON_MEDIA_GROUND),
 )
+
+private const val MEDIA_GROUND = 0xFF000000
+private const val ON_MEDIA_GROUND = 0xFFFFFFFF
 
 /**
  * tokens.json `brand` (`--bahr-brand-*`): "Continue with Google" and "Continue with Apple" as their

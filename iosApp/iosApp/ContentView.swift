@@ -71,6 +71,9 @@ struct ContentView: View {
         // the labels through TabBarModel.muteLabels, the icons drawn in that colour (TabBarModel.icon).
         .tint(tabs.selectedTint)
         .modifier(MinimizesOnScroll())
+        // The full-screen viewer (MV-M3) hides the status bar and the home indicator while it is open.
+        .statusBarHidden(tabs.fullScreen)
+        .persistentSystemOverlays(tabs.fullScreen ? .hidden : .automatic)
         // Light unless the person picked Dark, or the phone's setting (nil) in Profile → Appearance.
         .preferredColorScheme(tabs.colorScheme)
         .onAppear { TabBarModel.applyWindowStyle(tabs.colorScheme) }

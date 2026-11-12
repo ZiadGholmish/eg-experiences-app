@@ -258,7 +258,10 @@ private fun Section(
 ) {
     val padded = Modifier.padding(start = BahrSpacing.gutter, end = BahrSpacing.gutter, top = BahrSpacing.xl)
     when (section) {
-        TripSection.Hero -> TripHero(images = trip?.photos().orEmpty(), loading = trip == null, onBack = onBack)
+        TripSection.Hero -> {
+            val items = remember(trip) { trip?.galleryMedia().orEmpty() }
+            TripHero(items = items, loading = trip == null, onBack = onBack)
+        }
 
         TripSection.Title ->
             if (header != null) {
@@ -327,9 +330,6 @@ private fun TripDetailUiState.header(): TripHeader? {
     trip?.let { return TripHeader(it.title, it.subtitle, it.price, it.rating) }
     return preview?.let { TripHeader(it.title, it.subtitle, it.price, it.rating) }
 }
-
-/** The slider's photos: the gallery, else the hero or card image alone. */
-private fun TripDetailDto.photos() = gallery.ifEmpty { listOfNotNull(heroImage ?: cardImage) }
 
 /** Lets screenshot tests scroll the page to a section by key. */
 internal const val TRIP_PAGE_TAG = "trip_page"

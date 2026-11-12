@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
@@ -65,3 +66,30 @@ fun Modifier.bahrSharedBounds(key: String?): Modifier {
         )
     }
 }
+
+/**
+ * Marks this element as the same one as the element with [key] elsewhere under [BahrSharedTransitions], with its
+ * visibility in the caller's hands rather than a screen transition's (MV-M3): a gallery thumbnail is [visible] while the
+ * full-screen viewer is closed, the viewer's page while it is open, and on each switch the one shown flies from the
+ * other's bounds. Nothing under reduce motion (the viewer fades instead), with no [key], or outside the layout (tests).
+ */
+@OptIn(ExperimentalSharedTransitionApi::class)
+@Composable
+fun Modifier.bahrSharedElement(
+    key: String?,
+    visible: Boolean,
+): Modifier {
+    val transitions = LocalSharedTransitionScope.current
+    if (key == null || transitions == null || BahrTheme.reducedMotion) return this
+    return with(transitions) {
+        this@bahrSharedElement.sharedElementWithCallerManagedVisibility(
+            sharedContentState = rememberSharedContentState(key),
+            visible = visible,
+            boundsTransform = { _, _ -> tween(BahrMotion.Medium, easing = BahrMotion.Standard) },
+        )
+    }
+}
+
+/** Whether [bahrSharedElement] can fly an element here: under [BahrSharedTransitions], and not under reduce motion. */
+@Composable
+fun bahrSharedElementsActive(): Boolean = LocalSharedTransitionScope.current != null && !BahrTheme.reducedMotion

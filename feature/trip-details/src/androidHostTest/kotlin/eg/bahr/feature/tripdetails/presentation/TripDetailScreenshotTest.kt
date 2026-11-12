@@ -38,6 +38,7 @@ import eg.bahr.feature.tripdetails.model.DepartureDto
 import eg.bahr.feature.tripdetails.model.HostDto
 import eg.bahr.feature.tripdetails.model.ReviewsDto
 import eg.bahr.feature.tripdetails.model.TripDetailDto
+import eg.bahr.feature.tripdetails.model.TripMediaDto
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
@@ -542,6 +543,38 @@ class TripDetailScreenshotTest {
         snap("trip_detail_gallery", AppLanguage.ENGLISH) {
             serve(TripDetailPayloads.english, TripDetailPayloads.englishDepartures, photos = UNREACHABLE_PHOTOS)
         }
+
+    /**
+     * M5-M2 (MV-M3): a video first in the gallery (`media`), drawn as its poster with the play badge and its running time
+     * ("0:08", left to right in Arabic too); the photo counter counts it with the photos. Unreachable URLs, as above.
+     */
+    @Test
+    fun galleryVideoArabic() =
+        snap("trip_detail_gallery_video", AppLanguage.ARABIC) {
+            serve(TripDetailPayloads.arabic, TripDetailPayloads.arabicDepartures, detail = ::withVideoFirst)
+        }
+
+    @Test
+    fun galleryVideoEnglish() =
+        snap("trip_detail_gallery_video", AppLanguage.ENGLISH) {
+            serve(TripDetailPayloads.english, TripDetailPayloads.englishDepartures, detail = ::withVideoFirst)
+        }
+
+    private fun withVideoFirst(trip: TripDetailDto) =
+        trip.copy(
+            media =
+                listOf(
+                    TripMediaDto(
+                        kind = "video",
+                        url = "http://127.0.0.1:9/dawn.mp4",
+                        width = 640,
+                        height = 360,
+                        alt = "Video: dawn on the lake",
+                        durationSeconds = 8,
+                        poster = UNREACHABLE_PHOTOS.first(),
+                    ),
+                ) + UNREACHABLE_PHOTOS.drop(1).map { TripMediaDto(kind = "photo", url = it.url, width = it.width, height = it.height) },
+        )
 
     private fun FakeTripDetailRepository.serve(
         trip: String,

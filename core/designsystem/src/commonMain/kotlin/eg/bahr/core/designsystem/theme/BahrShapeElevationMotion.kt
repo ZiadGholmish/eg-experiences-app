@@ -115,6 +115,12 @@ fun Modifier.bahrShadow(
 
 // ---------- Motion — mirrors sys.motion ----------
 object BahrMotion {
+    /**
+     * A flick at least this fast (per second) closes the full-screen viewer whatever the distance dragged (MV-M3):
+     * about what the platforms' own photo viewers take for "thrown away".
+     */
+    val DismissFlingVelocity = 1200.dp
+
     const val Short = 150
     const val Medium = 250
     const val Long = 400
@@ -376,6 +382,13 @@ object BahrSize {
 
     /** The trip thumbnail on the payment screen's summary card (62px in the handoff). */
     val thumbnail = 62.dp
+
+    /**
+     * The full-screen viewer (MV-M3): a video's round play button in the middle of its poster, and the smaller badge
+     * on a video in a gallery strip (the trip page's slider).
+     */
+    val mediaPlayButton = 64.dp
+    val mediaPlayBadge = 40.dp
 
     /** A small trip thumbnail beside its title, as on a Home review card's trip line (MH-M1). */
     val thumbnailSmall = 32.dp

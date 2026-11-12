@@ -6,6 +6,8 @@
 plugins {
     id("bahr.kmp.library")
     id("bahr.kmp.compose")
+    // The full-screen viewer's goldens (MV-M3).
+    id("bahr.kmp.screenshots")
     alias(libs.plugins.kotlinSerialization)
 }
 
@@ -32,6 +34,20 @@ kotlin {
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.datetime)
+            // The full-screen viewer (MV-M3): Back closes it, and a video pauses when the app goes to the background.
+            implementation(libs.navigationevent.compose)
+            implementation(libs.androidx.lifecycle.runtimeCompose)
+        }
+        androidMain.dependencies {
+            // The viewer's video player on Android (MV-M3); AVPlayer on iOS. Libraries, not module edges.
+            implementation(libs.androidx.media3.exoplayer)
+            implementation(libs.androidx.media3.ui.compose)
+            // WindowCompat: the viewer hides the status and navigation bars while it is open.
+            implementation(libs.androidx.core)
+        }
+        getByName("androidHostTest").dependencies {
+            // The viewer's Back test: activity 1.12+ makes the test activity a NavigationEventDispatcherOwner (as :composeApp's).
+            implementation(libs.androidx.activity.compose)
         }
         commonTest.dependencies {
             implementation(projects.core.testing)

@@ -20,6 +20,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,6 +38,8 @@ import eg.bahr.core.catalog.model.RatingSummaryDto
 import eg.bahr.core.catalog.model.ReviewDto
 import eg.bahr.core.catalog.model.StarCountDto
 import eg.bahr.core.catalog.model.stars
+import eg.bahr.core.catalog.presentation.media.ViewerMedia
+import eg.bahr.core.catalog.presentation.media.opensMediaViewer
 import eg.bahr.core.designsystem.components.BahrCard
 import eg.bahr.core.designsystem.components.ImageGround
 import eg.bahr.core.designsystem.format.BahrFormat
@@ -144,6 +147,8 @@ fun ReviewCard(review: ReviewDto) {
  */
 @Composable
 private fun ReviewPhotos(photos: List<ImageDto>) {
+    // A tap opens them full screen, in their order, on the one tapped (MV-M3).
+    val gallery = remember(photos) { photos.map { ViewerMedia.Photo(it) } }
     Row(
         modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm),
@@ -155,11 +160,17 @@ private fun ReviewPhotos(photos: List<ImageDto>) {
                     Modifier
                         .size(BahrSize.reviewPhoto)
                         .clip(BahrTheme.shapes.small)
+                        .testTag(REVIEW_PHOTO_TAG)
+                        // Before clearAndSetSemantics, so the "View full screen" action stays with the photo's name.
+                        .opensMediaViewer(gallery, index)
                         .clearAndSetSemantics { contentDescription = spoken },
             ) { Photo(photo) }
         }
     }
 }
+
+/** For tests: a review's photo (MV-M3: it opens the full-screen viewer). */
+const val REVIEW_PHOTO_TAG = "review_photo"
 
 /**
  * "Verified trip" (M3-B7): the reviewer booked and took the trip through the app. Not a link, so no touch target.
