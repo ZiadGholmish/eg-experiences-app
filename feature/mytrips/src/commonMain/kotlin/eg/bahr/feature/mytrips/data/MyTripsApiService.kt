@@ -35,5 +35,8 @@ internal class MyTripsApiService(
     companion object {
         /** The contract's default page size (1..50). */
         const val PAGE_SIZE = 20
+
+        /** The contract's largest page (`size` maximum): Upcoming is read whole in as few requests as possible. */
+        const val MAX_PAGE_SIZE = 50
     }
 }

@@ -3,16 +3,32 @@ package eg.bahr.feature.mytrips.presentation
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.getBoundsInRoot
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeDown
 import androidx.paging.LoadState
 import androidx.paging.LoadStates
 import androidx.paging.PagingData
@@ -21,6 +37,7 @@ import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.designsystem.components.BAHR_LOTTIE_READY_TAG
 import eg.bahr.core.designsystem.theme.BahrLocale
+import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.designsystem.theme.BahrThemeName
 import eg.bahr.core.localization.ProvideAppLanguage
@@ -30,6 +47,7 @@ import eg.bahr.feature.mytrips.data.MyTripsFixtures
 import eg.bahr.feature.mytrips.model.MyBookingDto
 import eg.bahr.feature.mytrips.presentation.components.RATE_TRIP_TAG
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalDate
 import org.junit.Rule
 import org.junit.Test
@@ -41,9 +59,10 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * M3-M0: My trips × {ar, en} × {signed out with this phone's waiting lists (also dark) or none, loading, Upcoming loaded,
- * Waiting list loaded, Past empty, waiting list failed}. From the stateless content with fixed paging
- * data, as the screen draws it.
+ * My trips × {ar, en}: signed out with this phone's waiting lists (also dark) or none (M3-M0, M3-M8); signed in as
+ * one list since MV-M2 × light/dark: loading, all three sections, only Past (with "Rate your trip" and each review
+ * status), one section failed, nothing at all. From the stateless content with fixed paging data, as the screen
+ * draws it.
  *
  * Record: `./gradlew :feature:mytrips:recordRoborazziAndroidHostTest`; verify: `verifyRoborazziAndroidHostTest`.
  */
@@ -92,87 +111,115 @@ class MyTripsScreenshotTest {
     @Test
     fun signedOutNoJoinsEnglish() = shootStill("mytrips_signed_out_no_joins", AppLanguage.ENGLISH, MyTripsUiState(SessionState.SignedOut))
 
-    @Test
-    fun loadingArabic() = shoot("mytrips_loading", AppLanguage.ARABIC, MyTripsUiState(session = signedIn), emptyList(), loading)
+    /** Every section's first read: one skeleton, at the top (MV-M2: never one per section). */
+    private val loadingState = MyTripsUiState(session = signedIn)
 
     @Test
-    fun loadingEnglish() = shoot("mytrips_loading", AppLanguage.ENGLISH, MyTripsUiState(session = signedIn), emptyList(), loading)
+    fun loadingArabic() = shoot("mytrips_loading", AppLanguage.ARABIC, loadingState, emptyList(), loading)
+
+    @Test
+    fun loadingEnglish() = shoot("mytrips_loading", AppLanguage.ENGLISH, loadingState, emptyList(), loading)
 
     /** The rows' skeleton in dark mode (M3-M14). */
     @Test
-    fun loadingDarkArabic() =
-        shoot("mytrips_loading_dark", AppLanguage.ARABIC, MyTripsUiState(session = signedIn), emptyList(), loading, BahrThemeName.Dark)
+    fun loadingDarkArabic() = shoot("mytrips_loading_dark", AppLanguage.ARABIC, loadingState, emptyList(), loading, BahrThemeName.Dark)
 
     @Test
-    fun loadingDarkEnglish() =
-        shoot("mytrips_loading_dark", AppLanguage.ENGLISH, MyTripsUiState(session = signedIn), emptyList(), loading, BahrThemeName.Dark)
+    fun loadingDarkEnglish() = shoot("mytrips_loading_dark", AppLanguage.ENGLISH, loadingState, emptyList(), loading, BahrThemeName.Dark)
 
-    /** The waiting list's first read: the same skeleton rows under the segments (M3-M14). */
+    /** Upcoming, Waiting list, Past, each under its header and count; Past's count is the server's total, not the rows shown. */
+    private val allSections =
+        MyTripsUiState(
+            session = signedIn,
+            upcoming = SectionLoad.Loaded(MyTripsFixtures.upcoming()),
+            waitlist = SectionLoad.Loaded(MyTripsFixtures.waitlist()),
+            pastTotal = PAST_TOTAL,
+        )
+
+    @Config(qualifiers = "en-w360dp-h1400dp-xhdpi")
     @Test
-    fun waitlistLoadingArabic() = shoot("mytrips_waitlist_loading", AppLanguage.ARABIC, waitlistLoading, emptyList())
+    fun allSectionsArabic() = shoot("mytrips_all_sections", AppLanguage.ARABIC, allSections, MyTripsFixtures.past())
 
+    @Config(qualifiers = "en-w360dp-h1400dp-xhdpi")
     @Test
-    fun waitlistLoadingEnglish() = shoot("mytrips_waitlist_loading", AppLanguage.ENGLISH, waitlistLoading, emptyList())
+    fun allSectionsEnglish() = shoot("mytrips_all_sections", AppLanguage.ENGLISH, allSections, MyTripsFixtures.past())
 
-    private val waitlistLoading = MyTripsUiState(session = signedIn, segment = MyTripsSegment.Waitlist, waitlist = WaitlistLoad.Loading)
-
+    @Config(qualifiers = "en-w360dp-h1400dp-xhdpi")
     @Test
-    fun upcomingArabic() = shoot("mytrips_upcoming", AppLanguage.ARABIC, MyTripsUiState(session = signedIn), MyTripsFixtures.upcoming())
+    fun allSectionsDarkArabic() =
+        shoot("mytrips_all_sections_dark", AppLanguage.ARABIC, allSections, MyTripsFixtures.past(), theme = BahrThemeName.Dark)
 
+    @Config(qualifiers = "en-w360dp-h1400dp-xhdpi")
     @Test
-    fun upcomingEnglish() = shoot("mytrips_upcoming", AppLanguage.ENGLISH, MyTripsUiState(session = signedIn), MyTripsFixtures.upcoming())
+    fun allSectionsDarkEnglish() =
+        shoot("mytrips_all_sections_dark", AppLanguage.ENGLISH, allSections, MyTripsFixtures.past(), theme = BahrThemeName.Dark)
 
-    private val waitlistState =
-        MyTripsUiState(session = signedIn, segment = MyTripsSegment.Waitlist, waitlist = WaitlistLoad.Loaded(MyTripsFixtures.waitlist()))
-
-    @Test
-    fun waitlistArabic() = shoot("mytrips_waitlist", AppLanguage.ARABIC, waitlistState, emptyList())
-
-    @Test
-    fun waitlistEnglish() = shoot("mytrips_waitlist", AppLanguage.ENGLISH, waitlistState, emptyList())
-
-    private val pastEmpty = MyTripsUiState(session = signedIn, segment = MyTripsSegment.Past)
-
-    // Signed in, no trips (M3-M8b): the looping suitcase over the line, shot still under reduced motion.
-    @Test
-    fun pastEmptyArabic() = shootStill("mytrips_past_empty", AppLanguage.ARABIC, pastEmpty)
-
-    @Test
-    fun pastEmptyEnglish() = shootStill("mytrips_past_empty", AppLanguage.ENGLISH, pastEmpty)
-
-    private val upcomingEmpty = MyTripsUiState(session = signedIn)
-
-    @Test
-    fun upcomingEmptyArabic() = shootStill("mytrips_upcoming_empty", AppLanguage.ARABIC, upcomingEmpty)
-
-    @Test
-    fun upcomingEmptyEnglish() = shootStill("mytrips_upcoming_empty", AppLanguage.ENGLISH, upcomingEmpty)
-
-    @Test
-    fun upcomingEmptyDarkArabic() = shootStill("mytrips_upcoming_empty_dark", AppLanguage.ARABIC, upcomingEmpty, BahrThemeName.Dark)
-
-    @Test
-    fun upcomingEmptyDarkEnglish() = shootStill("mytrips_upcoming_empty_dark", AppLanguage.ENGLISH, upcomingEmpty, BahrThemeName.Dark)
-
-    private val waitlistFailed =
-        MyTripsUiState(session = signedIn, segment = MyTripsSegment.Waitlist, waitlist = WaitlistLoad.Failed(AppError.Network))
-
-    @Test
-    fun waitlistFailedArabic() = shoot("mytrips_waitlist_failed", AppLanguage.ARABIC, waitlistFailed, emptyList())
-
-    @Test
-    fun waitlistFailedEnglish() = shoot("mytrips_waitlist_failed", AppLanguage.ENGLISH, waitlistFailed, emptyList())
-
-    /** M3-M4: Past with "Rate your trip" on a finished booking and each review status on the reviewed ones. */
-    private val pastReviews = MyTripsUiState(session = signedIn, segment = MyTripsSegment.Past)
+    /**
+     * Nothing upcoming, no waiting list: Past alone, no empty headers above it. M3-M4's "Rate your trip" on a finished
+     * booking and each review status on the reviewed ones.
+     */
+    private val onlyPast =
+        MyTripsUiState(
+            session = signedIn,
+            upcoming = SectionLoad.Loaded(emptyList()),
+            waitlist = SectionLoad.Loaded(emptyList()),
+            pastTotal = MyTripsFixtures.pastWithReviews().size.toLong(),
+        )
 
     @Config(qualifiers = "en-w360dp-h1000dp-xhdpi")
     @Test
-    fun pastReviewsArabic() = shoot("mytrips_past_reviews", AppLanguage.ARABIC, pastReviews, MyTripsFixtures.pastWithReviews())
+    fun onlyPastArabic() = shoot("mytrips_only_past", AppLanguage.ARABIC, onlyPast, MyTripsFixtures.pastWithReviews())
 
     @Config(qualifiers = "en-w360dp-h1000dp-xhdpi")
     @Test
-    fun pastReviewsEnglish() = shoot("mytrips_past_reviews", AppLanguage.ENGLISH, pastReviews, MyTripsFixtures.pastWithReviews())
+    fun onlyPastEnglish() = shoot("mytrips_only_past", AppLanguage.ENGLISH, onlyPast, MyTripsFixtures.pastWithReviews())
+
+    @Config(qualifiers = "en-w360dp-h1000dp-xhdpi")
+    @Test
+    fun onlyPastDarkArabic() =
+        shoot("mytrips_only_past_dark", AppLanguage.ARABIC, onlyPast, MyTripsFixtures.pastWithReviews(), theme = BahrThemeName.Dark)
+
+    @Config(qualifiers = "en-w360dp-h1000dp-xhdpi")
+    @Test
+    fun onlyPastDarkEnglish() =
+        shoot("mytrips_only_past_dark", AppLanguage.ENGLISH, onlyPast, MyTripsFixtures.pastWithReviews(), theme = BahrThemeName.Dark)
+
+    /** The waiting list could not be read: its header and its own "Try again"; Upcoming and Past stay. */
+    private val waitlistFailed = allSections.copy(waitlist = SectionLoad.Failed(AppError.Network))
+
+    @Config(qualifiers = "en-w360dp-h1200dp-xhdpi")
+    @Test
+    fun sectionFailedArabic() = shoot("mytrips_section_failed", AppLanguage.ARABIC, waitlistFailed, MyTripsFixtures.past())
+
+    @Config(qualifiers = "en-w360dp-h1200dp-xhdpi")
+    @Test
+    fun sectionFailedEnglish() = shoot("mytrips_section_failed", AppLanguage.ENGLISH, waitlistFailed, MyTripsFixtures.past())
+
+    @Config(qualifiers = "en-w360dp-h1200dp-xhdpi")
+    @Test
+    fun sectionFailedDarkArabic() =
+        shoot("mytrips_section_failed_dark", AppLanguage.ARABIC, waitlistFailed, MyTripsFixtures.past(), theme = BahrThemeName.Dark)
+
+    @Config(qualifiers = "en-w360dp-h1200dp-xhdpi")
+    @Test
+    fun sectionFailedDarkEnglish() =
+        shoot("mytrips_section_failed_dark", AppLanguage.ENGLISH, waitlistFailed, MyTripsFixtures.past(), theme = BahrThemeName.Dark)
+
+    // Signed in, no trips in any section (M3-M8b): the looping suitcase over the line, shot still under reduced motion.
+    private val empty =
+        MyTripsUiState(session = signedIn, upcoming = SectionLoad.Loaded(emptyList()), waitlist = SectionLoad.Loaded(emptyList()))
+
+    @Test
+    fun emptyArabic() = shootStill("mytrips_empty", AppLanguage.ARABIC, empty)
+
+    @Test
+    fun emptyEnglish() = shootStill("mytrips_empty", AppLanguage.ENGLISH, empty)
+
+    @Test
+    fun emptyDarkArabic() = shootStill("mytrips_empty_dark", AppLanguage.ARABIC, empty, BahrThemeName.Dark)
+
+    @Test
+    fun emptyDarkEnglish() = shootStill("mytrips_empty_dark", AppLanguage.ENGLISH, empty, BahrThemeName.Dark)
 
     @Test
     fun `Rate your trip calls back with the booking and its trip's title - only where it may be reviewed`() {
@@ -181,8 +228,8 @@ class MyTripsScreenshotTest {
         compose.setContent {
             Themed(AppLanguage.ENGLISH) {
                 MyTripsContent(
-                    state = pastReviews,
-                    bookings = flowOf(PagingData.from(MyTripsFixtures.pastWithReviews(), loaded)).collectAsLazyPagingItems(),
+                    state = onlyPast,
+                    past = flowOf(PagingData.from(MyTripsFixtures.pastWithReviews(), loaded)).collectAsLazyPagingItems(),
                     actions = MyTripsActions(onRateTrip = { ref, title -> rated += ref to title }, onTripClick = { opened += it }),
                 )
             }
@@ -202,7 +249,7 @@ class MyTripsScreenshotTest {
             Themed(AppLanguage.ENGLISH) {
                 MyTripsContent(
                     state = signedOutState,
-                    bookings = flowOf(PagingData.from(emptyList<MyBookingDto>(), loaded)).collectAsLazyPagingItems(),
+                    past = flowOf(PagingData.from(emptyList<MyBookingDto>(), loaded)).collectAsLazyPagingItems(),
                     actions = MyTripsActions(onSignIn = { signIns++ }, onTripClick = { opened += it }),
                 )
             }
@@ -211,20 +258,79 @@ class MyTripsScreenshotTest {
         assertEquals(1, signIns)
     }
 
+    /** TalkBack / VoiceOver move by headings: every section header is one; a failed one's retry reads only it. */
     @Test
-    fun `a segment tap reaches the view model`() {
-        val picked = mutableListOf<MyTripsSegment>()
+    fun `section headers are headings and a failed section's retry reaches only that section`() {
+        var waitlistRetries = 0
+        var upcomingRetries = 0
         compose.setContent {
             Themed(AppLanguage.ENGLISH) {
                 MyTripsContent(
-                    state = MyTripsUiState(session = signedIn),
-                    bookings = flowOf(PagingData.from(MyTripsFixtures.upcoming(), loaded)).collectAsLazyPagingItems(),
-                    actions = MyTripsActions(onSegment = { picked += it }),
+                    state = waitlistFailed,
+                    past = flowOf(PagingData.from(MyTripsFixtures.past(), loaded)).collectAsLazyPagingItems(),
+                    actions = MyTripsActions(onRetryWaitlist = { waitlistRetries++ }, onRetryUpcoming = { upcomingRetries++ }),
                 )
             }
         }
-        compose.onNodeWithTag(segmentTag(MyTripsSegment.Waitlist)).performClick()
-        assertEquals(listOf(MyTripsSegment.Waitlist), picked)
+        listOf(MyTripsSection.Upcoming, MyTripsSection.Waitlist).forEach { section ->
+            compose.onNodeWithTag(sectionHeaderTag(section)).assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading))
+        }
+        compose.onNodeWithTag(sectionHeaderTag(MyTripsSection.Upcoming)).assertTextEquals("Upcoming (2)")
+        compose.onNodeWithTag(sectionHeaderTag(MyTripsSection.Waitlist)).assertTextEquals("Waiting list")
+        compose.onNodeWithText("Try again").performClick()
+        assertEquals(1, waitlistRetries)
+        assertEquals(0, upcomingRetries)
+        compose.onNodeWithTag(MY_TRIPS_LIST_TAG).performScrollToNode(hasTestTag(sectionHeaderTag(MyTripsSection.Past)))
+        compose
+            .onNodeWithTag(sectionHeaderTag(MyTripsSection.Past))
+            .assert(SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading))
+            .assertTextEquals("Past ($PAST_TOTAL)")
+    }
+
+    /** MV-M2: a section's header stays at the top while its rows scroll under it. */
+    @Test
+    fun `a section header sticks while its rows scroll`() {
+        lateinit var listState: LazyListState
+        compose.setContent {
+            listState = rememberLazyListState()
+            Themed(AppLanguage.ENGLISH) {
+                MyTripsContent(
+                    state = allSections,
+                    past = flowOf(PagingData.from(MyTripsFixtures.past(), loaded)).collectAsLazyPagingItems(),
+                    actions = MyTripsActions(),
+                    listState = listState,
+                )
+            }
+        }
+        // (The smallest spacing step absorbs rounding between the list's padding and the measured top.)
+        // The title (0), Upcoming's header (1) and first row (2) go above the top: only a sticky header still shows.
+        compose.runOnIdle { runBlocking { listState.scrollToItem(UPCOMING_SECOND_ROW_INDEX) } }
+
+        val header = compose.onNodeWithTag(sectionHeaderTag(MyTripsSection.Upcoming)).assertIsDisplayed().getBoundsInRoot()
+        val list = compose.onNodeWithTag(MY_TRIPS_LIST_TAG).getBoundsInRoot()
+        assertTrue(header.top - list.top <= BahrSpacing.lg + BahrSpacing.xs, "pinned at the list's top, was ${header.top - list.top}")
+    }
+
+    /** Pull-to-refresh reads the account's lists again; signed out there is nothing to pull. */
+    @Test
+    fun `a pull refreshes when signed in - not when signed out`() {
+        var pulls = 0
+        var signedOut by mutableStateOf(false)
+        compose.setContent {
+            Themed(AppLanguage.ENGLISH) {
+                MyTripsContent(
+                    state = if (signedOut) signedOutState else allSections,
+                    past = flowOf(PagingData.from(MyTripsFixtures.past(), loaded)).collectAsLazyPagingItems(),
+                    actions = MyTripsActions(onRefresh = { pulls++ }),
+                )
+            }
+        }
+        compose.onNodeWithTag(MY_TRIPS_LIST_TAG).performTouchInput { swipeDown() }
+        compose.runOnIdle { assertEquals(1, pulls) }
+
+        signedOut = true
+        compose.onNodeWithTag(MY_TRIPS_LIST_TAG).performTouchInput { swipeDown() }
+        compose.runOnIdle { assertEquals(1, pulls) }
     }
 
     /** A shot holding a BahrLottie: still under reduced motion, once its file has loaded. */
@@ -238,7 +344,7 @@ class MyTripsScreenshotTest {
             Themed(language, theme, reducedMotion = true) {
                 MyTripsContent(
                     state = state,
-                    bookings = flowOf(PagingData.from(emptyList<MyBookingDto>(), loaded)).collectAsLazyPagingItems(),
+                    past = flowOf(PagingData.from(emptyList<MyBookingDto>(), loaded)).collectAsLazyPagingItems(),
                     actions = MyTripsActions(),
                 )
             }
@@ -260,7 +366,7 @@ class MyTripsScreenshotTest {
             Themed(language, theme) {
                 MyTripsContent(
                     state = state,
-                    bookings = flowOf(PagingData.from(bookings, loadStates)).collectAsLazyPagingItems(),
+                    past = flowOf(PagingData.from(bookings, loadStates)).collectAsLazyPagingItems(),
                     actions = MyTripsActions(),
                 )
             }
@@ -296,3 +402,9 @@ class MyTripsScreenshotTest {
 }
 
 private const val LOTTIE_LOAD_TIMEOUT_MS = 10_000L
+
+/** Upcoming's second row: the title and Upcoming's header and first row come before it. */
+private const val UPCOMING_SECOND_ROW_INDEX = 3
+
+/** More past bookings than the first page shows: the header counts the server's total. */
+private const val PAST_TOTAL = 14L

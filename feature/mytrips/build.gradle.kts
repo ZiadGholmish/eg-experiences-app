@@ -1,5 +1,5 @@
 // My trips (M3-M0, user decisions 2026-10-12): the fifth tab, Upcoming · Waiting list · Past for the
-// signed-in account, a sign-in prompt otherwise. A feature like the others: core:* only.
+// signed-in account (one list of sections since MV-M2), a sign-in prompt otherwise. A feature like the others: core:* only.
 plugins {
     id("bahr.kmp.feature")
     id("bahr.kmp.screenshots")
@@ -8,7 +8,7 @@ plugins {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            // Upcoming and Past are paged lists (`GET /me/bookings`), on AndroidX Paging like the trip lists.
+            // Past is a paged list (`GET /me/bookings?status=past`, MV-M2), on AndroidX Paging like the trip lists.
             implementation(libs.androidx.paging.common)
             implementation(libs.androidx.paging.compose)
             // Signed out: this device's waiting-list joins (WaitlistMemory) with the titles the card cache

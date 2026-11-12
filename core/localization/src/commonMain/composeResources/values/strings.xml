@@ -347,17 +347,17 @@
     <!-- My trips (M3-M0): the fifth tab. -->
     <string name="tab_my_trips">My trips</string>
     <string name="mytrips_title">My trips</string>
-    <string name="mytrips_segment_upcoming">Upcoming</string>
-    <string name="mytrips_segment_waitlist">Waiting list</string>
-    <string name="mytrips_segment_past">Past</string>
+    <string name="mytrips_section_upcoming">Upcoming</string>
+    <string name="mytrips_section_waitlist">Waiting list</string>
+    <string name="mytrips_section_past">Past</string>
+    <!-- A My trips section header (MV-M2): the section and how many it holds. -->
+    <string name="mytrips_section_header">%1$s (%2$d)</string>
     <string name="mytrips_signed_out_title">Sign in to see your trips</string>
     <string name="mytrips_signed_out_body">Your bookings and waiting lists, on any phone you sign in on.</string>
     <string name="mytrips_sign_in">Sign in</string>
     <string name="mytrips_device_waitlists">Waiting lists on this phone</string>
     <string name="mytrips_device_waitlists_note">They move to your account when you sign in.</string>
     <string name="mytrips_empty_upcoming">No upcoming trips yet.</string>
-    <string name="mytrips_empty_past">No past trips yet.</string>
-    <string name="mytrips_empty_waitlist">You’re not on any waiting list.</string>
     <string name="mytrips_status_held">Seats held</string>
     <string name="mytrips_status_paying">Paying</string>
     <string name="mytrips_status_confirmed">Booked</string>

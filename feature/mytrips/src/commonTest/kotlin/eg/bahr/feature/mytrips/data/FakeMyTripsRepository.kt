@@ -27,6 +27,7 @@ internal class FakeMyTripsRepository(
                     } else {
                         MyTripsFixtures.past()
                     },
+                totalItems = 2,
                 totalPages = 1,
             ),
         )
@@ -45,11 +46,16 @@ internal class FakeMyTripsRepository(
 
     override suspend fun loadSession() = Unit
 
+    /** The page size of each read, in order (Upcoming is read whole at the contract's largest page). */
+    val bookingSizes = mutableListOf<Int>()
+
     override suspend fun bookings(
         list: BookingList,
         page: Int,
+        size: Int,
     ): AppResult<PageDto<MyBookingDto>> {
         bookingReads += list to page
+        bookingSizes += size
         return bookings.invoke(list, page)
     }
 

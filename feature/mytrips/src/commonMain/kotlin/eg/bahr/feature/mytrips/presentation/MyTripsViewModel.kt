@@ -6,13 +6,13 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
-import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.network.auth.SessionState
 import eg.bahr.feature.mytrips.data.BookingList
 import eg.bahr.feature.mytrips.data.MyBookingsPagingSource
 import eg.bahr.feature.mytrips.data.MyTripsApiService
 import eg.bahr.feature.mytrips.data.MyTripsRepository
+import eg.bahr.feature.mytrips.data.allBookings
 import eg.bahr.feature.mytrips.model.MyBookingDto
 import eg.bahr.feature.mytrips.model.MyWaitlistEntryDto
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -21,7 +21,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -29,24 +28,9 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
-
-/** The three segments of My trips (user decision 2026-10-12), in reading order. */
-internal enum class MyTripsSegment { Upcoming, Waitlist, Past }
-
-/** The signed-in waiting list: its own small load (the endpoint is not paged). */
-internal sealed interface WaitlistLoad {
-    data object Loading : WaitlistLoad
-
-    data class Loaded(
-        val entries: List<MyWaitlistEntryDto>,
-    ) : WaitlistLoad
-
-    data class Failed(
-        val error: AppError,
-    ) : WaitlistLoad
-}
 
 /** A waiting-list join made on this device while signed out; [title] when a card on this device showed it. */
 internal data class DeviceJoin(
@@ -59,15 +43,20 @@ internal data class DeviceJoin(
 
 internal data class MyTripsUiState(
     val session: SessionState = SessionState.Unknown,
-    val segment: MyTripsSegment = MyTripsSegment.Upcoming,
-    val waitlist: WaitlistLoad = WaitlistLoad.Loading,
+    val upcoming: SectionLoad<MyBookingDto> = SectionLoad.Loading,
+    val waitlist: SectionLoad<MyWaitlistEntryDto> = SectionLoad.Loading,
+    /** Past's `totalItems` from its first page, for the header; null until then or after sign-out. */
+    val pastTotal: Long? = null,
+    /** A pull-to-refresh is under way: until Upcoming and the waiting list are read again. */
+    val refreshing: Boolean = false,
     val deviceJoins: List<DeviceJoin> = emptyList(),
 )
 
 /**
- * My trips (M3-M0). Signed out: a sign-in prompt and the device's own waiting-list joins (shown until
- * sign-in attaches them to the account, M3-B1). Signed in: Upcoming and Past as paged lists
- * ([bookings], one flow following the selected segment) and the Waiting list as one read.
+ * My trips (M3-M0; one list since MV-M2). Signed out: a sign-in prompt and the device's own waiting-list joins
+ * (shown until sign-in attaches them to the account, M3-B1). Signed in: one list of three sections, Upcoming and the
+ * Waiting list each read whole (they are small) and Past paged at the end ([pastBookings]), each loading and failing
+ * on its own, so the list never waits on Past.
  *
  * Signing in or out anywhere (Settings, the sheet, a refused refresh) reaches this screen through the
  * session, so it never needs telling.
@@ -79,23 +68,25 @@ internal class MyTripsViewModel(
     private val _uiState = MutableStateFlow(MyTripsUiState())
     val uiState: StateFlow<MyTripsUiState> = _uiState.asStateFlow()
 
+    private var upcomingJob: Job? = null
     private var waitlistJob: Job? = null
+    private var refreshJob: Job? = null
 
-    /** The paged list's current source, so a visit can ask it for a fresh read ([refresh]). */
-    private var bookingSource: MyBookingsPagingSource? = null
+    /** Past's current source, so a visit or a pull can ask it for a fresh read. */
+    private var pastSource: MyBookingsPagingSource? = null
 
-    /** Upcoming or Past for the selected segment while signed in; empty otherwise (and on Waiting list). */
-    val bookings: Flow<PagingData<MyBookingDto>> =
-        combine(
-            repository.session.map { it is SessionState.SignedIn }.distinctUntilChanged(),
-            _uiState.map { it.segment }.distinctUntilChanged(),
-        ) { signedIn, segment -> if (signedIn) segment.list() else null }
+    /** Past while signed in, page by page as the list reaches its end; empty otherwise. */
+    val pastBookings: Flow<PagingData<MyBookingDto>> =
+        repository.session
+            .map { it is SessionState.SignedIn }
             .distinctUntilChanged()
-            .flatMapLatest { list ->
-                if (list == null) {
+            .flatMapLatest { signedIn ->
+                if (!signedIn) {
                     flowOf(PagingData.empty())
                 } else {
-                    Pager(PAGING) { MyBookingsPagingSource(repository, list).also { bookingSource = it } }.flow
+                    Pager(PAGING) {
+                        MyBookingsPagingSource(repository, BookingList.Past, onTotal = ::onPastTotal).also { pastSource = it }
+                    }.flow
                 }
             }.cachedIn(viewModelScope)
 
@@ -105,13 +96,26 @@ internal class MyTripsViewModel(
             .onEach { session ->
                 val wasSignedIn = _uiState.value.session is SessionState.SignedIn
                 if (session !is SessionState.SignedIn) {
-                    // The account's list goes with its sign-in: the next person on this phone must never
-                    // see it, not even while their own read is under way (M3-M0 review #5).
+                    // The account's lists go with its sign-in: the next person on this phone must never see
+                    // them, not even while their own read is under way (M3-M0 review #5).
+                    upcomingJob?.cancel()
                     waitlistJob?.cancel()
-                    _uiState.update { it.copy(session = session, waitlist = WaitlistLoad.Loading) }
+                    refreshJob?.cancel()
+                    _uiState.update {
+                        it.copy(
+                            session = session,
+                            upcoming = SectionLoad.Loading,
+                            waitlist = SectionLoad.Loading,
+                            pastTotal = null,
+                            refreshing = false,
+                        )
+                    }
                 } else {
                     _uiState.update { it.copy(session = session) }
-                    if (!wasSignedIn) loadWaitlist()
+                    if (!wasSignedIn) {
+                        loadUpcoming()
+                        loadWaitlist()
+                    }
                 }
             }.launchIn(viewModelScope)
         repository.deviceJoins
@@ -135,52 +139,83 @@ internal class MyTripsViewModel(
             }.launchIn(viewModelScope)
     }
 
-    fun selectSegment(segment: MyTripsSegment) {
-        if (segment == _uiState.value.segment) return
-        _uiState.update { it.copy(segment = segment) }
-        // The list may have changed since (a place opened, an entry was attached at sign-in).
-        if (segment == MyTripsSegment.Waitlist) loadWaitlist()
-    }
-
     /**
-     * Each visit after the first (M3-M0 review #11): Upcoming and Past are read again, so a hold placed on
-     * the booking screen, or a booking made on another phone, shows without changing segment. The cards
-     * shown stay until the new page arrives (the paged list keeps them while it refreshes). The waiting
-     * list is read again too, when it is the segment showing.
+     * Each visit after the first (M3-M0 review #11): all three sections are read again, so a hold placed on the
+     * booking screen, a review just written or a booking made on another phone shows. What is shown stays until
+     * the new read arrives.
      */
     fun refresh() {
         if (_uiState.value.session !is SessionState.SignedIn) return
-        when (_uiState.value.segment) {
-            MyTripsSegment.Waitlist -> loadWaitlist()
-            MyTripsSegment.Upcoming, MyTripsSegment.Past -> bookingSource?.invalidate()
-        }
+        reloadAll()
     }
 
-    /** "Try again" on a failed waiting list. */
+    /** Pull-to-refresh: all three again; the indicator stays until Upcoming and the waiting list are back. */
+    fun pullToRefresh() {
+        if (_uiState.value.session !is SessionState.SignedIn) return
+        refreshJob?.cancel()
+        _uiState.update { it.copy(refreshing = true) }
+        reloadAll()
+        val reads = listOfNotNull(upcomingJob, waitlistJob)
+        refreshJob =
+            viewModelScope.launch {
+                reads.joinAll()
+                _uiState.update { it.copy(refreshing = false) }
+            }
+    }
+
+    /** "Try again" in the Upcoming section: only that section is read again. */
+    fun retryUpcoming() = loadUpcoming()
+
+    /** "Try again" in the Waiting list section. */
     fun retryWaitlist() = loadWaitlist()
+
+    private fun reloadAll() {
+        loadUpcoming()
+        loadWaitlist()
+        pastSource?.invalidate()
+    }
+
+    private fun onPastTotal(total: Long) {
+        _uiState.update { it.copy(pastTotal = total) }
+    }
+
+    private fun loadUpcoming() {
+        if (_uiState.value.session !is SessionState.SignedIn) return
+        upcomingJob?.cancel()
+        // Keep what is shown while re-reading; only a first read (or one after a failure) shows the skeleton.
+        if (_uiState.value.upcoming !is SectionLoad.Loaded) _uiState.update { it.copy(upcoming = SectionLoad.Loading) }
+        upcomingJob =
+            viewModelScope.launch {
+                val load =
+                    when (val result = repository.allBookings(BookingList.Upcoming)) {
+                        is AppResult.Success -> SectionLoad.Loaded(result.data)
+                        is AppResult.Failure -> SectionLoad.Failed(result.error)
+                    }
+                _uiState.update { it.copy(upcoming = it.upcoming.after(load)) }
+            }
+    }
 
     private fun loadWaitlist() {
         if (_uiState.value.session !is SessionState.SignedIn) return
         waitlistJob?.cancel()
-        // Keep what is shown while re-reading; only a first read shows the loading state.
-        if (_uiState.value.waitlist !is WaitlistLoad.Loaded) _uiState.update { it.copy(waitlist = WaitlistLoad.Loading) }
+        if (_uiState.value.waitlist !is SectionLoad.Loaded) _uiState.update { it.copy(waitlist = SectionLoad.Loading) }
         waitlistJob =
             viewModelScope.launch {
                 val load =
                     when (val result = repository.waitlist()) {
-                        is AppResult.Success -> WaitlistLoad.Loaded(result.data)
-                        is AppResult.Failure -> WaitlistLoad.Failed(result.error)
+                        is AppResult.Success -> SectionLoad.Loaded(result.data)
+                        is AppResult.Failure -> SectionLoad.Failed(result.error)
                     }
-                _uiState.update { it.copy(waitlist = load) }
+                _uiState.update { it.copy(waitlist = it.waitlist.after(load)) }
             }
     }
 
-    private fun MyTripsSegment.list(): BookingList? =
-        when (this) {
-            MyTripsSegment.Upcoming -> BookingList.Upcoming
-            MyTripsSegment.Past -> BookingList.Past
-            MyTripsSegment.Waitlist -> null
-        }
+    /**
+     * A failed re-read keeps the rows shown (offline on a return or a pull), as Past's paged list does; only a first
+     * read, or a retry of a failed one, shows the error.
+     */
+    private fun <T> SectionLoad<T>.after(read: SectionLoad<T>): SectionLoad<T> =
+        if (this is SectionLoad.Loaded && read is SectionLoad.Failed) this else read
 
     private companion object {
         val PAGING =
