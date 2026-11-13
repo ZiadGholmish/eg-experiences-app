@@ -12,6 +12,7 @@ import org.gradle.kotlin.dsl.configure
  *  - Spotless for the root build scripts and build-logic itself (modules format their own);
  *  - the merged Kover report and gate (`koverHtmlReportMobile` / `koverXmlReportMobile` /
  *    `koverVerifyMobile`), part of `check`;
+ *  - build-logic's own unit tests, part of `check` (MV-M10);
  *  - `installGitHooks`.
  */
 class RootConventionPlugin : Plugin<Project> {
@@ -21,6 +22,9 @@ class RootConventionPlugin : Plugin<Project> {
             configureRootSpotless()
             configureMergedCoverage()
             registerInstallGitHooks()
+            // build-logic is an included build, so its `test` is not in the root's task graph by itself; without this
+            // `./gradlew build` would never run it (e.g. LocalNetworkSecurityConfigTest).
+            tasks.named("check") { dependsOn(gradle.includedBuild("build-logic").task(":test")) }
         }
 }
 
