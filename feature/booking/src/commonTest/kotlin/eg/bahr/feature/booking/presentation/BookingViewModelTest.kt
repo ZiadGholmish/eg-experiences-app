@@ -118,17 +118,56 @@ class BookingViewModelTest {
         }
 
     @Test
-    fun `the phone keeps digits and a leading plus and must match the contract's pattern`() =
+    fun `the phone is kept as typed and checked cleaned against the contract's pattern`() =
         runViewModelTest {
             val vm = BookingViewModel(SLUG, "dep-1", loaded(), FakeActiveHoldStore())
             advanceUntilIdle()
 
             vm.setGuestPhone("+20 10-1234 5678")
-            assertEquals("+201012345678", vm.uiState.value.guestPhone)
+            assertEquals("+20 10-1234 5678", vm.uiState.value.guestPhone)
+            assertEquals("+201012345678", vm.uiState.value.cleanGuestPhone)
             assertTrue(vm.uiState.value.isPhoneValid)
 
             vm.setGuestPhone("0101")
             assertFalse(vm.uiState.value.isPhoneValid)
+        }
+
+    @Test
+    fun `typing 01012345678 key by key keeps every key - the leading 0 too`() =
+        runViewModelTest {
+            val vm = BookingViewModel(SLUG, "dep-1", loaded(), FakeActiveHoldStore())
+            advanceUntilIdle()
+
+            val number = "01012345678"
+            number.indices.forEach { i ->
+                vm.setGuestPhone(number.take(i + 1))
+                assertEquals(number.take(i + 1), vm.uiState.value.guestPhone)
+            }
+            assertTrue(vm.uiState.value.isPhoneValid)
+        }
+
+    @Test
+    fun `a pasted number is sent cleaned - with or without the country code`() =
+        runViewModelTest {
+            listOf("+20 10 1234 5678" to "+201012345678", "01012345678" to "01012345678").forEach { (pasted, sent) ->
+                val repo = loaded()
+                val vm = BookingViewModel(SLUG, "dep-1", repo, FakeActiveHoldStore())
+                advanceUntilIdle()
+                vm.setGuestName("ندى حسن")
+                vm.setGuestPhone(pasted)
+                assertTrue(vm.uiState.value.isPhoneValid, pasted)
+
+                vm.placeHold()
+                advanceUntilIdle()
+
+                assertEquals(
+                    sent,
+                    repo.holdRequests
+                        .single()
+                        .guest.phone,
+                )
+                assertEquals(sent, assertNotNull(vm.uiState.value.held).guestPhone)
+            }
         }
 
     @Test

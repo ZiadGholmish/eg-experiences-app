@@ -8,12 +8,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.semantics.SemanticsNode
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.unit.toSize
 import androidx.core.graphics.Insets
 import androidx.core.view.ViewCompat
@@ -37,6 +40,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
@@ -72,6 +76,83 @@ class BookingKeyboardTest {
 
     @Test
     fun phoneFieldStaysAboveTheBarArabic() = check(AppLanguage.ARABIC, "احجز المقاعد وادفع")
+
+    /**
+     * MV-M12 (user bug: "can't type 010", the screen jumps on each digit): with the keyboard up, typing the number key by
+     * key keeps every key, the leading 0 too, with the cursor after the last one, and the form does not move under the
+     * field as it is typed into (it was brought into view once, when it took the focus).
+     */
+    @Test
+    fun typingKeyByKeyKeepsEveryDigitAndTheFormStillArabic() = typeKeyByKey(AppLanguage.ARABIC)
+
+    @Test
+    fun typingKeyByKeyKeepsEveryDigitAndTheFormStillEnglish() = typeKeyByKey(AppLanguage.ENGLISH)
+
+    private fun typeKeyByKey(language: AppLanguage) {
+        val vm = showForm(language)
+        raiseKeyboard()
+
+        val field = compose.onNodeWithTag(PHONE_FIELD_TAG)
+        val top = field.fetchSemanticsNode().positionInRoot.y
+        NUMBER.forEachIndexed { i, digit ->
+            field.performTextInput(digit.toString())
+            compose.waitForIdle()
+            val typed = NUMBER.take(i + 1)
+            assertEquals(typed, vm.uiState.value.guestPhone)
+            val node = field.fetchSemanticsNode()
+            assertEquals(typed, node.config[SemanticsProperties.EditableText].text)
+            assertEquals(TextRange(typed.length), node.config[SemanticsProperties.TextSelectionRange], "the cursor after $typed")
+            assertEquals(top, node.positionInRoot.y, "the form moved under the field after $typed")
+        }
+        assertTrue(vm.uiState.value.isPhoneValid)
+        compose.captureScreenshot("booking_phone_typed_${language.tag}")
+    }
+
+    private fun showForm(language: AppLanguage): BookingViewModel {
+        val repo =
+            FakeBookingRepository(
+                tripBySlug = { AppResult.Success(BookingFixtures.trip()) },
+                departuresFor = { AppResult.Success(BookingFixtures.saturdays()) },
+            )
+        val vm = BookingViewModel(SLUG, "dep-2", repo, FakeActiveHoldStore())
+        compose.setContent {
+            ProvideAppLanguage(language) {
+                BahrTheme(locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English) {
+                    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+                        BookingScreen(slug = SLUG, departureId = "dep-2", onBack = {}, onHeld = { _, _ -> }, viewModel = vm)
+                    }
+                }
+            }
+        }
+        compose.waitForIdle()
+        vm.setGuestName("Nada Hassan")
+        compose.waitForIdle()
+        return vm
+    }
+
+    /** Taps the phone field, scrolled to just above the bar, then lets a real IME inset arrive, as the platform does. */
+    private fun raiseKeyboard() {
+        compose.onNodeWithTag(PHONE_FIELD_TAG).performScrollTo().performClick()
+        compose.waitForIdle()
+        val rootHeight =
+            compose
+                .onRoot()
+                .fetchSemanticsNode()
+                .size.height
+        val imeHeight = rootHeight * IME_SHARE / 100
+        compose.runOnUiThread {
+            val insets =
+                WindowInsetsCompat
+                    .Builder()
+                    .setInsets(WindowInsetsCompat.Type.ime(), Insets.of(0, 0, 0, imeHeight))
+                    .setVisible(WindowInsetsCompat.Type.ime(), true)
+                    .build()
+            ViewCompat.dispatchApplyWindowInsets(compose.activity.window.decorView, insets)
+        }
+        compose.waitForIdle()
+        compose.mainClock.advanceTimeBy(SETTLE_MS)
+        compose.waitForIdle()
+    }
 
     private fun check(
         language: AppLanguage,
@@ -134,5 +215,6 @@ class BookingKeyboardTest {
         /** A phone keyboard takes about 40 % of the screen's height. */
         const val IME_SHARE = 40
         const val SETTLE_MS = 1_000L
+        const val NUMBER = "01012345678"
     }
 }

@@ -26,11 +26,13 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -52,7 +54,9 @@ import eg.bahr.core.designsystem.theme.BahrTheme
  * ([Props.cancel]) last.
  *
  * Keyboard and switch-access focus starts on the safe action, the cancel (touch mode gives buttons none,
- * so it is asked for again when a key first switches the input mode). Swiping the sheet away, the scrim
+ * so it is asked for again when a key first switches the input mode, unless something in the sheet already has
+ * the focus: on Android a typed key leaves touch mode too, and taking the focus then moved it off the field being
+ * typed into after its first character, MV-M12). Swiping the sheet away, the scrim
  * and Back all call [Props.onDismiss], unless the sheet is busy ([Props.dismissible] false). The sheet is its own window; the app's layout direction is
  * carried into it by hand, as Android takes a window's direction from the platform locale otherwise.
  *
@@ -144,13 +148,17 @@ fun BahrBottomSheetContent(
 ) {
     val safe = remember { FocusRequester() }
     val inputMode = LocalInputModeManager.current.inputMode
+    // Read by the effect only, so a focus move does not recompose the sheet.
+    val contentFocused = remember { mutableStateOf(false) }
     LaunchedEffect(safe, inputMode, props.cancel != null) {
-        if (inputMode == InputMode.Keyboard && props.cancel != null) safe.requestFocus()
+        // A key typed into the sheet's field is what switched the mode: the focus stays where it is.
+        if (inputMode == InputMode.Keyboard && props.cancel != null && !contentFocused.value) safe.requestFocus()
     }
     Column(
         modifier =
             Modifier
                 .fillMaxWidth()
+                .onFocusChanged { contentFocused.value = it.hasFocus }
                 .verticalScroll(rememberScrollState())
                 .navigationBarsPadding()
                 .padding(start = BahrSpacing.xl, end = BahrSpacing.xl, bottom = BahrSpacing.xxl),
