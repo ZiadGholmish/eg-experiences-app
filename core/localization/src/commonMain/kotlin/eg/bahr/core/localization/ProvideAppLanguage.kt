@@ -34,3 +34,10 @@ fun ProvideAppLanguage(
         }
     }
 }
+
+/**
+ * The language the nearest [ProvideAppLanguage] draws its content in: the one that content is keyed on, so it is
+ * constant for the life of everything below the key (MV-M8: the tab state tags each NavHost's reports with it).
+ */
+val currentAppLanguage: AppLanguage
+    @Composable get() = AppLanguage.fromTag(LocalAppLocale.current)

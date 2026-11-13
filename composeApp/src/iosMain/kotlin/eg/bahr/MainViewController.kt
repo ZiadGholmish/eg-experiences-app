@@ -2,7 +2,6 @@ package eg.bahr
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.window.ComposeUIViewController
-import eg.bahr.core.catalog.presentation.media.IosMediaChrome
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.common.push.PushChannel
 import eg.bahr.core.datastore.APP_PREFERENCES_FILE
@@ -86,15 +85,19 @@ interface AppTabBar {
     /** Show [tab]. Not a tap: Swift must not report it back. */
     fun selectTab(tab: AppTab)
 
-    /** Hide the bar while [tab] shows a pushed screen; show it on the tab's root. */
+    /**
+     * Hide the bar while [tab] shows a pushed screen or its open viewer; show it on the tab's root. Sent for every tab;
+     * Swift applies the selected tab's value (MV-M8: SwiftUI let a tab not on screen show the bar over the selected one).
+     */
     fun setBarHidden(
         tab: AppTab,
         hidden: Boolean,
     )
 
     /**
-     * The full-screen photo and video viewer (MV-M3) opened ([fullScreen] true) or closed: hide the status bar and the
-     * home indicator while it is open. The status bar is the SwiftUI app's, which the Compose roots cannot hide.
+     * The selected tab's full-screen photo and video viewer (MV-M3) opened ([fullScreen] true) or closed: hide the status
+     * bar and the home indicator while it is open; the status bar is the SwiftUI app's, which the Compose roots cannot
+     * hide. Not the tab bar: [setBarHidden] already says it for that tab.
      */
     fun setFullScreen(fullScreen: Boolean)
 }
@@ -158,8 +161,6 @@ fun startApp(
     // The stored appearance before any Compose root or the bar draws (M3-M0b review R4-1).
     KoinPlatform.getKoin().seedStoredAppearance()
     IosTabs.start(tabBar, selectedTab)
-    // The viewer's status bar (MV-M3): core:catalog cannot reach Swift, so it goes through here.
-    IosMediaChrome.onFullScreen = tabBar::setFullScreen
 }
 
 /** A non-blank Info.plist string, or null: the xcconfigs leave a setting empty when an environment has none. */
@@ -283,19 +284,12 @@ internal object IosTabs {
         started = true
         bar = tabBar
         state = AppTabsState(initial = selectedTab)
-        scope.launch {
-            var shown: AppTabsState.Snapshot? = null
-            state.state.collect { now ->
-                if (shown?.selected != now.selected) tabBar.selectTab(now.selected)
-                AppTab.entries
-                    .filter { shown == null || shown?.atRoot?.get(it) != now.atRoot[it] }
-                    .forEach { tab -> tabBar.setBarHidden(tab, hidden = now.atRoot[tab] != true) }
-                shown = now
-            }
-        }
-        // A language switch starts every tab over at its root (see AppTabsState.resetToRoots).
+        val mirror = IosBarMirror(tabBar)
+        scope.launch { state.state.collect(mirror::show) }
+        // A language switch rebuilds every tab's NavHost at its root, a tab not on screen when it next draws: the tab
+        // state hears of each language, so a stack reported in an earlier one counts as on its root (MV-M8).
         val languages: AppLanguageState = KoinPlatform.getKoin().get()
-        scope.launch { languages.language.drop(1).collect { state.resetToRoots() } }
+        scope.launch { languages.language.collect(state::onLanguage) }
         // Profile → Appearance (M3-M0b): the stored value at once (it was seeded), then each pick.
         val appearance: AppAppearanceState = KoinPlatform.getKoin().get()
         tabBar.applyAppearance(appearance.appearance.value.tag)

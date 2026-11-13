@@ -92,16 +92,22 @@ import kotlin.math.roundToInt
 /**
  * Hosts the viewer over [content] (the app's NavHost): provides [LocalMediaViewer] and, while a gallery is open, draws the
  * viewer on top, takes Back to close it, and hides what is under it from TalkBack and VoiceOver.
+ *
+ * [onOpenChange] hears true when the viewer appears and false once it has faded out (or left the composition), so the app
+ * can hide its bars for this host's tab only (MV-M8; on iOS the tab bar and status bar are the SwiftUI app's).
  */
 @Composable
-fun MediaViewerHost(content: @Composable () -> Unit) {
+fun MediaViewerHost(
+    onOpenChange: (Boolean) -> Unit = {},
+    content: @Composable () -> Unit,
+) {
     val controller = remember { MediaViewerController() }
     CompositionLocalProvider(LocalMediaViewer provides controller) {
         val session = controller.session
         Box(Modifier.fillMaxSize()) {
             // While the viewer is open the page under it is not there for a screen reader: focus stays in the viewer.
             Box(Modifier.fillMaxSize().then(if (session != null) Modifier.clearAndSetSemantics {} else Modifier)) { content() }
-            if (session != null) ViewerOverlay(controller, session)
+            if (session != null) ViewerOverlay(controller, session, onOpenChange)
         }
     }
 }
@@ -110,6 +116,7 @@ fun MediaViewerHost(content: @Composable () -> Unit) {
 private fun ViewerOverlay(
     controller: MediaViewerController,
     session: MediaViewerState,
+    onOpenChange: (Boolean) -> Unit,
 ) {
     // Starts hidden and is told to show, so the viewer fades in rather than appearing at once.
     val visibility = remember(session) { MutableTransitionState(false) }
@@ -140,6 +147,11 @@ private fun ViewerOverlay(
         exit = fadeOut(tween(BahrMotion.Medium, easing = BahrMotion.Standard)),
     ) {
         HideSystemBars()
+        val reportOpen by rememberUpdatedState(onOpenChange)
+        DisposableEffect(Unit) {
+            reportOpen(true)
+            onDispose { reportOpen(false) }
+        }
         MediaViewer(state = session, shown = shown, onClose = controller::close, flightKey = controller.flightKey)
     }
 }

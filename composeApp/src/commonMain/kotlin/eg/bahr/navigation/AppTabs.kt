@@ -11,8 +11,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigationevent.NavigationEventInfo
@@ -48,6 +53,17 @@ fun AppTabs(
 ) {
     val state by tabs.state.collectAsStateWithLifecycle()
     val holder = rememberSaveableStateHolder()
+
+    // A holder made afresh (a language switch: ProvideAppLanguage's key rebuilds this host) has dropped every tab's
+    // stack but the selected one's, so their last reports no longer hold (MV-M8 round 1: after ar → en → ar, an Arabic
+    // report would count again and the bar hide then re-show). Restored after an Activity recreation, the stacks are
+    // all there and the reports stand.
+    var restored by rememberSaveable { mutableStateOf(false) }
+    val composedFirst = remember { tabs.selected }
+    LaunchedEffect(Unit) {
+        if (!restored) tabs.forgetStacks(except = composedFirst)
+        restored = true
+    }
 
     // Back on the root of any tab but Home goes to Home; on Home's root it leaves the app. Off a root the
     // tab's NavHost handles Back (its own handler is the enabled one there).

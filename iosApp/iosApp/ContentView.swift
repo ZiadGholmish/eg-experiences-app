@@ -62,8 +62,9 @@ struct ContentView: View {
                     }
                     .badge(tabs.badge(tab))
                     .tag(tab)
-                    // Shown on a tab's root only: hidden on the trip page, booking, hold, confirmation.
-                    .toolbar(tabs.isBarHidden(tab) ? .hidden : .visible, for: .tabBar)
+                    // Shown on a tab's root only: hidden on the trip page, booking, hold, confirmation, the viewer.
+                    // The selected tab's value on every tab (see TabBarModel.isBarHidden).
+                    .toolbar(tabs.isBarHidden ? .hidden : .visible, for: .tabBar)
             }
         }
         // The selected tab's colour (the theme's onPrimaryContainer, as Android's selected icon), from the
