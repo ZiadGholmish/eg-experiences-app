@@ -72,10 +72,10 @@ interface BahrLottie {
         SuccessCheck("files/lottie/success_check.json", SQUARE),
 
         /**
-         * A line-drawn suitcase that grows from a dot, shows its handle and shrinks back to the dot
-         * (square). Its still frame is the whole suitcase: the loop starts and ends on the dot.
+         * A line-drawn folded map that opens, its roads drawn in, a pin dropping and a dotted route
+         * leading from it to a cross, then held (square). Its still frame is the last: the whole map.
          */
-        Suitcase("files/lottie/suitcase.json", SQUARE, stillProgress = SUITCASE_STILL),
+        MapRoute("files/lottie/map_route.json", SQUARE),
 
         /** A magnifying glass with a sad face that changes its mind now and then (square). */
         Magnifier("files/lottie/magnifier.json", SQUARE),
@@ -229,8 +229,5 @@ private const val BELL_HEIGHT = 663f
 private const val SAILBOAT_WIDTH = 348f
 private const val SAILBOAT_HEIGHT = 240f
 
-/** The success check, suitcase and magnifier files have square canvases. */
+/** The success check, map and magnifier files have square canvases. */
 private const val SQUARE = 1f
-
-/** Mid-loop, between growing and shrinking: the whole suitcase with its handle. */
-private const val SUITCASE_STILL = .5f

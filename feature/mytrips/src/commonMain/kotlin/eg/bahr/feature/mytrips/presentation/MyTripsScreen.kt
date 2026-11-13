@@ -2,6 +2,7 @@ package eg.bahr.feature.mytrips.presentation
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
@@ -157,20 +158,20 @@ internal fun MyTripsContent(
             contentPadding = PaddingValues(horizontal = BahrSpacing.gutter, vertical = BahrSpacing.lg),
             verticalArrangement = Arrangement.spacedBy(BahrSpacing.md),
         ) {
-            item(key = "title", contentType = CONTENT_HEADING) {
-                Text(
-                    text = stringResource(Res.string.mytrips_title),
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.semantics { heading() }.padding(bottom = BahrSpacing.sm),
-                )
-            }
-            when (state.session) {
-                // The stored sign-in is read in a moment; drawing neither state until then keeps the
-                // signed-out prompt or a bookings skeleton from flashing (as the Alerts tab does, M3-M14).
-                SessionState.Unknown -> Unit
-                SessionState.SignedOut -> signedOut(state, actions)
-                is SessionState.SignedIn -> signedIn(state, blocks, past, actions)
+            if (signedIn && blocks.isEmpty()) {
+                // No trips yet: the title and the empty state share one item as tall as the list, so the state
+                // sits in the middle of the space under the title (a lazy item alone has no height to centre in;
+                // user, 2026-11-12). The list stays, so pulling down still reads the three sections again.
+                item(key = "empty", contentType = CONTENT_EMPTY) { NoTrips(Modifier.fillParentMaxSize()) }
+            } else {
+                item(key = "title", contentType = CONTENT_HEADING) { Title() }
+                when (state.session) {
+                    // The stored sign-in is read in a moment; drawing neither state until then keeps the
+                    // signed-out prompt or a bookings skeleton from flashing (as the Alerts tab does, M3-M14).
+                    SessionState.Unknown -> Unit
+                    SessionState.SignedOut -> signedOut(state, actions)
+                    is SessionState.SignedIn -> signedIn(state, blocks, past, actions)
+                }
             }
         }
     }
@@ -198,28 +199,49 @@ private fun LazyListScope.signedOut(
     }
 }
 
-/** The sections in their order ([sectionBlocks]); none at all is the empty state. */
+@Composable
+private fun Title(modifier: Modifier = Modifier) {
+    Text(
+        text = stringResource(Res.string.mytrips_title),
+        style = MaterialTheme.typography.headlineSmall,
+        color = MaterialTheme.colorScheme.onSurface,
+        modifier = modifier.semantics { heading() }.padding(bottom = BahrSpacing.sm),
+    )
+}
+
+/**
+ * Signed in with no trips in any section: the title, and under it, centred in the rest of [modifier]'s height,
+ * a map opening with a route to a pin while on screen (2026-11-12; a suitcase since M3-M8b) over the line that
+ * says it, so the animation is decorative. Drawn on the page's `background`, which its pin's hole and the
+ * route's end take ([BahrLottie.Ground.Background]).
+ */
+@Composable
+private fun NoTrips(modifier: Modifier) {
+    Column(modifier) {
+        Title()
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            BahrEmptyView(stringResource(Res.string.mytrips_empty_upcoming)) {
+                BahrLottie(
+                    modifier = Modifier.width(BahrSize.lottieState),
+                    props =
+                        BahrLottie.Props(
+                            BahrLottie.Animation.MapRoute,
+                            playback = BahrLottie.Playback.Loop,
+                            ground = BahrLottie.Ground.Background,
+                        ),
+                )
+            }
+        }
+    }
+}
+
+/** The sections in their order ([sectionBlocks]); never empty (that is [NoTrips]). */
 private fun LazyListScope.signedIn(
     state: MyTripsUiState,
     blocks: List<SectionBlock>,
     past: LazyPagingItems<MyBookingDto>,
     actions: MyTripsActions,
 ) {
-    if (blocks.isEmpty()) {
-        item(key = "empty", contentType = CONTENT_EMPTY) {
-            // No trips yet (M3-M8b): a suitcase packing and unpacking itself while on screen. Decorative:
-            // the line under it says it.
-            Centered {
-                BahrEmptyView(stringResource(Res.string.mytrips_empty_upcoming)) {
-                    BahrLottie(
-                        modifier = Modifier.width(BahrSize.lottieState),
-                        props = BahrLottie.Props(BahrLottie.Animation.Suitcase, playback = BahrLottie.Playback.Loop),
-                    )
-                }
-            }
-        }
-        return
-    }
     blocks.forEach { block ->
         val section = block.section
         when (block) {
