@@ -6,10 +6,11 @@ import eg.bahr.core.network.MoneyDto
 import eg.bahr.core.network.auth.SessionState
 import eg.bahr.feature.booking.model.BookingDepartureDto
 import eg.bahr.feature.booking.model.BookingDeparturePlaceDto
+import eg.bahr.feature.booking.model.BookingDto
+import eg.bahr.feature.booking.model.BookingHostDto
 import eg.bahr.feature.booking.model.BookingPolicyDto
 import eg.bahr.feature.booking.model.BookingTripDto
 import eg.bahr.feature.booking.model.BookingTripSummaryDto
-import eg.bahr.feature.booking.model.HeldBookingDto
 import eg.bahr.feature.booking.model.HeldSeatsDto
 import eg.bahr.feature.booking.model.PaymentActionDto
 import eg.bahr.feature.booking.model.PaymentStartedDto
@@ -26,9 +27,9 @@ internal class FakeBookingRepository(
     var tripBySlug: suspend (slug: String) -> AppResult<BookingTripDto> = { unset() },
     var departuresFor: suspend (slug: String) -> AppResult<List<BookingDepartureDto>> = { unset() },
     var placeHold: suspend (request: PlaceHoldRequest) -> AppResult<HeldSeatsDto> = { unset() },
-    var heldBooking: suspend (ref: String, phone: String) -> AppResult<HeldBookingDto> = { _, _ -> unset() },
+    var heldBooking: suspend (ref: String, phone: String) -> AppResult<BookingDto> = { _, _ -> unset() },
     var releaseHold: suspend (ref: String, phone: String) -> AppResult<Unit> = { _, _ -> unset() },
-    var bookingByRef: suspend (ref: String) -> AppResult<HeldBookingDto> = { unset() },
+    var bookingByRef: suspend (ref: String) -> AppResult<BookingDto> = { unset() },
     var startPayment: suspend (ref: String, request: StartPaymentRequest) -> AppResult<PaymentStartedDto> = { _, _ -> unset() },
     signedIn: Boolean = true,
 ) : BookingRepository {
@@ -71,12 +72,12 @@ internal class FakeBookingRepository(
     override suspend fun bookingByRef(
         ref: String,
         phone: String?,
-    ): AppResult<HeldBookingDto> = bookingByRef.invoke(ref)
+    ): AppResult<BookingDto> = bookingByRef.invoke(ref)
 
     override suspend fun heldBooking(
         ref: String,
         phone: String,
-    ): AppResult<HeldBookingDto> {
+    ): AppResult<BookingDto> {
         bookingReads += ref to phone
         return heldBooking.invoke(ref, phone)
     }
@@ -161,7 +162,11 @@ internal object BookingFixtures {
         returnDate: LocalDate? = null,
         paymentMethods: List<String>? = null,
         method: String? = null,
-    ) = HeldBookingDto(
+        whereToStand: String? = null,
+        host: BookingHostDto? = null,
+        dateCalledOff: Boolean? = null,
+        hostPaid: Boolean? = null,
+    ) = BookingDto(
         ref = "BRL-7K4M2X9P",
         status = status,
         holdExpiresAt = holdExpiresAt.takeIf { status == "HELD" || status == "PAYMENT_PENDING" },
@@ -169,7 +174,14 @@ internal object BookingFixtures {
         trip = BookingTripSummaryDto(slug = SLUG, title = title),
         date = LocalDate.parse("2026-10-10"),
         dayLabel = dayLabel,
-        departure = BookingDeparturePlaceDto(placeName = placeName, city = city, timeLocal = "05:00", arriveBy = "04:45"),
+        departure =
+            BookingDeparturePlaceDto(
+                placeName = placeName,
+                city = city,
+                timeLocal = "05:00",
+                arriveBy = "04:45",
+                whereToStand = whereToStand,
+            ),
         returnTime = "22:00",
         returnDate = returnDate,
         partySize = 2,
@@ -177,7 +189,14 @@ internal object BookingFixtures {
         method = method,
         // As the server: the accepted methods only on a HELD booking (MV-B2).
         paymentMethods = paymentMethods.takeIf { status == "HELD" },
+        dateCalledOff = dateCalledOff,
+        hostPaid = hostPaid,
+        // As the server: the host only on a paid booking (D4).
+        host = host.takeIf { status == "CONFIRMED" || status == "COMPLETED" },
     )
+
+    /** openapi `Booking.host` as the local api sends it (seeded host). */
+    fun host(name: String = "أشرف البحر") = BookingHostDto(name = name, phone = "+201065124477", whatsappUrl = "https://wa.me/201065124477")
 
     /** What a local or dev server takes (MV-B2): the two real methods, then test cash. Its order, card first. */
     val WITH_TEST_CASH = listOf("card", "vodafone_cash", "test_cash")

@@ -9,7 +9,7 @@ import eg.bahr.core.network.ApiErrorCodes
 import eg.bahr.core.network.auth.SessionState
 import eg.bahr.feature.booking.data.BookingRepository
 import eg.bahr.feature.booking.di.CheckoutConfig
-import eg.bahr.feature.booking.model.HeldBookingDto
+import eg.bahr.feature.booking.model.BookingDto
 import eg.bahr.feature.booking.model.PayerRequest
 import eg.bahr.feature.booking.model.PaymentStartedDto
 import eg.bahr.feature.booking.model.StartPaymentRequest
@@ -68,7 +68,7 @@ internal data class HoldUiState(
     /** Share of the hold still left, 1 → 0, against the hold's length on the server's clock. */
     val progress: Float = 1f,
     /** The re-read booking: the trip summary. Null until `GET /bookings/{ref}` first answers. */
-    val booking: HeldBookingDto? = null,
+    val booking: BookingDto? = null,
     /** The last re-read at zero failed; shown under the countdown while it retries. */
     val checkError: AppError? = null,
     val isLeaveConfirmVisible: Boolean = false,
@@ -339,7 +339,7 @@ internal class HoldViewModel(
             }
     }
 
-    private suspend fun onBookingRead(booking: HeldBookingDto) {
+    private suspend fun onBookingRead(booking: BookingDto) {
         if (_uiState.value.phase.isEnded) return
         val receivedAt = clock.now()
         val fresh = booking.liveDeadline(receivedAt)
@@ -397,7 +397,7 @@ internal class HoldViewModel(
      * [PaymentStep.Confirming]. No reminder now (M3-M1): "pay before the seats are released" no longer applies.
      */
     private fun onPaymentPending(
-        booking: HeldBookingDto,
+        booking: BookingDto,
         receivedAt: Instant,
     ) {
         HoldDeadline.from(booking.holdExpiresAt, booking.serverNow, receivedAt)?.let { deadline = it }

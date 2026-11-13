@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -23,10 +24,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import eg.bahr.core.catalog.presentation.components.SectionTitle
 import eg.bahr.core.designsystem.components.BahrPrimaryButton
-import eg.bahr.core.designsystem.components.BahrSkeletonBlock
+import eg.bahr.core.designsystem.components.BahrSkeletonLine
 import eg.bahr.core.designsystem.components.StickyActionBar
 import eg.bahr.core.designsystem.format.BahrFormat
 import eg.bahr.core.designsystem.icon.BahrIcons
@@ -36,6 +38,7 @@ import eg.bahr.core.designsystem.theme.BahrSize
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.designsystem.theme.bahrShadow
+import eg.bahr.core.designsystem.theme.bahrShimmer
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.departure_back_on
 import eg.bahr.core.localization.generated.resources.departure_cancelled
@@ -86,6 +89,8 @@ internal fun TripAvailability(
     onSelect: (String) -> Unit,
     modifier: Modifier = Modifier,
     joinedIds: Set<String> = emptySet(),
+    seatsLoading: Boolean = false,
+    policyPending: Boolean = false,
 ) {
     Column(
         modifier =
@@ -98,14 +103,17 @@ internal fun TripAvailability(
         val gutter = Modifier.padding(horizontal = BahrSpacing.gutter)
         SectionTitle(stringResource(Res.string.departures_pick_a_date), gutter)
         when {
+            // The loaded row itself, with cards of a loaded card's height (MV-M7): the band keeps its size when the dates
+            // land. A lazy row, as the loaded one, so the cards past the screen's edge run off it at their own width
+            // instead of being squeezed (and their lines wrapped) to fit.
             loading ->
-                Row(gutter, horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm)) {
-                    repeat(SKELETON_CARDS) {
-                        BahrSkeletonBlock(
-                            modifier = Modifier.width(BahrSize.dateCard).heightIn(min = BahrSize.dateCard),
-                            props = BahrSkeletonBlock.Props(shape = BahrTheme.shapes.extraLarge),
-                        )
-                    }
+                LazyRow(
+                    modifier = Modifier.testTag(TRIP_DATE_ROW_TAG),
+                    contentPadding = PaddingValues(horizontal = BahrSpacing.gutter, vertical = BahrSpacing.xs),
+                    horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm),
+                    userScrollEnabled = false,
+                ) {
+                    items(SKELETON_CARDS, contentType = { CONTENT_DATE_CARD_SKELETON }) { DateCardSkeleton() }
                 }
 
             departures.isEmpty() ->
@@ -118,6 +126,7 @@ internal fun TripAvailability(
 
             else ->
                 LazyRow(
+                    modifier = Modifier.testTag(TRIP_DATE_ROW_TAG),
                     contentPadding = PaddingValues(horizontal = BahrSpacing.gutter, vertical = BahrSpacing.xs),
                     horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm),
                 ) {
@@ -126,6 +135,7 @@ internal fun TripAvailability(
                             departure = departure,
                             selected = departure.id == selected?.id,
                             joined = departure.id in joinedIds,
+                            seatsPending = seatsLoading,
                             onSelect = { onSelect(departure.id) },
                         )
                     }
@@ -133,7 +143,10 @@ internal fun TripAvailability(
         }
         waitlistOutcome?.let { WaitlistOutcomeNote(it, gutter) }
         if (selected?.availability == DateAvailability.SoldOut) SoldOutNotice(selected, alternative, waitlist, gutter)
-        policy?.let { PolicyNote(it, gutter) }
+        when {
+            policy != null -> PolicyNote(policy, gutter)
+            policyPending -> PolicyNoteSkeleton(gutter)
+        }
     }
 }
 
@@ -161,6 +174,7 @@ private fun DateCard(
     departure: DepartureDto,
     selected: Boolean,
     joined: Boolean,
+    seatsPending: Boolean,
     onSelect: () -> Unit,
 ) {
     val c = MaterialTheme.colorScheme
@@ -226,10 +240,55 @@ private fun DateCard(
                 modifier = Modifier.size(BahrSize.iconSmall),
             )
             // Wraps rather than clips: "11 seats left" is wider than the 100dp card in English.
-            Text(
-                text = if (waiting) stringResource(Res.string.waitlist_tag) else seatsText(departure),
-                style = MaterialTheme.typography.labelMedium,
-                color = content,
+            val seats = if (waiting) stringResource(Res.string.waitlist_tag) else seatsText(departure)
+            if (seatsPending) {
+                SeatsSkeleton(seats)
+            } else {
+                Text(text = seats, style = MaterialTheme.typography.labelMedium, color = content)
+            }
+        }
+    }
+}
+
+/**
+ * The seats line while the live count is on its way (HANDOFF §loading: "live seat counts shimmer", MV-M7): the date
+ * itself is known from the trip, only the count is not. The trip's own count holds the line's room, undrawn.
+ */
+@Composable
+private fun SeatsSkeleton(placeholder: String) {
+    Box {
+        InvisibleText(placeholder, MaterialTheme.typography.labelMedium)
+        Column(Modifier.matchParentSize(), verticalArrangement = Arrangement.Center) { BahrSkeletonLine() }
+    }
+}
+
+/**
+ * A date card while nothing about the dates is known: [DateCard]'s padding and lines laid out but not drawn, so the
+ * shimmering card is a loaded card's height. The seats line holds "10 seats left" in the page's language, which wraps
+ * on the narrow card in English as a real count does.
+ */
+@Composable
+private fun DateCardSkeleton() {
+    Column(
+        modifier =
+            Modifier
+                .width(BahrSize.dateCard)
+                .bahrShimmer(BahrTheme.shapes.extraLarge)
+                .heightIn(min = BahrSpacing.minTouch)
+                .padding(BahrSpacing.md),
+        verticalArrangement = Arrangement.spacedBy(BahrSpacing.xs),
+    ) {
+        ReservedText(MaterialTheme.typography.labelMedium)
+        ReservedText(MaterialTheme.typography.titleMedium)
+        Row(
+            modifier = Modifier.padding(top = BahrSpacing.xs),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(BahrSpacing.xs),
+        ) {
+            Spacer(Modifier.size(BahrSize.iconSmall))
+            InvisibleText(
+                pluralStringResource(Res.plurals.departure_seats_left, TYPICAL_SEATS, TYPICAL_SEATS),
+                MaterialTheme.typography.labelMedium,
             )
         }
     }
@@ -321,15 +380,30 @@ private fun PolicyNote(
 }
 
 /**
+ * The small print while the trip loads (MV-M7): the cancellation rule is the trip's and shimmers; the units line is
+ * fixed copy and is text.
+ */
+@Composable
+private fun PolicyNoteSkeleton(modifier: Modifier) {
+    val style = MaterialTheme.typography.labelMedium
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(BahrSpacing.xs)) {
+        LinesSkeleton(style, widthFraction = POLICY_SKELETON_FRACTION)
+        Text(stringResource(Res.string.trip_policy_units), style = style, color = BahrTheme.colors.onSurfaceSecondary)
+    }
+}
+
+/**
  * The sticky bottom bar (item 11): what the price is for ("Per person", or the picked date and its
  * seats) and the price, then the one coral button. Its label follows the selection: "Choose a date"
- * → "Continue" → a disabled "Sold out".
+ * → "Continue" → a disabled "Sold out" (also with no date picked when nothing can be booked, MV-M9).
+ * [ctaEnabled] comes from the state ([TripDetailUiState.ctaEnabled]).
  */
 @Composable
 internal fun TripStickyBar(
     price: MoneyDto?,
     selected: DepartureDto?,
     cta: TripCta,
+    ctaEnabled: Boolean,
     onCta: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -343,13 +417,22 @@ internal fun TripStickyBar(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
             )
-            // The picked date's own price when there is one: a date may be priced differently.
-            (selected?.price ?: price)?.let {
+            // The picked date's own price when there is one: a date may be priced differently. Not known yet (a cold
+            // open, MV-M7): the line shimmers at its own height, so the bar does not grow when the trip lands.
+            val shown = selected?.price ?: price
+            if (shown != null) {
                 Text(
-                    text = BahrFormat.money(it.amount, it.currencyCode, BahrTheme.locale.isArabic),
+                    text = BahrFormat.money(shown.amount, shown.currencyCode, BahrTheme.locale.isArabic),
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.primary,
                     maxLines = 1,
+                    modifier = Modifier.testTag(TRIP_BAR_PRICE_TAG),
+                )
+            } else {
+                LinesSkeleton(
+                    MaterialTheme.typography.titleLarge,
+                    Modifier.testTag(TRIP_BAR_PRICE_TAG),
+                    widthFraction = PRICE_SKELETON_FRACTION,
                 )
             }
         }
@@ -363,16 +446,33 @@ internal fun TripStickyBar(
                     },
                 ),
             onClick = onCta,
-            // Only "Sold out" is disabled. While the trip loads the button keeps its normal look, so a
-            // slow page never reads as unavailable; the tap waits for the dates (see TripDetailScreen).
-            enabled = cta != TripCta.SoldOut,
+            // MV-M9 reverses the earlier "normal look while loading": a button that looked ready and then did nothing, or
+            // was refused, read as a bug. Disabled is the same size (only the fill changes), so the bar does not jump.
+            enabled = ctaEnabled,
             leadingIcon = if (cta == TripCta.Continue) BahrIcons.ArrowForward.outlined() else null,
+            modifier = Modifier.testTag(TRIP_CTA_TAG),
         )
     }
 }
 
+/** For tests (MV-M9): the sticky bar's button, disabled while sold out or not yet known. */
+internal const val TRIP_CTA_TAG = "trip_cta"
+
+/** For tests (MV-M7): the sticky bar's price, whose bounds must not move while the page loads. */
+internal const val TRIP_BAR_PRICE_TAG = "trip_bar_price"
+
+private const val PRICE_SKELETON_FRACTION = 0.4f
+private const val POLICY_SKELETON_FRACTION = 0.6f
+
+/** For tests (MV-M7): the row of date cards, loaded or not, whose height must not change while the page loads. */
+internal const val TRIP_DATE_ROW_TAG = "trip_date_row"
+
 /** Placeholder date cards while the live seat counts load. */
 private const val SKELETON_CARDS = 4
 
+/** The count a skeleton date card's seats line is laid out with: two digits, as most open dates have. */
+private const val TYPICAL_SEATS = 10
+
 /** The date row holds date cards only; named, as every lazy list here names its content types (M3-M11). */
 private const val CONTENT_DATE_CARD = "date-card"
+private const val CONTENT_DATE_CARD_SKELETON = "date-card-skeleton"

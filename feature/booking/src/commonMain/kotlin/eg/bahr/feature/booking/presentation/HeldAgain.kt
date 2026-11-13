@@ -3,7 +3,7 @@ package eg.bahr.feature.booking.presentation
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.datastore.StoredHold
 import eg.bahr.core.network.ApiErrorCodes
-import eg.bahr.feature.booking.model.HeldBookingDto
+import eg.bahr.feature.booking.model.BookingDto
 import eg.bahr.feature.booking.navigation.HoldRoute
 import kotlin.time.Duration
 import kotlin.time.Instant
@@ -17,7 +17,7 @@ import kotlin.time.Instant
  * The deadline, if the server says the seats are still held for this booking: HELD or
  * PAYMENT_PENDING with a deadline that parses. Anything else means they are not.
  */
-internal fun HeldBookingDto.liveDeadline(receivedAt: Instant): HoldDeadline? =
+internal fun BookingDto.liveDeadline(receivedAt: Instant): HoldDeadline? =
     if (status in HoldViewModel.HELD_STATUSES) HoldDeadline.from(holdExpiresAt, serverNow, receivedAt) else null
 
 /**
@@ -31,7 +31,7 @@ internal fun HeldBookingDto.liveDeadline(receivedAt: Instant): HoldDeadline? =
  */
 internal fun reopenedHold(
     stored: StoredHold,
-    booking: HeldBookingDto,
+    booking: BookingDto,
     holdExpiresAt: String,
     serverNow: String = booking.serverNow,
 ): HoldRoute =
@@ -69,7 +69,7 @@ internal const val PAYMENT_PENDING = "PAYMENT_PENDING"
  */
 internal suspend fun HoldReminderSchedule.onLiveRead(
     ref: String,
-    booking: HeldBookingDto,
+    booking: BookingDto,
     deadline: HoldDeadline,
 ) {
     if (booking.status == PAYMENT_PENDING) onEnded(ref) else onHeld(ref, deadline, booking.trip?.title, booking.partySize)

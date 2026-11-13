@@ -46,6 +46,8 @@ ICONS=(
   check_circle cloud_off done_all mark_email_read mark_email_unread visibility_off
   # MV-M1: the hosts directory's sort menu.
   sort
+  # MV-M3: the full-screen viewer's video controls.
+  play_arrow pause
 )
 
 TMP="$(mktemp -d)"

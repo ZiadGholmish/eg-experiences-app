@@ -36,6 +36,7 @@ import eg.bahr.core.catalog.presentation.components.hostSharedKey
 import eg.bahr.core.catalog.presentation.components.showsSeeAllReviews
 import eg.bahr.core.catalog.presentation.components.symbolIcon
 import eg.bahr.core.designsystem.components.BahrCard
+import eg.bahr.core.designsystem.components.BahrSkeletonCircle
 import eg.bahr.core.designsystem.format.BahrFormat
 import eg.bahr.core.designsystem.icon.BahrIcons
 import eg.bahr.core.designsystem.theme.BahrSize
@@ -98,6 +99,45 @@ internal fun TripItinerary(
         }
     }
 }
+
+/**
+ * The day while the trip loads (MV-M7): the heading is fixed copy, so it is text, and the panel is drawn for real with
+ * [StopRow]-shaped rows shimmering in it (time, dot, text). The number of stops is a guess, under the heading and below
+ * the fold.
+ */
+@Composable
+internal fun TripItinerarySkeleton(modifier: Modifier = Modifier) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(BahrSpacing.xs)) {
+        SectionTitle(stringResource(Res.string.trip_itinerary))
+        Column(
+            modifier =
+                Modifier
+                    .padding(top = BahrSpacing.sm)
+                    .fillMaxWidth()
+                    .clip(BahrTheme.shapes.card)
+                    .background(ItineraryPanelColor)
+                    .padding(start = BahrSpacing.lg, end = BahrSpacing.lg, top = BahrSpacing.lg),
+        ) {
+            repeat(ITINERARY_SKELETON_STOPS) {
+                Row(horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm)) {
+                    LinesSkeleton(
+                        MaterialTheme.typography.labelLarge,
+                        Modifier.width(BahrSize.timeColumn).padding(top = BahrSpacing.xs),
+                    )
+                    BahrSkeletonCircle(props = BahrSkeletonCircle.Props(size = BahrSize.marker))
+                    LinesSkeleton(
+                        MaterialTheme.typography.bodyMedium,
+                        Modifier.weight(1f).padding(top = BahrSpacing.xs, bottom = BahrSpacing.lg),
+                        widthFraction = STOP_SKELETON_FRACTION,
+                    )
+                }
+            }
+        }
+    }
+}
+
+private const val ITINERARY_SKELETON_STOPS = 4
+private const val STOP_SKELETON_FRACTION = 0.7f
 
 @Composable
 private fun StopRow(

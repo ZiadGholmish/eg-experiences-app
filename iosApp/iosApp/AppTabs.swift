@@ -76,6 +76,9 @@ final class TabBarModel: NSObject, ObservableObject, AppTabBar {
     @Published private(set) var selectedTintColor: UIColor?
     /// Home starts on splash, which is not a tab root.
     @Published private(set) var hiddenOn: Set<BahrTab> = [.home]
+    /// The selected tab's full-screen photo and video viewer is open (MV-M3): no status bar or home indicator meanwhile.
+    /// The tab bar is already hidden for that tab through `hiddenOn` (MV-M8).
+    @Published private(set) var fullScreen = false
 
     private override init() {
         let stored = UserDefaults.standard.string(forKey: Self.selectedKey)
@@ -112,7 +115,10 @@ final class TabBarModel: NSObject, ObservableObject, AppTabBar {
         spokenLabels.indices.contains(tab.index) ? spokenLabels[tab.index] : title(tab)
     }
 
-    func isBarHidden(_ tab: BahrTab) -> Bool { titles.isEmpty || hiddenOn.contains(tab) }
+    /// Whether the bar is hidden: the selected tab's answer, which every tab's content carries alike (MV-M8). There is
+    /// one UITabBar, and SwiftUI may apply a `.toolbar(_:for: .tabBar)` change from a tab not on screen to it as well:
+    /// with a value per tab, the viewer closing (which flipped every tab's value) showed the bar over a trip page.
+    var isBarHidden: Bool { titles.isEmpty || hiddenOn.contains(selected) }
 
     /// The `TabView`'s selection. Its setter also runs for a tap on the tab already selected, which is
     /// how a re-tap reaches the shared code (back to the tab's root, or to the top of its list).
@@ -210,6 +216,10 @@ final class TabBarModel: NSObject, ObservableObject, AppTabBar {
     func setBarHidden(tab: AppTab, hidden: Bool) {
         let swiftTab = BahrTab(tab)
         if hidden { hiddenOn.insert(swiftTab) } else { hiddenOn.remove(swiftTab) }
+    }
+
+    func setFullScreen(fullScreen: Bool) {
+        self.fullScreen = fullScreen
     }
 }
 

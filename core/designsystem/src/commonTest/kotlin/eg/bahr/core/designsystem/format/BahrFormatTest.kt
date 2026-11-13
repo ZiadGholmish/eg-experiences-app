@@ -147,4 +147,12 @@ class BahrFormatTest {
     fun `booking reference alphabet has no look-alike characters`() {
         listOf('0', 'O', '1', 'I').forEach { assertTrue(it !in BahrFormat.REF_ALPHABET) }
     }
+
+    @Test
+    fun `a video's duration reads as a player prints it and left to right`() {
+        assertEquals(BahrFormat.ltr("0:08"), BahrFormat.duration(8))
+        assertEquals(BahrFormat.ltr("1:05"), BahrFormat.duration(65))
+        assertEquals(BahrFormat.ltr("1:02:03"), BahrFormat.duration(3723))
+        assertEquals(BahrFormat.ltr("0:00"), BahrFormat.duration(-4))
+    }
 }

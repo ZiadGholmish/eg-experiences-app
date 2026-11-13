@@ -2,6 +2,7 @@ package eg.bahr.feature.booking.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hasRoute
@@ -13,6 +14,8 @@ import eg.bahr.feature.booking.presentation.BookingConfirmedScreen
 import eg.bahr.feature.booking.presentation.BookingScreen
 import eg.bahr.feature.booking.presentation.HoldScreen
 import eg.bahr.feature.booking.presentation.OpenHoldScreen
+import eg.bahr.feature.booking.presentation.TicketCallbacks
+import eg.bahr.feature.booking.presentation.TicketEntry
 
 /**
  * The booking feature's public surface: destinations for the app's NavHost, and how to reach them.
@@ -113,9 +116,32 @@ fun NavController.openHeldSeats(hold: HoldRoute) =
         launchSingleTop = true
     }
 
-fun NavGraphBuilder.bookingConfirmedScreen(onDone: () -> Unit) {
+/**
+ * The booking's ticket. [onBack] is its bar's back button; [onDone] the "Trips" button after paying (wire it back to
+ * the tab's root). Opened as details (MV-M6, [navigateToBookingDetails]): [onViewTrip] opens the trip's page (slug),
+ * and [onRateTrip] the review page of booking `ref` (feature:reviews), offered when the route's `canRate` says so.
+ */
+fun NavGraphBuilder.bookingConfirmedScreen(
+    onDone: () -> Unit,
+    onBack: () -> Unit = onDone,
+    onViewTrip: (slug: String) -> Unit = {},
+    onRateTrip: (ref: String, title: String?) -> Unit = { _, _ -> },
+) {
     composable<BookingConfirmedRoute> { entry ->
-        BahrDestination(this) { BookingConfirmedScreen(ref = entry.toRoute<BookingConfirmedRoute>().ref, onDone = onDone) }
+        val route = entry.toRoute<BookingConfirmedRoute>()
+        // One instance for the destination's life: the graph's lambdas do not change, so the ticket need not redraw for them.
+        val actions =
+            remember(onBack, onDone, onViewTrip, onRateTrip) {
+                TicketCallbacks(onBack = onBack, onDone = onDone, onViewTrip = onViewTrip, onRateTrip = onRateTrip)
+            }
+        BahrDestination(this) {
+            BookingConfirmedScreen(
+                ref = route.ref,
+                entry = if (route.details) TicketEntry.Details else TicketEntry.Paid,
+                canRate = route.canRate,
+                actions = actions,
+            )
+        }
     }
 }
 
@@ -228,7 +254,17 @@ fun NavController.navigateToPaidBooking(ref: String) {
 
 /**
  * A booking opened from outside the booking flow (M3-M6: a notification about it), on top of what is open, by its
- * reference: the same page as after paying, which reads the booking again and shows it as it is now. Unlike
- * [navigateToBookingConfirmed] it pops nothing, so Back returns to where it was opened from.
+ * reference: its details ([navigateToBookingDetails], since MV-M6), which read the booking again and show it as it is
+ * now. Unlike [navigateToBookingConfirmed] it pops nothing, so Back returns to where it was opened from.
  */
-fun NavController.navigateToBookingByRef(ref: String) = navigate(BookingConfirmedRoute(ref)) { launchSingleTop = true }
+fun NavController.navigateToBookingByRef(ref: String) = navigateToBookingDetails(ref)
+
+/**
+ * A booking's details (MV-M6): a My trips row's booking, on top of the list, so Back returns to it with its scroll.
+ * The same ticket as after paying, read by [ref], with a way to the trip's page; "Rate your trip" when [canRate] (My
+ * trips' rule, which `getBooking` cannot answer). Single-top, so a double tap does not stack it twice.
+ */
+fun NavController.navigateToBookingDetails(
+    ref: String,
+    canRate: Boolean = false,
+) = navigate(BookingConfirmedRoute(ref, details = true, canRate = canRate)) { launchSingleTop = true }

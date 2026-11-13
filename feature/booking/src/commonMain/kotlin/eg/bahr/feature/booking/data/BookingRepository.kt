@@ -4,8 +4,8 @@ import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.network.auth.AuthSession
 import eg.bahr.core.network.auth.SessionState
 import eg.bahr.feature.booking.model.BookingDepartureDto
+import eg.bahr.feature.booking.model.BookingDto
 import eg.bahr.feature.booking.model.BookingTripDto
-import eg.bahr.feature.booking.model.HeldBookingDto
 import eg.bahr.feature.booking.model.HeldSeatsDto
 import eg.bahr.feature.booking.model.PaymentStartedDto
 import eg.bahr.feature.booking.model.PlaceHoldRequest
@@ -26,12 +26,12 @@ internal interface BookingRepository {
     suspend fun bookingByRef(
         ref: String,
         phone: String? = null,
-    ): AppResult<HeldBookingDto>
+    ): AppResult<BookingDto>
 
     suspend fun heldBooking(
         ref: String,
         phone: String,
-    ): AppResult<HeldBookingDto>
+    ): AppResult<BookingDto>
 
     suspend fun releaseHold(
         ref: String,
@@ -64,12 +64,12 @@ internal class DefaultBookingRepository(
     override suspend fun bookingByRef(
         ref: String,
         phone: String?,
-    ): AppResult<HeldBookingDto> = api.bookingByRef(ref, phone)
+    ): AppResult<BookingDto> = api.bookingByRef(ref, phone)
 
     override suspend fun heldBooking(
         ref: String,
         phone: String,
-    ): AppResult<HeldBookingDto> = api.heldBooking(ref, phone)
+    ): AppResult<BookingDto> = api.heldBooking(ref, phone)
 
     override suspend fun releaseHold(
         ref: String,

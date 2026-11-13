@@ -114,7 +114,32 @@ data class BahrExtendedColors(
     val unread: Color,
     /** The sign-in buttons' colours, set by Apple and Google, never by a Bahr theme (`brand`, Oct 2026). */
     val brand: BahrBrandColors,
+    /**
+     * The booking confirmation's header (HANDOFF §6, MV-M5): a `160deg` gradient from [heroStart] through [heroMid] (at
+     * 60%) to [heroEnd], with [onHero] (white) text. Code-side, not tokens: tokens.json has no gradient role and no dark
+     * value for it (see [Dark]).
+     *
+     * The handoff's stops are the theme's `primary`, then `teal-50` and `teal-60`, but white is only 3.2:1 on `teal-50`
+     * and 2.4:1 on `teal-60`, and the overline and the "show this screen" line are small text (MV-M5 review #1). So
+     * [heroStart] stays the theme's primary and [heroMid] / [heroEnd] are the same two hues (the green teal, then the
+     * bluer one) taken deep enough for 4.5:1 with white at every point of the gradient, including under the header's
+     * 4% white disc. White contrast, worst point / under the disc: Lake Burullus 4.95 / 4.61, Dusk and HighContrast
+     * 5.01 / 4.67, Dark 6.35 / 5.82.
+     */
+    val heroStart: Color,
+    val heroMid: Color,
+    val heroEnd: Color,
+    val onHero: Color,
+    /**
+     * The full-screen photo and video viewer's ground and what sits on it (MV-M3): black and white in every theme and
+     * mode, as a photo is judged against black. Code-only, not tokens (the handoff has no viewer).
+     */
+    val mediaGround: Color = Color(MEDIA_GROUND),
+    val onMediaGround: Color = Color(ON_MEDIA_GROUND),
 )
+
+private const val MEDIA_GROUND = 0xFF000000
+private const val ON_MEDIA_GROUND = 0xFFFFFFFF
 
 /**
  * tokens.json `brand` (`--bahr-brand-*`): "Continue with Google" and "Continue with Apple" as their
@@ -156,6 +181,10 @@ internal data class BahrColorTheme(
 )
 
 private val P = BahrPalette
+
+/** The light confirmation header's middle and end stops (see [BahrExtendedColors.heroStart]); Dusk and HighContrast share them. */
+private val HERO_MID = Color(0xFF0B7D73)
+private val HERO_END = Color(0xFF0A6F87)
 
 private const val SURFACE_TRANSLUCENT_ALPHA = .94f
 private const val SCRIM_ALPHA = .5f
@@ -246,6 +275,11 @@ internal val LakeBurullus =
                 navIndicator = P.Teal95,
                 unread = P.Teal95,
                 brand = BrandLight,
+                heroStart = P.Teal40,
+                // `teal-50` and `teal-60`'s hues, deep enough for white small text (white 5.01:1 and 5.77:1).
+                heroMid = HERO_MID,
+                heroEnd = HERO_END,
+                onHero = P.Neutral100,
             ),
     )
 
@@ -280,6 +314,8 @@ internal val Dusk =
                     ctaShadow = Color(0xFFC8552F).copy(alpha = DUSK_CTA_SHADOW_ALPHA),
                     chipShadow = Color(0xFF1B4A6B).copy(alpha = CHIP_SHADOW_ALPHA),
                     raisedShadow = Color(0xFF1B4A6B).copy(alpha = RAISED_SHADOW_ALPHA),
+                    // The handoff's gradient starts on the theme's own primary.
+                    heroStart = Color(0xFF1B4A6B),
                 ),
         )
     }
@@ -304,6 +340,8 @@ internal val HighContrast =
                 base.extended.copy(
                     onSurfaceSecondary = Color(0xFF1D2F35),
                     outlinedElevation = true,
+                    // The handoff's gradient starts on the theme's own primary.
+                    heroStart = Color(0xFF045A63),
                 ),
         )
     }
@@ -319,6 +357,9 @@ internal val HighContrast =
  * - `secondary`, `onSecondary`, `onTertiary`, `secondaryDim`, `tertiaryHover`, `primaryBright`,
  *   `primaryDeep` keep their light values (gold and coral fills read on the dark ground as they are);
  * - `primaryDim` (overline labels inside a primary container) takes `onSurfaceVariant`;
+ * - the confirmation header's gradient (MV-M5) starts on `teal-30` and runs through the light gradient's two hues one
+ *   step deeper, with white text: dark `primary` is a pale teal that white text would not read on, and the light
+ *   gradient would glare on the dark page;
  * - the M3 slots tokens.json has no role for (`surfaceContainerHigh/Highest`, `surfaceBright`, the
  *   inverse roles) are set from the dark ramp, so no Material baseline purple shows through.
  */
@@ -386,6 +427,9 @@ internal val Dark =
                 navIndicator = DarkTokens.PrimaryContainer,
                 unread = Color(0xFF12313A),
                 brand = BrandDark,
+                heroStart = P.Teal30,
+                heroMid = Color(0xFF0B6A70),
+                heroEnd = Color(0xFF0A6478),
             ),
     )
 

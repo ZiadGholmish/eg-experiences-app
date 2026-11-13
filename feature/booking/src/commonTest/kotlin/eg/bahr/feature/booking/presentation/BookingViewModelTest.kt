@@ -14,7 +14,7 @@ import eg.bahr.feature.booking.data.BookingFixtures.trip
 import eg.bahr.feature.booking.data.FakeActiveHoldStore
 import eg.bahr.feature.booking.data.FakeBookingRepository
 import eg.bahr.feature.booking.data.RecordingHoldReminderSchedule
-import eg.bahr.feature.booking.model.HeldBookingDto
+import eg.bahr.feature.booking.model.BookingDto
 import eg.bahr.feature.booking.model.HeldSeatsDto
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.awaitCancellation
@@ -271,7 +271,7 @@ class BookingViewModelTest {
     @Test
     fun `a stored hold the server calls over is forgotten and the new hold placed`() =
         runViewModelTest {
-            for (answer in listOf<AppResult<HeldBookingDto>>(
+            for (answer in listOf<AppResult<BookingDto>>(
                 AppResult.Success(heldBooking(status = "EXPIRED")),
                 AppResult.Failure(AppError.Api(ApiErrorCodes.NOT_FOUND, null, 404)),
             )) {

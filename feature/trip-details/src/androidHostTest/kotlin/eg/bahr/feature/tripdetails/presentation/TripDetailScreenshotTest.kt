@@ -38,6 +38,7 @@ import eg.bahr.feature.tripdetails.model.DepartureDto
 import eg.bahr.feature.tripdetails.model.HostDto
 import eg.bahr.feature.tripdetails.model.ReviewsDto
 import eg.bahr.feature.tripdetails.model.TripDetailDto
+import eg.bahr.feature.tripdetails.model.TripMediaDto
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
@@ -115,6 +116,84 @@ class TripDetailScreenshotTest {
             tripBySlug = { awaitCancellation() }
             departuresFor = { awaitCancellation() }
             cards = mapOf(SLUG to card("Dawn on Lake Burullus", "Lake Burullus · Kafr El Sheikh", "Most booked"))
+        }
+
+    /*
+     * MV-M7: the page's loading stages, each the whole page on one tall screen so the sections line up from shot to shot:
+     * opened from a list (the card's text, the rest shimmering), opened cold from a link (nothing known), and loaded. The
+     * stage between (the trip landed, the live seat counts on their way) differs only in the dates band, below this
+     * screen, so the band_* shots below carry it. The trip carries a deck of the two lines the page
+     * reserves (the seeded deck's first sentence), so the shots differ only where content replaced its skeleton.
+     */
+
+    @Config(qualifiers = "en-w360dp-h3200dp-xhdpi")
+    @Test
+    fun stageCardArabic() = stage("trip_detail_stage_card", AppLanguage.ARABIC, card = true, trip = false, dates = false)
+
+    @Config(qualifiers = "en-w360dp-h3200dp-xhdpi")
+    @Test
+    fun stageCardEnglish() = stage("trip_detail_stage_card", AppLanguage.ENGLISH, card = true, trip = false, dates = false)
+
+    @Config(qualifiers = "en-w360dp-h3200dp-xhdpi")
+    @Test
+    fun stageColdArabic() = stage("trip_detail_stage_cold", AppLanguage.ARABIC, card = false, trip = false, dates = false)
+
+    @Config(qualifiers = "en-w360dp-h3200dp-xhdpi")
+    @Test
+    fun stageColdEnglish() = stage("trip_detail_stage_cold", AppLanguage.ENGLISH, card = false, trip = false, dates = false)
+
+    @Config(qualifiers = "en-w360dp-h3200dp-xhdpi")
+    @Test
+    fun stageLoadedArabic() = stage("trip_detail_stage_loaded", AppLanguage.ARABIC, card = true, trip = true, dates = true)
+
+    @Config(qualifiers = "en-w360dp-h3200dp-xhdpi")
+    @Test
+    fun stageLoadedEnglish() = stage("trip_detail_stage_loaded", AppLanguage.ENGLISH, card = true, trip = true, dates = true)
+
+    /*
+     * The same stages at the dates band (on a phone, scrolled to it): skeleton cards; the trip's own dates with only their
+     * seat counts shimmering (HANDOFF §loading: "live seat counts shimmer"); the live dates. One band height throughout.
+     */
+
+    @Test
+    fun bandCardArabic() = stage("trip_detail_band_card", AppLanguage.ARABIC, card = true, trip = false, dates = false, band = true)
+
+    @Test
+    fun bandCardEnglish() = stage("trip_detail_band_card", AppLanguage.ENGLISH, card = true, trip = false, dates = false, band = true)
+
+    @Test
+    fun bandDatesLoadingArabic() =
+        stage("trip_detail_band_dates_loading", AppLanguage.ARABIC, card = true, trip = true, dates = false, band = true)
+
+    @Test
+    fun bandDatesLoadingEnglish() =
+        stage("trip_detail_band_dates_loading", AppLanguage.ENGLISH, card = true, trip = true, dates = false, band = true)
+
+    @Test
+    fun bandLoadedArabic() = stage("trip_detail_band_loaded", AppLanguage.ARABIC, card = true, trip = true, dates = true, band = true)
+
+    @Test
+    fun bandLoadedEnglish() = stage("trip_detail_band_loaded", AppLanguage.ENGLISH, card = true, trip = true, dates = true, band = true)
+
+    private fun stage(
+        prefix: String,
+        language: AppLanguage,
+        card: Boolean,
+        trip: Boolean,
+        dates: Boolean,
+        band: Boolean = false,
+    ) = snap(prefix, language, scrollTo = if (band) TripSection.Availability else null) {
+        serve(payload(language), departures(language), detail = { it.copy(deck = it.deck?.substringBefore('.')?.plus('.')) })
+        if (card) cards = mapOf(SLUG to cardOf(language))
+        if (!trip) tripBySlug = { awaitCancellation() }
+        if (!dates) departuresFor = { awaitCancellation() }
+    }
+
+    /** The list card of the seeded trip as Home or search caches it: the trip's own title, place, price and duration. */
+    private fun cardOf(language: AppLanguage) =
+        json.decodeFromString<Envelope<TripDetailDto>>(payload(language)).data.let { d ->
+            trip(1, title = d.title, priceEgp = d.price.amount, durationLabel = d.durationLabel)
+                .copy(slug = SLUG, subtitle = d.subtitle, durationMinutes = d.durationMinutes, rating = d.rating)
         }
 
     @Config(qualifiers = "en-w360dp-h3200dp-xhdpi")
@@ -299,6 +378,25 @@ class TripDetailScreenshotTest {
         snap("trip_detail_waitlist_remembered", AppLanguage.ENGLISH, select = SOLD_OUT_ID, waitlists = rememberedJoin(), lottie = true) {
             serve(TripDetailPayloads.english, TripDetailPayloads.englishDepartures)
         }
+
+    /**
+     * MV-M9: every date full (the seeded white-desert-overnight's shape). The button reads a disabled "Sold out" with
+     * no date picked; picking one shows its notice with "Join the waiting list" (no other date to point to).
+     */
+    @Test
+    fun allSoldOutArabic() =
+        snap("trip_detail_all_sold_out", AppLanguage.ARABIC, select = SOLD_OUT_ID) {
+            serve(TripDetailPayloads.arabic, TripDetailPayloads.arabicDepartures, dates = ::allFull)
+        }
+
+    @Test
+    fun allSoldOutEnglish() =
+        snap("trip_detail_all_sold_out", AppLanguage.ENGLISH, select = SOLD_OUT_ID) {
+            serve(TripDetailPayloads.english, TripDetailPayloads.englishDepartures, dates = ::allFull)
+        }
+
+    private fun allFull(dates: List<DepartureDto>) =
+        dates.map { it.copy(seatsRemaining = 0, soldOut = true, bookable = false, unavailableReason = "SOLD_OUT") }
 
     private fun rememberedJoin() =
         waitlistMemory(FakeWaitlistJoinsStore(listOf(storedJoin(departureId = SOLD_OUT_ID, tripSlug = SLUG, date = "2026-10-24"))))
@@ -542,6 +640,38 @@ class TripDetailScreenshotTest {
         snap("trip_detail_gallery", AppLanguage.ENGLISH) {
             serve(TripDetailPayloads.english, TripDetailPayloads.englishDepartures, photos = UNREACHABLE_PHOTOS)
         }
+
+    /**
+     * M5-M2 (MV-M3): a video first in the gallery (`media`), drawn as its poster with the play badge and its running time
+     * ("0:08", left to right in Arabic too); the photo counter counts it with the photos. Unreachable URLs, as above.
+     */
+    @Test
+    fun galleryVideoArabic() =
+        snap("trip_detail_gallery_video", AppLanguage.ARABIC) {
+            serve(TripDetailPayloads.arabic, TripDetailPayloads.arabicDepartures, detail = ::withVideoFirst)
+        }
+
+    @Test
+    fun galleryVideoEnglish() =
+        snap("trip_detail_gallery_video", AppLanguage.ENGLISH) {
+            serve(TripDetailPayloads.english, TripDetailPayloads.englishDepartures, detail = ::withVideoFirst)
+        }
+
+    private fun withVideoFirst(trip: TripDetailDto) =
+        trip.copy(
+            media =
+                listOf(
+                    TripMediaDto(
+                        kind = "video",
+                        url = "http://127.0.0.1:9/dawn.mp4",
+                        width = 640,
+                        height = 360,
+                        alt = "Video: dawn on the lake",
+                        durationSeconds = 8,
+                        poster = UNREACHABLE_PHOTOS.first(),
+                    ),
+                ) + UNREACHABLE_PHOTOS.drop(1).map { TripMediaDto(kind = "photo", url = it.url, width = it.width, height = it.height) },
+        )
 
     private fun FakeTripDetailRepository.serve(
         trip: String,

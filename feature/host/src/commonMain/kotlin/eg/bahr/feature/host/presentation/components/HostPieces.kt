@@ -9,16 +9,22 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextDirection
+import eg.bahr.core.catalog.model.ImageDto
 import eg.bahr.core.catalog.presentation.components.InitialAvatar
 import eg.bahr.core.catalog.presentation.components.TextSkeleton
 import eg.bahr.core.catalog.presentation.components.Tint
 import eg.bahr.core.catalog.presentation.components.hostSharedKey
+import eg.bahr.core.catalog.presentation.media.ViewerMedia
+import eg.bahr.core.catalog.presentation.media.opensMediaViewer
 import eg.bahr.core.designsystem.format.BahrFormat
 import eg.bahr.core.designsystem.icon.BahrIcons
 import eg.bahr.core.designsystem.theme.BahrSize
@@ -30,6 +36,7 @@ import eg.bahr.core.localization.generated.resources.format_pair
 import eg.bahr.core.localization.generated.resources.host_kind_company
 import eg.bahr.core.localization.generated.resources.host_kind_person
 import eg.bahr.core.localization.generated.resources.host_member_since
+import eg.bahr.core.localization.generated.resources.media_host_photo
 import eg.bahr.core.localization.generated.resources.trip_host_trips_run
 import eg.bahr.core.localization.generated.resources.trip_host_verified
 import eg.bahr.feature.host.model.HostKind
@@ -62,7 +69,7 @@ internal fun HostHeader(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(BahrSpacing.lg),
         ) {
-            InitialAvatar(name = name, tint = Tint.Teal, size = BahrSize.avatarLarge, image = avatar)
+            HostAvatar(name, avatar, profile)
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(BahrSpacing.xs)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(BahrSpacing.xs)) {
                     name?.let {
@@ -101,6 +108,38 @@ internal fun HostHeader(
         }
     }
 }
+
+/**
+ * The host's photo, which a tap opens full screen when there is one (MV-M3): the profile's own (with its size, LQIP and
+ * alt) once it has loaded, the card's URL until then. Without a photo it is the initial, and nothing opens.
+ */
+@Composable
+private fun HostAvatar(
+    name: String?,
+    avatar: String?,
+    profile: HostProfileDto?,
+) {
+    val photo = profile?.avatar ?: avatar?.let { ImageDto(url = it, width = 0, height = 0) }
+    val spoken = name?.let { stringResource(Res.string.media_host_photo, it) }
+    val gallery = remember(photo, spoken) { listOfNotNull(photo?.let { ViewerMedia.Photo(it, alt = it.alt ?: spoken) }) }
+    val opens =
+        if (gallery.isEmpty()) {
+            Modifier
+        } else {
+            // Before clearAndSetSemantics, so "View full screen" stays with "<name>'s photo" (not the initial behind it).
+            Modifier.opensMediaViewer(gallery, 0).clearAndSetSemantics { spoken?.let { contentDescription = it } }
+        }
+    InitialAvatar(
+        name = name,
+        tint = Tint.Teal,
+        size = BahrSize.avatarLarge,
+        image = photo?.url,
+        modifier = Modifier.testTag(HOST_AVATAR_TAG).then(opens),
+    )
+}
+
+/** For tests: the host page's avatar (MV-M3: it opens the full-screen viewer). */
+internal const val HOST_AVATAR_TAG = "host_avatar"
 
 /**
  * "Host company · Member since Sep 2024 · 11 trips run". [HostProfileDto.tripsRun] is the host's track

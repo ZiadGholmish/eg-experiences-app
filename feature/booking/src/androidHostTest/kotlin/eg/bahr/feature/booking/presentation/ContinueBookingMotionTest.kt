@@ -25,7 +25,7 @@ import eg.bahr.core.testing.ANIMATION_SETTLE_MARGIN_MILLIS
 import eg.bahr.feature.booking.data.BookingFixtures
 import eg.bahr.feature.booking.data.FakeActiveHoldStore
 import eg.bahr.feature.booking.data.FakeBookingRepository
-import eg.bahr.feature.booking.model.HeldBookingDto
+import eg.bahr.feature.booking.model.BookingDto
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -186,7 +186,7 @@ class ContinueBookingMotionTest {
     private fun heldBooking(
         status: String,
         serverNow: Instant,
-    ): HeldBookingDto =
+    ): BookingDto =
         BookingFixtures.heldBooking(
             status = status,
             holdExpiresAt = (placedAt + 15.minutes).toString(),

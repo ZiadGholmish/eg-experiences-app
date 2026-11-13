@@ -91,6 +91,8 @@ import eg.bahr.core.designsystem.generated.resources.ic_notifications_active_fil
 import eg.bahr.core.designsystem.generated.resources.ic_notifications_filled
 import eg.bahr.core.designsystem.generated.resources.ic_palette
 import eg.bahr.core.designsystem.generated.resources.ic_palette_filled
+import eg.bahr.core.designsystem.generated.resources.ic_pause
+import eg.bahr.core.designsystem.generated.resources.ic_pause_filled
 import eg.bahr.core.designsystem.generated.resources.ic_payments
 import eg.bahr.core.designsystem.generated.resources.ic_payments_filled
 import eg.bahr.core.designsystem.generated.resources.ic_person
@@ -99,6 +101,8 @@ import eg.bahr.core.designsystem.generated.resources.ic_person_remove
 import eg.bahr.core.designsystem.generated.resources.ic_person_remove_filled
 import eg.bahr.core.designsystem.generated.resources.ic_pin_drop
 import eg.bahr.core.designsystem.generated.resources.ic_pin_drop_filled
+import eg.bahr.core.designsystem.generated.resources.ic_play_arrow
+import eg.bahr.core.designsystem.generated.resources.ic_play_arrow_filled
 import eg.bahr.core.designsystem.generated.resources.ic_rate_review
 import eg.bahr.core.designsystem.generated.resources.ic_rate_review_filled
 import eg.bahr.core.designsystem.generated.resources.ic_remove
@@ -269,6 +273,10 @@ enum class BahrIcons(
 
     /** The hosts directory's sort menu (MV-M1). Directional upstream: its bars line up at the start. */
     Sort(Res.drawable.ic_sort, Res.drawable.ic_sort),
+
+    /** The full-screen viewer's video controls and a video's badge in a gallery (MV-M3). Never mirrored (Google's own). */
+    PlayArrow(Res.drawable.ic_play_arrow, Res.drawable.ic_play_arrow_filled),
+    Pause(Res.drawable.ic_pause, Res.drawable.ic_pause_filled),
     ;
 
     /** FILL 0, the prototype's default (`class="ms"`). */

@@ -69,6 +69,12 @@ import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
 /**
+ * "Rate your trip" is offered: the server says the booking may be reviewed and it has no review yet. The row's button
+ * and the booking's details (MV-M6, handed over on the tap) follow this one rule.
+ */
+internal val MyBookingDto.rateable: Boolean get() = canReview && review == null
+
+/**
  * A booking in Upcoming or Past: the trip's thumbnail, its title, "Sat 10 Oct · 05:00", the party, and
  * the booking's status as a badge. Text first: the thumbnail has its size before the photo loads.
  */
@@ -93,7 +99,7 @@ internal fun BookingRow(
         testBadge = booking.method == TEST_CASH,
         // A finished trip (M3-M4): "Rate your trip" while it may be reviewed, then where its review stands.
         review = booking.review?.let { ReviewStatus.of(it.status).badge() },
-        onRateTrip = if (booking.canReview && booking.review == null) onRateTrip else null,
+        onRateTrip = if (booking.rateable) onRateTrip else null,
     )
 }
 
@@ -198,7 +204,7 @@ private fun TripRow(
                     review?.let { (text, tone) -> BahrBadge(props = BahrBadge.Props(stringResource(text), tone)) }
                 }
             }
-            // Its own target inside the row: the row opens the trip, this the review page. A way in, not the
+            // Its own target inside the row: the row opens the booking (MV-M6; a waiting-list entry its trip), this the review page. A way in, not the
             // screen's one step forward (a list may offer it many times), so primary, never coral.
             onRateTrip?.let {
                 BahrPillButton(

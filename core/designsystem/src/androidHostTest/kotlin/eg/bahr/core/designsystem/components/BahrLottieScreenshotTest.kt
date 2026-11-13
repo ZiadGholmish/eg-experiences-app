@@ -2,6 +2,7 @@ package eg.bahr.core.designsystem.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,6 +14,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import eg.bahr.core.common.locale.AppLanguage
@@ -31,7 +33,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * BahrLottie (M3-M8): each shipped animation re-tinted for {light, dark, HighContrast}, on a fixed frame:
+ * BahrLottie (M3-M8): each shipped animation (MV-M5's booking-confirmed one on its header gradient) re-tinted for {light, dark, HighContrast}, on a fixed frame:
  *  - still (reduced motion: the last whole frame, where a played-once animation stops, or the frame the
  *    animation names), in ar and en (the animation itself is not mirrored);
  *  - mid-animation, to show the moving parts' colours (the bell's rings, the boat between two rocks, the
@@ -108,6 +110,17 @@ class BahrLottieScreenshotTest {
                         BahrLottie(Modifier.width(BahrSize.lottieMoment), BahrLottie.Props(BahrLottie.Animation.SuccessCheck), progress)
                         BahrLottie(Modifier.width(BahrSize.lottieMoment), BahrLottie.Props(BahrLottie.Animation.MapRoute), progress)
                         BahrLottie(Modifier.width(BahrSize.lottieMoment), BahrLottie.Props(BahrLottie.Animation.Magnifier), progress)
+                    }
+                    // MV-M5: the confirmation's celebration, on the header gradient it is drawn for.
+                    val x = BahrTheme.colors
+                    Box(
+                        Modifier.background(Brush.linearGradient(listOf(x.heroStart, x.heroMid, x.heroEnd))).padding(BahrSpacing.md),
+                    ) {
+                        BahrLottie(
+                            Modifier.width(BahrSize.lottieCelebration),
+                            BahrLottie.Props(BahrLottie.Animation.BookingConfirmed),
+                            progress,
+                        )
                     }
                     Text(
                         text = if (language == AppLanguage.ARABIC) "مفيش إشعارات لسه" else "No notifications yet",

@@ -9,12 +9,13 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -22,13 +23,17 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.designsystem.theme.BahrLocale
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.localization.ProvideAppLanguage
+import eg.bahr.core.localization.currentAppLanguage
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -174,6 +179,86 @@ class AppTabsTest {
         compose.onNodeWithText("Map root").assertIsDisplayed()
     }
 
+    /**
+     * MV-M8 round 1: on Android a language switch rebuilds the tab host (ProvideAppLanguage's key), which drops every
+     * tab's saved back stack but the selected one's. After ar → en → ar, a tab that had a page pushed before the switch
+     * is on its root, so its old Arabic report must not count again: the bar shows from its first frame (no hide and
+     * re-show, M4-M8 review #7).
+     */
+    @Test
+    fun `after ar - en - ar a tab whose stack was dropped shows the bar from its first frame`() {
+        val language = mutableStateOf(AppLanguage.ARABIC)
+        tabs.onLanguage(AppLanguage.ARABIC)
+        setContent(language)
+        compose.runOnUiThread { tabs.select(AppTab.MyTrips) }
+        compose.onNodeWithText("Open MyTrips detail").performClick()
+        compose.waitForIdle()
+        assertEquals(false, tabs.state.value.barVisible, "My trips: a page pushed")
+
+        compose.runOnUiThread { tabs.select(AppTab.Profile) }
+        compose.waitForIdle()
+        listOf(AppLanguage.ENGLISH, AppLanguage.ARABIC).forEach { next ->
+            compose.runOnUiThread {
+                language.value = next
+                tabs.onLanguage(next)
+            }
+            compose.waitForIdle()
+        }
+
+        val seen = mutableListOf<Boolean>()
+        val watching =
+            CoroutineScope(Dispatchers.Unconfined).launch {
+                tabs.state.collect {
+                    if (it.selected ==
+                        AppTab.MyTrips
+                    ) {
+                        seen += it.barVisible
+                    }
+                }
+            }
+        compose.runOnUiThread { tabs.select(AppTab.MyTrips) }
+        compose.waitForIdle()
+        watching.cancel()
+
+        compose.onNodeWithText("MyTrips root").assertIsDisplayed()
+        assertEquals(true, seen.isNotEmpty() && seen.all { it }, "the bar over My trips, from its first frame: $seen")
+    }
+
+    /** MV-M8 round 1: a host restored after an Activity recreation kept every stack, so it forgets no tab's report. */
+    @Test
+    fun `a restored tab host keeps the other tabs' reports`() {
+        val restoration = StateRestorationTester(compose)
+        restoration.setContent {
+            ProvideAppLanguage(AppLanguage.ENGLISH) {
+                BahrTheme(locale = BahrLocale.English) {
+                    AppTabs(tabs = tabs, appVersion = "0.1", content = { tab -> StandInTab(tab) }, overlay = {})
+                }
+            }
+        }
+        compose.onNodeWithText("Open Home detail").performClick()
+        compose.runOnUiThread { tabs.select(AppTab.Profile) }
+        compose.waitForIdle()
+
+        restoration.emulateSavedInstanceStateRestore()
+        val seen = mutableListOf<Boolean>()
+        val watching =
+            CoroutineScope(Dispatchers.Unconfined).launch {
+                tabs.state.collect {
+                    if (it.selected ==
+                        AppTab.Home
+                    ) {
+                        seen += it.barVisible
+                    }
+                }
+            }
+        compose.runOnUiThread { tabs.select(AppTab.Home) }
+        compose.waitForIdle()
+        watching.cancel()
+
+        compose.onNodeWithText("Home detail").assertIsDisplayed()
+        assertEquals(true, seen.isNotEmpty() && seen.none { it }, "no bar over Home's restored page, from its first frame: $seen")
+    }
+
     private fun backPress() {
         compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
         compose.waitForIdle()
@@ -181,8 +266,12 @@ class AppTabsTest {
 
     // ---------- Plumbing ----------
 
-    private fun setContent(language: AppLanguage = AppLanguage.ENGLISH) {
+    private fun setContent(language: AppLanguage = AppLanguage.ENGLISH) = setContent(mutableStateOf(language))
+
+    /** [language] drives ProvideAppLanguage, whose key rebuilds the tab host on a switch, as in the app (App.kt). */
+    private fun setContent(language: State<AppLanguage>) {
         compose.setContent {
+            val language = language.value
             ProvideAppLanguage(language) {
                 BahrTheme(locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English) {
                     AppTabs(tabs = tabs, appVersion = "0.1", content = { tab -> StandInTab(tab) }, overlay = {})
@@ -195,9 +284,8 @@ class AppTabsTest {
     @Composable
     private fun StandInTab(tab: AppTab) {
         val nav = rememberNavController()
-        val entry by nav.currentBackStackEntryAsState()
-        val atRoot = entry?.destination?.route?.let { it == ROOT }
-        SideEffect(atRoot) { atRoot?.let { tabs.reportAtRoot(tab, it) } }
+        val builtIn = currentAppLanguage
+        LaunchedEffect(nav) { tabs.followBackStack(tab, nav.currentBackStackEntryFlow.map { it.destination.route == ROOT }, builtIn) }
         val list = rememberLazyListState()
         LaunchedEffect(nav) {
             tabs.reselected.filter { it == tab }.collect {

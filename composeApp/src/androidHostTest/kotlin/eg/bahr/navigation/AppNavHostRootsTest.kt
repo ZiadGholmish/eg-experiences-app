@@ -10,12 +10,14 @@ import androidx.navigation.compose.ComposeNavigator
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.testing.TestNavHostController
+import androidx.navigation.toRoute
 import eg.bahr.feature.booking.navigation.BookingConfirmedRoute
 import eg.bahr.feature.booking.navigation.BookingRoute
 import eg.bahr.feature.booking.navigation.HoldRoute
 import eg.bahr.feature.booking.navigation.navigateToBooking
 import eg.bahr.feature.booking.navigation.navigateToBookingByRef
 import eg.bahr.feature.booking.navigation.navigateToBookingConfirmed
+import eg.bahr.feature.booking.navigation.navigateToBookingDetails
 import eg.bahr.feature.booking.navigation.navigateToHold
 import eg.bahr.feature.home.navigation.TripListRoute
 import eg.bahr.feature.host.navigation.HostProfileRoute
@@ -27,6 +29,8 @@ import eg.bahr.feature.map.navigation.TripMapRoute
 import eg.bahr.feature.mytrips.navigation.MyTripsRoute
 import eg.bahr.feature.notifications.navigation.NotificationsRoute
 import eg.bahr.feature.notifications.navigation.navigateToNotifications
+import eg.bahr.feature.reviews.navigation.WriteReviewRoute
+import eg.bahr.feature.reviews.navigation.navigateToWriteReview
 import eg.bahr.feature.search.navigation.SearchTripsRoute
 import eg.bahr.feature.search.navigation.navigateToSearchTrips
 import eg.bahr.feature.settings.navigation.EditPersonalInfoRoute
@@ -234,6 +238,81 @@ class AppNavHostRootsTest {
         assertEquals(listOf(TripListRoute::class.simpleName, NotificationsRoute::class.simpleName), screens())
     }
 
+    /**
+     * MV-M6: a My trips booking row opens the booking's details on top of the list; "View trip" the trip's page on top
+     * of them; Back returns to the details, Back again to My trips (its root: the bar shows, its scroll kept).
+     */
+    @Test
+    fun `a booking row opens its details - View trip the trip on top - and Back Back returns to My trips`() {
+        show(start = MyTripsRoute)
+
+        onUi { nav.navigateToBookingDetails(REF, canRate = true) }
+        assertFalse(nav.isAt(AppTab.MyTrips), "the details hide the bar")
+        assertEquals(listOf(MyTripsRoute::class.simpleName, BookingConfirmedRoute::class.simpleName), screens())
+        val details = nav.currentBackStackEntry!!.toRoute<BookingConfirmedRoute>()
+        assertEquals(BookingConfirmedRoute(REF, details = true, canRate = true), details, "opened as details, with the row's rule")
+
+        onUi { nav.navigateToTripDetail(SLUG) }
+        assertEquals(
+            listOf(MyTripsRoute::class.simpleName, BookingConfirmedRoute::class.simpleName, TripDetailRoute::class.simpleName),
+            screens(),
+        )
+
+        onUi { nav.popBackStack() }
+        assertEquals(listOf(MyTripsRoute::class.simpleName, BookingConfirmedRoute::class.simpleName), screens())
+
+        onUi { nav.popBackStack() }
+        assertTrue(nav.isAt(AppTab.MyTrips), "back on My trips")
+        assertEquals(listOf(MyTripsRoute::class.simpleName), screens())
+    }
+
+    /** MV-M6: a double tap on a row does not stack the details twice. */
+    @Test
+    fun `a double tap on a booking row opens its details once`() {
+        show(start = MyTripsRoute)
+
+        onUi {
+            nav.navigateToBookingDetails(REF)
+            nav.navigateToBookingDetails(REF)
+        }
+
+        assertEquals(listOf(MyTripsRoute::class.simpleName, BookingConfirmedRoute::class.simpleName), screens())
+    }
+
+    /**
+     * MV-M6: "Rate your trip" on a booking's details opens the review page on top; Back returns to the details, while
+     * "Done" once sent returns to My trips (which re-reads and shows the review), not to details still offering Rate.
+     */
+    @Test
+    fun `a review sent from a booking's details is Done back on My trips`() {
+        show(start = MyTripsRoute)
+        onUi {
+            nav.navigateToBookingDetails(REF, canRate = true)
+            nav.navigateToWriteReview(REF, TITLE)
+        }
+
+        onUi { nav.popBackStack() }
+        assertEquals(listOf(MyTripsRoute::class.simpleName, BookingConfirmedRoute::class.simpleName), screens(), "Back: the details")
+
+        onUi { nav.navigateToWriteReview(REF, TITLE) }
+        onUi { nav.popToMyTripsOrBack() }
+        assertTrue(nav.isAt(AppTab.MyTrips), "Done: My trips")
+
+        // From the row's own "Rate your trip" too.
+        onUi { nav.navigateToWriteReview(REF, TITLE) }
+        onUi { nav.popToMyTripsOrBack() }
+        assertTrue(nav.isAt(AppTab.MyTrips))
+    }
+
+    /** M3-M6, since MV-M6 as details: a notification's booking opens as the booking, not as a confirmation. */
+    @Test
+    fun `a notification's booking opens as its details`() {
+        show(start = TripListRoute)
+        onUi { nav.navigateToBookingByRef(REF) }
+
+        assertEquals(BookingConfirmedRoute(REF, details = true), nav.currentBackStackEntry!!.toRoute<BookingConfirmedRoute>())
+    }
+
     // ---------- Plumbing ----------
 
     /** A fresh controller and NavHost started at [start]; a test may call it once per tab. */
@@ -263,6 +342,7 @@ class AppNavHostRootsTest {
                         composable<BookingRoute> {}
                         composable<HoldRoute> {}
                         composable<BookingConfirmedRoute> {}
+                        composable<WriteReviewRoute> {}
                     }
                 }
             }
@@ -305,5 +385,6 @@ class AppNavHostRootsTest {
         const val SLUG = "lake-burullus-birds"
         const val DEPARTURE = "dep-1"
         const val REF = "BRL-7K4M2X9P"
+        const val TITLE = "Dawn on Lake Burullus"
     }
 }

@@ -64,13 +64,54 @@ internal data class TripDetailUiState(
     val departuresLoading: Boolean
         get() = departures.isEmpty() && (liveDeparturesLoading || isLoading)
 
+    /**
+     * The dates shown are the trip's own copy and the live read is still on its way (MV-M7): the cards are drawn, only
+     * their seat counts shimmer (HANDOFF §loading: "live seat counts shimmer"). A failed live read ends it; the trip's
+     * counts then stand, as before.
+     */
+    val seatsLoading: Boolean
+        get() = liveDepartures == null && liveDeparturesLoading && departures.isNotEmpty()
+
     val selectedDeparture: DepartureDto?
         get() = departures.firstOrNull { it.id == selectedDepartureId }
 
+    /**
+     * The button follows the selected date; with none picked it reads "Sold out" when nothing can be booked
+     * ([nothingBookable]), from the first frame when the list card already says so (MV-M9), else "Choose a date".
+     */
     val cta: TripCta
         get() {
-            val selected = selectedDeparture ?: return TripCta.ChooseDate
+            val selected = selectedDeparture ?: return if (nothingBookable) TripCta.SoldOut else TripCta.ChooseDate
             return if (selected.availability == DateAvailability.Open) TripCta.Continue else TripCta.SoldOut
+        }
+
+    /**
+     * Whether a tap on the button can do something now (MV-M9): never for "Sold out", and not until the live dates have
+     * answered (or failed, leaving the trip's own copy), so it is never enabled and then refused. "Choose a date" also
+     * waits for the trip: its tap scrolls to the dates, which the trip's sections would push away again. The button keeps
+     * its size while disabled; only its fill changes.
+     */
+    val ctaEnabled: Boolean
+        get() =
+            when (cta) {
+                TripCta.SoldOut -> false
+                TripCta.Continue -> !liveDeparturesLoading
+                TripCta.ChooseDate -> !liveDeparturesLoading && trip != null
+            }
+
+    /**
+     * No upcoming date can be booked and at least one is sold out: the trip is full (MV-M9). The same rule as the
+     * contract's `nextDeparture.soldOut` ("every upcoming open date is full"; cancelled and closed dates do not count),
+     * so the page agrees with the trip's card. Read from the best source known so far: the live dates, else the trip's
+     * own copy, else the list card's `nextDeparture` (known on the first frame). A trip with no open and no sold-out
+     * date (none listed, or all cancelled or closed) is not "sold out": "Choose a date" takes the reader to the band,
+     * which says why.
+     */
+    val nothingBookable: Boolean
+        get() {
+            liveDepartures?.let { return it.allFull() }
+            trip?.let { return if (it.dates.isNotEmpty()) it.dates.allFull() else it.nextDeparture?.soldOut == true }
+            return preview?.nextDeparture?.soldOut == true
         }
 
     /** The date "Continue" books. Null unless the selected date is bookable, so sold out never continues. */
@@ -107,6 +148,10 @@ internal data class TripDetailUiState(
         const val FALLBACK_MAX_PARTY_SIZE = 6
     }
 }
+
+/** No date is bookable and at least one is sold out (the contract's `nextDeparture.soldOut` rule). */
+private fun List<DepartureDto>.allFull(): Boolean =
+    none { it.availability == DateAvailability.Open } && any { it.availability == DateAvailability.SoldOut }
 
 /**
  * The waiting-list form for one sold-out date ([departureId]): the email and party to put on its

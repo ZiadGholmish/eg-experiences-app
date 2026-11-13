@@ -4,14 +4,19 @@ sdk.dir=/Users/<you>/Library/Android/sdk
 
 # Base URL for the `local` product flavor. 10.0.2.2 is the host machine as seen
 # from the Android emulator; the api deployable listens on 8084.
-# Plain HTTP is allowed only to 10.0.2.2, localhost and 127.0.0.1, and only in the
-# localDebug build (composeApp/src/androidLocalDebug/res/xml/network_security_config.xml).
-# A physical device on a LAN IP needs that IP added there, or `adb reverse tcp:8084 tcp:8084`
-# with LOCAL_BASE_URL=http://localhost:8084/api/v1/.
+# Plain HTTP is allowed only to 10.0.2.2, localhost and 127.0.0.1 (plus LOCAL_LAN_HOST below), and only
+# in the localDebug build (generated from androidApp/src/localDebug/network_security_config.xml).
+# A physical device: set LOCAL_LAN_HOST to the Mac's LAN address and either point this at it, or use
+# `adb reverse tcp:8084 tcp:8084` with LOCAL_BASE_URL=http://localhost:8084/api/v1/.
 # `localRelease` therefore cannot reach a local HTTP backend: release builds never allow plain
-# HTTP. If a local release build is ever needed (e.g. to check R8), copy that file to
-# composeApp/src/androidLocal/res/xml/ for the run, or put the backend behind HTTPS.
+# HTTP. If a local release build is ever needed (e.g. to check R8), put the backend behind HTTPS.
 LOCAL_BASE_URL=http://10.0.2.2:8084/api/v1/
+
+# The Mac's LAN address (`ipconfig getifaddr en0`; a bare IP or hostname, no scheme or port), allowed plain
+# HTTP in the localDebug build. Needed on a physical phone when the local api serves its photo URLs on that
+# address (ASSET_BASE_URL, as a physical iPhone needs): without it the phone shows only the blurred
+# placeholders. Unset, the build is unchanged. DHCP-assigned, so personal: keep it here, never in git.
+# LOCAL_LAN_HOST=192.168.1.20
 
 # Share-link host the `local` flavor claims with App Links (https://<host>/t/{slug}; http too, in local
 # only). `localhost` matches the api's default SITE_PUBLIC_BASE_URL, so its "Open in app" link opens

@@ -101,7 +101,7 @@
     <string name="trip_bar_per_person">للفرد</string>
     <string name="trip_cta_choose_date">اختار التاريخ</string>
     <string name="trip_cta_continue">كمّل</string>
-    <string name="trip_cta_sold_out">كامل</string>
+    <string name="trip_cta_sold_out">كامل العدد</string>
     <string name="action_back">رجوع</string>
     <plurals name="trip_hours_door_to_door">
         <item quantity="zero">%1$d ساعة من الباب للباب</item>
@@ -213,8 +213,6 @@
     <string name="booking_hold_label">المقاعد محجوزة لمدة</string>
     <string name="booking_confirm">تأكيد الحجز</string>
     <string name="booking_total">الإجمالي</string>
-    <string name="booking_your_ref">رقم الحجز</string>
-    <string name="booking_confirmed">تم الحجز</string>
     <string name="booking_cancel">إلغاء الحجز</string>
 
     <string name="booking_step_title">التاريخ والأفراد</string>
@@ -293,6 +291,41 @@
     <!-- How a booking was paid (openapi Booking.method), on the confirmation and in My trips. -->
     <string name="booking_method_test_cash">كاش (تجربة)</string>
     <string name="booking_paid_with">اتدفع بـ%1$s</string>
+
+    <!-- تذكرة الحجز (HANDOFF §6، MV-M5). -->
+    <string name="ticket_overline_confirmed">محجوز — رقم الحجز</string>
+    <string name="ticket_overline_completed">الرحلة خلصت — رقم الحجز</string>
+    <string name="ticket_overline_called_off">الرحلة اتلغت — رقم الحجز</string>
+    <string name="ticket_overline_cancelled">اتلغى — رقم الحجز</string>
+    <string name="ticket_overline_expired">انتهى — رقم الحجز</string>
+    <string name="ticket_overline_unpaid">لسه متدفعش — رقم الحجز</string>
+    <string name="ticket_overline_unknown">الحجز — رقم الحجز</string>
+    <string name="ticket_show_host">اعرض الشاشة دي أو رقم الحجز لـ%1$s عند الأتوبيس.</string>
+    <string name="ticket_show_host_unnamed">اعرض الشاشة دي أو رقم الحجز للمضيف عند الأتوبيس.</string>
+    <string name="ticket_note_completed">شكرًا إنك سافرت معانا.</string>
+    <string name="ticket_note_called_off">الرحلة في اليوم ده اتلغت.</string>
+    <string name="ticket_note_cancelled">الحجز ده اتلغى، ومالوش مكان في الأتوبيس.</string>
+    <string name="ticket_note_expired">وقت الدفع خلص والمقاعد رجعت.</string>
+    <string name="ticket_note_unpaid">الحجز ده مش مؤكد غير لما يتدفع.</string>
+    <string name="ticket_row_date">التاريخ</string>
+    <string name="ticket_row_departure">القيام</string>
+    <string name="ticket_row_return">الرجوع</string>
+    <string name="ticket_row_party">الأفراد</string>
+    <string name="ticket_row_paid">المدفوع</string>
+    <string name="ticket_row_owed_to_host">تدفعه للمضيف</string>
+    <string name="ticket_row_host">المضيف</string>
+    <string name="ticket_value_dash">%1$s — %2$s</string>
+    <string name="ticket_value_comma">%1$s، %2$s</string>
+    <string name="ticket_value_dot">%1$s · %2$s</string>
+    <string name="ticket_where_to_stand">مكان الوقوف</string>
+    <string name="ticket_whatsapp_host">ابعت لـ%1$s على واتساب</string>
+    <string name="ticket_whatsapp_host_unnamed">ابعت للمضيف على واتساب</string>
+    <string name="ticket_screenshot_note">خد سكرين شوت — الشبكة بتقطع في جزء من الطريق.</string>
+    <!-- MV-M6: شريط التذكرة بيقول اتفتحت منين (بعد الدفع، أو حجز من رحلاتي)، وزرار يفتح الرحلة. -->
+    <string name="ticket_title_confirmation">تأكيد الحجز</string>
+    <string name="ticket_title_details">تفاصيل الحجز</string>
+    <string name="ticket_view_trip">تفاصيل الرحلة</string>
+    <string name="ticket_not_found">مش لاقيين الحجز ده. اتأكد من رقم الحجز، أو إنك داخل بالحساب اللي حجز بيه.</string>
     <string name="booking_payer_vf_number">رقم فودافون كاش</string>
     <string name="booking_payer_card_name">الاسم على الكارت</string>
     <string name="booking_payer_card_note">هتكتب بيانات الكارت في صفحة الدفع الآمنة.</string>
@@ -564,4 +597,18 @@
     </plurals>
     <string name="search_hosts_title">المضيفين</string>
     <string name="search_hosts_see_all">شوف كل المضيفين</string>
+
+    <!-- MV-M3: the full-screen photo and video viewer. -->
+    <string name="media_close">اقفل</string>
+    <string name="media_counter_spoken">%1$d من %2$d</string>
+    <string name="media_open">افتح بملء الشاشة</string>
+    <string name="media_zoom">كبّر</string>
+    <string name="media_zoom_out">صغّر</string>
+    <string name="media_video">فيديو، %1$s</string>
+    <string name="media_play">شغّل الفيديو</string>
+    <string name="media_pause">وقّف</string>
+    <string name="media_position">مكان الفيديو</string>
+    <string name="media_photo_failed">مقدرناش نحمّل الصورة دي.</string>
+    <string name="media_video_failed">مقدرناش نشغّل الفيديو ده.</string>
+    <string name="media_host_photo">صورة %1$s</string>
 </resources>

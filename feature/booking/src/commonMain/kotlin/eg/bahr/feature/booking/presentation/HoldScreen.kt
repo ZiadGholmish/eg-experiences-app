@@ -72,7 +72,7 @@ import eg.bahr.core.localization.generated.resources.booking_pay_waiting_cta
 import eg.bahr.core.localization.generated.resources.booking_summary_party
 import eg.bahr.core.localization.generated.resources.booking_total
 import eg.bahr.core.localization.generated.resources.format_pair
-import eg.bahr.feature.booking.model.HeldBookingDto
+import eg.bahr.feature.booking.model.BookingDto
 import eg.bahr.feature.booking.model.laterReturnDate
 import eg.bahr.feature.booking.navigation.HoldRoute
 import eg.bahr.feature.booking.presentation.components.BookingThumbnail
@@ -268,7 +268,7 @@ private fun Countdown(state: HoldUiState) {
 
 /** Thumbnail, title, "Sat 7 Nov · 2 people" and where the bus leaves; lines wait for the re-read. */
 @Composable
-private fun TripSummary(booking: HeldBookingDto?) {
+private fun TripSummary(booking: BookingDto?) {
     BahrCard(modifier = Modifier.fillMaxWidth()) {
         Row(modifier = Modifier.padding(BahrSpacing.md), horizontalArrangement = Arrangement.spacedBy(BahrSpacing.md)) {
             BookingThumbnail(booking?.trip?.cardImage)
@@ -295,7 +295,7 @@ private fun TripSummary(booking: HeldBookingDto?) {
 }
 
 @Composable
-private fun departsLine(booking: HeldBookingDto): String? {
+private fun departsLine(booking: BookingDto): String? {
     val place = booking.departure?.placeName ?: return null
     val time = booking.departure.timeLocal?.let(BahrFormat::ltr) ?: return null
     val city = booking.departure.city

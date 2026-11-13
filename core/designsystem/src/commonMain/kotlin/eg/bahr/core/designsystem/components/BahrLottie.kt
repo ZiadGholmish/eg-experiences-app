@@ -72,6 +72,13 @@ interface BahrLottie {
         SuccessCheck("files/lottie/success_check.json", SQUARE),
 
         /**
+         * MV-M5: a white disc in a pale ring, the tick drawn in, confetti, streamers and two bursts going out, then
+         * still (500 x 400). Drawn for the confirmation's teal header: its disc and white confetti are `onHero`, the
+         * tick `heroStart`, the rest `primaryBright` and `secondary`, so it needs that ground in every theme.
+         */
+        BookingConfirmed("files/lottie/booking_confirmed.json", BOOKING_CONFIRMED_WIDTH / BOOKING_CONFIRMED_HEIGHT),
+
+        /**
          * A line-drawn folded map that opens, its roads drawn in, a pin dropping and a dotted route
          * leading from it to a cross, then held (square). Its still frame is the last: the whole map.
          */
@@ -86,7 +93,7 @@ interface BahrLottie {
     /**
      * What the animation is drawn on (M3-M8b). The files paint their ground-coloured parts (the boat's
      * water band, the check's gap and tick) in the `surface` role; on the page's `background` (the
-     * sign-in sheet, booking confirmed) they take that colour instead, or they would show as a box; in a
+     * sign-in sheet; booking confirmed until MV-M5) they take that colour instead, or they would show as a box; in a
      * snackbar ("Your profile is saved") its `inverseSurface`.
      */
     enum class Ground { Surface, Background, InverseSurface }
@@ -188,6 +195,9 @@ private fun lottieRoles(
         "primaryContainer" to scheme.primaryContainer,
         "onPrimaryContainer" to scheme.onPrimaryContainer,
         "secondary" to scheme.secondary,
+        "primaryBright" to extended.primaryBright,
+        "onHero" to extended.onHero,
+        "heroStart" to extended.heroStart,
         "surface" to
             when (ground) {
                 BahrLottie.Ground.Surface -> scheme.surface
@@ -228,6 +238,8 @@ private const val BELL_WIDTH = 624f
 private const val BELL_HEIGHT = 663f
 private const val SAILBOAT_WIDTH = 348f
 private const val SAILBOAT_HEIGHT = 240f
+private const val BOOKING_CONFIRMED_WIDTH = 500f
+private const val BOOKING_CONFIRMED_HEIGHT = 400f
 
 /** The success check, map and magnifier files have square canvases. */
 private const val SQUARE = 1f

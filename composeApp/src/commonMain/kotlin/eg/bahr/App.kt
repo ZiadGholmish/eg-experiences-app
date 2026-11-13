@@ -35,7 +35,6 @@ import eg.bahr.navigation.AppTabs
 import eg.bahr.navigation.AppTabsState
 import eg.bahr.navigation.badgeCount
 import eg.bahr.navigation.title
-import kotlinx.coroutines.flow.drop
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 
@@ -57,9 +56,10 @@ fun App(appVersion: String) {
     // Synchronous, so a keyed SideEffect (Compose 1.12) rather than a coroutine (Compose audit L9).
     SideEffect(pendingLink, pendingHold) { if (pendingLink != null || pendingHold != null) tabs.select(AppTab.Home) }
 
-    // A language switch starts every tab over at its root (see AppTabsState.resetToRoots).
+    // A language switch rebuilds every tab's NavHost at its root: the tab state hears of each language, so a stack
+    // reported in an earlier one counts as on its root (MV-M8, AppTabsState.onLanguage).
     val languages: AppLanguageState = koinInject()
-    LaunchedEffect(languages, tabs) { languages.language.drop(1).collect { tabs.resetToRoots() } }
+    LaunchedEffect(languages, tabs) { languages.language.collect(tabs::onLanguage) }
 
     App { AppTabs(tabs = tabs, appVersion = appVersion) }
 }

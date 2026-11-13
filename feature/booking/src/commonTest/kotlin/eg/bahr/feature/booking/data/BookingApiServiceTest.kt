@@ -335,6 +335,25 @@ class BookingApiServiceTest {
             assertEquals("Dawn on Lake Burullus", booking.trip?.title)
             assertNull(booking.holdExpiresAt)
             assertNull(booking.paymentMethods, "only while HELD")
+            // MV-M5: the ticket's host row and WhatsApp button.
+            assertEquals("Ashraf El Bahr", booking.host?.name)
+            assertEquals("+201001234567", booking.host?.phone)
+            assertEquals("https://wa.me/201001234567", booking.host?.whatsappUrl)
+            assertNull(booking.dateCalledOff)
+            assertNull(booking.hostPaid)
+        }
+
+    /** MV-M5: a called-off date (M6-B3) and a host's own unpaid booking (M5-B3) decode, for the ticket's header and money row. */
+    @Test
+    fun `the ticket reads dateCalledOff and hostPaid`() =
+        runTest {
+            val payload =
+                BOOKING_CONFIRMED_TEST_CASH
+                    .replace("\"status\":\"CONFIRMED\"", "\"status\":\"CANCELLED\",\"dateCalledOff\":true,\"hostPaid\":false")
+            val booking = (service(payload).bookingByRef("BRL-Y4GHX1PW") as AppResult.Success).data
+            assertEquals("CANCELLED", booking.status)
+            assertEquals(true, booking.dateCalledOff)
+            assertEquals(false, booking.hostPaid)
         }
 
     private object NoSession : SessionStore {

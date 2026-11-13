@@ -15,6 +15,9 @@ android-targetSdk = "36"
 # 1.13.0: what Compose Multiplatform 1.12.2's Android artifacts resolve activity to anyway (M3-M10).
 androidx-activity = "1.13.0"
 androidx-appcompat = "1.7.1"
+# 1.18.0: what the app already resolves androidx.core to (Compose, activity, Media3 pull it in). Named for core:catalog's
+# WindowCompat (MV-M3: the full-screen viewer hides the system bars), so it compiles against the version it runs with.
+androidx-core = "1.18.0"
 # JetBrains lifecycle 2.11.0: the Lifecycle Compose Multiplatform 1.12.2 lists (androidx Lifecycle 2.11.0).
 androidx-lifecycle = "2.11.0"
 composeMultiplatform = "1.12.2"
@@ -72,6 +75,12 @@ googleServices = "4.5.0"
 # google-services.json the SDK has no FirebaseApp and the app treats push as off (AndroidPush.kt).
 firebaseMessaging = "26.0.1"
 
+# Video (MV-M3, M5-M2): Media3 ExoPlayer and its Compose surface for the full-screen viewer. Android only: Media3 publishes
+# Android AARs and no Kotlin Multiplatform target (checked on Google Maven 2026-11-12), and Google has no multiplatform
+# player, so iOS plays through AVPlayer behind core:catalog's expect/actual. 1.11.1: the newest stable (1.12 is in beta);
+# its compose-bom (2026.05.00, foundation 1.11.1) is below the androidx Compose 1.12.1 the app resolves, so it moves nothing.
+media3 = "1.11.1"
+
 # Image loading
 # 3.6.3 (M3-M10): built against Skiko 0.150.1, the line Compose Multiplatform 1.12.2 ships (0.150.2). 3.3.0 was built
 # against Skiko 0.9.4.2, and on 1.12 the iOS build's Compose compatibility check warned the two were incompatible.
@@ -124,6 +133,7 @@ ktlint = "1.5.0"
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "androidx-appcompat" }
+androidx-core = { module = "androidx.core:core", version.ref = "androidx-core" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }
 firebase-messaging = { module = "com.google.firebase:firebase-messaging", version.ref = "firebaseMessaging" }
 androidx-lifecycle-viewmodelCompose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "androidx-lifecycle" }
@@ -169,6 +179,10 @@ androidx-browser = { module = "androidx.browser:browser", version.ref = "android
 androidx-credentials = { module = "androidx.credentials:credentials", version.ref = "androidxCredentials" }
 androidx-credentials-playServicesAuth = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "androidxCredentials" }
 google-identity-googleid = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleId" }
+
+# Media3 (Android)
+androidx-media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = "media3" }
+androidx-media3-ui-compose = { module = "androidx.media3:media3-ui-compose", version.ref = "media3" }
 
 # Coil
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }

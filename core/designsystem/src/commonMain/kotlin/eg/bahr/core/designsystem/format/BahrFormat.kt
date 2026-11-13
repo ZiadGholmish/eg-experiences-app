@@ -85,6 +85,21 @@ object BahrFormat {
     private fun Int.twoDigits() = toString().padStart(TWO_DIGITS, '0')
 
     /**
+     * A video's running time or play position (MV-M3), as players print it: `0:08`, `1:05`, `1:02:03` past the hour.
+     * Negative input clamps to `0:00`. Wrapped in an LTR isolate, so it reads left to right inside Arabic.
+     */
+    fun duration(seconds: Long): String {
+        val s = seconds.coerceAtLeast(0)
+        val hours = s / SECONDS_PER_HOUR
+        val minutes = (s % SECONDS_PER_HOUR) / SECONDS_PER_MINUTE
+        val rest = (s % SECONDS_PER_MINUTE).toInt().twoDigits()
+        val text = if (hours > 0) "$hours:${minutes.toInt().twoDigits()}:$rest" else "$minutes:$rest"
+        return ltr(text)
+    }
+
+    private const val SECONDS_PER_HOUR = 3600
+
+    /**
      * "Sat 17 Oct" / "السبت 17 أكتوبر". The day and month words come from `core:localization`
      * (`weekdays_short`, `months_short`), so the composition's language picks them; the digits are
      * Kotlin's, so they stay Western in Arabic.

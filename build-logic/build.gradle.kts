@@ -11,6 +11,15 @@ dependencies {
     compileOnly(libs.compose.gradlePlugin)
     compileOnly(libs.kover.gradlePlugin)
     compileOnly(libs.spotless.gradlePlugin)
+
+    // The build logic's own unit tests (MV-M10). kotlin("test") follows Gradle's embedded Kotlin, which this
+    // included build compiles with; the JUnit 4 flavour is picked from `useJUnit()` below. The root's `check` (so
+    // `./gradlew build`) depends on this `test` (bahr.root); alone: `./gradlew -p build-logic test`.
+    testImplementation(kotlin("test"))
+}
+
+tasks.test {
+    useJUnit()
 }
 
 gradlePlugin {

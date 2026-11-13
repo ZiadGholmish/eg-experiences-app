@@ -1,3 +1,4 @@
+import eg.bahr.buildlogic.GenerateLocalNetworkSecurityConfigTask
 import eg.bahr.buildlogic.localSetting
 
 // The Android application (M3-M13): AGP 9 keeps `com.android.application` out of Kotlin Multiplatform modules, so
@@ -23,6 +24,12 @@ val localBaseUrl: String = localSetting("LOCAL_BASE_URL", "http://10.0.2.2:8084/
 // local SSR page builds (`intent://localhost:8084/t/…`) resolves to this app. Set it to a tunnel's
 // host to check App Links verification end to end; see README → Deep links.
 val localAppLinkHost: String = localSetting("LOCAL_APP_LINK_HOST", "localhost")
+
+// The Mac's LAN address (MV-M10), e.g. 192.168.1.20: a bare IP or hostname, no scheme or port. The local api serves
+// photo URLs on it (its ASSET_BASE_URL, so a physical iPhone can load them), so a physical Android phone needs plain
+// HTTP to it as well. Added to the localDebug network security config at build time (below); unset, that config is
+// the checked-in template unchanged. Personal and DHCP-assigned, hence local.properties, never git.
+val localLanHost: String = localSetting("LOCAL_LAN_HOST", "")
 
 // Where the hosted checkout returns to (M3-M1): `<application id>://checkout`, which the manifest claims. The server
 // takes a return link only under a prefix it lists (PAYMENT_RETURN_URL_PREFIXES). The local api lists
@@ -141,4 +148,25 @@ fun com.android.build.api.dsl.ApplicationProductFlavor.appLinks(
 /** The flavor's payment return link (M3-M1) into BuildConfig; empty sends none. */
 fun com.android.build.api.dsl.ApplicationProductFlavor.paymentReturn(url: String) {
     buildConfigField("String", "PAYMENT_RETURN_URL", "\"$url\"")
+}
+
+// localDebug's network security config (MV-M10): the template in src/localDebug/ (outside res/, so it is not merged
+// twice) plus LOCAL_LAN_HOST when set, written into a generated res directory of that variant only. It overrides
+// src/main/res/xml/network_security_config.xml (no plain HTTP) like the checked-in file used to. Every other variant
+// keeps main's.
+val generateLocalDebugNetworkSecurityConfig =
+    tasks.register<GenerateLocalNetworkSecurityConfigTask>("generateLocalDebugNetworkSecurityConfig") {
+        description = "Writes the localDebug network_security_config.xml, adding LOCAL_LAN_HOST when it is set."
+        template.set(layout.projectDirectory.file("src/localDebug/network_security_config.xml"))
+        lanHost.set(localLanHost)
+        outputDir.set(layout.buildDirectory.dir("generated/res/localDebugNetworkSecurityConfig"))
+    }
+
+androidComponents {
+    onVariants(selector().withName("localDebug")) { variant ->
+        variant.sources.res?.addGeneratedSourceDirectory(
+            generateLocalDebugNetworkSecurityConfig,
+            GenerateLocalNetworkSecurityConfigTask::outputDir,
+        )
+    }
 }

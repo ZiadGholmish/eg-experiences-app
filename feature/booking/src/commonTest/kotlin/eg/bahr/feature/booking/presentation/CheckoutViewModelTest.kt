@@ -11,7 +11,7 @@ import eg.bahr.feature.booking.data.FakeActiveHoldStore
 import eg.bahr.feature.booking.data.FakeBookingRepository
 import eg.bahr.feature.booking.data.RecordingHoldReminderSchedule
 import eg.bahr.feature.booking.di.CheckoutConfig
-import eg.bahr.feature.booking.model.HeldBookingDto
+import eg.bahr.feature.booking.model.BookingDto
 import eg.bahr.feature.booking.model.PaymentStartedDto
 import eg.bahr.feature.booking.navigation.HoldRoute
 import kotlinx.coroutines.CompletableDeferred
@@ -59,7 +59,7 @@ class CheckoutViewModelTest {
         }
 
     /** The booking as the server reads it now: HELD / PAYMENT_PENDING keep the 15-minute deadline, even once past. */
-    private fun TestScope.serverAnswer(): AppResult<HeldBookingDto> =
+    private fun TestScope.serverAnswer(): AppResult<BookingDto> =
         AppResult.Success(
             BookingFixtures.heldBooking(
                 status = status,
@@ -394,7 +394,7 @@ class CheckoutViewModelTest {
     @Test
     fun `a read sent before paying cannot pass for a decline once the payment has started`() =
         runViewModelTest {
-            val late = CompletableDeferred<AppResult<HeldBookingDto>>()
+            val late = CompletableDeferred<AppResult<BookingDto>>()
             var first = true
             val repo =
                 repository().apply {
@@ -433,7 +433,7 @@ class CheckoutViewModelTest {
     fun `a read sent while the payment starts cannot pass for a decline either`() =
         runViewModelTest {
             val start = CompletableDeferred<AppResult<PaymentStartedDto>>()
-            val heldBeforeStart = CompletableDeferred<AppResult<HeldBookingDto>>()
+            val heldBeforeStart = CompletableDeferred<AppResult<BookingDto>>()
             var reads = 0
             val repo =
                 repository().apply {

@@ -80,10 +80,11 @@ fun InitialAvatar(
     tint: Tint,
     size: Dp,
     image: String? = null,
+    modifier: Modifier = Modifier,
 ) {
     val colors = tint.colors()
     Box(
-        modifier = Modifier.size(size).clip(BahrTheme.shapes.full).background(colors.container),
+        modifier = modifier.size(size).clip(BahrTheme.shapes.full).background(colors.container),
         contentAlignment = Alignment.Center,
     ) {
         name?.firstOrNull()?.let {

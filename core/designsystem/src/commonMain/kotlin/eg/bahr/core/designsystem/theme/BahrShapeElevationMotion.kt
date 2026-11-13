@@ -25,6 +25,8 @@ data class BahrShapes(
     val card: RoundedCornerShape = RoundedCornerShape(22.dp),
     val hero: RoundedCornerShape = RoundedCornerShape(24.dp),
     val sheet: RoundedCornerShape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
+    /** A header that runs to the top edge (HANDOFF §6, the booking confirmation's: 30px bottom radius), the sheet's mirror. */
+    val header: RoundedCornerShape = RoundedCornerShape(bottomStart = 30.dp, bottomEnd = 30.dp),
     /** 100px in tokens.json; Compose clamps a radius to half the side, so this is always a pill. */
     val full: RoundedCornerShape = RoundedCornerShape(100.dp),
 )
@@ -115,6 +117,12 @@ fun Modifier.bahrShadow(
 
 // ---------- Motion — mirrors sys.motion ----------
 object BahrMotion {
+    /**
+     * A flick at least this fast (per second) closes the full-screen viewer whatever the distance dragged (MV-M3):
+     * about what the platforms' own photo viewers take for "thrown away".
+     */
+    val DismissFlingVelocity = 1200.dp
+
     const val Short = 150
     const val Medium = 250
     const val Long = 400
@@ -304,7 +312,7 @@ object BahrSize {
     val lottieHero = 112.dp
 
     /**
-     * A done moment's animation box (M3-M8b, BahrLottie's SuccessCheck: booking confirmed, seats held,
+     * A done moment's animation box (M3-M8b, BahrLottie's SuccessCheck: joined the waiting list, review sent,
      * profile saved). Its disc and ring fill about 70% of the canvas, so the disc reads near [stateDisc].
      */
     val lottieMoment = 96.dp
@@ -314,6 +322,13 @@ object BahrSize {
      * the size of the [avatarSmall] disc it replaced, with room for the halo.
      */
     val lottieInline = 44.dp
+
+    /**
+     * The booking-confirmed celebration's box (MV-M5, BahrLottie's BookingConfirmed), its width: the canvas is 5:4 and
+     * its ring about half the height, so the disc draws a little under [stateDisc] with room round it for the confetti,
+     * kept this small so the whole ticket (reference to the host's phone) fits one screenshot of a 360 x 740 phone.
+     */
+    val lottieCelebration = 136.dp
 
     /** Profile's initials avatar (account handoff §2: 60px). */
     val avatarProfile = 60.dp
@@ -376,6 +391,13 @@ object BahrSize {
 
     /** The trip thumbnail on the payment screen's summary card (62px in the handoff). */
     val thumbnail = 62.dp
+
+    /**
+     * The full-screen viewer (MV-M3): a video's round play button in the middle of its poster, and the smaller badge
+     * on a video in a gallery strip (the trip page's slider).
+     */
+    val mediaPlayButton = 64.dp
+    val mediaPlayBadge = 40.dp
 
     /** A small trip thumbnail beside its title, as on a Home review card's trip line (MH-M1). */
     val thumbnailSmall = 32.dp
