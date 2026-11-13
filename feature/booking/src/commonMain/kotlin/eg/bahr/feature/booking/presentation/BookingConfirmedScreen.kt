@@ -28,6 +28,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,6 +56,7 @@ import eg.bahr.core.designsystem.components.BahrSkeletonBlock
 import eg.bahr.core.designsystem.components.BahrSkeletonLine
 import eg.bahr.core.designsystem.format.BahrFormat
 import eg.bahr.core.designsystem.icon.BahrIcons
+import eg.bahr.core.designsystem.lifecycle.RefreshesOnReturn
 import eg.bahr.core.designsystem.theme.BahrSize
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
@@ -68,6 +70,7 @@ import eg.bahr.core.localization.generated.resources.booking_method_vf
 import eg.bahr.core.localization.generated.resources.booking_party_count
 import eg.bahr.core.localization.generated.resources.booking_total
 import eg.bahr.core.localization.generated.resources.mytrips_rate_trip
+import eg.bahr.core.localization.generated.resources.ticket_add_to_calendar
 import eg.bahr.core.localization.generated.resources.ticket_not_found
 import eg.bahr.core.localization.generated.resources.ticket_note_called_off
 import eg.bahr.core.localization.generated.resources.ticket_note_cancelled
@@ -106,6 +109,7 @@ import eg.bahr.core.localization.localizedMessage
 import eg.bahr.core.network.ApiErrorCodes
 import eg.bahr.feature.booking.model.BookingDto
 import eg.bahr.feature.booking.model.laterReturnDate
+import eg.bahr.feature.booking.model.rateable
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
@@ -122,12 +126,15 @@ import kotlin.math.sin
  * WhatsApp and a note to take a screenshot. Opened after paying and by reference (a notification), so the header
  * follows the booking's status ([TicketState]): only a confirmed booking celebrates and says "Booked".
  *
- * Only what the contract serves is drawn: no "Add to calendar" (`Booking.calendar` is not served yet) and no map
- * crop (M3-M2).
+ * Only what the contract serves is drawn: "Add to calendar" when the server sends the event (`Booking.calendar`, a
+ * confirmed booking, MV-M13), handed to [calendar]; no map crop (M3-M2).
  *
  * Since MV-M6 it is also a booking's details, opened from My trips ([TicketEntry.Details]): the bar names the entry
- * and has a way back in every state (loading, error, not found); the details offer the trip's page and, when [canRate]
- * (My trips' rule), "Rate your trip", instead of the "Trips" button, which there would only repeat Back.
+ * and has a way back in every state (loading, error, not found); the details offer the trip's page and, when the
+ * booking may be reviewed (`canReview` from `getBooking` since MV-M13, My trips' rule), "Rate your trip", instead of
+ * the "Trips" button, which there would only repeat Back. Each return to the screen (back from the review page, the
+ * calendar, the app brought forward) reads the booking again without a skeleton, so a review just sent takes "Rate
+ * your trip" away.
  */
 @Composable
 internal fun BookingConfirmedScreen(
@@ -135,11 +142,12 @@ internal fun BookingConfirmedScreen(
     actions: TicketCallbacks,
     modifier: Modifier = Modifier,
     entry: TicketEntry = TicketEntry.Paid,
-    canRate: Boolean = false,
+    calendar: CalendarInserter = rememberCalendarInserter(),
     viewModel: BookingConfirmedViewModel = koinViewModel { parametersOf(ref) },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val booking = state.booking
+    RefreshesOnReturn(viewModel::refresh)
 
     when {
         state.isLoading -> TicketSkeleton(entry, actions.onBack, modifier)
@@ -168,7 +176,7 @@ internal fun BookingConfirmedScreen(
                 )
             }
 
-        else -> Ticket(booking, entry, canRate, actions, modifier)
+        else -> Ticket(booking, entry, actions, calendar, modifier)
     }
 }
 
@@ -196,8 +204,8 @@ internal class TicketCallbacks(
 private fun Ticket(
     booking: BookingDto,
     entry: TicketEntry,
-    canRate: Boolean,
     actions: TicketCallbacks,
+    calendar: CalendarInserter,
     modifier: Modifier,
 ) {
     val ticket = booking.ticketState
@@ -216,7 +224,7 @@ private fun Ticket(
                 ?.whereToStand
                 ?.takeIf { it.isNotBlank() && ticket in BUS_AHEAD }
                 ?.let { WhereToStand(it) }
-            TicketActions(booking, ticket, entry, canRate, actions)
+            TicketActions(booking, ticket, entry, actions, calendar)
         }
         Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
     }
@@ -396,7 +404,9 @@ private fun departureValue(booking: BookingDto): String? {
 
 /**
  * The money row: "Paid  900 EGP · Vodafone Cash" (with the Test badge for test cash, MV-M4), "To pay the host" on a
- * host's own unpaid booking, else "Total". The amount is the server's total; `Booking.paid` is not served.
+ * host's own unpaid booking, else "Total". "Paid" says what was paid in the app (`Booking.paid`, MV-B3: the same as the
+ * total today, and kept after a refund); a paid booking without it (a host's own booking paid to the host, an older
+ * server) says the server's total. The app adds nothing up either way.
  */
 @Composable
 private fun MoneyRow(
@@ -404,7 +414,8 @@ private fun MoneyRow(
     arabic: Boolean,
 ) {
     val payment = booking.ticketPayment
-    val amount = BahrFormat.money(booking.total.amount, booking.total.currencyCode, arabic)
+    val money = booking.paid?.takeIf { payment == TicketPayment.Paid } ?: booking.total
+    val amount = BahrFormat.money(money.amount, money.currencyCode, arabic)
     val method = PaymentMethod.of(booking.method)
     val key =
         when (payment) {
@@ -512,17 +523,18 @@ private fun WhereToStand(text: String) {
 }
 
 /**
- * The host's WhatsApp (coral: the one step forward here) when the server sent the link; then after paying the way
- * back to the trips, or on a booking's details "Rate your trip" (when it may be rated) and the trip's page; and on a
- * confirmed ticket the note to take a screenshot.
+ * The host's WhatsApp (coral: the one step forward here) when the server sent the link; "Add Sat 10 Oct to calendar"
+ * when it sent the event (HANDOFF §6's second action, on `primaryContainer`); then after paying the way back to the
+ * trips, or on a booking's details "Rate your trip" (when it may be rated) and the trip's page; and on a confirmed
+ * ticket the note to take a screenshot.
  */
 @Composable
 private fun TicketActions(
     booking: BookingDto,
     ticket: TicketState,
     entry: TicketEntry,
-    canRate: Boolean,
     actions: TicketCallbacks,
+    calendar: CalendarInserter,
 ) {
     Column(
         modifier = Modifier.padding(vertical = BahrSpacing.sm),
@@ -545,10 +557,19 @@ private fun TicketActions(
                 modifier = Modifier.fillMaxWidth().testTag(TICKET_WHATSAPP_TAG),
             )
         }
+        val event = remember(booking.calendar) { booking.calendar?.toEvent() }
+        if (event != null) {
+            SecondaryButton(
+                icon = BahrIcons.Event,
+                text = stringResource(Res.string.ticket_add_to_calendar, booking.dayLabel ?: BahrFormat.date(booking.date)),
+                onClick = { calendar.add(event) },
+                tag = TICKET_CALENDAR_TAG,
+            )
+        }
         when (entry) {
             TicketEntry.Paid -> SecondaryButton(BahrIcons.Sailing, stringResource(Res.string.trips_title), actions.onDone)
             TicketEntry.Details -> {
-                if (canRate) {
+                if (booking.rateable) {
                     SecondaryButton(
                         icon = BahrIcons.RateReview,
                         text = stringResource(Res.string.mytrips_rate_trip),
@@ -763,6 +784,9 @@ internal const val TICKET_WHATSAPP_TAG = "ticket_whatsapp"
 internal const val TICKET_BACK_TAG = "ticket_back"
 internal const val TICKET_VIEW_TRIP_TAG = "ticket_view_trip"
 internal const val TICKET_RATE_TAG = "ticket_rate"
+
+/** For tests (MV-M13): "Add to calendar". */
+internal const val TICKET_CALENDAR_TAG = "ticket_calendar"
 
 // The handoff's `linear-gradient(160deg, primary, teal-50 60%, teal-60)`.
 private const val GRADIENT_ANGLE_DEGREES = 160.0

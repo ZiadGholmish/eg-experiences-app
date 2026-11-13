@@ -15,6 +15,7 @@ import eg.bahr.feature.booking.model.GuestRequest
 import eg.bahr.feature.booking.model.PayerRequest
 import eg.bahr.feature.booking.model.PlaceHoldRequest
 import eg.bahr.feature.booking.model.StartPaymentRequest
+import eg.bahr.feature.booking.model.rateable
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.request.HttpRequestData
@@ -33,6 +34,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 /**
@@ -354,6 +356,43 @@ class BookingApiServiceTest {
             assertEquals("CANCELLED", booking.status)
             assertEquals(true, booking.dateCalledOff)
             assertEquals(false, booking.hostPaid)
+        }
+
+    /**
+     * MV-M13: what MV-B3 serves on `getBooking` decodes: the calendar event (Cairo offset; the start here in ISO's
+     * minute-only form, which the app also reads, the end with seconds as the server sends them today), and for the
+     * booking's own account `canReview` and the review written for it.
+     */
+    @Test
+    fun `the ticket reads calendar - canReview and review - MV-B3`() =
+        runTest {
+            val payload =
+                BOOKING_CONFIRMED_TEST_CASH
+                    .replace("2026-11-07T05:00:00+02:00", "2026-11-07T05:00+02:00")
+                    .replace(
+                        "\"partySize\":1,",
+                        "\"partySize\":1,\"canReview\":false," +
+                            "\"review\":{\"id\":\"3f0c2a1e-8a4b-4d6e-9a51-2b7c0e4d9f10\",\"status\":\"pending\",\"canEdit\":true},",
+                    )
+            val booking = (service(payload).bookingByRef("BRL-Y4GHX1PW") as AppResult.Success).data
+            val calendar = assertNotNull(booking.calendar)
+            assertEquals("2026-11-07T05:00+02:00", calendar.start)
+            assertEquals("2026-11-07T22:00:00+02:00", calendar.end)
+            assertEquals("Dawn on Lake Burullus", calendar.title)
+            assertEquals("Abdel Moneim Riad, Cairo", calendar.location)
+            assertEquals(false, booking.canReview)
+            assertEquals("pending", booking.review?.status)
+            assertEquals(true, booking.review?.canEdit)
+        }
+
+    /** Opened by phone alone (or from an older server): no `canReview`, no review, so no "Rate your trip". */
+    @Test
+    fun `without canReview the booking is not rateable`() =
+        runTest {
+            val booking = (service(BOOKING_CONFIRMED_TEST_CASH).bookingByRef("BRL-Y4GHX1PW") as AppResult.Success).data
+            assertNull(booking.canReview)
+            assertNull(booking.review)
+            assertFalse(booking.rateable)
         }
 
     private object NoSession : SessionStore {

@@ -123,9 +123,8 @@ internal data class HeldSeatsDto(
  * Named for the contract's schema since MV-M5 (it was `HeldBookingDto`, from when only the held-seats screen read it).
  *
  * **A partial copy of the contract's `Booking`, on purpose:** only the fields these screens read.
- * Left out: `calendar` (declared by the contract but not served yet: MV-M5 contract gap), `canReview`/`review`
- * (`listMyBookings` only), `Place.lat`/`lng` and `Image.variants` (unknown keys are ignored on decode, so the full
- * payload still parses). Whoever needs one of them adds it here, nullable with a default, field-for-field with
+ * Left out: `Place.lat`/`lng` and `Image.variants` (unknown keys are ignored on decode, so the full payload still
+ * parses). `paid`, `calendar`, `canReview` and `review` are read since MV-M13 (served since MV-B3). Whoever needs one of them adds it here, nullable with a default, field-for-field with
  * `openapi.yaml`.
  *
  * [status] is a string, not an enum: anything other than `HELD` / `PAYMENT_PENDING` means the seats
@@ -146,6 +145,10 @@ internal data class BookingDto(
     val returnDate: LocalDate? = null,
     val partySize: Int,
     val total: MoneyDto,
+    /**
+     * Since MV-B3: what was paid in the app for this booking, present exactly when [method] is (absent while unpaid and
+     * on a booking the host entered). The ticket's "Paid" row shows it; refunds are not taken off it.
+     */
     val paid: MoneyDto? = null,
     /** Since MV-B2: how it was paid (`card`, `vodafone_cash`, `test_cash`); absent while unpaid. A string, as [status]. */
     val method: String? = null,
@@ -160,7 +163,43 @@ internal data class BookingDto(
     val hostPaid: Boolean? = null,
     /** Only on a paid booking (CONFIRMED, COMPLETED): D4, the host's phone is shown once paid. */
     val host: BookingHostDto? = null,
+    /** Since MV-B3, only on a CONFIRMED booking whose date still runs: the event "Add to calendar" creates. */
+    val calendar: BookingCalendarDto? = null,
+    /**
+     * Since MV-B3 on `getBooking`, only for the booking's own signed-in account (absent when opened by phone alone or
+     * by another account): the booking may be reviewed now. With no [review], the details offer "Rate your trip".
+     */
+    val canReview: Boolean? = null,
+    /** Since MV-B3 on `getBooking` wherever [canReview] is served: the review written for this booking, if any. */
+    val review: BookingReviewDto? = null,
 )
+
+/**
+ * openapi `Booking.calendar` (MV-B3): the web ticket's `.ics` event as fields. [start] and [end] are ISO-8601 date-times
+ * with Cairo's offset (`2026-11-27T06:00:00+02:00`, cut to the minute); [end] is absent when the return time is not known, and the event is
+ * then the moment the bus leaves. [title] is localised (else the booking's ref); [location] is where the bus leaves.
+ */
+@Serializable
+internal data class BookingCalendarDto(
+    val start: String,
+    val end: String? = null,
+    val title: String,
+    val location: String? = null,
+)
+
+/**
+ * openapi `Booking.review` (MV-B3 on `getBooking`): the review written for this booking. Only its presence is read (a
+ * reviewed booking offers no "Rate your trip"); [status] is the contract's `MyReviewStatus`, kept as a string.
+ */
+@Serializable
+internal data class BookingReviewDto(
+    val id: String,
+    val status: String,
+    val canEdit: Boolean = false,
+)
+
+/** "Rate your trip" on a booking's details (MV-M13): My trips' own rule, now that `getBooking` serves the fields. */
+internal val BookingDto.rateable: Boolean get() = canReview == true && review == null
 
 /** openapi `Booking.host`. [phone] is openapi `Phone` (Western digits, shown as sent); [whatsappUrl] opens a chat with the host. */
 @Serializable

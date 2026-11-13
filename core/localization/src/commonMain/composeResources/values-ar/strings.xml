@@ -321,6 +321,8 @@
     <string name="ticket_whatsapp_host">ابعت لـ%1$s على واتساب</string>
     <string name="ticket_whatsapp_host_unnamed">ابعت للمضيف على واتساب</string>
     <string name="ticket_screenshot_note">خد سكرين شوت — الشبكة بتقطع في جزء من الطريق.</string>
+    <!-- MV-M13: بيفتح تقويم الموبايل والرحلة متكتبة فيه؛ المتغير هو تاريخ الرحلة ("السبت 10 أكتوبر"). -->
+    <string name="ticket_add_to_calendar">ضيف %1$s للتقويم</string>
     <!-- MV-M6: شريط التذكرة بيقول اتفتحت منين (بعد الدفع، أو حجز من رحلاتي)، وزرار يفتح الرحلة. -->
     <string name="ticket_title_confirmation">تأكيد الحجز</string>
     <string name="ticket_title_details">تفاصيل الحجز</string>

@@ -59,13 +59,12 @@ data class OpenHoldRoute(
  * my booking" deep link will carry.
  *
  * [details] (MV-M6): opened as a booking to look at (a My trips row, a notification) rather than right after paying.
- * The bar then says "Booking details" and the ticket offers the trip's page instead of "Trips". [canRate]: My trips'
- * own rule for "Rate your trip" (`canReview` and no review yet), handed over because `getBooking` does not serve
- * `canReview` (it is on `listMyBookings` only).
+ * The bar then says "Booking details" and the ticket offers the trip's page instead of "Trips". Whether it offers
+ * "Rate your trip" is the booking's own `canReview`, read with it (`getBooking` since MV-B3; MV-M13 took the flag out
+ * of the route, where it went stale once the review was sent).
  */
 @Serializable
 data class BookingConfirmedRoute(
     val ref: String,
     val details: Boolean = false,
-    val canRate: Boolean = false,
 )
