@@ -47,11 +47,14 @@ class MediaViewerHostTest {
                 ) { ImageDto(url = "http://127.0.0.1:9/review-$it.png", width = 900, height = 560, alt = "Review photo ${it + 1}") },
         )
 
+    /** What the host said through `onOpenChange`, in order. */
+    private val opened = mutableListOf<Boolean>()
+
     private fun showReview() {
         compose.setContent {
             ProvideAppLanguage(AppLanguage.ENGLISH) {
                 BahrTheme(locale = BahrLocale.English) {
-                    MediaViewerHost { Column { ReviewCard(review) } }
+                    MediaViewerHost(onOpenChange = { opened += it }) { Column { ReviewCard(review) } }
                 }
             }
         }
@@ -118,5 +121,20 @@ class MediaViewerHostTest {
         compose.waitForIdle()
 
         assertEquals(0, compose.onAllNodesWithTag(MEDIA_VIEWER_TAG).fetchSemanticsNodes().size)
+    }
+
+    /** MV-M8: the app hides its bars for this host's tab from these, so open and closed are each said once, in order. */
+    @Test
+    fun `the host says when the viewer opens and once it has closed`() {
+        showReview()
+        assertEquals(emptyList(), opened, "nothing open yet")
+
+        compose.onAllNodesWithTag(REVIEW_PHOTO_TAG)[0].performClick()
+        compose.waitForIdle()
+        assertEquals(listOf(true), opened)
+
+        compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        compose.waitForIdle()
+        assertEquals(listOf(true, false), opened)
     }
 }

@@ -76,14 +76,40 @@ Then:
 ./gradlew :androidApp:installLocalDebug
 ```
 
-`10.0.2.2` is the host machine as seen from the Android emulator. On a physical
-device, set `LOCAL_BASE_URL` in `local.properties` to your machine's LAN address.
+`10.0.2.2` is the host machine as seen from the Android emulator.
+
+#### A physical Android phone
+
+The `localDebug` build allows plain HTTP only to `10.0.2.2`, `localhost` and
+`127.0.0.1` (`androidApp/src/localDebug/network_security_config.xml`), plus one
+host of your own: set `LOCAL_LAN_HOST` in `local.properties` to the Mac's LAN
+address (`ipconfig getifaddr en0`; a bare IP or hostname, no scheme or port).
+The build adds it to that variant's network security config in a generated
+resource, so the address never lands in git; without it the build is the same
+as before. Every other variant still allows no plain HTTP. It matters for photos:
+when the local api's `ASSET_BASE_URL` is the Mac's LAN address (so a physical
+iPhone can load them), the image URLs it serves point there, and without
+`LOCAL_LAN_HOST` the phone shows only the blurred LQIP placeholders.
+
+```properties
+# local.properties (gitignored)
+LOCAL_LAN_HOST=192.168.1.20
+# Either the api through USB …
+LOCAL_BASE_URL=http://localhost:8084/api/v1/   # with: adb reverse tcp:8084 tcp:8084
+# … or straight over Wi-Fi (phone and Mac on the same network):
+# LOCAL_BASE_URL=http://192.168.1.20:8084/api/v1/
+```
+
+The photos load from `LOCAL_LAN_HOST` over Wi-Fi either way (one cleartext
+domain covers every port on that host). The address comes from DHCP, so update
+it when the router hands the Mac a new one. `./gradlew -p build-logic test`
+(also part of `./gradlew build`) checks the generated config.
 
 ### Flavors
 
 | Flavor | Base URL | Share-link host (App Links) |
 |---|---|---|
-| `local` | `LOCAL_BASE_URL` from `local.properties`, default `http://10.0.2.2:8084/api/v1/` | `LOCAL_APP_LINK_HOST`, default `localhost`; http and https |
+| `local` | `LOCAL_BASE_URL` from `local.properties`, default `http://10.0.2.2:8084/api/v1/`; plain HTTP also to `LOCAL_LAN_HOST` when set (localDebug) | `LOCAL_APP_LINK_HOST`, default `localhost`; http and https |
 | `dev` | `https://d1epegbe1ipzwy.cloudfront.net/api/v1/` (the deployed dev api) | `d1epegbe1ipzwy.cloudfront.net` |
 | `prod` | placeholder — no prod host deployed yet | `bahr.eg` |
 
@@ -131,6 +157,23 @@ ipconfig getifaddr en0     # put this address in the file you just copied
 `Local.xcconfig` pulls it in with an optional `#include?`, so the simulator
 still builds when the file is absent. It is gitignored, and the address is
 DHCP — it changes when the router reassigns it.
+
+For a one-off build, pass `BASE_URL` on the `xcodebuild` line instead: a build
+setting given on the command line overrides every xcconfig, and the `/$()/`
+trick is only needed inside xcconfig files (where `//` starts a comment):
+
+```bash
+xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp -configuration Debug \
+  -destination 'platform=iOS,name=<your iPhone>' \
+  BASE_URL="http://$(ipconfig getifaddr en0):8084/api/v1/" build
+```
+
+Plain HTTP to the LAN address (the api, and the photos when the local api's
+`ASSET_BASE_URL` is that address) needs no per-IP setting: `Info.plist` sets
+`NSAllowsLocalNetworking`, which Apple documents as letting ATS connect to
+"unqualified domains, `.local` domains, and IP addresses using IPv4 or IPv6"
+(iOS 17 stopped allowing IP addresses by default, so the key is what does it).
+Confirmed on a physical iPhone. This is the iOS side of Android's `LOCAL_LAN_HOST`.
 
 Signing is automatic against `DEVELOPMENT_TEAM = 474WXSCVBC`. Simulator builds
 are ad-hoc signed (`CODE_SIGNING_ALLOWED[sdk=iphonesimulator*] = NO`), so

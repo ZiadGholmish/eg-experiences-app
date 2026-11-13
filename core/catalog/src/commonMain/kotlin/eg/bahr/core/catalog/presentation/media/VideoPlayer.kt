@@ -59,8 +59,9 @@ internal expect fun VideoSurface(
 
 /**
  * Hides the status and navigation bars while in the composition, and shows them again after (the viewer is full
- * screen). Android: the window's insets controller, a swipe from the edge shows them for a moment. iOS: the SwiftUI app's
- * status bar and home indicator, through `IosMediaChrome` (iosMain), which `:composeApp` wires to Swift.
+ * screen). Android: the window's insets controller, a swipe from the edge shows them for a moment. iOS: nothing; the
+ * SwiftUI app hides its status bar and home indicator for the tab whose viewer is open, which `:composeApp` learns from
+ * `MediaViewerHost`'s `onOpenChange` (MV-M8).
  */
 @Composable
 internal expect fun HideSystemBars()

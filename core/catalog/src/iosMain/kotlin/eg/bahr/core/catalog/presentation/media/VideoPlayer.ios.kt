@@ -151,13 +151,12 @@ internal actual fun VideoSurface(
     )
 }
 
+/**
+ * Nothing here: on iOS the status bar, home indicator and tab bar are the SwiftUI app's, which the app hides for the tab
+ * whose viewer is open from `MediaViewerHost`'s `onOpenChange` (MV-M8; MV-M3 set one flag for every tab from here).
+ */
 @Composable
-internal actual fun HideSystemBars() {
-    DisposableEffect(Unit) {
-        IosMediaChrome.fullScreen(true)
-        onDispose { IosMediaChrome.fullScreen(false) }
-    }
-}
+internal actual fun HideSystemBars() = Unit
 
 private const val MS_PER_SECOND = 1000.0
 
