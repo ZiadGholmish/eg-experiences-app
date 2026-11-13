@@ -31,7 +31,8 @@ import kotlinx.serialization.Serializable
  * openapi `TripDetail`: the [TripCardDto] fields (the contract's `allOf` merges them flat) plus the
  * trip page. [shareUrl] is served since M1-B5 and not used yet (no share button); [dates] are the same `Departure`
  * shape as the departures endpoint. [returnLabel] (M4-B0b) is the facts grid's "Back Fri 22:00" note on a
- * multi-day trip; absent on a day trip.
+ * multi-day trip; absent on a day trip. [likeCount] / [likedByMe] (MP-B1) as on [TripCardDto]: 0 and null from an
+ * older server, [likedByMe] null for a guest.
  */
 @Serializable
 internal data class TripDetailDto(
@@ -65,6 +66,8 @@ internal data class TripDetailDto(
     val og: OpenGraphDto? = null,
     val shareUrl: String? = null,
     val media: List<TripMediaDto>? = null,
+    val likeCount: Int = 0,
+    val likedByMe: Boolean? = null,
 )
 
 /**

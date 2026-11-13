@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -33,6 +34,7 @@ import eg.bahr.core.catalog.presentation.components.listBody
 import eg.bahr.core.catalog.presentation.components.rememberListMotion
 import eg.bahr.core.catalog.presentation.components.rememberQueryStatus
 import eg.bahr.core.catalog.presentation.components.selectedOrder
+import eg.bahr.core.catalog.presentation.heartTap
 import eg.bahr.core.catalog.presentation.rememberThrottled
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.bahrSharedBounds
@@ -67,9 +69,12 @@ internal fun CategoryTripsScreen(
     onTripClick: (slug: String) -> Unit,
     modifier: Modifier = Modifier,
     sharedKey: String? = null,
+    onSignIn: () -> Unit = {},
     viewModel: CategoryTripsViewModel = koinViewModel(key = "category:$category") { parametersOf(category, title) },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    // A heart tapped by a guest opens the sign-in sheet (MP-M1).
+    val onLike = remember(viewModel, onSignIn) { heartTap(viewModel::toggleLike, onSignIn) }
     val trips = viewModel.trips.collectAsLazyPagingItems()
     val listState = rememberLazyListState()
     val perPersonLabel = stringResource(Res.string.trip_per_person)
@@ -118,6 +123,8 @@ internal fun CategoryTripsScreen(
                 motion = motion,
                 perPersonLabel = perPersonLabel,
                 waitlistTags = state.waitlistTags,
+                likes = state.likes,
+                onLike = onLike,
                 emptyMessage = { stringResource(if (state.filter != null) Res.string.trips_filter_empty else Res.string.trips_empty) },
                 onRetry = viewModel::retry,
                 onAppendRetry = appendRetry,

@@ -40,6 +40,8 @@ import kotlinx.coroutines.flow.emptyFlow
  *
  * M4-M8: Home is the Home tab's root; [onSearch] and [onMap] switch to the Search and Map tabs (the
  * app decides). [scrollToTop] fires on a re-tap of the selected Home tab.
+ *
+ * [onSignIn] (MP-M1) opens the sign-in sheet when a guest taps a trip's heart.
  */
 fun NavGraphBuilder.tripListScreen(
     onTripClick: (slug: String) -> Unit,
@@ -50,6 +52,7 @@ fun NavGraphBuilder.tripListScreen(
     onAlerts: (() -> Unit)? = null,
     unreadAlerts: StateFlow<Int?> = NoUnreadAlerts,
     scrollToTop: Flow<Unit> = emptyFlow(),
+    onSignIn: () -> Unit,
 ) {
     composable<TripListRoute> {
         BahrDestination(this) {
@@ -62,6 +65,7 @@ fun NavGraphBuilder.tripListScreen(
                 onAlerts = onAlerts,
                 unreadAlerts = unreadAlerts,
                 scrollToTop = scrollToTop,
+                onSignIn = onSignIn,
             )
         }
     }

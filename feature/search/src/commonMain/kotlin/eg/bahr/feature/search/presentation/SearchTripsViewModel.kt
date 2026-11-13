@@ -11,6 +11,8 @@ import co.touchlab.kermit.Logger
 import eg.bahr.core.catalog.data.FIRST_PAGE
 import eg.bahr.core.catalog.data.HostListRepository
 import eg.bahr.core.catalog.data.SEARCH_HOSTS_SIZE
+import eg.bahr.core.catalog.data.TripHearts
+import eg.bahr.core.catalog.data.TripLikes
 import eg.bahr.core.catalog.data.TripListPagingSource
 import eg.bahr.core.catalog.data.TripListRepository
 import eg.bahr.core.catalog.data.TripPagingConfig
@@ -24,8 +26,10 @@ import eg.bahr.core.catalog.model.TripCardDto
 import eg.bahr.core.catalog.model.TripPageDto
 import eg.bahr.core.catalog.presentation.Throttle
 import eg.bahr.core.catalog.presentation.WaitlistTags
+import eg.bahr.core.catalog.presentation.collectTripLikes
 import eg.bahr.core.catalog.presentation.collectWaitlistTags
 import eg.bahr.core.catalog.presentation.distinctTrips
+import eg.bahr.core.catalog.presentation.toggle
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.datastore.RecentSearchesStore
 import eg.bahr.feature.search.data.LastSearch
@@ -77,6 +81,8 @@ internal data class SearchTripsUiState(
     val totalItems: Long? = null,
     val recents: List<String> = emptyList(),
     val waitlistTags: WaitlistTags = WaitlistTags.None,
+    /** The hearts on the cards (MP-M1), as every screen shows them. */
+    val likes: TripLikes = TripLikes.None,
     val hosts: List<HostCardDto> = emptyList(),
 ) {
     /** The filter chips, in the served order. The category chips are not drawn on the search page. */
@@ -124,6 +130,8 @@ internal class SearchTripsViewModel(
     waitlists: WaitlistMemory,
     private val last: LastSearch,
     private val hostLists: HostListRepository,
+    // The hearts (MP-M1): the app's TripLikeStore; none in tests that do not look at them.
+    private val hearts: TripHearts = TripHearts.None,
 ) : ViewModel() {
     // Reopened (M3-M0b, user decision 2026-10-14): the last search comes back, searched at once.
     private val _uiState =
@@ -161,6 +169,9 @@ internal class SearchTripsViewModel(
             }.distinctTrips()
             .cachedIn(viewModelScope)
 
+    /** A tap on [trip]'s heart; false for a guest, whom the screen offers the sign-in sheet (MP-M1). */
+    fun toggleLike(trip: TripCardDto): Boolean = hearts.toggle(trip, _uiState.value.likes)
+
     init {
         viewModelScope.launch {
             typed
@@ -174,6 +185,7 @@ internal class SearchTripsViewModel(
                 .collect { recents -> _uiState.update { it.copy(recents = recents) } }
         }
         collectWaitlistTags(waitlists) { tags -> _uiState.update { it.copy(waitlistTags = tags) } }
+        collectTripLikes(hearts) { likes -> _uiState.update { it.copy(likes = likes) } }
         viewModelScope.launch {
             // The same search's hosts, beside its trips (MV-B1: one contract, no combined endpoint). A new search
             // cancels the read in flight; Retry reads them again with the trips. The filter chips are trips' only.

@@ -57,6 +57,7 @@ import eg.bahr.core.catalog.presentation.components.listBody
 import eg.bahr.core.catalog.presentation.components.rememberListMotion
 import eg.bahr.core.catalog.presentation.components.rememberQueryStatus
 import eg.bahr.core.catalog.presentation.components.selectedOrder
+import eg.bahr.core.catalog.presentation.heartTap
 import eg.bahr.core.catalog.presentation.rememberThrottled
 import eg.bahr.core.designsystem.components.BahrBackButton
 import eg.bahr.core.designsystem.components.BahrLottie
@@ -113,9 +114,12 @@ internal fun SearchTripsScreen(
     focusOnEntry: Boolean = true,
     focusRequests: Flow<Unit> = emptyFlow(),
     scrollToTop: Flow<Unit> = emptyFlow(),
+    onSignIn: () -> Unit = {},
     viewModel: SearchTripsViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    // A heart tapped by a guest opens the sign-in sheet (MP-M1).
+    val onLike = remember(viewModel, onSignIn) { heartTap(viewModel::toggleLike, onSignIn) }
     val trips = viewModel.trips.collectAsLazyPagingItems()
     val listState = rememberLazyListState()
     val perPersonLabel = stringResource(Res.string.trip_per_person)
@@ -240,6 +244,8 @@ internal fun SearchTripsScreen(
                 onAppendRetry = appendRetry,
                 perPersonLabel = perPersonLabel,
                 waitlistTags = state.waitlistTags,
+                likes = state.likes,
+                onLike = onLike,
                 emptyMessage = {
                     if (state.filter != null) {
                         stringResource(Res.string.trips_filter_empty)

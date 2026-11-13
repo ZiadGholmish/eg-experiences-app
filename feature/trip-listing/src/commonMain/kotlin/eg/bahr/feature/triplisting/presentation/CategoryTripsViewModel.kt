@@ -6,6 +6,8 @@ import androidx.paging.Pager
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import co.touchlab.kermit.Logger
+import eg.bahr.core.catalog.data.TripHearts
+import eg.bahr.core.catalog.data.TripLikes
 import eg.bahr.core.catalog.data.TripListPagingSource
 import eg.bahr.core.catalog.data.TripPagingConfig
 import eg.bahr.core.catalog.data.WaitlistMemory
@@ -16,9 +18,11 @@ import eg.bahr.core.catalog.model.TripCardDto
 import eg.bahr.core.catalog.model.TripPageDto
 import eg.bahr.core.catalog.presentation.Throttle
 import eg.bahr.core.catalog.presentation.WaitlistTags
+import eg.bahr.core.catalog.presentation.collectTripLikes
 import eg.bahr.core.catalog.presentation.collectWaitlistTags
 import eg.bahr.core.catalog.presentation.distinctTrips
 import eg.bahr.core.catalog.presentation.isValidationFailure
+import eg.bahr.core.catalog.presentation.toggle
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.feature.triplisting.data.TripListingRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -52,6 +56,8 @@ internal data class CategoryTripsUiState(
     val fallbackTitle: String? = null,
     val categoryAccepted: Boolean = false,
     val waitlistTags: WaitlistTags = WaitlistTags.None,
+    /** The hearts on the cards (MP-M1), as every screen shows them. */
+    val likes: TripLikes = TripLikes.None,
 ) {
     /** The category's own chip: its label, icon and tone make the header. Matched on type and key. */
     val categoryFacet: FacetDto?
@@ -90,6 +96,8 @@ internal class CategoryTripsViewModel(
     title: String?,
     private val repository: TripListingRepository,
     waitlists: WaitlistMemory,
+    // The hearts (MP-M1): the app's TripLikeStore; none in tests that do not look at them.
+    private val hearts: TripHearts = TripHearts.None,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(CategoryTripsUiState(category = category, fallbackTitle = title))
     val uiState: StateFlow<CategoryTripsUiState> = _uiState.asStateFlow()
@@ -119,8 +127,12 @@ internal class CategoryTripsViewModel(
             }.distinctTrips()
             .cachedIn(viewModelScope)
 
+    /** A tap on [trip]'s heart; false for a guest, whom the screen offers the sign-in sheet (MP-M1). */
+    fun toggleLike(trip: TripCardDto): Boolean = hearts.toggle(trip, _uiState.value.likes)
+
     init {
         collectWaitlistTags(waitlists) { tags -> _uiState.update { it.copy(waitlistTags = tags) } }
+        collectTripLikes(hearts) { likes -> _uiState.update { it.copy(likes = likes) } }
     }
 
     /** Retry, from the first page's error: loads the current query again. Throttled. */

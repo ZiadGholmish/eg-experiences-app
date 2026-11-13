@@ -3,8 +3,12 @@ package eg.bahr.feature.tripdetails.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import eg.bahr.core.catalog.data.JoinedWaitlist
+import eg.bahr.core.catalog.data.LikeState
+import eg.bahr.core.catalog.data.TripHearts
+import eg.bahr.core.catalog.data.TripLikes
 import eg.bahr.core.catalog.data.WaitlistMemory
 import eg.bahr.core.catalog.model.TripCardDto
+import eg.bahr.core.catalog.presentation.collectTripLikes
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.network.ApiErrorCodes
@@ -52,7 +56,19 @@ internal data class TripDetailUiState(
     val askForPush: Boolean = false,
     /** The page opened on a linked date (M3-M5): scroll to the dates once, then [TripDetailViewModel.datesRevealed]. */
     val revealDates: Boolean = false,
+    /** Every heart in the app (MP-M1), this trip's among them. */
+    val likes: TripLikes = TripLikes.None,
 ) {
+    /**
+     * The hero's heart (MP-M1): from the trip once it is here, else from the list card (so it is drawn from the first
+     * frame), as [likes] lays this run's taps over them. Null on a cold open until the trip arrives.
+     */
+    val like: LikeState?
+        get() {
+            trip?.let { return likes.stateOf(it.slug, it.likeCount, it.likedByMe) }
+            return preview?.let(likes::stateOf)
+        }
+
     /**
      * The dates to show: the live list when it has answered, else the trip's own `dates` (the same
      * shape, read with the trip), so a failed departures call still leaves the page bookable.
@@ -218,6 +234,8 @@ internal class TripDetailViewModel(
     private val repository: TripDetailRepository,
     private val waitlists: WaitlistMemory,
     private val link: TripLink = TripLink(),
+    // The hearts (MP-M1): the app's TripLikeStore; none in tests that do not look at them.
+    private val hearts: TripHearts = TripHearts.None,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(TripDetailUiState(preview = repository.cachedCard(slug)))
     val uiState: StateFlow<TripDetailUiState> = _uiState.asStateFlow()
@@ -235,6 +253,7 @@ internal class TripDetailViewModel(
     private var accountEmailRead: Job? = null
 
     init {
+        collectTripLikes(hearts) { likes -> _uiState.update { it.copy(likes = likes) } }
         viewModelScope.launch {
             waitlists.joins.collect { joins ->
                 val today = waitlists.today()
@@ -255,8 +274,11 @@ internal class TripDetailViewModel(
         val tripRead =
             viewModelScope.launch {
                 when (val trip = repository.tripBySlug(slug)) {
-                    is AppResult.Success ->
+                    is AppResult.Success -> {
+                        // A fresh read: its heart becomes every screen's (the card this page was opened from included).
+                        hearts.seen(trip.data.slug, trip.data.likeCount, trip.data.likedByMe)
                         _uiState.update { it.copy(isLoading = false, trip = trip.data).keepingSelection() }
+                    }
                     is AppResult.Failure ->
                         _uiState.update { it.copy(isLoading = false, error = trip.error) }
                 }
@@ -330,6 +352,12 @@ internal class TripDetailViewModel(
                 revealDates = true,
             )
         }
+    }
+
+    /** A tap on the hero's heart; false for a guest, whom the screen offers the sign-in sheet (MP-M1). */
+    fun toggleLike(): Boolean {
+        val shown = _uiState.value.like ?: return true
+        return hearts.toggle(slug, shown)
     }
 
     /** The page has scrolled to the linked date. */

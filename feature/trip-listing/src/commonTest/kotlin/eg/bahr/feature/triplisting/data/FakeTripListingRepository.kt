@@ -23,7 +23,15 @@ internal class FakeTripListingRepository(
     /** The narrowed list (category page, search, a host's trips); defaults to [listTrips], which ignores the query. */
     var listFiltered: (suspend (query: TripQuery) -> AppResult<TripPageDto>)? = null,
     var sectionTrips: suspend (sectionId: String, page: Int) -> AppResult<TripCardPageDto> = { _, _ -> unset() },
+    var likedTrips: suspend (page: Int) -> AppResult<TripCardPageDto> = { unset() },
 ) : TripListingRepository {
+    val likedRequests = mutableListOf<Int>()
+
+    override suspend fun likedTrips(page: Int): AppResult<TripCardPageDto> {
+        likedRequests += page
+        return likedTrips.invoke(page)
+    }
+
     val requestedPages = mutableListOf<Int>()
     val requestedQueries = mutableListOf<TripQuery>()
     val sectionRequests = mutableListOf<Pair<String, Int>>()

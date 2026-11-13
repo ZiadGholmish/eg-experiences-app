@@ -644,4 +644,20 @@
     <string name="media_photo_failed">مقدرناش نحمّل الصورة دي.</string>
     <string name="media_video_failed">مقدرناش نشغّل الفيديو ده.</string>
     <string name="media_host_photo">صورة %1$s</string>
+    <!-- MP-M1: القلب على كارت الرحلة وصفحة الرحلة. بيتقري مع حالته (متعلّم ولا لأ) والعدد. -->
+    <string name="like_action">عجبني</string>
+    <plurals name="like_count">
+        <item quantity="zero">مفيش إعجابات</item>
+        <item quantity="one">إعجاب واحد</item>
+        <item quantity="two">إعجابين</item>
+        <item quantity="few">%1$d إعجابات</item>
+        <item quantity="many">%1$d إعجاب</item>
+        <item quantity="other">%1$d إعجاب</item>
+    </plurals>
+    <!-- MP-M1: الحساب ← الرحلات اللي عجبتك، الأحدث الأول. -->
+    <string name="liked_trips_title">الرحلات اللي عجبتك</string>
+    <string name="liked_trips_empty">الرحلات اللي تعجبك هتلاقيها هنا. دوس على القلب في أي رحلة عشان تحفظها.</string>
+    <string name="liked_trips_signed_out_title">سجّل دخولك عشان تشوف الرحلات اللي عجبتك</string>
+    <string name="liked_trips_signed_out_body">الإعجابات بتتحفظ مع حسابك، على أي موبايل تسجّل دخولك عليه.</string>
+    <string name="liked_trips_sign_in">سجّل دخولك</string>
 </resources>

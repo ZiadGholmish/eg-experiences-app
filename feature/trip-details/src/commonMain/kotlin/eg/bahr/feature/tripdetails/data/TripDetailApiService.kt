@@ -17,7 +17,8 @@ import io.ktor.client.request.setBody
  * the reviews list feature:reviews' (split from feature:trips, M3-M16); `GET /trips` is core:catalog's `TripListApiService`.
  *
  * None of these require a token: a trip link dropped into a social post is opened cold by someone
- * with no account, and that is the funnel release 1 exists to test.
+ * with no account, and that is the funnel release 1 exists to test. Signed in, they carry the account's token all the
+ * same (core:network's `bahrAuth`), so `getTrip` says `likedByMe` (MP-B1); a bad token is served as a guest's.
  */
 internal class TripDetailApiService(
     private val client: HttpClient,

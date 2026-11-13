@@ -27,12 +27,15 @@ data object SearchTripsRoute
  *
  * M3-M12: it moves with the app's one screen transition, which the NavHost sets; it draws on an opaque page
  * ([BahrDestination]), which also hands its AnimatedVisibilityScope down for the header morph (M4-M6).
+ *
+ * [onSignIn] (MP-M1) opens the sign-in sheet when a guest taps a trip's heart.
  */
 fun NavGraphBuilder.searchTripsScreen(
     onBack: () -> Unit,
     onTripClick: (slug: String) -> Unit,
     onHostClick: (host: SearchHost) -> Unit = {},
     onSeeAllHosts: (q: String) -> Unit = {},
+    onSignIn: () -> Unit,
 ) {
     composable<SearchTripsRoute> {
         BahrDestination(this) {
@@ -41,6 +44,7 @@ fun NavGraphBuilder.searchTripsScreen(
                 onTripClick = onTripClick,
                 onHostClick = { host -> onHostClick(SearchHost(host.slug, host.name, host.avatar?.url)) },
                 onSeeAllHosts = onSeeAllHosts,
+                onSignIn = onSignIn,
             )
         }
     }

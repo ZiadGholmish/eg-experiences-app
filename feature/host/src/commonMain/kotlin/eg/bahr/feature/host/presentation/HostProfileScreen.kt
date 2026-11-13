@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -33,6 +34,7 @@ import eg.bahr.core.catalog.presentation.components.listBody
 import eg.bahr.core.catalog.presentation.components.rememberListMotion
 import eg.bahr.core.catalog.presentation.components.rememberQueryStatus
 import eg.bahr.core.catalog.presentation.components.showsSeeAllReviews
+import eg.bahr.core.catalog.presentation.heartTap
 import eg.bahr.core.catalog.presentation.rememberThrottled
 import eg.bahr.core.designsystem.components.BahrEmptyView
 import eg.bahr.core.designsystem.components.BahrErrorView
@@ -74,9 +76,12 @@ internal fun HostProfileScreen(
     onTripClick: (slug: String) -> Unit,
     modifier: Modifier = Modifier,
     onSeeAllReviews: ((name: String) -> Unit)? = null,
+    onSignIn: () -> Unit = {},
     viewModel: HostProfileViewModel = koinViewModel(key = "host:$slug") { parametersOf(slug, name, avatar) },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    // A heart tapped by a guest opens the sign-in sheet (MP-M1).
+    val onLike = remember(viewModel, onSignIn) { heartTap(viewModel::toggleLike, onSignIn) }
     val trips = viewModel.trips.collectAsLazyPagingItems()
     val error = state.error
     val page =
@@ -111,7 +116,7 @@ internal fun HostProfileScreen(
                         )
                     } ?: Box(Modifier.fillMaxSize())
 
-                HostPage.Shown -> HostPageList(slug, state, trips, onTripClick, viewModel::retryTrips, onSeeAllReviews)
+                HostPage.Shown -> HostPageList(slug, state, trips, onTripClick, viewModel::retryTrips, onSeeAllReviews, onLike)
             }
         }
     }
@@ -128,6 +133,7 @@ private fun HostPageList(
     onTripClick: (slug: String) -> Unit,
     onRetryTrips: () -> Unit,
     onSeeAllReviews: ((name: String) -> Unit)?,
+    onLike: (TripCardDto) -> Unit,
 ) {
     val listState = rememberLazyListState()
     val perPersonLabel = stringResource(Res.string.trip_per_person)
@@ -177,6 +183,8 @@ private fun HostPageList(
             motion = motion,
             perPersonLabel = perPersonLabel,
             waitlistTags = state.waitlistTags,
+            likes = state.likes,
+            onLike = onLike,
             emptyMessage = { stringResource(Res.string.host_trips_empty) },
             onRetry = onRetryTrips,
             onAppendRetry = appendRetry,

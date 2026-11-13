@@ -16,6 +16,9 @@ internal interface TripListingRepository : TripListRepository {
         sectionId: String,
         page: Int,
     ): AppResult<TripCardPageDto>
+
+    /** One page of the signed-in account's liked trips (MP-M1), newest like first. */
+    suspend fun likedTrips(page: Int): AppResult<TripCardPageDto>
 }
 
 /**
@@ -34,6 +37,12 @@ internal class DefaultTripListingRepository(
         page: Int,
     ): AppResult<TripCardPageDto> =
         api.sectionTrips(sectionId = sectionId, page = page).also { result ->
+            if (result is AppResult.Success) cards.remember(result.data.items)
+        }
+
+    // Remembered too: text-first trip pages, and (through the cache) every screen's heart (MP-M1).
+    override suspend fun likedTrips(page: Int): AppResult<TripCardPageDto> =
+        api.likedTrips(page = page).also { result ->
             if (result is AppResult.Success) cards.remember(result.data.items)
         }
 }

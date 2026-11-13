@@ -16,7 +16,9 @@ val hostModule =
     module {
         single { HostApiService(get()) }
         single<HostRepository> { DefaultHostRepository(get(), get(), get()) }
-        viewModel { (slug: String, name: String?, avatar: String?) -> HostProfileViewModel(slug, name, avatar, get(), get()) }
+        viewModel { (slug: String, name: String?, avatar: String?) ->
+            HostProfileViewModel(slug, name, avatar, get(), get(), hearts = get())
+        }
         // The hosts directory (MV-M1): the search text and sort its opener carried (search's "See all hosts").
         viewModel { (q: String?, sort: String?) -> HostsViewModel(q, sort, get()) }
     }

@@ -1,17 +1,23 @@
 package eg.bahr.feature.triplisting.di
 
+import eg.bahr.core.catalog.data.TripHearts
+import eg.bahr.core.catalog.data.TripLikeStore
 import eg.bahr.core.catalog.data.TripListRepository
 import eg.bahr.core.catalog.di.catalogModule
+import eg.bahr.core.common.error.AppErrorController
 import eg.bahr.core.datastore.WaitlistJoinsStore
 import eg.bahr.core.network.ApiConfig
 import eg.bahr.core.network.apiHttpClient
+import eg.bahr.core.network.auth.AuthSession
 import eg.bahr.core.testing.EMPTY_TRIP_PAGE_JSON
+import eg.bahr.core.testing.FakeSessionStore
 import eg.bahr.core.testing.FakeWaitlistJoinsStore
 import eg.bahr.core.testing.TEST_BASE_URL
 import eg.bahr.core.testing.jsonMockEngine
 import eg.bahr.core.testing.runKoinGraphTest
 import eg.bahr.feature.triplisting.data.TripListingRepository
 import eg.bahr.feature.triplisting.presentation.CategoryTripsViewModel
+import eg.bahr.feature.triplisting.presentation.LikedTripsViewModel
 import eg.bahr.feature.triplisting.presentation.SectionTripsViewModel
 import io.ktor.client.HttpClient
 import org.koin.core.Koin
@@ -37,6 +43,10 @@ class TripListingKoinGraphTest {
                         apiHttpClient(jsonMockEngine { EMPTY_TRIP_PAGE_JSON }, ApiConfig(TEST_BASE_URL, isDebug = false)) { "en" }
                     }
                     single<WaitlistJoinsStore> { FakeWaitlistJoinsStore() }
+                    // The app module's error outlet, which core:catalog's heart store reports to (MP-M1).
+                    single { AppErrorController() }
+                    // core:network's sign-in, signed out: the heart store follows it (MP-M1).
+                    single { AuthSession(FakeSessionStore()) }
                 },
             ),
             test,
@@ -49,5 +59,8 @@ class TripListingKoinGraphTest {
             koin.get<TripListRepository>()
             koin.get<CategoryTripsViewModel> { parametersOf("birds", null) }
             koin.get<SectionTripsViewModel> { parametersOf("s-1", "Featured") }
+            koin.get<LikedTripsViewModel>()
+            // One heart store for the app, the card cache's too (MP-M1).
+            check(koin.get<TripHearts>() === koin.get<TripLikeStore>())
         }
 }

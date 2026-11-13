@@ -5,6 +5,7 @@ import eg.bahr.core.catalog.data.WaitlistMemory
 import eg.bahr.core.catalog.di.catalogModule
 import eg.bahr.core.common.auth.SessionStore
 import eg.bahr.core.common.auth.StoredSession
+import eg.bahr.core.common.error.AppErrorController
 import eg.bahr.core.datastore.WaitlistJoinsStore
 import eg.bahr.core.network.ApiConfig
 import eg.bahr.core.network.apiHttpClient
@@ -45,6 +46,8 @@ class TripDetailsKoinGraphTest {
                         apiHttpClient(jsonMockEngine { EMPTY_TRIP_PAGE_JSON }, ApiConfig(TEST_BASE_URL, isDebug = false)) { "en" }
                     }
                     single<WaitlistJoinsStore> { FakeWaitlistJoinsStore() }
+                    // The app module's error outlet, which core:catalog's heart store reports to (MP-M1).
+                    single { AppErrorController() }
                     // core:network's sign-in (the waiting-list email prefill, M3-M5), signed out.
                     single {
                         AuthSession(

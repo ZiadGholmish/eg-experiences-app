@@ -47,6 +47,7 @@ import eg.bahr.core.catalog.presentation.components.listBody
 import eg.bahr.core.catalog.presentation.components.rememberListMotion
 import eg.bahr.core.catalog.presentation.components.rememberQueryStatus
 import eg.bahr.core.catalog.presentation.components.selectedOrder
+import eg.bahr.core.catalog.presentation.heartTap
 import eg.bahr.core.catalog.presentation.rememberThrottled
 import eg.bahr.core.designsystem.components.BahrCountBadge
 import eg.bahr.core.designsystem.components.BahrEmptyView
@@ -114,9 +115,12 @@ internal fun TripListScreen(
     onAlerts: (() -> Unit)? = null,
     unreadAlerts: StateFlow<Int?> = NoUnreadAlerts,
     scrollToTop: Flow<Unit> = emptyFlow(),
+    onSignIn: () -> Unit = {},
     viewModel: TripListViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    // A heart tapped by a guest opens the sign-in sheet (MP-M1).
+    val onLike = remember(viewModel, onSignIn) { heartTap(viewModel::toggleLike, onSignIn) }
     // A StateFlow, so the bell has its count on the first frame (a language switch rebuilds Home).
     val unread by unreadAlerts.collectAsStateWithLifecycle()
     val trips = viewModel.trips.collectAsLazyPagingItems()
@@ -213,6 +217,8 @@ internal fun TripListScreen(
                 waitlistTags = state.waitlistTags,
                 onTripClick = onTripClick,
                 onAction = onAction,
+                likes = state.likes,
+                onLike = onLike,
             )
         }
 
@@ -253,6 +259,8 @@ internal fun TripListScreen(
             onRetry = viewModel::refresh,
             onAppendRetry = appendRetry,
             onTripClick = onTripClick,
+            likes = state.likes,
+            onLike = onLike,
         )
 
         // Under the last card only, as the app's own footer note was: while more pages can load, the
@@ -265,6 +273,8 @@ internal fun TripListScreen(
                     waitlistTags = state.waitlistTags,
                     onTripClick = onTripClick,
                     onAction = onAction,
+                    likes = state.likes,
+                    onLike = onLike,
                 )
             }
         }

@@ -6,6 +6,8 @@ import androidx.paging.Pager
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import co.touchlab.kermit.Logger
+import eg.bahr.core.catalog.data.TripHearts
+import eg.bahr.core.catalog.data.TripLikes
 import eg.bahr.core.catalog.data.TripListPagingSource
 import eg.bahr.core.catalog.data.TripPagingConfig
 import eg.bahr.core.catalog.data.WaitlistMemory
@@ -16,9 +18,11 @@ import eg.bahr.core.catalog.model.TripCardDto
 import eg.bahr.core.catalog.model.TripPageDto
 import eg.bahr.core.catalog.presentation.Throttle
 import eg.bahr.core.catalog.presentation.WaitlistTags
+import eg.bahr.core.catalog.presentation.collectTripLikes
 import eg.bahr.core.catalog.presentation.collectWaitlistTags
 import eg.bahr.core.catalog.presentation.distinctTrips
 import eg.bahr.core.catalog.presentation.isValidationFailure
+import eg.bahr.core.catalog.presentation.toggle
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.feature.home.data.HomeRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -56,6 +60,8 @@ internal data class TripListUiState(
     val sections: List<HomeBlock> = emptyList(),
     /** Which cards carry the "Waiting list" tag (M4-M5), in the rows and the list alike. */
     val waitlistTags: WaitlistTags = WaitlistTags.None,
+    /** The hearts on the cards (MP-M1), as every screen shows them. */
+    val likes: TripLikes = TripLikes.None,
     val filter: String? = null,
     val facets: List<FacetDto> = emptyList(),
     val totalItems: Long? = null,
@@ -91,6 +97,8 @@ private data class HomeListLoad(
 internal class TripListViewModel(
     private val repository: HomeRepository,
     waitlists: WaitlistMemory,
+    // The hearts (MP-M1): the app's TripLikeStore; none in tests that do not look at them.
+    private val hearts: TripHearts = TripHearts.None,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(TripListUiState())
     val uiState: StateFlow<TripListUiState> = _uiState.asStateFlow()
@@ -123,6 +131,9 @@ internal class TripListViewModel(
     /** The `/home` read in flight. A newer [refresh] cancels it, so a stale answer cannot land last. */
     private var homeRead: Job? = null
 
+    /** A tap on [trip]'s heart; false for a guest, whom the screen offers the sign-in sheet (MP-M1). */
+    fun toggleLike(trip: TripCardDto): Boolean = hearts.toggle(trip, _uiState.value.likes)
+
     init {
         loadHome()
         viewModelScope.launch {
@@ -132,6 +143,7 @@ internal class TripListViewModel(
             waitlists.forgetPassed()
         }
         collectWaitlistTags(waitlists) { tags -> _uiState.update { it.copy(waitlistTags = tags) } }
+        collectTripLikes(hearts) { likes -> _uiState.update { it.copy(likes = likes) } }
     }
 
     /** A burst of Retry taps is one reload (M4-M6). */

@@ -28,9 +28,11 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import eg.bahr.core.catalog.data.LikeState
 import eg.bahr.core.catalog.presentation.components.Photo
 import eg.bahr.core.catalog.presentation.media.ViewerMedia
 import eg.bahr.core.catalog.presentation.media.opensMediaViewer
+import eg.bahr.core.designsystem.components.BahrLikeButton
 import eg.bahr.core.designsystem.components.BahrSkeletonBlock
 import eg.bahr.core.designsystem.components.ImageGround
 import eg.bahr.core.designsystem.format.BahrFormat
@@ -62,9 +64,12 @@ import org.jetbrains.compose.resources.stringResource
  * full screen, in the same order; closing the viewer turns the slider to the item the reader closed on, so the page
  * flies back to it.
  *
- * Share and favourite are not drawn. Share needs the platform share sheet (an Intent on Android,
- * `UIActivityViewController` on iOS), i.e. an expect/actual this module does not have yet, though
- * `shareUrl` is served since M1-B5; there is no favourites feature.
+ * The heart (MP-M1, the handoff's favourite button) sits at the top end, level with the back button, with the trip's
+ * like count: an overlay on the photo's fixed box, so it moves nothing when it appears or its count grows (MV-M7). [like]
+ * is null until something is known about the trip (a cold open, before it loads): no heart then.
+ *
+ * Share is not drawn. It needs the platform share sheet (an Intent on Android, `UIActivityViewController` on iOS), i.e.
+ * an expect/actual this module does not have yet, though `shareUrl` is served since M1-B5.
  */
 @Composable
 internal fun TripHero(
@@ -72,6 +77,8 @@ internal fun TripHero(
     loading: Boolean,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    like: LikeState? = null,
+    onLike: () -> Unit = {},
 ) {
     Box(modifier = modifier.fillMaxWidth().aspectRatio(HeroAspectRatio).testTag(TRIP_HERO_TAG)) {
         if (items.isEmpty() && loading) {
@@ -115,6 +122,16 @@ internal fun TripHero(
                     .windowInsetsPadding(WindowInsets.statusBars)
                     .padding(BahrSpacing.md),
         )
+        like?.let {
+            BahrLikeButton(
+                modifier =
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .windowInsetsPadding(WindowInsets.statusBars)
+                        .padding(BahrSpacing.md),
+                props = BahrLikeButton.Props(liked = it.liked, count = it.count, size = BahrLikeButton.Size.Hero, onToggle = onLike),
+            )
+        }
     }
 }
 

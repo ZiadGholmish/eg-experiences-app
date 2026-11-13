@@ -25,6 +25,7 @@ data object EditPersonalInfoRoute
  * BuildConfig, iOS's Info.plist). [signInButtons] draws feature:auth's sign-in buttons for the
  * signed-out card; [onEditPersonalInfo] opens [editPersonalInfoScreen]; [deleteAccountSheet] draws
  * feature:auth's delete-account sheet while the row has it open (M3-M0b: sheets, not dialogs). All joined in :composeApp. [scrollToTop] fires when the selected tab is tapped again.
+ * [onLikedTrips] (MP-M1) opens the account's liked trips (feature:trip-listing's page).
  */
 fun NavGraphBuilder.profileScreen(
     appVersion: String,
@@ -32,6 +33,7 @@ fun NavGraphBuilder.profileScreen(
     onEditPersonalInfo: () -> Unit,
     deleteAccountSheet: @Composable (onDismiss: () -> Unit) -> Unit,
     scrollToTop: Flow<Unit> = emptyFlow(),
+    onLikedTrips: () -> Unit,
 ) {
     composable<ProfileRoute> {
         BahrDestination(this) {
@@ -41,6 +43,7 @@ fun NavGraphBuilder.profileScreen(
                 onEditPersonalInfo = onEditPersonalInfo,
                 deleteAccountSheet = deleteAccountSheet,
                 scrollToTop = scrollToTop,
+                onLikedTrips = onLikedTrips,
             )
         }
     }

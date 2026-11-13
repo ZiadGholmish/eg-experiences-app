@@ -6,14 +6,18 @@ import androidx.paging.InvalidatingPagingSourceFactory
 import androidx.paging.Pager
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
+import eg.bahr.core.catalog.data.TripHearts
+import eg.bahr.core.catalog.data.TripLikes
 import eg.bahr.core.catalog.data.TripListPagingSource
 import eg.bahr.core.catalog.data.TripPagingConfig
 import eg.bahr.core.catalog.data.WaitlistMemory
 import eg.bahr.core.catalog.model.TripCardDto
 import eg.bahr.core.catalog.presentation.Throttle
 import eg.bahr.core.catalog.presentation.WaitlistTags
+import eg.bahr.core.catalog.presentation.collectTripLikes
 import eg.bahr.core.catalog.presentation.collectWaitlistTags
 import eg.bahr.core.catalog.presentation.distinctTrips
+import eg.bahr.core.catalog.presentation.toggle
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.network.ApiErrorCodes
@@ -47,6 +51,8 @@ internal data class HostProfileUiState(
     /** How many published trips the host's list holds, from its first page. */
     val totalTrips: Long? = null,
     val waitlistTags: WaitlistTags = WaitlistTags.None,
+    /** The hearts on the cards (MP-M1), as every screen shows them. */
+    val likes: TripLikes = TripLikes.None,
 ) {
     val name: String? get() = profile?.name ?: previewName
     val avatar: String? get() = profile?.avatar?.url ?: previewAvatar
@@ -63,6 +69,8 @@ internal class HostProfileViewModel(
     previewAvatar: String?,
     private val repository: HostRepository,
     waitlists: WaitlistMemory,
+    // The hearts (MP-M1): the app's TripLikeStore; none in tests that do not look at them.
+    private val hearts: TripHearts = TripHearts.None,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(HostProfileUiState(previewName = previewName, previewAvatar = previewAvatar))
     val uiState: StateFlow<HostProfileUiState> = _uiState.asStateFlow()
@@ -90,9 +98,13 @@ internal class HostProfileViewModel(
             .distinctTrips()
             .cachedIn(viewModelScope)
 
+    /** A tap on [trip]'s heart; false for a guest, whom the screen offers the sign-in sheet (MP-M1). */
+    fun toggleLike(trip: TripCardDto): Boolean = hearts.toggle(trip, _uiState.value.likes)
+
     init {
         loadProfile()
         collectWaitlistTags(waitlists) { tags -> _uiState.update { it.copy(waitlistTags = tags) } }
+        collectTripLikes(hearts) { likes -> _uiState.update { it.copy(likes = likes) } }
     }
 
     /**

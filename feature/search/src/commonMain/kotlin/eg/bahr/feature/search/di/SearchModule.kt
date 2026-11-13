@@ -14,5 +14,5 @@ val searchModule =
     module {
         // One last search for the run of the app (M3-M0b): reopening search shows it again.
         single { LastSearch() }
-        viewModel { SearchTripsViewModel(get(), get(), get(), get(), get()) }
+        viewModel { SearchTripsViewModel(get(), get(), get(), get(), get(), hearts = get()) }
     }

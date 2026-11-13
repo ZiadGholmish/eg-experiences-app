@@ -43,6 +43,8 @@ import androidx.compose.ui.semantics.collectionInfo
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import eg.bahr.core.catalog.data.TripLikes
+import eg.bahr.core.catalog.model.TripCardDto
 import eg.bahr.core.catalog.presentation.WaitlistTags
 import eg.bahr.core.catalog.presentation.components.CategoryTile
 import eg.bahr.core.catalog.presentation.components.Photo
@@ -94,10 +96,12 @@ internal fun HomeSection(
     onTripClick: (slug: String) -> Unit,
     onAction: (HomeAction) -> Unit,
     modifier: Modifier = Modifier,
+    likes: TripLikes? = null,
+    onLike: (TripCardDto) -> Unit = {},
 ) {
     val context =
-        remember(perPersonLabel, waitlistTags, onTripClick, onAction) {
-            HomeSectionContext(perPersonLabel, waitlistTags, onTripClick, onAction)
+        remember(perPersonLabel, waitlistTags, onTripClick, onAction, likes, onLike) {
+            HomeSectionContext(perPersonLabel, waitlistTags, onTripClick, onAction, likes, onLike)
         }
     val seeAll = (section as? CardsBlock)?.seeAll
     Titled(

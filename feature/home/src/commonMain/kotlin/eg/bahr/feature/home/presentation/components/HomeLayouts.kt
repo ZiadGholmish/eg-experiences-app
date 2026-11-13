@@ -27,6 +27,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import eg.bahr.core.catalog.data.TripLikes
+import eg.bahr.core.catalog.model.TripCardDto
 import eg.bahr.core.catalog.presentation.WaitlistTags
 import eg.bahr.core.catalog.presentation.components.Photo
 import eg.bahr.core.designsystem.components.ImageGround
@@ -61,6 +63,9 @@ internal class HomeSectionContext(
     val waitlistTags: WaitlistTags,
     val onTripClick: (slug: String) -> Unit,
     val onAction: (HomeAction) -> Unit,
+    // The hearts on trip cards (MP-M1); null draws none.
+    val likes: TripLikes? = null,
+    val onLike: (TripCardDto) -> Unit = {},
 )
 
 /** A layout's renderer, one kind per [HomeShape]. */

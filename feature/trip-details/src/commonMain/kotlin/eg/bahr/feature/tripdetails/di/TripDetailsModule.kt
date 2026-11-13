@@ -17,5 +17,5 @@ val tripDetailsModule =
         single { TripDetailApiService(get()) }
         // AuthSession (core:network): a signed-in person's waiting-list email is prefilled (M3-M5).
         single<TripDetailRepository> { DefaultTripDetailRepository(get(), get(), get()) }
-        viewModel { (slug: String, link: TripLink) -> TripDetailViewModel(slug, get(), get(), link) }
+        viewModel { (slug: String, link: TripLink) -> TripDetailViewModel(slug, get(), get(), link, hearts = get()) }
     }

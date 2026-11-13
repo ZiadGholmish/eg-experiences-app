@@ -74,6 +74,10 @@ const val FILTER_ALL = "all"
  * is at" cells, the same values as on `TripDetail`, so the page opened from a card lays them out at their final size
  * before the trip arrives (MV-M13). Absent from servers before MV-B3, and when the trip has none. Last, so positional
  * constructor calls written before they joined still mean the same.
+ *
+ * [likeCount] is the heart's public count (MP-B1): always sent since then, 0 from an older server, as the contract says.
+ * [likedByMe] only comes when the request carried a valid token: null for a guest (and from an older server), read as
+ * "not liked". What a card shows goes through `TripLikes`, which lays the heart taps of this run over these values.
  */
 @Serializable
 data class TripCardDto(
@@ -94,6 +98,18 @@ data class TripCardDto(
     val deck: String? = null,
     val departure: DeparturePointDto? = null,
     val destination: DestinationDto? = null,
+    val likeCount: Int = 0,
+    val likedByMe: Boolean? = null,
+)
+
+/**
+ * openapi `TripLike` (MP-B1): a trip's like state after `likeTrip` / `unlikeTrip`, which the heart settles on.
+ */
+@Serializable
+data class TripLikeDto(
+    val slug: String,
+    val likeCount: Int = 0,
+    val likedByMe: Boolean = false,
 )
 
 /**

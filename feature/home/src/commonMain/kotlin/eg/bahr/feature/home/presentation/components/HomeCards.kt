@@ -85,6 +85,8 @@ internal fun HomeCard(
                 modifier = modifier,
                 compact = compact,
                 waitlisted = context.waitlistTags.shows(trip),
+                like = context.likes?.stateOf(trip),
+                onLike = { context.onLike(trip) },
             )
         }
 

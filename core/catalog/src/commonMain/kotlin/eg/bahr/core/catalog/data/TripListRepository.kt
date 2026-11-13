@@ -70,12 +70,20 @@ internal class DefaultTripListRepository(
  * state is text-first), whichever feature loaded the card: one instance for the app (M4-M1c), so a
  * trip opened from Home is text-first on feature:trip-details' page. It is the seam where real caching goes.
  *
+ * Every card it is handed is a fresh read, so its hearts go to [likes] too (MP-M1): a list loaded later shows the same
+ * heart on every screen. Null in tests that do not look at hearts.
+ *
  * Only touched from view-model coroutines, which run on the main dispatcher, so it needs no lock.
  */
-class TripCardCache {
+class TripCardCache(
+    private val likes: TripLikeStore? = null,
+) {
     private val cards = mutableMapOf<String, TripCardDto>()
 
-    fun remember(items: List<TripCardDto>) = items.forEach { cards[it.slug] = it }
+    fun remember(items: List<TripCardDto>) {
+        items.forEach { cards[it.slug] = it }
+        likes?.seen(items)
+    }
 
     /** The card already loaded for [slug], or null (a cold open, e.g. a shared link). */
     fun card(slug: String): TripCardDto? = cards[slug]

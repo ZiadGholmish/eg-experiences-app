@@ -15,5 +15,5 @@ val homeModule =
     module {
         single { HomeApiService(get()) }
         single<HomeRepository> { DefaultHomeRepository(get(), get(), get()) }
-        viewModel { TripListViewModel(get(), get()) }
+        viewModel { TripListViewModel(get(), get(), hearts = get()) }
     }

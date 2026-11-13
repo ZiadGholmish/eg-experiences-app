@@ -79,7 +79,9 @@ import eg.bahr.feature.tripdetails.navigation.TripDetailRoute
 import eg.bahr.feature.tripdetails.navigation.navigateToTripDetail
 import eg.bahr.feature.tripdetails.navigation.tripDetailScreen
 import eg.bahr.feature.triplisting.navigation.categoryTripsScreen
+import eg.bahr.feature.triplisting.navigation.likedTripsScreen
 import eg.bahr.feature.triplisting.navigation.navigateToCategoryTrips
+import eg.bahr.feature.triplisting.navigation.navigateToLikedTrips
 import eg.bahr.feature.triplisting.navigation.navigateToSectionTrips
 import eg.bahr.feature.triplisting.navigation.sectionTripsScreen
 import kotlinx.coroutines.channels.Channel
@@ -227,6 +229,8 @@ fun AppNavHost(
                     onAlerts = navController::navigateToNotifications,
                     unreadAlerts = unreadAlerts.count,
                     scrollToTop = scrollRequests,
+                    // A guest's tap on a heart (MP-M1): the sign-in sheet, in this tab.
+                    onSignIn = { navController.navigateToSignIn() },
                 )
 
                 // The Map tab's root: no Back; its "List" is Home, its search button the full-screen search.
@@ -245,6 +249,7 @@ fun AppNavHost(
                     // MV-M1: a matching host opens their page; "See all hosts" the directory with the same text.
                     onHostClick = { host -> navController.navigateToHostProfile(host.slug, host.name, host.avatar) },
                     onSeeAllHosts = { q -> navController.navigateToHosts(q = q) },
+                    onSignIn = { navController.navigateToSignIn() },
                 )
 
                 // The hosts directory (MV-M1): the Hosts tab's root, and pushed from Home's hosts "See all" and
@@ -263,6 +268,8 @@ fun AppNavHost(
                     onEditPersonalInfo = navController::navigateToEditPersonalInfo,
                     deleteAccountSheet = { onDismiss -> DeleteAccountSheetSlot(onDismiss) },
                     scrollToTop = scrollRequests,
+                    // Liked trips (MP-M1, feature:trip-listing's page), in this tab's stack, bar hidden.
+                    onLikedTrips = navController::navigateToLikedTrips,
                 )
 
                 editPersonalInfoScreen(
@@ -313,11 +320,20 @@ fun AppNavHost(
                 categoryTripsScreen(
                     onBack = { navController.popBackStack() },
                     onTripClick = navController::navigateToTripDetail,
+                    onSignIn = { navController.navigateToSignIn() },
                 )
 
                 sectionTripsScreen(
                     onBack = { navController.popBackStack() },
                     onTripClick = navController::navigateToTripDetail,
+                    onSignIn = { navController.navigateToSignIn() },
+                )
+
+                // Account → Liked trips (MP-M1): a card opens its trip on top; signed out, the sign-in sheet.
+                likedTripsScreen(
+                    onBack = { navController.popBackStack() },
+                    onTripClick = navController::navigateToTripDetail,
+                    onSignIn = { navController.navigateToSignIn() },
                 )
 
                 tripDetailScreen(
@@ -329,12 +345,15 @@ fun AppNavHost(
                     onSeeAllReviews = { slug, title -> navController.navigateToReviews(trip = slug, title = title) },
                     // Right after a waiting-list join (M3-M5): feature:notifications' push pre-prompt.
                     pushPrompt = { onDone -> PushPromptSlot(onDone) },
+                    // A guest's tap on the heart (MP-M1).
+                    onSignIn = { navController.navigateToSignIn() },
                 )
 
                 hostProfileScreen(
                     onBack = { navController.popBackStack() },
                     onTripClick = navController::navigateToTripDetail,
                     onSeeAllReviews = { host, name -> navController.navigateToReviews(host = host, title = name) },
+                    onSignIn = { navController.navigateToSignIn() },
                 )
 
                 reviewsScreen(onBack = { navController.popBackStack() })

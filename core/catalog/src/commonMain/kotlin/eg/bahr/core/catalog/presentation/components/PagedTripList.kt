@@ -53,6 +53,7 @@ import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.itemContentType
 import androidx.paging.compose.itemKey
+import eg.bahr.core.catalog.data.TripLikes
 import eg.bahr.core.catalog.data.appError
 import eg.bahr.core.catalog.model.FacetDto
 import eg.bahr.core.catalog.model.TripCardDto
@@ -275,6 +276,9 @@ internal fun LazyListScope.pagedTripCards(
     // Null: no motion (Home's "All trips", which keeps its cards through a refresh).
     motion: ListMotion? = null,
     stale: Boolean = false,
+    // MP-M1: the hearts; null draws none.
+    likes: TripLikes? = null,
+    onLike: (TripCardDto) -> Unit = {},
 ) {
     items(
         count = trips.itemCount,
@@ -300,6 +304,8 @@ internal fun LazyListScope.pagedTripCards(
                 onClick = { onTripClick(trip.slug) },
                 waitlisted = waitlistTags.shows(trip),
                 enabled = !stale,
+                like = likes?.stateOf(trip),
+                onLike = { onLike(trip) },
             )
         }
     }
@@ -375,6 +381,7 @@ fun RefreshBar(
  * search, in the gap under the chips on the category page ([RefreshBarBelow]), so the list holds no
  * extra item and the cards sit where they did before M4-M6. [onRetry] reloads the first page (the view model's, throttled); [onAppendRetry] a failed next page.
  * [emptyArt] (M3-M8b, search's "no results": a looping BahrLottie) goes above the empty line, which is then centred under it.
+ * [likes] and [onLike] (MP-M1) are the cards' hearts and their tap (see [heartTap]); null [likes] draws no heart.
  */
 fun LazyListScope.listBody(
     trips: LazyPagingItems<TripCardDto>,
@@ -387,6 +394,8 @@ fun LazyListScope.listBody(
     onRetry: () -> Unit,
     onAppendRetry: () -> Unit,
     onTripClick: (slug: String) -> Unit,
+    likes: TripLikes? = null,
+    onLike: (TripCardDto) -> Unit = {},
 ) {
     when (status) {
         PagedListStatus.Loading ->
@@ -440,6 +449,8 @@ fun LazyListScope.listBody(
                 onAppendRetry = onAppendRetry,
                 motion = motion,
                 stale = status == PagedListStatus.Refreshing,
+                likes = likes,
+                onLike = onLike,
             )
     }
 }

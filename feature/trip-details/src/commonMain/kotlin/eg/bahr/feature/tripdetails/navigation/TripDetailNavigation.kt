@@ -33,6 +33,8 @@ import eg.bahr.feature.tripdetails.presentation.TripDetailScreen
  * M3-M5: [pushPrompt] is placed right after a successful waiting-list join (usually feature:notifications'
  * `PushPromptSlot`, the push pre-prompt); it calls `onDone` when answered or not needed, and is removed then. Null:
  * no prompt. The route's `date` / `placeOpened` open the page on a linked date (see [TripDetailRoute]).
+ *
+ * MP-M1: [onSignIn] opens the sign-in sheet when a guest taps the heart.
  */
 fun NavGraphBuilder.tripDetailScreen(
     onBack: () -> Unit,
@@ -40,6 +42,7 @@ fun NavGraphBuilder.tripDetailScreen(
     onHostClick: ((HostLink) -> Unit)? = null,
     onSeeAllReviews: ((slug: String, title: String) -> Unit)? = null,
     pushPrompt: (@Composable (onDone: () -> Unit) -> Unit)? = null,
+    onSignIn: () -> Unit,
 ) {
     composable<TripDetailRoute> { entry ->
         val route = entry.toRoute<TripDetailRoute>()
@@ -50,6 +53,7 @@ fun NavGraphBuilder.tripDetailScreen(
                 date = route.date,
                 placeOpened = route.placeOpened,
                 pushPrompt = pushPrompt,
+                onSignIn = onSignIn,
                 onBack = onBack,
                 onContinue = onContinue,
                 // Null when the app wires no host page: the card then stays as it was, not tappable.

@@ -21,6 +21,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
+import eg.bahr.core.catalog.data.TripLikes
+import eg.bahr.core.catalog.model.BadgeDto
 import eg.bahr.core.catalog.model.HomeCategoryDto
 import eg.bahr.core.catalog.model.ImageDto
 import eg.bahr.core.catalog.presentation.WaitlistTags
@@ -78,6 +80,9 @@ class HomeLayoutsScreenshotTest {
     private companion object {
         const val CONTENT_TAG = "home_layout_content"
 
+        /** Signed in: the cards' own likes show (MP-M1). */
+        val LIKED = TripLikes(signedIn = true)
+
         /** Room for a grid's or a list's every row. */
         const val TALL = "en-w360dp-h1100dp-xhdpi"
     }
@@ -128,6 +133,18 @@ class HomeLayoutsScreenshotTest {
     @Config(qualifiers = TALL)
     fun cardGridTrips() = sectionShots("card_grid_trips") { trips(it, "card_grid") }
 
+    /*
+     * MP-M1 review #1: the narrowest trip cards with the heart at its widest (liked, a three-digit count) beside a long
+     * badge, a multi-day trip's nights badge under it: the badges give way to the heart (ellipsized), never under it.
+     */
+
+    @Test
+    @Config(qualifiers = TALL)
+    fun cardGridTripsHearts() = sectionShots("card_grid_trips_hearts", likes = LIKED) { heartTrips(it, "card_grid") }
+
+    @Test
+    fun cardRailTripsHearts() = sectionShots("card_rail_trips_hearts", likes = LIKED) { heartTrips(it, "card_rail") }
+
     @Test
     @Config(qualifiers = TALL)
     fun cardListTrips() = sectionShots("card_list_trips") { trips(it, "card_list") }
@@ -163,6 +180,7 @@ class HomeLayoutsScreenshotTest {
 
     private fun sectionShots(
         name: String,
+        likes: TripLikes? = null,
         section: (arabic: Boolean) -> HomeSectionDto,
     ) = shots(name) { arabic ->
         val block = parseHomeSections(listOf(section(arabic))) { error(it) }.single()
@@ -172,6 +190,7 @@ class HomeLayoutsScreenshotTest {
             waitlistTags = WaitlistTags.None,
             onTripClick = {},
             onAction = {},
+            likes = likes,
         )
     }
 
@@ -374,6 +393,31 @@ class HomeLayoutsScreenshotTest {
             listOf(
                 trip(1, title = t(arabic, "الفجر على بحيرة البرلس", "Dawn on Lake Burullus"), priceEgp = 1450),
                 trip(2, title = t(arabic, "قنوات قطّاعي البوص بالكياك", "Reed-cutters' channels, by kayak"), priceEgp = 520),
+            ),
+    )
+
+    /** Long badges, a multi-day trip, liked with a three-digit count (MP-M1 review #1). */
+    private fun heartTrips(
+        arabic: Boolean,
+        layout: String,
+    ) = TripsSectionDto(
+        id = "trips",
+        type = "trips",
+        title = t(arabic, "رحلات مميزة", "Featured trips"),
+        layout = layout,
+        items =
+            listOf(
+                trip(
+                    1,
+                    title = t(arabic, "الفجر على بحيرة البرلس", "Dawn on Lake Burullus"),
+                    badge = BadgeDto(t(arabic, "موسم الفلامنجو الكبير", "Great flamingo season"), "secondary"),
+                    nights = 2,
+                ).copy(likeCount = 1284, likedByMe = true),
+                trip(
+                    2,
+                    title = t(arabic, "قنوات قطّاعي البوص بالكياك", "Reed-cutters' channels, by kayak"),
+                    badge = BadgeDto(t(arabic, "الأكثر حجزًا", "Most booked"), "primary"),
+                ).copy(likeCount = 128, likedByMe = false),
             ),
     )
 

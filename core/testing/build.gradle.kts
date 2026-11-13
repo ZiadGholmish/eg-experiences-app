@@ -11,6 +11,8 @@ kotlin {
             // The waiting-list fakes over core:datastore's store (M4-M7: the approved test-only edge
             // core:testing → core:datastore; this module is only ever a test dependency).
             implementation(projects.core.datastore)
+            // FakeSessionStore over core:common's SessionStore (MP-M1); an edge the graph already allows.
+            implementation(projects.core.common)
             // The Koin graph tests' lifecycle and JSON MockEngine (libraries, not module edges).
             implementation(libs.koin.core)
             implementation(libs.ktor.client.mock)

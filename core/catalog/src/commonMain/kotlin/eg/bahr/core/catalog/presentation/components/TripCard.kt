@@ -16,21 +16,26 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import coil3.compose.AsyncImage
+import eg.bahr.core.catalog.data.LikeState
 import eg.bahr.core.catalog.model.NextDepartureDto
 import eg.bahr.core.catalog.model.TripCardDto
 import eg.bahr.core.catalog.model.isMultiDay
 import eg.bahr.core.designsystem.components.BahrBadge
 import eg.bahr.core.designsystem.components.BahrCard
+import eg.bahr.core.designsystem.components.BahrLikeButton
 import eg.bahr.core.designsystem.components.BahrSkeletonBlock
 import eg.bahr.core.designsystem.components.BahrSkeletonCard
 import eg.bahr.core.designsystem.components.BahrSkeletonLine
 import eg.bahr.core.designsystem.components.ImageGround
 import eg.bahr.core.designsystem.components.SeatBadge
 import eg.bahr.core.designsystem.format.BahrFormat
+import eg.bahr.core.designsystem.theme.BahrSize
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.localization.generated.resources.Res
@@ -61,6 +66,9 @@ import org.jetbrains.compose.resources.stringResource
  *
  * Not [enabled] (M4-M6): the card belongs to a list being replaced (a filter switch, a new search)
  * and is drawn dimmed by its caller; it cannot be opened, and is not announced as a button.
+ *
+ * [like] (MP-M1) draws the heart at the photo's top end, with the trip's like count, as `TripLikes` has it; [onLike] is
+ * its tap. The trip's badge and a multi-day trip's nights badge stack at the top start.
  */
 @Composable
 fun TripCard(
@@ -71,25 +79,36 @@ fun TripCard(
     compact: Boolean = false,
     waitlisted: Boolean = false,
     enabled: Boolean = true,
+    like: LikeState? = null,
+    onLike: () -> Unit = {},
 ) {
     BahrCard(modifier = modifier.fillMaxWidth(), onClick = if (enabled) onClick else null) {
         Box {
             CoverImage(trip)
-            trip.badge?.label?.let { label ->
-                BahrBadge(
-                    modifier = Modifier.align(Alignment.TopStart).padding(BahrSpacing.md),
-                    props = BahrBadge.Props(text = label, tone = badgeTone(trip.badge.tone)),
-                )
-            }
-            if (trip.isMultiDay) {
-                BahrBadge(
-                    modifier = Modifier.align(Alignment.TopEnd).padding(BahrSpacing.md),
-                    props =
-                        BahrBadge.Props(
-                            text = pluralStringResource(Res.plurals.trip_nights_badge, trip.nights, trip.nights),
-                            tone = BahrBadge.Tone.Secondary,
-                        ),
-                )
+            PhotoCorners(
+                // The photo's own size: the badges never spill onto the text under it.
+                modifier = Modifier.matchParentSize(),
+                heart =
+                    like?.let {
+                        {
+                            BahrLikeButton(
+                                // The 48dp touch target around the drawn heart makes up the rest of the corner's gap.
+                                modifier = Modifier.padding(BahrSpacing.xs),
+                                props = BahrLikeButton.Props(liked = it.liked, count = it.count, enabled = enabled, onToggle = onLike),
+                            )
+                        }
+                    },
+            ) {
+                trip.badge?.label?.let { label -> BahrBadge(props = BahrBadge.Props(text = label, tone = badgeTone(trip.badge.tone))) }
+                if (trip.isMultiDay) {
+                    BahrBadge(
+                        props =
+                            BahrBadge.Props(
+                                text = pluralStringResource(Res.plurals.trip_nights_badge, trip.nights, trip.nights),
+                                tone = BahrBadge.Tone.Secondary,
+                            ),
+                    )
+                }
             }
         }
 
@@ -134,6 +153,61 @@ fun TripCard(
 }
 
 private const val TITLE_LINES = 2
+
+/** How far inside its box the card's heart is drawn: its padding, and the 48dp touch target around the 34dp pill. */
+private val HeartSlop = BahrSpacing.xs + (BahrSize.touchTarget - BahrSize.likeButton) / 2
+
+/**
+ * What sits over a card's photo (MP-M1): the [heart] at the top end, and the [badges] (the trip's, then a multi-day
+ * trip's nights) down the start, each kept whole wherever it can be (MP-M1 review round 2):
+ * - a badge that fits beside the heart goes there, the badges stacking down the start;
+ * - one that does not goes under the heart, across the photo, if the photo has the room (a Home grid's narrow card);
+ * - only when neither works does it go beside the heart and end in "…".
+ * Never below the photo: the layout is the photo's size ([BoxScope.matchParentSize] by the caller). A Layout rather
+ * than a `BoxWithConstraints`: cards are lazy-list items, where subcomposition is costly.
+ */
+@Composable
+private fun PhotoCorners(
+    heart: (@Composable () -> Unit)?,
+    modifier: Modifier = Modifier,
+    badges: @Composable () -> Unit,
+) {
+    Layout(
+        contents = listOf(badges, heart ?: {}),
+        modifier = modifier,
+    ) { (badgeMeasurables, heartMeasurables), constraints ->
+        val inset = BahrSpacing.md.roundToPx()
+        val gap = BahrSpacing.xs.roundToPx()
+        val width = constraints.maxWidth
+        val bottom = if (constraints.hasBoundedHeight) constraints.maxHeight - gap else Int.MAX_VALUE
+        val loose = constraints.copy(minWidth = 0, minHeight = 0)
+        val heartPlaceable = heartMeasurables.firstOrNull()?.measure(loose)
+        val heartWidth = heartPlaceable?.width ?: 0
+        val heartHeight = heartPlaceable?.height ?: 0
+        val full = (width - 2 * inset).coerceAtLeast(0)
+        // The heart's box is its touch target: the drawn pill sits [HeartSlop] inside it. Badges keep a gap from the pill
+        // itself, not from the invisible target, so they may reach into the slop.
+        val slop = if (heartPlaceable == null) 0 else HeartSlop.roundToPx()
+        val beside = if (heartPlaceable == null) full else (width - inset - heartWidth + slop - gap).coerceAtLeast(0)
+        var besideY = inset
+        var belowY = if (heartPlaceable == null) 0 else heartHeight - slop + gap
+        val placed =
+            badgeMeasurables.map { badge ->
+                val wanted = badge.maxIntrinsicWidth(Constraints.Infinity)
+                val tall = badge.minIntrinsicHeight(wanted)
+                val under = maxOf(belowY, besideY)
+                val goesUnder = wanted > beside && under + tall <= bottom
+                val placeable = badge.measure(loose.copy(maxWidth = if (goesUnder) full else beside))
+                val at = if (goesUnder) under else besideY
+                if (goesUnder) belowY = at + placeable.height + gap else besideY += placeable.height + gap
+                placeable to at
+            }
+        layout(width, if (constraints.hasBoundedHeight) constraints.maxHeight else maxOf(heartHeight, besideY, belowY)) {
+            placed.forEach { (placeable, at) -> placeable.placeRelative(inset, at) }
+            heartPlaceable?.placeRelative(width - heartWidth, 0)
+        }
+    }
+}
 
 /**
  * A [TripCard] still loading (M3-M14): the card itself, its photo's reserved room and a line where

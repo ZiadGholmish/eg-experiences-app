@@ -64,6 +64,7 @@ import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.appearance_dark
 import eg.bahr.core.localization.generated.resources.appearance_light
 import eg.bahr.core.localization.generated.resources.appearance_system
+import eg.bahr.core.localization.generated.resources.liked_trips_title
 import eg.bahr.core.localization.generated.resources.profile_about
 import eg.bahr.core.localization.generated.resources.profile_appearance
 import eg.bahr.core.localization.generated.resources.profile_can_browse
@@ -117,6 +118,7 @@ internal fun ProfileScreen(
     onEditPersonalInfo: () -> Unit,
     deleteAccountSheet: @Composable (onDismiss: () -> Unit) -> Unit,
     scrollToTop: Flow<Unit> = emptyFlow(),
+    onLikedTrips: () -> Unit = {},
     viewModel: ProfileViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -148,6 +150,7 @@ internal fun ProfileScreen(
             actions =
                 ProfileActions(
                     onPersonalInfo = onEditPersonalInfo,
+                    onLikedTrips = onLikedTrips,
                     onLanguage = { sheet = ProfileSheet.Language },
                     onAppearance = { sheet = ProfileSheet.Appearance },
                     onAbout = { sheet = ProfileSheet.About },
@@ -186,6 +189,7 @@ internal enum class ProfileSheet { Language, Appearance, About }
 
 internal class ProfileActions(
     val onPersonalInfo: () -> Unit = {},
+    val onLikedTrips: () -> Unit = {},
     val onLanguage: () -> Unit = {},
     val onAppearance: () -> Unit = {},
     val onAbout: () -> Unit = {},
@@ -242,6 +246,12 @@ internal fun ProfileContent(
             is SessionState.SignedIn -> {
                 AccountHeader(state, session)
                 ProfileRowGroup(listOf(personalInfoRow(state, session, actions.onPersonalInfo), language, appearance))
+                // MP-M1: the trips this account liked (a heart on a trip), on a page of their own.
+                ProfileRowGroup(
+                    listOf(
+                        ProfileRow(BahrIcons.Favorite, stringResource(Res.string.liked_trips_title), ROW_LIKED_TRIPS, actions.onLikedTrips),
+                    ),
+                )
                 // Notifications prefs (M3-B10) and My reviews (M3-B7 + M3-M4), then Help & contact, join
                 // About here once they have something to open.
                 ProfileRowGroup(listOf(about))
@@ -638,6 +648,7 @@ private const val APPLE_RELAY_DOMAIN = "@privaterelay.appleid.com"
 
 /** For tests: the rows. */
 internal const val ROW_PERSONAL_INFO = "profile_personal_info"
+internal const val ROW_LIKED_TRIPS = "profile_liked_trips"
 internal const val ROW_LANGUAGE = "profile_language"
 internal const val ROW_APPEARANCE = "profile_appearance"
 internal const val ROW_ABOUT = "profile_about"

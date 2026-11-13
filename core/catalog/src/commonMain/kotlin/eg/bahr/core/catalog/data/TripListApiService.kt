@@ -10,7 +10,9 @@ import io.ktor.client.request.parameter
 /**
  * `GET /trips`, the public catalogue list, read by Home's "All trips" (feature:home), the category
  * page and search (feature:trip-listing, feature:search). One owner here, so the two features do not each send it (M4-M1c).
- * No token: a trip link dropped into a social post is opened cold by someone with no account.
+ * Needs no token (a trip link dropped into a social post is opened cold by someone with no account), but carries the
+ * signed-in account's when there is one, as every request does (core:network's `bahrAuth`): the cards then say
+ * `likedByMe` (MP-B1). A bad token is served as a guest's, never refused.
  */
 internal class TripListApiService(
     private val client: HttpClient,

@@ -13,6 +13,9 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollToKey
+import eg.bahr.core.catalog.data.LikeState
+import eg.bahr.core.catalog.data.TripHearts
+import eg.bahr.core.catalog.data.TripLikes
 import eg.bahr.core.catalog.data.WaitlistMemory
 import eg.bahr.core.catalog.model.BadgeDto
 import eg.bahr.core.catalog.model.ImageDto
@@ -40,6 +43,8 @@ import eg.bahr.feature.tripdetails.model.ReviewsDto
 import eg.bahr.feature.tripdetails.model.TripDetailDto
 import eg.bahr.feature.tripdetails.model.TripMediaDto
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.plus
@@ -221,6 +226,57 @@ class TripDetailScreenshotTest {
         trip(1, title = d.title, priceEgp = d.price.amount, durationLabel = d.durationLabel)
             .copy(slug = SLUG, subtitle = d.subtitle, durationMinutes = d.durationMinutes, rating = d.rating)
             .let { if (pageFields) it.copy(deck = d.deck, departure = d.departure, destination = d.destination) else it }
+    }
+
+    /*
+     * MP-M1: the hero's heart at the top end, level with Back, with the trip's like count: liked (signed in), and a
+     * guest's (never filled, the count still shown). Light and dark. An overlay on the photo's box: the page under it is
+     * the loaded page's, unmoved.
+     */
+
+    @Test
+    fun heartLikedArabic() = heart("trip_detail_heart_liked", AppLanguage.ARABIC, signedIn = true)
+
+    @Test
+    fun heartLikedEnglish() = heart("trip_detail_heart_liked", AppLanguage.ENGLISH, signedIn = true)
+
+    @Test
+    fun heartLikedDarkArabic() = heart("trip_detail_heart_liked_dark", AppLanguage.ARABIC, signedIn = true, theme = BahrThemeName.Dark)
+
+    @Test
+    fun heartLikedDarkEnglish() = heart("trip_detail_heart_liked_dark", AppLanguage.ENGLISH, signedIn = true, theme = BahrThemeName.Dark)
+
+    @Test
+    fun heartGuestArabic() = heart("trip_detail_heart_guest", AppLanguage.ARABIC, signedIn = false)
+
+    @Test
+    fun heartGuestEnglish() = heart("trip_detail_heart_guest", AppLanguage.ENGLISH, signedIn = false)
+
+    private fun heart(
+        prefix: String,
+        language: AppLanguage,
+        signedIn: Boolean,
+        theme: BahrThemeName = BahrThemeName.LakeBurullus,
+    ) = snap(prefix, language, theme = theme, hearts = FixedHearts(signedIn)) {
+        serve(payload(language), departures(language), detail = { it.copy(likeCount = LIKES, likedByMe = signedIn) })
+    }
+
+    /** Hearts as the store would have them, signed in or not; taps change nothing. */
+    private class FixedHearts(
+        signedIn: Boolean,
+    ) : TripHearts {
+        override val likes: StateFlow<TripLikes> = MutableStateFlow(TripLikes(signedIn = signedIn))
+
+        override fun toggle(
+            slug: String,
+            shown: LikeState,
+        ) = false
+
+        override fun seen(
+            slug: String,
+            likeCount: Int,
+            likedByMe: Boolean?,
+        ) = Unit
     }
 
     @Config(qualifiers = "en-w360dp-h3200dp-xhdpi")
@@ -816,9 +872,10 @@ class TripDetailScreenshotTest {
         // The shot holds a BahrLottie (the joined tick): drawn still under reduced motion, once its file has loaded.
         lottie: Boolean = false,
         link: TripLink = TripLink(),
+        hearts: TripHearts = TripHearts.None,
         stub: FakeTripDetailRepository.() -> Unit,
     ) {
-        val viewModel = TripDetailViewModel(SLUG, FakeTripDetailRepository().apply(stub), waitlists, link)
+        val viewModel = TripDetailViewModel(SLUG, FakeTripDetailRepository().apply(stub), waitlists, link, hearts)
         compose.setContent {
             ProvideAppLanguage(language) {
                 BahrTheme(
@@ -884,6 +941,9 @@ class TripDetailScreenshotTest {
     )
 
     private companion object {
+        /** A two-digit count, so the heart's pill is at its usual width. */
+        const val LIKES = 12
+
         const val SLUG = "burullus-dawn"
         const val SETTLE_MS = 1_000L
         const val LOTTIE_LOAD_TIMEOUT_MS = 10_000L

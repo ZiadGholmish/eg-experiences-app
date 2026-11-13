@@ -10,6 +10,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import eg.bahr.core.designsystem.theme.BahrExtendedColors
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
@@ -43,6 +44,8 @@ fun BahrBadge(
         style = MaterialTheme.typography.labelMedium,
         color = content,
         maxLines = 1,
+        // A badge given less room than its text (a narrow trip card beside the heart, MP-M1) ends in "…", never cut.
+        overflow = TextOverflow.Ellipsis,
         modifier =
             modifier
                 .clip(BahrTheme.shapes.full)

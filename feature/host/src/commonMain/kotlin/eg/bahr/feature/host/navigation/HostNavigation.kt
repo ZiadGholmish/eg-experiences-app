@@ -36,11 +36,14 @@ data class HostProfileRoute(
  * M4-M11: [onSeeAllReviews] opens every review of the host's trips (the host's slug and name; usually
  * feature:reviews' `navigateToReviews`), from "See all reviews" under the previews, shown only under a full
  * preview when the summary counts more.
+ *
+ * [onSignIn] (MP-M1) opens the sign-in sheet when a guest taps a trip's heart.
  */
 fun NavGraphBuilder.hostProfileScreen(
     onBack: () -> Unit,
     onTripClick: (slug: String) -> Unit,
     onSeeAllReviews: ((host: String, name: String) -> Unit)? = null,
+    onSignIn: () -> Unit,
 ) {
     composable<HostProfileRoute> { entry ->
         val route = entry.toRoute<HostProfileRoute>()
@@ -52,6 +55,7 @@ fun NavGraphBuilder.hostProfileScreen(
                 onBack = onBack,
                 onTripClick = onTripClick,
                 onSeeAllReviews = onSeeAllReviews?.let { open -> { name -> open(route.slug, name) } },
+                onSignIn = onSignIn,
             )
         }
     }

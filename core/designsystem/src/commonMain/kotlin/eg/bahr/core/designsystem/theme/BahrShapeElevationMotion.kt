@@ -399,6 +399,12 @@ object BahrSize {
     val mediaPlayButton = 64.dp
     val mediaPlayBadge = 40.dp
 
+    /**
+     * The heart on a trip card's photo (MP-M1, HANDOFF "Trip cards": a 34px translucent favourite button). Its touch
+     * target is still the 48dp minimum around it; the trip page's heart is [BahrSpacing.minTouch], as its back button.
+     */
+    val likeButton = 34.dp
+
     /** A small trip thumbnail beside its title, as on a Home review card's trip line (MH-M1). */
     val thumbnailSmall = 32.dp
 

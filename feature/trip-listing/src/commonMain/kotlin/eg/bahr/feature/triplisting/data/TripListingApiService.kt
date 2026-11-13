@@ -9,8 +9,9 @@ import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 
 /**
- * A Home row's "See all". `GET /trips` (the category page) is core:catalog's `TripListApiService`, shared with Home
- * (M4-M1c). Needs no token, as every trip read.
+ * A Home row's "See all", and the account's liked trips (MP-M1). `GET /trips` (the category page) is core:catalog's
+ * `TripListApiService`, shared with Home (M4-M1c). Every request carries the signed-in account's token (core:network's
+ * `bahrAuth`): "See all" needs none but gets `likedByMe` with it (MP-B1); liked trips need it.
  */
 internal class TripListingApiService(
     private val client: HttpClient,
@@ -26,6 +27,21 @@ internal class TripListingApiService(
     ): AppResult<TripCardPageDto> =
         callApi {
             client.get("home/sections/$sectionId/trips") {
+                parameter("page", page)
+                parameter("size", size)
+            }
+        }
+
+    /**
+     * `listMyLikedTrips` (MP-B1): a page of the trips the signed-in account liked, newest like first; every card says
+     * `likedByMe: true`. UNAUTHORIZED when nobody is signed in.
+     */
+    suspend fun likedTrips(
+        page: Int = 0,
+        size: Int = PAGE_SIZE,
+    ): AppResult<TripCardPageDto> =
+        callApi {
+            client.get("me/likes") {
                 parameter("page", page)
                 parameter("size", size)
             }

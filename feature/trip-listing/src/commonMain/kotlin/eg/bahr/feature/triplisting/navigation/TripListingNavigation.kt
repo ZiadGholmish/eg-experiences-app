@@ -9,6 +9,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import eg.bahr.core.designsystem.theme.BahrDestination
 import eg.bahr.feature.triplisting.presentation.CategoryTripsScreen
+import eg.bahr.feature.triplisting.presentation.LikedTripsScreen
 import eg.bahr.feature.triplisting.presentation.SectionTripsScreen
 
 /*
@@ -22,11 +23,12 @@ import eg.bahr.feature.triplisting.presentation.SectionTripsScreen
 
 /**
  * The category page (M4-M1b). Back is [onBack]; Home under it keeps its scroll position, because its
- * list state is saved with its back-stack entry.
+ * list state is saved with its back-stack entry. [onSignIn] (MP-M1) opens the sign-in sheet when a guest taps a heart.
  */
 fun NavGraphBuilder.categoryTripsScreen(
     onBack: () -> Unit,
     onTripClick: (slug: String) -> Unit,
+    onSignIn: () -> Unit,
 ) {
     pageWithHeaderMorph<CategoryTripsRoute> { entry ->
         val route = entry.toRoute<CategoryTripsRoute>()
@@ -36,14 +38,16 @@ fun NavGraphBuilder.categoryTripsScreen(
             onBack = onBack,
             onTripClick = onTripClick,
             sharedKey = route.sharedKey,
+            onSignIn = onSignIn,
         )
     }
 }
 
-/** A Home row's "See all" list (M4-M1b). */
+/** A Home row's "See all" list (M4-M1b). [onSignIn] as on [categoryTripsScreen]. */
 fun NavGraphBuilder.sectionTripsScreen(
     onBack: () -> Unit,
     onTripClick: (slug: String) -> Unit,
+    onSignIn: () -> Unit,
 ) {
     pageWithHeaderMorph<SectionTripsRoute> { entry ->
         val route = entry.toRoute<SectionTripsRoute>()
@@ -53,6 +57,7 @@ fun NavGraphBuilder.sectionTripsScreen(
             onBack = onBack,
             onTripClick = onTripClick,
             sharedKey = route.sharedKey,
+            onSignIn = onSignIn,
         )
     }
 }
@@ -82,3 +87,20 @@ fun NavController.navigateToSectionTrips(
     sharedKey: String? = null,
     builder: NavOptionsBuilder.() -> Unit = {},
 ) = navigate(SectionTripsRoute(sectionId, title, sharedKey), builder)
+
+/**
+ * Account → Liked trips (MP-M1), pushed from Profile. A card opens its trip ([onTripClick]); signed out, the page's
+ * button and a heart open the sign-in sheet ([onSignIn]).
+ */
+fun NavGraphBuilder.likedTripsScreen(
+    onBack: () -> Unit,
+    onTripClick: (slug: String) -> Unit,
+    onSignIn: () -> Unit,
+) {
+    composable<LikedTripsRoute> {
+        BahrDestination(this) { LikedTripsScreen(onBack = onBack, onTripClick = onTripClick, onSignIn = onSignIn) }
+    }
+}
+
+/** Single-top: a double tap on Profile's row opens one list. */
+fun NavController.navigateToLikedTrips() = navigate(LikedTripsRoute) { launchSingleTop = true }

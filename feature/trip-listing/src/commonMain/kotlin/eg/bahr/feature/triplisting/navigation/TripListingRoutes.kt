@@ -24,3 +24,7 @@ data class SectionTripsRoute(
     val title: String? = null,
     val sharedKey: String? = null,
 )
+
+/** Account → Liked trips (MP-M1): the signed-in account's liked trips, newest like first. */
+@Serializable
+data object LikedTripsRoute

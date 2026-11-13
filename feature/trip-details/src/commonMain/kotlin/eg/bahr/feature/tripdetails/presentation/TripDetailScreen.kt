@@ -91,6 +91,7 @@ internal fun TripDetailScreen(
     date: String? = null,
     placeOpened: Boolean = false,
     pushPrompt: (@Composable (onDone: () -> Unit) -> Unit)? = null,
+    onSignIn: () -> Unit = {},
     viewModel: TripDetailViewModel =
         koinViewModel { parametersOf(slug, TripLink(date?.let(::linkedDate), placeOpened)) },
 ) {
@@ -126,8 +127,11 @@ internal fun TripDetailScreen(
                 onJoin = viewModel::joinWaitlist,
             )
         }
+    // The hero's heart (MP-M1): a guest's tap opens the sign-in sheet.
+    val onLike = remember(viewModel, onSignIn) { { if (!viewModel.toggleLike()) onSignIn() } }
     TripPage(
         state = state,
+        onLike = onLike,
         waitlist = waitlist,
         onDatesRevealed = viewModel::datesRevealed,
         onBack = onBack,
@@ -145,6 +149,7 @@ internal enum class TripSection { Hero, Title, Facts, Inclusions, Itinerary, Hos
 @Composable
 private fun TripPage(
     state: TripDetailUiState,
+    onLike: () -> Unit,
     waitlist: WaitlistPanelState,
     onDatesRevealed: () -> Unit,
     onBack: () -> Unit,
@@ -195,7 +200,19 @@ private fun TripPage(
             ) {
                 // One content type per section (M3-M11, Compose audit M1): each draws differently.
                 items(sections, key = { it.name }, contentType = { it }) { section ->
-                    Section(section, state, header, trip, heroItems, waitlist, onBack, onSelectDeparture, onHostClick, onSeeAllReviews)
+                    Section(
+                        section,
+                        state,
+                        header,
+                        trip,
+                        heroItems,
+                        waitlist,
+                        onBack,
+                        onSelectDeparture,
+                        onHostClick,
+                        onSeeAllReviews,
+                        onLike,
+                    )
                 }
             }
             StatusBarScrim(visible = { listState.firstVisibleItemIndex > 0 })
@@ -287,10 +304,11 @@ private fun Section(
     onSelectDeparture: (String) -> Unit,
     onHostClick: ((HostDto) -> Unit)?,
     onSeeAllReviews: ((title: String) -> Unit)?,
+    onLike: () -> Unit,
 ) {
     val padded = Modifier.padding(start = BahrSpacing.gutter, end = BahrSpacing.gutter, top = BahrSpacing.xl)
     when (section) {
-        TripSection.Hero -> TripHero(items = heroItems, loading = trip == null, onBack = onBack)
+        TripSection.Hero -> TripHero(items = heroItems, loading = trip == null, onBack = onBack, like = state.like, onLike = onLike)
 
         TripSection.Title -> {
             // A card from an MV-B3 server carries the deck (MV-M13): drawn as text from the first frame, nothing reserved.

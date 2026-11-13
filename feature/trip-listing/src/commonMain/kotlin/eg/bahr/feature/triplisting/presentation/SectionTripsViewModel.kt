@@ -6,13 +6,17 @@ import androidx.paging.InvalidatingPagingSourceFactory
 import androidx.paging.Pager
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
+import eg.bahr.core.catalog.data.TripHearts
+import eg.bahr.core.catalog.data.TripLikes
 import eg.bahr.core.catalog.data.TripPagingConfig
 import eg.bahr.core.catalog.data.WaitlistMemory
 import eg.bahr.core.catalog.model.TripCardDto
 import eg.bahr.core.catalog.presentation.Throttle
 import eg.bahr.core.catalog.presentation.WaitlistTags
+import eg.bahr.core.catalog.presentation.collectTripLikes
 import eg.bahr.core.catalog.presentation.collectWaitlistTags
 import eg.bahr.core.catalog.presentation.distinctTrips
+import eg.bahr.core.catalog.presentation.toggle
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.feature.triplisting.data.SectionTripsPagingSource
 import eg.bahr.feature.triplisting.data.TripListingRepository
@@ -31,6 +35,8 @@ internal data class SectionTripsUiState(
     val title: String?,
     val totalItems: Long? = null,
     val waitlistTags: WaitlistTags = WaitlistTags.None,
+    /** The hearts on the cards (MP-M1), as every screen shows them. */
+    val likes: TripLikes = TripLikes.None,
 )
 
 /** Every trip of one Home `trips` section, paged, in the row's order. */
@@ -39,6 +45,8 @@ internal class SectionTripsViewModel(
     title: String?,
     repository: TripListingRepository,
     waitlists: WaitlistMemory,
+    // The hearts (MP-M1): the app's TripLikeStore; none in tests that do not look at them.
+    private val hearts: TripHearts = TripHearts.None,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(SectionTripsUiState(title = title))
     val uiState: StateFlow<SectionTripsUiState> = _uiState.asStateFlow()
@@ -64,7 +72,11 @@ internal class SectionTripsViewModel(
     /** Retry, from the first page's error: loads the list again. Throttled. */
     fun retry() = retries.attempt { sources.invalidate() }
 
+    /** A tap on [trip]'s heart; false for a guest, whom the screen offers the sign-in sheet (MP-M1). */
+    fun toggleLike(trip: TripCardDto): Boolean = hearts.toggle(trip, _uiState.value.likes)
+
     init {
         collectWaitlistTags(waitlists) { tags -> _uiState.update { it.copy(waitlistTags = tags) } }
+        collectTripLikes(hearts) { likes -> _uiState.update { it.copy(likes = likes) } }
     }
 }
