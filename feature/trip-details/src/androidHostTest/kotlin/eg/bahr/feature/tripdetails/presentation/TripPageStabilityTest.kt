@@ -6,11 +6,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToKey
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
+import eg.bahr.core.catalog.model.NextDepartureDto
 import eg.bahr.core.catalog.model.RatingDto
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.common.result.AppResult
@@ -24,6 +29,7 @@ import eg.bahr.feature.tripdetails.data.waitlistMemory
 import eg.bahr.feature.tripdetails.model.DepartureDto
 import eg.bahr.feature.tripdetails.model.TripDetailDto
 import eg.bahr.feature.tripdetails.presentation.components.TRIP_BAR_PRICE_TAG
+import eg.bahr.feature.tripdetails.presentation.components.TRIP_CTA_TAG
 import eg.bahr.feature.tripdetails.presentation.components.TRIP_DATE_ROW_TAG
 import eg.bahr.feature.tripdetails.presentation.components.TRIP_HERO_TAG
 import eg.bahr.feature.tripdetails.presentation.components.TRIP_PRICE_FACT_TAG
@@ -59,6 +65,9 @@ class TripPageStabilityTest {
 
     private val trip = CompletableDeferred<AppResult<TripDetailDto>>()
     private val dates = CompletableDeferred<AppResult<List<DepartureDto>>>()
+
+    /** How many times the page asked to continue to the booking. */
+    private var continued = 0
 
     @Before
     fun pauseClock() {
@@ -161,6 +170,63 @@ class TripPageStabilityTest {
         assertEquals(scrolled, bounds(TRIP_PRICE_FACT_TAG))
     }
 
+    /**
+     * MV-M9: a trip whose card already says it is full shows a disabled "Sold out" from the first frame, and the button
+     * keeps its place and size through the loading stages (only its fill would change).
+     */
+    @Test
+    fun soldOutFromTheFirstFrameArabic() = soldOutFromTheFirstFrame(AppLanguage.ARABIC)
+
+    @Test
+    fun soldOutFromTheFirstFrameEnglish() = soldOutFromTheFirstFrame(AppLanguage.ENGLISH)
+
+    private fun soldOutFromTheFirstFrame(language: AppLanguage) {
+        open(language, withCard = true, cardSoldOut = true)
+        val soldOut = if (language == AppLanguage.ARABIC) "كامل العدد" else "Sold out"
+        val cta = compose.onNodeWithTag(TRIP_CTA_TAG)
+        cta.assertIsNotEnabled().assertTextEquals(soldOut)
+        val first = bounds(TRIP_CTA_TAG, TRIP_BAR_PRICE_TAG)
+
+        land(trip, AppResult.Success(detail(language).let { it.copy(dates = full(it.dates)) }))
+        cta.assertIsNotEnabled().assertTextEquals(soldOut)
+        assertEquals(first, bounds(TRIP_CTA_TAG, TRIP_BAR_PRICE_TAG), "trip landed")
+
+        land(dates, AppResult.Success(full(departures(language))))
+        cta.assertIsNotEnabled().assertTextEquals(soldOut)
+        assertEquals(first, bounds(TRIP_CTA_TAG, TRIP_BAR_PRICE_TAG), "dates landed")
+    }
+
+    /** MV-M9: before the dates are known, "Choose a date" is disabled at the size it will have once enabled. */
+    @Test
+    fun chooseADateWaitsForTheDatesWithoutMoving() {
+        open(AppLanguage.ARABIC, withCard = true)
+        val cta = compose.onNodeWithTag(TRIP_CTA_TAG)
+        cta.assertIsNotEnabled()
+        val loading = bounds(TRIP_CTA_TAG)
+
+        land(trip, AppResult.Success(detail(AppLanguage.ARABIC)))
+        cta.assertIsNotEnabled()
+
+        land(dates, AppResult.Success(departures(AppLanguage.ARABIC)))
+        cta.assertIsEnabled()
+        assertEquals(loading, bounds(TRIP_CTA_TAG))
+    }
+
+    /** MV-M9: a tap on the disabled "Sold out" neither continues nor scrolls the page. */
+    @Test
+    fun tappingSoldOutDoesNothing() {
+        open(AppLanguage.ARABIC, withCard = true, cardSoldOut = true)
+        land(trip, AppResult.Success(detail(AppLanguage.ARABIC).let { it.copy(dates = full(it.dates)) }))
+        land(dates, AppResult.Success(full(departures(AppLanguage.ARABIC))))
+        val before = bounds(TRIP_HERO_TAG, TRIP_TITLE_TAG)
+
+        compose.onNodeWithTag(TRIP_CTA_TAG).performClick()
+        settle()
+
+        assertEquals(0, continued)
+        assertEquals(before, bounds(TRIP_HERO_TAG, TRIP_TITLE_TAG), "the page did not scroll to the dates")
+    }
+
     /** The first date the page can be opened on: bookable or sold out. */
     private fun linkedDate() = departures(AppLanguage.ARABIC).first { it.isSelectable() }.date
 
@@ -205,19 +271,20 @@ class TripPageStabilityTest {
         language: AppLanguage,
         withCard: Boolean,
         link: TripLink = TripLink(),
+        cardSoldOut: Boolean = false,
     ) {
         val repository =
             FakeTripDetailRepository(
                 tripBySlug = { trip.await() },
                 departuresFor = { dates.await() },
-                cards = if (withCard) mapOf(SLUG to card(language)) else emptyMap(),
+                cards = if (withCard) mapOf(SLUG to card(language, cardSoldOut)) else emptyMap(),
             )
         val viewModel = TripDetailViewModel(SLUG, repository, waitlistMemory(), link)
         compose.setContent {
             ProvideAppLanguage(language) {
                 BahrTheme(locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English) {
                     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-                        TripDetailScreen(slug = SLUG, onBack = {}, onContinue = { _, _ -> }, viewModel = viewModel)
+                        TripDetailScreen(slug = SLUG, onBack = {}, onContinue = { _, _ -> continued++ }, viewModel = viewModel)
                     }
                 }
             }
@@ -247,11 +314,17 @@ class TripPageStabilityTest {
     private fun TripDetailDto.withTwoLineDeck() = copy(deck = deck?.substringBefore('.')?.plus('.'))
 
     /** The list card of the seeded trip, as Home or search would have cached it. */
-    private fun card(language: AppLanguage) =
-        detail(language).let { d ->
-            trip(1, title = d.title, priceEgp = d.price.amount, durationLabel = d.durationLabel)
-                .copy(slug = SLUG, subtitle = d.subtitle, durationMinutes = d.durationMinutes, rating = d.rating ?: RatingDto(4.8, 5))
-        }
+    private fun card(
+        language: AppLanguage,
+        soldOut: Boolean = false,
+    ) = detail(language).let { d ->
+        trip(1, title = d.title, priceEgp = d.price.amount, durationLabel = d.durationLabel)
+            .copy(slug = SLUG, subtitle = d.subtitle, durationMinutes = d.durationMinutes, rating = d.rating ?: RatingDto(4.8, 5))
+            .copy(nextDeparture = if (soldOut) NextDepartureDto(seatsRemaining = 0, capacity = 18, soldOut = true) else null)
+    }
+
+    private fun full(dates: List<DepartureDto>) =
+        dates.map { it.copy(seatsRemaining = 0, soldOut = true, bookable = false, unavailableReason = "SOLD_OUT") }
 
     private fun detail(language: AppLanguage): TripDetailDto =
         json

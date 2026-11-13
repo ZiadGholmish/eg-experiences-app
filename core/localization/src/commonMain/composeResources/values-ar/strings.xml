@@ -101,7 +101,7 @@
     <string name="trip_bar_per_person">للفرد</string>
     <string name="trip_cta_choose_date">اختار التاريخ</string>
     <string name="trip_cta_continue">كمّل</string>
-    <string name="trip_cta_sold_out">كامل</string>
+    <string name="trip_cta_sold_out">كامل العدد</string>
     <string name="action_back">رجوع</string>
     <plurals name="trip_hours_door_to_door">
         <item quantity="zero">%1$d ساعة من الباب للباب</item>

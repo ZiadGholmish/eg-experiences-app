@@ -203,9 +203,12 @@ private fun TripPage(
             price = header?.price,
             selected = state.selectedDeparture,
             cta = state.cta,
+            ctaEnabled = state.ctaEnabled,
             onCta = {
                 val departureId = state.continueDepartureId
                 when {
+                    // The button is disabled then; a tap that slips through still does nothing (MV-M9).
+                    !state.ctaEnabled -> Unit
                     departureId != null -> onContinue(departureId)
                     // "Choose a date" takes the user to the dates rather than doing nothing; while the trip loads it waits,
                     // as the reveal does (the trip's sections would push the band away again).

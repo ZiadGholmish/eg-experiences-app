@@ -395,13 +395,15 @@ private fun PolicyNoteSkeleton(modifier: Modifier) {
 /**
  * The sticky bottom bar (item 11): what the price is for ("Per person", or the picked date and its
  * seats) and the price, then the one coral button. Its label follows the selection: "Choose a date"
- * → "Continue" → a disabled "Sold out".
+ * → "Continue" → a disabled "Sold out" (also with no date picked when nothing can be booked, MV-M9).
+ * [ctaEnabled] comes from the state ([TripDetailUiState.ctaEnabled]).
  */
 @Composable
 internal fun TripStickyBar(
     price: MoneyDto?,
     selected: DepartureDto?,
     cta: TripCta,
+    ctaEnabled: Boolean,
     onCta: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -444,13 +446,17 @@ internal fun TripStickyBar(
                     },
                 ),
             onClick = onCta,
-            // Only "Sold out" is disabled. While the trip loads the button keeps its normal look, so a
-            // slow page never reads as unavailable; the tap waits for the dates (see TripDetailScreen).
-            enabled = cta != TripCta.SoldOut,
+            // MV-M9 reverses the earlier "normal look while loading": a button that looked ready and then did nothing, or
+            // was refused, read as a bug. Disabled is the same size (only the fill changes), so the bar does not jump.
+            enabled = ctaEnabled,
             leadingIcon = if (cta == TripCta.Continue) BahrIcons.ArrowForward.outlined() else null,
+            modifier = Modifier.testTag(TRIP_CTA_TAG),
         )
     }
 }
+
+/** For tests (MV-M9): the sticky bar's button, disabled while sold out or not yet known. */
+internal const val TRIP_CTA_TAG = "trip_cta"
 
 /** For tests (MV-M7): the sticky bar's price, whose bounds must not move while the page loads. */
 internal const val TRIP_BAR_PRICE_TAG = "trip_bar_price"

@@ -379,6 +379,25 @@ class TripDetailScreenshotTest {
             serve(TripDetailPayloads.english, TripDetailPayloads.englishDepartures)
         }
 
+    /**
+     * MV-M9: every date full (the seeded white-desert-overnight's shape). The button reads a disabled "Sold out" with
+     * no date picked; picking one shows its notice with "Join the waiting list" (no other date to point to).
+     */
+    @Test
+    fun allSoldOutArabic() =
+        snap("trip_detail_all_sold_out", AppLanguage.ARABIC, select = SOLD_OUT_ID) {
+            serve(TripDetailPayloads.arabic, TripDetailPayloads.arabicDepartures, dates = ::allFull)
+        }
+
+    @Test
+    fun allSoldOutEnglish() =
+        snap("trip_detail_all_sold_out", AppLanguage.ENGLISH, select = SOLD_OUT_ID) {
+            serve(TripDetailPayloads.english, TripDetailPayloads.englishDepartures, dates = ::allFull)
+        }
+
+    private fun allFull(dates: List<DepartureDto>) =
+        dates.map { it.copy(seatsRemaining = 0, soldOut = true, bookable = false, unavailableReason = "SOLD_OUT") }
+
     private fun rememberedJoin() =
         waitlistMemory(FakeWaitlistJoinsStore(listOf(storedJoin(departureId = SOLD_OUT_ID, tripSlug = SLUG, date = "2026-10-24"))))
 
