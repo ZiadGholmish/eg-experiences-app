@@ -318,6 +318,8 @@
     <string name="ticket_whatsapp_host">Message %1$s on WhatsApp</string>
     <string name="ticket_whatsapp_host_unnamed">Message the host on WhatsApp</string>
     <string name="ticket_screenshot_note">Screenshot this — there is no signal for part of the drive.</string>
+    <!-- MV-M13: opens the phone's calendar with the trip filled in; the argument is the trip's date ("Sat 10 Oct"). -->
+    <string name="ticket_add_to_calendar">Add %1$s to calendar</string>
     <!-- MV-M6: the ticket's bar names how it was opened (after paying, or a booking from My trips), and its way to the trip. -->
     <string name="ticket_title_confirmation">Booking confirmation</string>
     <string name="ticket_title_details">Booking details</string>

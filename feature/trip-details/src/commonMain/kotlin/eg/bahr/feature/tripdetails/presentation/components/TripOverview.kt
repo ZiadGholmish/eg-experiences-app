@@ -20,6 +20,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import eg.bahr.core.catalog.model.DeparturePointDto
+import eg.bahr.core.catalog.model.DestinationDto
 import eg.bahr.core.catalog.model.RatingDto
 import eg.bahr.core.catalog.model.TripCardDto
 import eg.bahr.core.catalog.presentation.components.SectionTitle
@@ -47,8 +49,6 @@ import eg.bahr.core.localization.generated.resources.trip_fact_price_note
 import eg.bahr.core.localization.generated.resources.trip_hours_door_to_door
 import eg.bahr.core.localization.generated.resources.trip_whats_included
 import eg.bahr.core.network.MoneyDto
-import eg.bahr.feature.tripdetails.model.DeparturePointDto
-import eg.bahr.feature.tripdetails.model.DestinationDto
 import eg.bahr.feature.tripdetails.model.TripDetailDto
 import eg.bahr.feature.tripdetails.model.isMultiDay
 import org.jetbrains.compose.resources.pluralStringResource
@@ -68,9 +68,10 @@ internal data class TripHeader(
 /**
  * Eyebrow row (location chip + rating), title and deck (HANDOFF screen 3, items 2–3).
  *
- * While the trip loads (MV-M7) the known part stays text: the list card's chip, rating and title. What is not known yet
- * shimmers in the room it will take: the deck ([deckPending], [DECK_SKELETON_LINES] lines of its own style), and on a
- * cold open with no card ([header] null) the chip and the title too. The price is not repeated under the title, as the
+ * While the trip loads (MV-M7) the known part stays text: the list card's chip, rating, title and (MV-M13, a card from
+ * an MV-B3 server) deck. What is not known yet shimmers in the room it will take: the deck when the card cannot say it
+ * ([deckPending], [DECK_SKELETON_LINES] lines of its own style), and on a cold open with no card ([header] null) the chip
+ * and the title too. The price is not repeated under the title, as the
  * prototype's skeleton did: it would vanish when the trip lands and pull everything under it up. The price is in the
  * facts grid and the sticky bar from the first frame instead.
  */
@@ -81,7 +82,7 @@ internal fun TripTitleBlock(
     deckPending: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(BahrSpacing.md)) {
+    Column(modifier = modifier.testTag(TRIP_TITLE_BLOCK_TAG), verticalArrangement = Arrangement.spacedBy(BahrSpacing.md)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             when {
                 header == null -> LocationChip(text = null)
@@ -157,8 +158,9 @@ private fun RatingLabel(
 
 /**
  * What the facts grid is drawn from: the trip, or (MV-M7) the list card while the trip loads. The card knows the price
- * and the duration but not where the bus leaves from or where the trip goes ([placesPending]): those two cells shimmer
- * in a cell of their final size until the trip lands.
+ * and the duration, and since MV-B3 where the bus leaves from and where the trip goes too (MV-M13). A card from an
+ * older server does not ([placesPending]): those two cells then shimmer in a cell of their final size until the trip
+ * lands.
  */
 internal data class TripFactsSource(
     val price: MoneyDto,
@@ -174,7 +176,10 @@ internal data class TripFactsSource(
 internal fun TripDetailDto.factsSource() =
     TripFactsSource(price, durationLabel, durationMinutes, isMultiDay, returnLabel, departure, destination)
 
-/** The card has no `returnLabel`: an overnight's note says the hours until the trip brings "Back Fri 22:00". */
+/**
+ * The card has no `returnLabel`: an overnight's note says the hours until the trip brings "Back Fri 22:00". Its place
+ * cells are drawn from the card when it carries the trip page's fields ([carriesPageFields]), else they shimmer.
+ */
 internal fun TripCardDto.factsSource() =
     TripFactsSource(
         price,
@@ -182,10 +187,18 @@ internal fun TripCardDto.factsSource() =
         durationMinutes,
         nights > 0,
         returnLabel = null,
-        departure = null,
-        destination = null,
-        placesPending = true,
+        departure = departure,
+        destination = destination,
+        placesPending = !carriesPageFields,
     )
+
+/**
+ * Whether this card comes from a server that puts the trip page's deck and place cells on cards (MV-B3). A field left
+ * out means "this trip has none" from such a server, but "not sent" from an older one, and the two read the same. A
+ * card with any of the three is from a new server, so the others' absence is real and nothing is reserved for them.
+ * A card with none of them (an older server, or a trip with no deck and no places at all) keeps MV-M7's reserved room.
+ */
+internal val TripCardDto.carriesPageFields: Boolean get() = deck != null || departure != null || destination != null
 
 /** One cell of the facts grid. */
 private data class Fact(
@@ -289,7 +302,7 @@ private fun FactsGrid(
     facts: List<Fact?>,
     modifier: Modifier,
 ) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(BahrSpacing.sm)) {
+    Column(modifier = modifier.testTag(TRIP_FACTS_TAG), verticalArrangement = Arrangement.spacedBy(BahrSpacing.sm)) {
         facts.chunked(2).forEach { row ->
             Row(
                 modifier = Modifier.height(IntrinsicSize.Min),
@@ -417,15 +430,20 @@ private fun InclusionRow(
 internal const val TRIP_TITLE_TAG = "trip_title"
 internal const val TRIP_PRICE_FACT_TAG = "trip_price_fact"
 
+/** For tests (MV-M13): the whole title block (chip, title, deck) and the whole facts grid. */
+internal const val TRIP_TITLE_BLOCK_TAG = "trip_title_block"
+internal const val TRIP_FACTS_TAG = "trip_facts"
+
 private const val MINUTES_PER_HOUR = 60
 
 /** The grid's four cells: price, duration, bus, place. */
 private const val FACTS_CELLS = 4
 
 /**
- * The deck is not on the card, so its length is a guess: two lines, what the seeded Arabic decks take on a 412–448dp
- * phone (on a 360dp phone most take three, and 3 of the 15 seeded trips have none). A deck of another length moves what
- * is under the title by the difference, until the card carries the deck (`TripCard` has no `deck`: MV-M7 report).
+ * When the card cannot say the deck (an older server, or a cold open), its length is a guess: two lines, what the seeded
+ * Arabic decks take on a 412–448dp phone (on a 360dp phone most take three, and 3 of the 15 seeded trips have none). A
+ * deck of another length moves what is under the title by the difference. A card from an MV-B3 server carries the deck
+ * itself (MV-M13), and nothing is guessed.
  */
 private const val DECK_SKELETON_LINES = 2
 

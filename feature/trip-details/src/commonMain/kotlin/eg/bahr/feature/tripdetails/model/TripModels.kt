@@ -1,6 +1,8 @@
 package eg.bahr.feature.tripdetails.model
 
 import eg.bahr.core.catalog.model.BadgeDto
+import eg.bahr.core.catalog.model.DeparturePointDto
+import eg.bahr.core.catalog.model.DestinationDto
 import eg.bahr.core.catalog.model.ImageDto
 import eg.bahr.core.catalog.model.ImageVariantDto
 import eg.bahr.core.catalog.model.LocationDto
@@ -83,30 +85,6 @@ internal data class TripMediaDto(
     val variants: List<ImageVariantDto> = emptyList(),
     val durationSeconds: Int? = null,
     val poster: ImageDto? = null,
-)
-
-/** openapi `Place` + `timeLocal`/`arriveBy` ("HH:mm", Cairo): the facts grid's "Bus leaves" cell. */
-@Serializable
-internal data class DeparturePointDto(
-    val placeName: String? = null,
-    val city: String? = null,
-    val governorate: String? = null,
-    val lat: Double? = null,
-    val lng: Double? = null,
-    val timeLocal: String? = null,
-    val arriveBy: String? = null,
-)
-
-/** openapi `Place` + `distanceKm`/`travelTime` ("2h40"): the facts grid's "Trip is at" cell. */
-@Serializable
-internal data class DestinationDto(
-    val placeName: String? = null,
-    val city: String? = null,
-    val governorate: String? = null,
-    val lat: Double? = null,
-    val lng: Double? = null,
-    val distanceKm: Int? = null,
-    val travelTime: String? = null,
 )
 
 /**

@@ -4,11 +4,13 @@ import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.network.MoneyDto
 import eg.bahr.core.network.auth.SessionState
+import eg.bahr.feature.booking.model.BookingCalendarDto
 import eg.bahr.feature.booking.model.BookingDepartureDto
 import eg.bahr.feature.booking.model.BookingDeparturePlaceDto
 import eg.bahr.feature.booking.model.BookingDto
 import eg.bahr.feature.booking.model.BookingHostDto
 import eg.bahr.feature.booking.model.BookingPolicyDto
+import eg.bahr.feature.booking.model.BookingReviewDto
 import eg.bahr.feature.booking.model.BookingTripDto
 import eg.bahr.feature.booking.model.BookingTripSummaryDto
 import eg.bahr.feature.booking.model.HeldSeatsDto
@@ -166,6 +168,8 @@ internal object BookingFixtures {
         host: BookingHostDto? = null,
         dateCalledOff: Boolean? = null,
         hostPaid: Boolean? = null,
+        canReview: Boolean? = null,
+        review: BookingReviewDto? = null,
     ) = BookingDto(
         ref = "BRL-7K4M2X9P",
         status = status,
@@ -186,6 +190,8 @@ internal object BookingFixtures {
         returnDate = returnDate,
         partySize = 2,
         total = MoneyDto(amount = 900, currencyCode = "EGP"),
+        // As the server (MV-B3): what was paid in the app, exactly when the method is there; the same as the total.
+        paid = MoneyDto(amount = 900, currencyCode = "EGP").takeIf { method != null },
         method = method,
         // As the server: the accepted methods only on a HELD booking (MV-B2).
         paymentMethods = paymentMethods.takeIf { status == "HELD" },
@@ -193,6 +199,16 @@ internal object BookingFixtures {
         hostPaid = hostPaid,
         // As the server: the host only on a paid booking (D4).
         host = host.takeIf { status == "CONFIRMED" || status == "COMPLETED" },
+        // As the server (MV-B3): the event only on a CONFIRMED booking whose date still runs; times cut to the minute.
+        calendar =
+            BookingCalendarDto(
+                start = "2026-10-10T05:00+03:00",
+                end = "2026-10-10T22:00+03:00",
+                title = title,
+                location = "$placeName، $city",
+            ).takeIf { status == "CONFIRMED" && dateCalledOff != true },
+        canReview = canReview,
+        review = review,
     )
 
     /** openapi `Booking.host` as the local api sends it (seeded host). */

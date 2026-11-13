@@ -151,6 +151,22 @@ class TripDetailScreenshotTest {
     fun stageLoadedEnglish() = stage("trip_detail_stage_loaded", AppLanguage.ENGLISH, card = true, trip = true, dates = true)
 
     /*
+     * MV-M13: opened from the card of an MV-B3 server, which carries the deck and the bus/place cells: the title block
+     * and the facts grid are text from the first frame (no deck lines or place cells shimmering), and the trip's whole
+     * deck is shown, so this stage lines up with trip_detail_loaded down to the end of the facts.
+     */
+
+    @Config(qualifiers = "en-w360dp-h3200dp-xhdpi")
+    @Test
+    fun stageCardWithPageFieldsArabic() =
+        stage("trip_detail_stage_card_fields", AppLanguage.ARABIC, card = true, trip = false, dates = false, pageFields = true)
+
+    @Config(qualifiers = "en-w360dp-h3200dp-xhdpi")
+    @Test
+    fun stageCardWithPageFieldsEnglish() =
+        stage("trip_detail_stage_card_fields", AppLanguage.ENGLISH, card = true, trip = false, dates = false, pageFields = true)
+
+    /*
      * The same stages at the dates band (on a phone, scrolled to it): skeleton cards; the trip's own dates with only their
      * seat counts shimmering (HANDOFF §loading: "live seat counts shimmer"); the live dates. One band height throughout.
      */
@@ -182,19 +198,30 @@ class TripDetailScreenshotTest {
         trip: Boolean,
         dates: Boolean,
         band: Boolean = false,
+        pageFields: Boolean = false,
     ) = snap(prefix, language, scrollTo = if (band) TripSection.Availability else null) {
-        serve(payload(language), departures(language), detail = { it.copy(deck = it.deck?.substringBefore('.')?.plus('.')) })
-        if (card) cards = mapOf(SLUG to cardOf(language))
+        // An older server's card has no deck: the trip's is cut to the two lines the page reserves. A card with the page's
+        // fields (MV-M13) needs no such fitting, so the deck stays whole.
+        val fitted: (TripDetailDto) -> TripDetailDto =
+            if (pageFields) ({ it }) else ({ it.copy(deck = it.deck?.substringBefore('.')?.plus('.')) })
+        serve(payload(language), departures(language), detail = fitted)
+        if (card) cards = mapOf(SLUG to cardOf(language, pageFields))
         if (!trip) tripBySlug = { awaitCancellation() }
         if (!dates) departuresFor = { awaitCancellation() }
     }
 
-    /** The list card of the seeded trip as Home or search caches it: the trip's own title, place, price and duration. */
-    private fun cardOf(language: AppLanguage) =
-        json.decodeFromString<Envelope<TripDetailDto>>(payload(language)).data.let { d ->
-            trip(1, title = d.title, priceEgp = d.price.amount, durationLabel = d.durationLabel)
-                .copy(slug = SLUG, subtitle = d.subtitle, durationMinutes = d.durationMinutes, rating = d.rating)
-        }
+    /**
+     * The list card of the seeded trip as Home or search caches it: the trip's own title, place, price and duration, and
+     * with [pageFields] (an MV-B3 server, MV-M13) its deck and bus/place cells too.
+     */
+    private fun cardOf(
+        language: AppLanguage,
+        pageFields: Boolean = false,
+    ) = json.decodeFromString<Envelope<TripDetailDto>>(payload(language)).data.let { d ->
+        trip(1, title = d.title, priceEgp = d.price.amount, durationLabel = d.durationLabel)
+            .copy(slug = SLUG, subtitle = d.subtitle, durationMinutes = d.durationMinutes, rating = d.rating)
+            .let { if (pageFields) it.copy(deck = d.deck, departure = d.departure, destination = d.destination) else it }
+    }
 
     @Config(qualifiers = "en-w360dp-h3200dp-xhdpi")
     @Test
@@ -284,6 +311,34 @@ class TripDetailScreenshotTest {
     @Config(qualifiers = WIDE_BAND, fontScale = FONT_SCALE_LARGE)
     @Test
     fun dateCardsFontScale15English() = dateCardsAtFontScale("trip_detail_date_cards_fs15", AppLanguage.ENGLISH)
+
+    /*
+     * MV-M13 (the MV-M11 follow-up): the itinerary at a larger text size on a phone, tall enough for every stop. The time
+     * column widens with the text (as the date cards do), so "≈12:15" stays on one line at the Pixel's 1.3 and at 1.5.
+     */
+
+    @Config(qualifiers = "en-w360dp-h1400dp-xhdpi", fontScale = FONT_SCALE_PIXEL)
+    @Test
+    fun itineraryFontScale13Arabic() = itineraryAtFontScale("trip_detail_itinerary_fs13", AppLanguage.ARABIC)
+
+    @Config(qualifiers = "en-w360dp-h1400dp-xhdpi", fontScale = FONT_SCALE_PIXEL)
+    @Test
+    fun itineraryFontScale13English() = itineraryAtFontScale("trip_detail_itinerary_fs13", AppLanguage.ENGLISH)
+
+    @Config(qualifiers = "en-w360dp-h1400dp-xhdpi", fontScale = FONT_SCALE_LARGE)
+    @Test
+    fun itineraryFontScale15Arabic() = itineraryAtFontScale("trip_detail_itinerary_fs15", AppLanguage.ARABIC)
+
+    @Config(qualifiers = "en-w360dp-h1400dp-xhdpi", fontScale = FONT_SCALE_LARGE)
+    @Test
+    fun itineraryFontScale15English() = itineraryAtFontScale("trip_detail_itinerary_fs15", AppLanguage.ENGLISH)
+
+    private fun itineraryAtFontScale(
+        prefix: String,
+        language: AppLanguage,
+    ) = snap(prefix, language, scrollTo = TripSection.Itinerary) {
+        serve(payload(language), departures(language))
+    }
 
     private fun dateCardsAtFontScale(
         prefix: String,

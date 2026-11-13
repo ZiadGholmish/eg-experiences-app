@@ -7,7 +7,9 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -15,6 +17,10 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LifecycleRegistry
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
@@ -24,9 +30,12 @@ import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.designsystem.theme.BahrThemeName
 import eg.bahr.core.localization.ProvideAppLanguage
 import eg.bahr.core.network.ApiErrorCodes
+import eg.bahr.core.network.MoneyDto
 import eg.bahr.core.testing.captureScreenshot
 import eg.bahr.feature.booking.data.BookingFixtures
 import eg.bahr.feature.booking.data.FakeBookingRepository
+import eg.bahr.feature.booking.model.BookingDto
+import eg.bahr.feature.booking.model.BookingReviewDto
 import kotlinx.coroutines.awaitCancellation
 import org.junit.Rule
 import org.junit.Test
@@ -35,12 +44,14 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import kotlin.test.assertEquals
+import kotlin.time.Instant
 
 /**
  * The booking's ticket (MV-M5) × {ar, en} × {light, dark}: confirmed (the celebration over the reference, every row,
  * where to stand, WhatsApp), paid with test cash (MV-M4's badge on the money row), and a cancelled booking opened by
  * its reference (no celebration, no "Booked"); and loading, in ar and en. Since MV-M6 also as a booking's details from My
- * trips, in ar and en: upcoming, past with "Rate your trip", cancelled, loading and not found. The celebration (BahrLottie, played once) is shot still: reduced motion
+ * trips, in ar and en: upcoming, past with "Rate your trip", cancelled, loading and not found. Since MV-M13 a confirmed
+ * ticket carries "Add … to calendar" (the server's `calendar`) and "Rate your trip" follows the booking's `canReview`. The celebration (BahrLottie, played once) is shot still: reduced motion
  * shows the frame it rests on. Tall enough to show the whole ticket, as a screenshot of it would be scrolled.
  *
  * Record: `./gradlew :feature:booking:recordRoborazziAndroidHostTest`; verify: `verifyRoborazziAndroidHostTest`.
@@ -162,7 +173,7 @@ class BookingConfirmedScreenshotTest {
         val trips = mutableListOf<String>()
         val rated = mutableListOf<Pair<String, String?>>()
         var backs = 0
-        val booking = BookingFixtures.heldBooking(status = "COMPLETED", title = "Dawn on Lake Burullus")
+        val booking = BookingFixtures.heldBooking(status = "COMPLETED", title = "Dawn on Lake Burullus", canReview = true)
         val viewModel = BookingConfirmedViewModel(REF, FakeBookingRepository(bookingByRef = { AppResult.Success(booking) }))
         compose.setContent {
             BahrTheme(locale = BahrLocale.English, reducedMotion = true) {
@@ -175,7 +186,6 @@ class BookingConfirmedScreenshotTest {
                             onRateTrip = { ref, title -> rated += ref to title },
                         ),
                     entry = TicketEntry.Details,
-                    canRate = true,
                     viewModel = viewModel,
                 )
             }
@@ -194,11 +204,11 @@ class BookingConfirmedScreenshotTest {
     @Test
     fun `after paying - Trips and no View trip or Rate`() {
         var done = 0
-        val booking = BookingFixtures.heldBooking(status = "CONFIRMED")
+        val booking = BookingFixtures.heldBooking(status = "CONFIRMED", canReview = true)
         val viewModel = BookingConfirmedViewModel(REF, FakeBookingRepository(bookingByRef = { AppResult.Success(booking) }))
         compose.setContent {
             BahrTheme(locale = BahrLocale.English, reducedMotion = true) {
-                BookingConfirmedScreen(ref = REF, actions = TicketCallbacks(onDone = { done++ }), canRate = true, viewModel = viewModel)
+                BookingConfirmedScreen(ref = REF, actions = TicketCallbacks(onDone = { done++ }), viewModel = viewModel)
             }
         }
         compose.onNodeWithText("Booking confirmation").assertExists()
@@ -206,6 +216,124 @@ class BookingConfirmedScreenshotTest {
         compose.onNodeWithTag(TICKET_RATE_TAG).assertDoesNotExist()
         compose.onNodeWithText("Trips").performScrollTo().performClick()
         assertEquals(1, done)
+    }
+
+    /**
+     * MV-M13: "Rate your trip" follows the booking's own `canReview` (getBooking since MV-B3): not without it, not once
+     * the booking has a review.
+     */
+    @Test
+    fun `details - no Rate without canReview`() = noRate(BookingFixtures.heldBooking(status = "COMPLETED"))
+
+    @Test
+    fun `details - no Rate once reviewed`() =
+        noRate(BookingFixtures.heldBooking(status = "COMPLETED", canReview = false, review = BookingReviewDto("r1", "pending")))
+
+    private fun noRate(booking: BookingDto) {
+        val viewModel = BookingConfirmedViewModel(REF, FakeBookingRepository(bookingByRef = { AppResult.Success(booking) }))
+        compose.setContent {
+            BahrTheme(locale = BahrLocale.English, reducedMotion = true) {
+                BookingConfirmedScreen(ref = REF, actions = TicketCallbacks(), entry = TicketEntry.Details, viewModel = viewModel)
+            }
+        }
+        compose.onNodeWithTag(TICKET_VIEW_TRIP_TAG).assertExists()
+        compose.onNodeWithTag(TICKET_RATE_TAG).assertDoesNotExist()
+    }
+
+    /**
+     * MV-M13, the stale Rate after Back: the details are left for the review page, the review is sent, and the details
+     * come back to the front. They read the booking again (no skeleton), and "Rate your trip" is gone.
+     */
+    @Test
+    fun `details - back in front after a review is sent - Rate is gone`() {
+        var booking = BookingFixtures.heldBooking(status = "COMPLETED", canReview = true)
+        val repository = FakeBookingRepository(bookingByRef = { AppResult.Success(booking) })
+        val viewModel = BookingConfirmedViewModel(REF, repository)
+        val lifecycle = TestLifecycleOwner()
+        compose.setContent {
+            CompositionLocalProvider(LocalLifecycleOwner provides lifecycle) {
+                BahrTheme(locale = BahrLocale.English, reducedMotion = true) {
+                    BookingConfirmedScreen(ref = REF, actions = TicketCallbacks(), entry = TicketEntry.Details, viewModel = viewModel)
+                }
+            }
+        }
+        compose.onNodeWithTag(TICKET_RATE_TAG).assertExists()
+
+        // The review page covers the details; the review is sent there.
+        compose.runOnIdle { lifecycle.registry.currentState = Lifecycle.State.STARTED }
+        booking = booking.copy(canReview = false, review = BookingReviewDto("r1", "pending"))
+        compose.runOnIdle { lifecycle.registry.currentState = Lifecycle.State.RESUMED }
+
+        compose.onNodeWithTag(TICKET_RATE_TAG).assertDoesNotExist()
+        compose.onNodeWithTag(TICKET_VIEW_TRIP_TAG).assertExists()
+    }
+
+    /**
+     * MV-M13: "Add Sat 10 Oct to calendar" on a confirmed ticket hands the server's event to the platform: its title and
+     * place, from the bus leaving to the return, as instants.
+     */
+    @Test
+    fun `confirmed - Add to calendar hands the server's event over`() {
+        val events = mutableListOf<CalendarEvent>()
+        val booking = BookingFixtures.heldBooking(status = "CONFIRMED", title = "Dawn on Lake Burullus", dayLabel = "Sat 10 Oct")
+        val viewModel = BookingConfirmedViewModel(REF, FakeBookingRepository(bookingByRef = { AppResult.Success(booking) }))
+        compose.setContent {
+            BahrTheme(locale = BahrLocale.English, reducedMotion = true) {
+                BookingConfirmedScreen(
+                    ref = REF,
+                    actions = TicketCallbacks(),
+                    calendar = { events += it },
+                    viewModel = viewModel,
+                )
+            }
+        }
+        compose.onNodeWithText("Add Sat 10 Oct to calendar").performScrollTo().performClick()
+        assertEquals(
+            listOf(
+                CalendarEvent(
+                    title = "Dawn on Lake Burullus",
+                    start = Instant.parse("2026-10-10T02:00:00Z"),
+                    end = Instant.parse("2026-10-10T19:00:00Z"),
+                    location = "موقف عبد المنعم رياض، القاهرة",
+                ),
+            ),
+            events,
+        )
+    }
+
+    /** MV-M13: no event from the server (not confirmed, or a date called off), no button. */
+    @Test
+    fun `completed - no Add to calendar`() = noCalendar(BookingFixtures.heldBooking(status = "COMPLETED", method = "card"))
+
+    @Test
+    fun `date called off - no Add to calendar`() =
+        noCalendar(BookingFixtures.heldBooking(status = "CONFIRMED", method = "card", dateCalledOff = true))
+
+    private fun noCalendar(booking: BookingDto) {
+        val viewModel = BookingConfirmedViewModel(REF, FakeBookingRepository(bookingByRef = { AppResult.Success(booking) }))
+        compose.setContent {
+            BahrTheme(locale = BahrLocale.English, reducedMotion = true) {
+                BookingConfirmedScreen(ref = REF, actions = TicketCallbacks(), viewModel = viewModel)
+            }
+        }
+        compose.onNodeWithTag(TICKET_MONEY_TAG).assertExists()
+        compose.onNodeWithTag(TICKET_CALENDAR_TAG).assertDoesNotExist()
+    }
+
+    /** MV-M13: the "Paid" row says what was paid (`Booking.paid`), which the server may one day set apart from the total. */
+    @Test
+    fun `paid row - the amount paid, not the total`() {
+        val booking =
+            BookingFixtures
+                .heldBooking(status = "CONFIRMED", method = "card")
+                .copy(paid = MoneyDto(amount = 850, currencyCode = "EGP"))
+        val viewModel = BookingConfirmedViewModel(REF, FakeBookingRepository(bookingByRef = { AppResult.Success(booking) }))
+        compose.setContent {
+            BahrTheme(locale = BahrLocale.English, reducedMotion = true) {
+                BookingConfirmedScreen(ref = REF, actions = TicketCallbacks(), viewModel = viewModel)
+            }
+        }
+        compose.onNodeWithTag(TICKET_MONEY_TAG).assert(hasText("850", substring = true)).assert(hasText("Card", substring = true))
     }
 
     /** While the booking is read: the header's ground with shimmering places, no status text yet (M3-M14). */
@@ -237,7 +365,7 @@ class BookingConfirmedScreenshotTest {
         val status: String,
         val method: String?,
         val entry: TicketEntry = TicketEntry.Paid,
-        val canRate: Boolean = false,
+        val canReview: Boolean? = null,
     ) {
         Confirmed("ticket_confirmed", "CONFIRMED", "vodafone_cash"),
         TestCash("ticket_test_cash", "CONFIRMED", "test_cash"),
@@ -248,7 +376,7 @@ class BookingConfirmedScreenshotTest {
 
         // MV-M6: opened from a My trips row.
         DetailsUpcoming("ticket_details_upcoming", "CONFIRMED", "card", TicketEntry.Details),
-        DetailsPastRate("ticket_details_past_rate", "COMPLETED", "vodafone_cash", TicketEntry.Details, canRate = true),
+        DetailsPastRate("ticket_details_past_rate", "COMPLETED", "vodafone_cash", TicketEntry.Details, canReview = true),
         DetailsCancelled("ticket_details_cancelled", "CANCELLED", "card", TicketEntry.Details),
     }
 
@@ -269,6 +397,7 @@ class BookingConfirmedScreenshotTest {
                     method = case.method,
                     whereToStand = if (arabic) WHERE_AR else WHERE_EN,
                     host = BookingFixtures.host(if (arabic) "أشرف البحر" else "Ashraf El Bahr"),
+                    canReview = case.canReview,
                 ).let {
                     // The fixture drops the host off an unpaid status, as the server does; this case puts it back.
                     if (case ==
@@ -280,7 +409,7 @@ class BookingConfirmedScreenshotTest {
                     }
                 }
         val viewModel = BookingConfirmedViewModel(REF, FakeBookingRepository(bookingByRef = { AppResult.Success(booking) }))
-        setScreen(language, theme, viewModel, case.entry, case.canRate)
+        setScreen(language, theme, viewModel, case.entry)
         if (case.status == "CONFIRMED") {
             // The celebration's file is read off the main thread: idle alone would shoot its empty box.
             compose.waitUntil(
@@ -296,7 +425,6 @@ class BookingConfirmedScreenshotTest {
         theme: BahrThemeName,
         viewModel: BookingConfirmedViewModel,
         entry: TicketEntry = TicketEntry.Paid,
-        canRate: Boolean = false,
     ) {
         val arabic = language == AppLanguage.ARABIC
         compose.setContent {
@@ -313,7 +441,6 @@ class BookingConfirmedScreenshotTest {
                                 ref = REF,
                                 actions = TicketCallbacks(),
                                 entry = entry,
-                                canRate = canRate,
                                 viewModel = viewModel,
                             )
                         }
@@ -321,6 +448,12 @@ class BookingConfirmedScreenshotTest {
                 }
             }
         }
+    }
+
+    /** A lifecycle the test moves by hand, starting resumed (the screen in front). */
+    private class TestLifecycleOwner : LifecycleOwner {
+        val registry = LifecycleRegistry.createUnsafe(this).apply { currentState = Lifecycle.State.RESUMED }
+        override val lifecycle: Lifecycle get() = registry
     }
 
     private companion object {

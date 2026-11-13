@@ -246,11 +246,11 @@ class AppNavHostRootsTest {
     fun `a booking row opens its details - View trip the trip on top - and Back Back returns to My trips`() {
         show(start = MyTripsRoute)
 
-        onUi { nav.navigateToBookingDetails(REF, canRate = true) }
+        onUi { nav.navigateToBookingDetails(REF) }
         assertFalse(nav.isAt(AppTab.MyTrips), "the details hide the bar")
         assertEquals(listOf(MyTripsRoute::class.simpleName, BookingConfirmedRoute::class.simpleName), screens())
         val details = nav.currentBackStackEntry!!.toRoute<BookingConfirmedRoute>()
-        assertEquals(BookingConfirmedRoute(REF, details = true, canRate = true), details, "opened as details, with the row's rule")
+        assertEquals(BookingConfirmedRoute(REF, details = true), details, "opened as details")
 
         onUi { nav.navigateToTripDetail(SLUG) }
         assertEquals(
@@ -281,13 +281,14 @@ class AppNavHostRootsTest {
 
     /**
      * MV-M6: "Rate your trip" on a booking's details opens the review page on top; Back returns to the details, while
-     * "Done" once sent returns to My trips (which re-reads and shows the review), not to details still offering Rate.
+     * "Done" once sent returns to My trips (which re-reads and shows the review). (The details read the booking again
+     * when they are back in front, MV-M13, so Back after sending no longer leaves a stale Rate there either.)
      */
     @Test
     fun `a review sent from a booking's details is Done back on My trips`() {
         show(start = MyTripsRoute)
         onUi {
-            nav.navigateToBookingDetails(REF, canRate = true)
+            nav.navigateToBookingDetails(REF)
             nav.navigateToWriteReview(REF, TITLE)
         }
 

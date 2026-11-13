@@ -56,6 +56,7 @@ import eg.bahr.feature.tripdetails.presentation.components.TripReviews
 import eg.bahr.feature.tripdetails.presentation.components.TripStickyBar
 import eg.bahr.feature.tripdetails.presentation.components.TripTitleBlock
 import eg.bahr.feature.tripdetails.presentation.components.WaitlistPanelState
+import eg.bahr.feature.tripdetails.presentation.components.carriesPageFields
 import eg.bahr.feature.tripdetails.presentation.components.factsSource
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
@@ -67,8 +68,8 @@ import org.koin.core.parameter.parametersOf
  * The trip page (HANDOFF screen 3), in the handoff's order: slider, eyebrow, title and deck, facts,
  * included/excluded, the day in order, host and tips, reviews, availability, and the sticky bar.
  *
- * Text first: while the trip loads, whatever the list card already said (title, location, price, duration, its photo)
- * is drawn as it will stay, and only what is not known yet shimmers. Opened cold (a shared link), there is no card yet,
+ * Text first: while the trip loads, whatever the list card already said (title, location, price, duration, its photo,
+ * and since MV-B3 the deck and the bus/place cells) is drawn as it will stay, and only what is not known yet shimmers. Opened cold (a shared link), there is no card yet,
  * so the page is all skeleton until the trip arrives.
  *
  * Without jumping (MV-M7): every part still loading is a skeleton of its loaded size (the hero's box, the deck's lines,
@@ -291,7 +292,16 @@ private fun Section(
     when (section) {
         TripSection.Hero -> TripHero(items = heroItems, loading = trip == null, onBack = onBack)
 
-        TripSection.Title -> TripTitleBlock(header = header, deck = trip?.deck, deckPending = trip == null, modifier = padded)
+        TripSection.Title -> {
+            // A card from an MV-B3 server carries the deck (MV-M13): drawn as text from the first frame, nothing reserved.
+            val preview = state.preview
+            TripTitleBlock(
+                header = header,
+                deck = if (trip != null) trip.deck else preview?.deck,
+                deckPending = trip == null && preview?.carriesPageFields != true,
+                modifier = padded,
+            )
+        }
 
         TripSection.Facts -> {
             val preview = state.preview

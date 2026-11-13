@@ -296,8 +296,8 @@ fun AppNavHost(
                 )
 
                 // The review page (M3-M4): back returns to the page under it. "Done" (sent) returns to My trips, which
-                // reads its bookings again and shows the review's status: also from a booking's details (MV-M6), whose
-                // "Rate your trip" would otherwise still show (`getBooking` does not say a booking was reviewed).
+                // reads its bookings again and shows the review's status: also from a booking's details (MV-M6, the
+                // user's choice), which read their booking again whenever they are back in front (MV-M13).
                 writeReviewScreen(
                     onBack = { navController.popBackStack() },
                     onDone = navController::popToMyTripsOrBack,
@@ -363,8 +363,9 @@ fun AppNavHost(
                 )
 
                 // The booking's ticket. After paying, "Trips" goes back to the root of the tab the booking was made in.
-                // As a booking's details (MV-M6: a My trips row, a notification) it opens the trip's page and, when My
-                // trips says the booking may be rated, the review page, on top; Back returns to where it was opened.
+                // As a booking's details (MV-M6: a My trips row, a notification) it opens the trip's page and, when the
+                // booking may be rated (its own `canReview`, MV-M13), the review page, on top; Back returns to where it
+                // was opened.
                 bookingConfirmedScreen(
                     onDone = { navController.popToRoot(tab) },
                     onBack = { navController.popBackStack() },

@@ -18,14 +18,17 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.unit.Dp
 import eg.bahr.core.catalog.presentation.components.InitialAvatar
 import eg.bahr.core.catalog.presentation.components.ReviewCard
 import eg.bahr.core.catalog.presentation.components.SectionTitle
@@ -122,7 +125,7 @@ internal fun TripItinerarySkeleton(modifier: Modifier = Modifier) {
                 Row(horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm)) {
                     LinesSkeleton(
                         MaterialTheme.typography.labelLarge,
-                        Modifier.width(BahrSize.timeColumn).padding(top = BahrSpacing.xs),
+                        Modifier.width(timeColumnWidth()).padding(top = BahrSpacing.xs),
                     )
                     BahrSkeletonCircle(props = BahrSkeletonCircle.Props(size = BahrSize.marker))
                     LinesSkeleton(
@@ -135,6 +138,16 @@ internal fun TripItinerarySkeleton(modifier: Modifier = Modifier) {
         }
     }
 }
+
+/**
+ * The itinerary's time column (MV-M13, the MV-M11 follow-up): [BahrSize.timeColumn] at the default text size, wider in
+ * step with a larger one, as the date cards are (`dateCardWidth`). At a fixed 52dp the Pixel's 1.3 text size wrapped
+ * "≈10:30" onto two lines. Never narrower than the default; the skeleton's column is the same width, so a stop's
+ * placeholder sits where its time will.
+ */
+@Composable
+@ReadOnlyComposable
+private fun timeColumnWidth(): Dp = BahrSize.timeColumn * LocalDensity.current.fontScale.coerceAtLeast(1f)
 
 private const val ITINERARY_SKELETON_STOPS = 4
 private const val STOP_SKELETON_FRACTION = 0.7f
@@ -152,7 +165,7 @@ private fun StopRow(
             // Clock times stay left-to-right inside Arabic.
             style = MaterialTheme.typography.labelLarge.copy(textDirection = TextDirection.Ltr),
             color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.width(BahrSize.timeColumn).padding(top = BahrSpacing.xs),
+            modifier = Modifier.width(timeColumnWidth()).padding(top = BahrSpacing.xs),
         )
         Column(modifier = Modifier.fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally) {
             Marker(symbolIcon(stop.icon).filled(), dot, onDot)

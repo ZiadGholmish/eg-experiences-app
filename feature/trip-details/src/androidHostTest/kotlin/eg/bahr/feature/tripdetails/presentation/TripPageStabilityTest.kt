@@ -11,6 +11,7 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToKey
 import androidx.compose.ui.test.performTouchInput
@@ -31,8 +32,10 @@ import eg.bahr.feature.tripdetails.model.TripDetailDto
 import eg.bahr.feature.tripdetails.presentation.components.TRIP_BAR_PRICE_TAG
 import eg.bahr.feature.tripdetails.presentation.components.TRIP_CTA_TAG
 import eg.bahr.feature.tripdetails.presentation.components.TRIP_DATE_ROW_TAG
+import eg.bahr.feature.tripdetails.presentation.components.TRIP_FACTS_TAG
 import eg.bahr.feature.tripdetails.presentation.components.TRIP_HERO_TAG
 import eg.bahr.feature.tripdetails.presentation.components.TRIP_PRICE_FACT_TAG
+import eg.bahr.feature.tripdetails.presentation.components.TRIP_TITLE_BLOCK_TAG
 import eg.bahr.feature.tripdetails.presentation.components.TRIP_TITLE_TAG
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.serialization.Serializable
@@ -52,9 +55,11 @@ import kotlin.test.assertEquals
  * hero, the title, the facts grid's price cell and the sticky bar's price must sit exactly where they sat before. The
  * scrolled case is the "scroll never jumps" rule: with the facts scrolled to the top, landing data must not move them.
  *
- * Vertical edges are compared: a shimmer bar is narrower than the text that replaces it, which is not a jump. The deck
- * is not on the list card, so the page reserves two lines for it; the trips here carry a two-line deck (the seeded
- * deck's first sentence). A deck of another length moves what is under the title by the difference (step report).
+ * Vertical edges are compared: a shimmer bar is narrower than the text that replaces it, which is not a jump. A card
+ * from an older server has no deck, so the page reserves two lines for it; those trips carry a two-line deck (the
+ * seeded deck's first sentence), and a deck of another length moves what is under the title by the difference. Since
+ * MV-M13 a card from an MV-B3 server carries the deck and the bus/place cells: then the whole title block and the
+ * whole facts grid hold still whatever the deck's length, or with none.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -122,8 +127,9 @@ class TripPageStabilityTest {
     }
 
     /**
-     * The deck's length is not known until the trip lands (the card has none): a three-line deck, or none at all, moves
-     * the facts under the title by the difference from the two lines reserved. What is above it holds still.
+     * A card from an older server (no deck, no places): the deck's length is not known until the trip lands, so a
+     * three-line deck, or none at all, moves the facts under the title by the difference from the two lines reserved.
+     * What is above it holds still.
      */
     @Test
     fun aLongerDeckMovesOnlyWhatIsUnderTheTitle() = deckOfOtherLength { it }
@@ -138,6 +144,40 @@ class TripPageStabilityTest {
         land(trip, AppResult.Success(deck(detail(AppLanguage.ARABIC))))
         land(dates, AppResult.Success(departures(AppLanguage.ARABIC)))
         assertEquals(cardOnly, bounds(TRIP_HERO_TAG, TRIP_TITLE_TAG, TRIP_BAR_PRICE_TAG))
+    }
+
+    /*
+     * MV-M13: a card from an MV-B3 server carries the deck and the bus/place cells (`TripCard.deck/departure/
+     * destination`), so the title block and the facts grid are drawn as text at their final size from the first frame,
+     * and nothing in them, or under them, moves when the trip lands: the seeded deck in full (three lines on this
+     * phone), and a trip with no deck at all.
+     */
+
+    @Test
+    fun cardWithPageFieldsNothingMovesArabic() = cardWithPageFieldsNothingMoves(AppLanguage.ARABIC) { it }
+
+    @Test
+    fun cardWithPageFieldsNothingMovesEnglish() = cardWithPageFieldsNothingMoves(AppLanguage.ENGLISH) { it }
+
+    @Test
+    fun cardWithPageFieldsAndNoDeckNothingMoves() = cardWithPageFieldsNothingMoves(AppLanguage.ARABIC) { it.copy(deck = null) }
+
+    private fun cardWithPageFieldsNothingMoves(
+        language: AppLanguage,
+        trip: (TripDetailDto) -> TripDetailDto,
+    ) {
+        val detail = trip(detail(language))
+        open(language, withCard = true, cardFrom = detail)
+        compose.onNodeWithTag(TRIP_TITLE_BLOCK_TAG).assertIsDisplayed()
+        val tags = arrayOf(TRIP_HERO_TAG, TRIP_TITLE_BLOCK_TAG, TRIP_FACTS_TAG, TRIP_PRICE_FACT_TAG, TRIP_BAR_PRICE_TAG)
+        val cardOnly = bounds(*tags)
+        detail.deck?.let { compose.onNodeWithText(it).assertIsDisplayed() }
+
+        land(this.trip, AppResult.Success(detail))
+        assertEquals(cardOnly, bounds(*tags), "trip landed")
+
+        land(dates, AppResult.Success(departures(language)))
+        assertEquals(cardOnly, bounds(*tags), "dates landed")
     }
 
     /**
@@ -293,12 +333,13 @@ class TripPageStabilityTest {
         withCard: Boolean,
         link: TripLink = TripLink(),
         cardSoldOut: Boolean = false,
+        cardFrom: TripDetailDto? = null,
     ) {
         val repository =
             FakeTripDetailRepository(
                 tripBySlug = { trip.await() },
                 departuresFor = { dates.await() },
-                cards = if (withCard) mapOf(SLUG to card(language, cardSoldOut)) else emptyMap(),
+                cards = if (withCard) mapOf(SLUG to card(language, cardSoldOut, cardFrom)) else emptyMap(),
             )
         val viewModel = TripDetailViewModel(SLUG, repository, waitlistMemory(), link)
         compose.setContent {
@@ -334,14 +375,23 @@ class TripPageStabilityTest {
     /** The deck's first sentence: two lines on this phone in both languages, the room the page reserves for it. */
     private fun TripDetailDto.withTwoLineDeck() = copy(deck = deck?.substringBefore('.')?.plus('.'))
 
-    /** The list card of the seeded trip, as Home or search would have cached it. */
+    /**
+     * The list card of the seeded trip, as Home or search would have cached it. [pageFieldsFrom]: as an MV-B3 server
+     * sends it, with that trip's deck and bus/place cells; else as an older server's card, without them.
+     */
     private fun card(
         language: AppLanguage,
         soldOut: Boolean = false,
+        pageFieldsFrom: TripDetailDto? = null,
     ) = detail(language).let { d ->
         trip(1, title = d.title, priceEgp = d.price.amount, durationLabel = d.durationLabel)
             .copy(slug = SLUG, subtitle = d.subtitle, durationMinutes = d.durationMinutes, rating = d.rating ?: RatingDto(4.8, 5))
             .copy(nextDeparture = if (soldOut) NextDepartureDto(seatsRemaining = 0, capacity = 18, soldOut = true) else null)
+            .copy(
+                deck = pageFieldsFrom?.deck,
+                departure = pageFieldsFrom?.departure,
+                destination = pageFieldsFrom?.destination,
+            )
     }
 
     private fun full(dates: List<DepartureDto>) =

@@ -119,7 +119,7 @@ fun NavController.openHeldSeats(hold: HoldRoute) =
 /**
  * The booking's ticket. [onBack] is its bar's back button; [onDone] the "Trips" button after paying (wire it back to
  * the tab's root). Opened as details (MV-M6, [navigateToBookingDetails]): [onViewTrip] opens the trip's page (slug),
- * and [onRateTrip] the review page of booking `ref` (feature:reviews), offered when the route's `canRate` says so.
+ * and [onRateTrip] the review page of booking `ref` (feature:reviews), offered when the booking may be reviewed.
  */
 fun NavGraphBuilder.bookingConfirmedScreen(
     onDone: () -> Unit,
@@ -138,7 +138,6 @@ fun NavGraphBuilder.bookingConfirmedScreen(
             BookingConfirmedScreen(
                 ref = route.ref,
                 entry = if (route.details) TicketEntry.Details else TicketEntry.Paid,
-                canRate = route.canRate,
                 actions = actions,
             )
         }
@@ -261,10 +260,7 @@ fun NavController.navigateToBookingByRef(ref: String) = navigateToBookingDetails
 
 /**
  * A booking's details (MV-M6): a My trips row's booking, on top of the list, so Back returns to it with its scroll.
- * The same ticket as after paying, read by [ref], with a way to the trip's page; "Rate your trip" when [canRate] (My
- * trips' rule, which `getBooking` cannot answer). Single-top, so a double tap does not stack it twice.
+ * The same ticket as after paying, read by [ref], with a way to the trip's page; "Rate your trip" when the booking may
+ * be reviewed (its own `canReview`, MV-M13). Single-top, so a double tap does not stack it twice.
  */
-fun NavController.navigateToBookingDetails(
-    ref: String,
-    canRate: Boolean = false,
-) = navigate(BookingConfirmedRoute(ref, details = true, canRate = canRate)) { launchSingleTop = true }
+fun NavController.navigateToBookingDetails(ref: String) = navigate(BookingConfirmedRoute(ref, details = true)) { launchSingleTop = true }

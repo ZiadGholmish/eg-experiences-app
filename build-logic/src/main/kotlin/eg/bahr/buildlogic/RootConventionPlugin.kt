@@ -41,7 +41,11 @@ private fun Project.configureRootSpotless() {
         // build-logic is an included build, not a subproject, so the root formats it. File trees
         // rooted at build-logic/src keep Spotless from walking the rest of the repository.
         bahrKotlin(ktlintVersion, fileTree("build-logic/src") { include("**/*.kt") })
-        bahrKotlinGradle(ktlintVersion, "*.gradle.kts", "build-logic/*.gradle.kts")
+        bahrKotlinGradle(
+            ktlintVersion,
+            fileTree(projectDir) { include("*.gradle.kts") },
+            fileTree("build-logic") { include("*.gradle.kts") },
+        )
     }
     tasks.named("check") { dependsOn("spotlessCheck") }
 }

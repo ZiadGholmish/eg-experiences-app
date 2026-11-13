@@ -69,6 +69,11 @@ const val FILTER_ALL = "all"
  *
  * [nights] is non-null with the contract's default 0 rather than nullable: the contract says to treat
  * an absent value as 0 (a day trip), so an older server's payload still decodes to the right thing.
+ *
+ * [deck], [departure] and [destination] (MV-B3) are the trip page's line under the title and its "Bus leaves" / "Trip
+ * is at" cells, the same values as on `TripDetail`, so the page opened from a card lays them out at their final size
+ * before the trip arrives (MV-M13). Absent from servers before MV-B3, and when the trip has none. Last, so positional
+ * constructor calls written before they joined still mean the same.
  */
 @Serializable
 data class TripCardDto(
@@ -86,6 +91,39 @@ data class TripCardDto(
     val badge: BadgeDto? = null,
     val rating: RatingDto? = null,
     val location: LocationDto? = null,
+    val deck: String? = null,
+    val departure: DeparturePointDto? = null,
+    val destination: DestinationDto? = null,
+)
+
+/**
+ * openapi `Place` + `timeLocal`/`arriveBy` ("HH:mm", Cairo): the trip page's "Bus leaves" cell, on `TripCard` (since
+ * MV-B3) and `TripDetail` alike. In core:catalog since MV-M13, when the card started carrying it (it was trip-details').
+ */
+@Serializable
+data class DeparturePointDto(
+    val placeName: String? = null,
+    val city: String? = null,
+    val governorate: String? = null,
+    val lat: Double? = null,
+    val lng: Double? = null,
+    val timeLocal: String? = null,
+    val arriveBy: String? = null,
+)
+
+/**
+ * openapi `Place` + `distanceKm`/`travelTime` ("2h40"): the trip page's "Trip is at" cell, on `TripCard` (since MV-B3)
+ * and `TripDetail` alike. In core:catalog since MV-M13, as [DeparturePointDto].
+ */
+@Serializable
+data class DestinationDto(
+    val placeName: String? = null,
+    val city: String? = null,
+    val governorate: String? = null,
+    val lat: Double? = null,
+    val lng: Double? = null,
+    val distanceKm: Int? = null,
+    val travelTime: String? = null,
 )
 
 /**

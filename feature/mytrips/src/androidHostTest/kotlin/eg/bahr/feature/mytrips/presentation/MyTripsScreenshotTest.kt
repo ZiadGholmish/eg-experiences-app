@@ -326,13 +326,13 @@ class MyTripsScreenshotTest {
     }
 
     /**
-     * MV-M6: an Upcoming or Past booking row opens the booking's details (its reference, and whether it may be rated by
-     * the row's own rule), not the trip; a waiting-list row still opens its trip.
+     * MV-M6: an Upcoming or Past booking row opens the booking's details (its reference: since MV-M13 the details read
+     * whether it may be rated themselves), not the trip; a waiting-list row still opens its trip.
      */
     @Config(qualifiers = "en-w360dp-h1400dp-xhdpi")
     @Test
     fun `a booking row opens the booking - a waiting-list row its trip`() {
-        val bookings = mutableListOf<Pair<String, Boolean>>()
+        val bookings = mutableListOf<String>()
         val trips = mutableListOf<String>()
         compose.setContent {
             Themed(AppLanguage.ENGLISH) {
@@ -340,12 +340,7 @@ class MyTripsScreenshotTest {
                     state = allSections,
                     past = flowOf(PagingData.from(MyTripsFixtures.pastWithReviews(), loaded)).collectAsLazyPagingItems(),
                     actions =
-                        MyTripsActions(onBookingClick = {
-                            ref,
-                            canRate,
-                            ->
-                            bookings += ref to canRate
-                        }, onTripClick = { trips += it }),
+                        MyTripsActions(onBookingClick = { bookings += it }, onTripClick = { trips += it }),
                 )
             }
         }
@@ -355,7 +350,7 @@ class MyTripsScreenshotTest {
 
         // Each row is one button whose lines merge into it: the row is found by its date (day and month joined by a no-break space).
         compose.onAllNodesWithText("24\u00A0Oct", substring = true)[0].performClick()
-        assertEquals(listOf(upcoming.ref to false), bookings, "the first upcoming row: its booking")
+        assertEquals(listOf(upcoming.ref), bookings, "the first upcoming row: its booking")
 
         compose.onNodeWithTag(sectionHeaderTag(MyTripsSection.Waitlist)).assertExists()
         compose.onAllNodesWithText("24\u00A0Oct", substring = true)[1].performClick()
@@ -366,9 +361,9 @@ class MyTripsScreenshotTest {
         compose.onNodeWithTag(MY_TRIPS_LIST_TAG).performScrollToNode(hasText("26\u00A0Sep", substring = true))
         compose.onNodeWithText("26\u00A0Sep", substring = true).performClick()
         assertEquals(
-            listOf(upcoming.ref to false, rateable.ref to true, reviewed.ref to false),
+            listOf(upcoming.ref, rateable.ref, reviewed.ref),
             bookings,
-            "past rows: their bookings, rateable only while not reviewed",
+            "past rows: their bookings",
         )
         assertEquals(1, trips.size, "no booking row opened a trip")
     }
