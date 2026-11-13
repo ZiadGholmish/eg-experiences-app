@@ -64,6 +64,14 @@ internal data class TripDetailUiState(
     val departuresLoading: Boolean
         get() = departures.isEmpty() && (liveDeparturesLoading || isLoading)
 
+    /**
+     * The dates shown are the trip's own copy and the live read is still on its way (MV-M7): the cards are drawn, only
+     * their seat counts shimmer (HANDOFF §loading: "live seat counts shimmer"). A failed live read ends it; the trip's
+     * counts then stand, as before.
+     */
+    val seatsLoading: Boolean
+        get() = liveDepartures == null && liveDeparturesLoading && departures.isNotEmpty()
+
     val selectedDeparture: DepartureDto?
         get() = departures.firstOrNull { it.id == selectedDepartureId }
 

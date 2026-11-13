@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -85,10 +86,16 @@ fun AppTabs(
                 )
             }
         },
-    ) { padding ->
+    ) { scaffoldPadding ->
+        // A pushed screen gets the whole window from its first frame (MV-M7): the bar slides away drawn over it instead
+        // of shrinking the screen with it, which moved the screen's own sticky bar down and grew its list mid-transition.
+        // Back on a root the bar's room is given back as it slides in, as before.
+        val padding = if (state.barVisible) scaffoldPadding else NoPadding
         Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding)) {
             holder.SaveableStateProvider(state.selected) { content(state.selected) }
         }
     }
     overlay()
 }
+
+private val NoPadding = PaddingValues()

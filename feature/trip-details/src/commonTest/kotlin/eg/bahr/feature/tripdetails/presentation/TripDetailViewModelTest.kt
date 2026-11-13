@@ -8,6 +8,8 @@ import eg.bahr.feature.tripdetails.data.TripFixtures.detail
 import eg.bahr.feature.tripdetails.data.TripFixtures.saturdays
 import eg.bahr.feature.tripdetails.data.TripFixtures.trip
 import eg.bahr.feature.tripdetails.data.waitlistMemory
+import eg.bahr.feature.tripdetails.model.DepartureDto
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlin.test.Test
@@ -35,6 +37,36 @@ class TripDetailViewModelTest {
             assertNull(state.selectedDeparture)
             assertEquals(TripCta.ChooseDate, state.cta)
             assertNull(state.continueDepartureId)
+        }
+
+    /** MV-M7: the trip's own dates are drawn while the live read is on its way; only their seat counts shimmer. */
+    @Test
+    fun `seat counts shimmer until the live dates answer and stop when the read fails`() =
+        runViewModelTest {
+            val live = CompletableDeferred<AppResult<List<DepartureDto>>>()
+            val repo = FakeTripDetailRepository(tripBySlug = { AppResult.Success(detail()) }, departuresFor = { live.await() })
+            val vm = TripDetailViewModel("burullus-dawn", repo, waitlistMemory())
+            advanceUntilIdle()
+
+            assertFalse(vm.uiState.value.departuresLoading)
+            assertTrue(vm.uiState.value.seatsLoading)
+
+            live.complete(AppResult.Failure(AppError.Network))
+            advanceUntilIdle()
+
+            assertFalse(vm.uiState.value.seatsLoading)
+            assertEquals(4, vm.uiState.value.departures.size)
+        }
+
+    @Test
+    fun `nothing about the dates is known before the trip so the cards themselves shimmer`() =
+        runViewModelTest {
+            val repo = FakeTripDetailRepository(tripBySlug = { awaitCancellation() }, departuresFor = { awaitCancellation() })
+            val vm = TripDetailViewModel("burullus-dawn", repo, waitlistMemory())
+            advanceUntilIdle()
+
+            assertTrue(vm.uiState.value.departuresLoading)
+            assertFalse(vm.uiState.value.seatsLoading)
         }
 
     @Test

@@ -50,7 +50,12 @@ import org.jetbrains.compose.resources.stringResource
 /**
  * The image slider at the top of the trip page (HANDOFF screen 3, item 1): full-bleed, under the
  * status bar, with a top scrim so the bar's icons and the back button read on any photo, and a photo
- * counter at the bottom end. [items] empty (or still loading, [loading]) leaves the reserved ground.
+ * counter at the bottom end. [items] empty leaves the reserved ground, shimmering while the trip [loading].
+ *
+ * Opened from a list (MV-M7), the card's photo (its `heroImage`, the trip's first gallery item, LQIP first) is the one
+ * item until the trip lands, drawn through the same scrim and pager as the loaded gallery: when the trip arrives the
+ * pager only gains pages, so the picture, the box and the scrim stay where they are. While [loading] a tap opens nothing:
+ * the viewer pages through the whole gallery, which is not known yet.
  *
  * Since MV-M3 the slider is the trip's whole gallery, photos and videos in the server's order (`media`, M5-B4; M5-M2): a
  * video shows as its poster with a play badge and its running time, and never plays here. A tap on any item opens it
@@ -68,8 +73,8 @@ internal fun TripHero(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Box(modifier = modifier.fillMaxWidth().aspectRatio(HeroAspectRatio)) {
-        if (loading) {
+    Box(modifier = modifier.fillMaxWidth().aspectRatio(HeroAspectRatio).testTag(TRIP_HERO_TAG)) {
+        if (items.isEmpty() && loading) {
             BahrSkeletonBlock(Modifier.fillMaxSize())
         } else {
             val pager = rememberPagerState { items.size }
@@ -77,7 +82,8 @@ internal fun TripHero(
             val turnTo: (Int) -> Unit = { page -> scope.launch { pager.scrollToPage(page) } }
             ImageGround(modifier = Modifier.fillMaxSize(), scrimTop = true) {
                 HorizontalPager(state = pager, modifier = Modifier.fillMaxSize()) { page ->
-                    Box(Modifier.fillMaxSize().opensMediaViewer(items, page, onDismiss = turnTo), contentAlignment = Alignment.Center) {
+                    val opens = if (loading) Modifier else Modifier.opensMediaViewer(items, page, onDismiss = turnTo)
+                    Box(Modifier.fillMaxSize().then(opens), contentAlignment = Alignment.Center) {
                         when (val item = items[page]) {
                             is ViewerMedia.Photo -> Photo(item.image)
                             is ViewerMedia.Video -> VideoItem(item)
@@ -152,6 +158,9 @@ private fun BoxScope.VideoItem(item: ViewerMedia.Video) {
         }
     }
 }
+
+/** For tests (MV-M7): the slider's box, whose bounds must not move while the page loads. */
+internal const val TRIP_HERO_TAG = "trip_hero"
 
 /** For tests: a video's running time in the slider. */
 internal const val TRIP_HERO_VIDEO_DURATION_TAG = "trip_hero_video_duration"
