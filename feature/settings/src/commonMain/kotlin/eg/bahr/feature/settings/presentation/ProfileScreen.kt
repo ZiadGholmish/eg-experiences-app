@@ -81,6 +81,7 @@ import eg.bahr.core.localization.generated.resources.profile_welcome_title
 import eg.bahr.core.localization.generated.resources.profile_without_account
 import eg.bahr.core.localization.generated.resources.provider_apple
 import eg.bahr.core.localization.generated.resources.provider_google
+import eg.bahr.core.localization.generated.resources.public_profile_title
 import eg.bahr.core.localization.generated.resources.settings_about_line
 import eg.bahr.core.localization.generated.resources.settings_delete_account
 import eg.bahr.core.localization.generated.resources.settings_language
@@ -119,6 +120,7 @@ internal fun ProfileScreen(
     deleteAccountSheet: @Composable (onDismiss: () -> Unit) -> Unit,
     scrollToTop: Flow<Unit> = emptyFlow(),
     onLikedTrips: () -> Unit = {},
+    onPublicProfile: () -> Unit = {},
     viewModel: ProfileViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -151,6 +153,7 @@ internal fun ProfileScreen(
                 ProfileActions(
                     onPersonalInfo = onEditPersonalInfo,
                     onLikedTrips = onLikedTrips,
+                    onPublicProfile = onPublicProfile,
                     onLanguage = { sheet = ProfileSheet.Language },
                     onAppearance = { sheet = ProfileSheet.Appearance },
                     onAbout = { sheet = ProfileSheet.About },
@@ -190,6 +193,7 @@ internal enum class ProfileSheet { Language, Appearance, About }
 internal class ProfileActions(
     val onPersonalInfo: () -> Unit = {},
     val onLikedTrips: () -> Unit = {},
+    val onPublicProfile: () -> Unit = {},
     val onLanguage: () -> Unit = {},
     val onAppearance: () -> Unit = {},
     val onAbout: () -> Unit = {},
@@ -246,10 +250,17 @@ internal fun ProfileContent(
             is SessionState.SignedIn -> {
                 AccountHeader(state, session)
                 ProfileRowGroup(listOf(personalInfoRow(state, session, actions.onPersonalInfo), language, appearance))
-                // MP-M1: the trips this account liked (a heart on a trip), on a page of their own.
+                // MP-M1: the trips this account liked (a heart on a trip), on a page of their own. MP-M2: beside them, who
+                // may see them: the public profile's switches.
                 ProfileRowGroup(
                     listOf(
                         ProfileRow(BahrIcons.Favorite, stringResource(Res.string.liked_trips_title), ROW_LIKED_TRIPS, actions.onLikedTrips),
+                        ProfileRow(
+                            BahrIcons.Visibility,
+                            stringResource(Res.string.public_profile_title),
+                            ROW_PUBLIC_PROFILE,
+                            actions.onPublicProfile,
+                        ),
                     ),
                 )
                 // Notifications prefs (M3-B10) and My reviews (M3-B7 + M3-M4), then Help & contact, join
@@ -649,6 +660,7 @@ private const val APPLE_RELAY_DOMAIN = "@privaterelay.appleid.com"
 /** For tests: the rows. */
 internal const val ROW_PERSONAL_INFO = "profile_personal_info"
 internal const val ROW_LIKED_TRIPS = "profile_liked_trips"
+internal const val ROW_PUBLIC_PROFILE = "profile_public_profile"
 internal const val ROW_LANGUAGE = "profile_language"
 internal const val ROW_APPEARANCE = "profile_appearance"
 internal const val ROW_ABOUT = "profile_about"

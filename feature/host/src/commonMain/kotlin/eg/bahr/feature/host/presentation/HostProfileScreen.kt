@@ -77,6 +77,7 @@ internal fun HostProfileScreen(
     modifier: Modifier = Modifier,
     onSeeAllReviews: ((name: String) -> Unit)? = null,
     onSignIn: () -> Unit = {},
+    onTravellerClick: ((publicId: String) -> Unit)? = null,
     viewModel: HostProfileViewModel = koinViewModel(key = "host:$slug") { parametersOf(slug, name, avatar) },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -116,7 +117,8 @@ internal fun HostProfileScreen(
                         )
                     } ?: Box(Modifier.fillMaxSize())
 
-                HostPage.Shown -> HostPageList(slug, state, trips, onTripClick, viewModel::retryTrips, onSeeAllReviews, onLike)
+                HostPage.Shown ->
+                    HostPageList(slug, state, trips, onTripClick, viewModel::retryTrips, onSeeAllReviews, onLike, onTravellerClick)
             }
         }
     }
@@ -134,6 +136,7 @@ private fun HostPageList(
     onRetryTrips: () -> Unit,
     onSeeAllReviews: ((name: String) -> Unit)?,
     onLike: (TripCardDto) -> Unit,
+    onTravellerClick: ((publicId: String) -> Unit)?,
 ) {
     val listState = rememberLazyListState()
     val perPersonLabel = stringResource(Res.string.trip_per_person)
@@ -161,7 +164,7 @@ private fun HostPageList(
                 key = { index, _ -> "$KEY_REVIEW$index" },
                 contentType = { _, _ -> CONTENT_REVIEW },
             ) { _, review ->
-                Box(padded) { ReviewCard(review) }
+                Box(padded) { ReviewCard(review, onAuthorClick = onTravellerClick) }
             }
             // M4-M11, M4-M12: only under a full preview, when the summary counts more than it shows.
             if (onSeeAllReviews != null && showsSeeAllReviews(count = profile.rating.count, previewed = profile.reviews.size)) {

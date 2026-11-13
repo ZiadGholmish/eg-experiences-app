@@ -631,4 +631,31 @@
     <string name="liked_trips_signed_out_title">Sign in to see your liked trips</string>
     <string name="liked_trips_signed_out_body">Your likes are kept with your account, on every phone you sign in on.</string>
     <string name="liked_trips_sign_in">Sign in</string>
+    <!-- MP-M2: a reviewer's name that opens their public profile (read out as "<name>, Open profile"). -->
+    <string name="review_author_open">Open profile</string>
+    <!-- MP-M2: a traveller's public profile, opened from a reviewer's name or "View my public profile". -->
+    <string name="traveller_member_since">Member since %1$s</string>
+    <string name="traveller_past_trips">Trips taken</string>
+    <string name="traveller_liked_trips">Liked trips</string>
+    <string name="traveller_no_past_trips">No trips yet.</string>
+    <string name="traveller_no_liked_trips">No liked trips yet.</string>
+    <string name="traveller_nothing_shared">Nothing else is shared on this profile.</string>
+    <string name="traveller_not_public">This profile isn’t public.</string>
+    <!-- MP-M2: Account → Public profile. Opt-in (PDPL): private until the traveller turns it on. -->
+    <string name="public_profile_title">Public profile</string>
+    <string name="public_profile_intro">Only you decide what other travellers see. Your profile stays private until you turn it on, and you can turn it off at any time.</string>
+    <string name="public_profile_master">Make my profile public</string>
+    <string name="public_profile_master_hint">Other travellers can open it by tapping your name on your reviews.</string>
+    <string name="public_profile_shows">What it shows</string>
+    <string name="public_profile_needs_public">Turn on your public profile to choose these.</string>
+    <string name="public_profile_past_trips">Trips I’ve taken</string>
+    <string name="public_profile_past_trips_hint">The trips only: never dates, prices or bookings.</string>
+    <string name="public_profile_likes">Trips I’ve liked</string>
+    <string name="public_profile_reviews">My reviews, signed with my name</string>
+    <string name="public_profile_reviews_hint">Off: your reviews stay on the trips, signed “A traveller”.</string>
+    <string name="public_profile_full_name">My full name and photo</string>
+    <string name="public_profile_full_name_hint">Off: your first name and initial only, like “Mona S.”</string>
+    <string name="public_profile_view">View my public profile</string>
+    <string name="public_profile_private_note">Your profile is private, so no one can open it.</string>
+    <string name="public_profile_save_failed">We couldn’t save that change. Try again.</string>
 </resources>

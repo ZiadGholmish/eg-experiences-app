@@ -13,12 +13,15 @@ import eg.bahr.core.testing.runKoinGraphTest
 import eg.bahr.feature.settings.data.SettingsRepository
 import eg.bahr.feature.settings.presentation.EditPersonalInfoViewModel
 import eg.bahr.feature.settings.presentation.ProfileViewModel
+import eg.bahr.feature.settings.presentation.PublicProfileSettingsViewModel
+import eg.bahr.feature.settings.presentation.TravellerProfileViewModel
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respondError
 import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import org.koin.core.parameter.parametersOf
 import org.koin.dsl.module
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -46,6 +49,9 @@ class SettingsKoinGraphTest {
         ) { koin ->
             koin.get<ProfileViewModel>()
             koin.get<EditPersonalInfoViewModel>()
+            // MP-M2: a traveller's profile (by its public id) and Account → Public profile.
+            koin.get<TravellerProfileViewModel> { parametersOf("3f9c2a7e5b1d4c8e9a0f6b2d7c4e1a95") }
+            koin.get<PublicProfileSettingsViewModel>()
             val repository = koin.get<SettingsRepository>()
             repository.setLanguage(AppLanguage.ENGLISH)
             assertEquals(AppLanguage.ENGLISH, koin.get<AppSettingsStore>().language.first())

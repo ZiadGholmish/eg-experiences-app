@@ -335,6 +335,7 @@ internal fun TripReviews(
     reviews: ReviewsDto,
     modifier: Modifier = Modifier,
     onSeeAll: (() -> Unit)? = null,
+    onAuthorClick: ((publicId: String) -> Unit)? = null,
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(BahrSpacing.md)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -342,7 +343,8 @@ internal fun TripReviews(
             Spacer(Modifier.weight(1f))
             reviews.average?.let { average -> ReviewsPill(BahrFormat.rating(average), reviews.count) }
         }
-        reviews.items.forEach { ReviewCard(it) }
+        // MP-M2: a reviewer whose profile is public has a tappable name.
+        reviews.items.forEach { ReviewCard(it, onAuthorClick = onAuthorClick) }
         if (onSeeAll != null && showsSeeAllReviews(count = reviews.count ?: 0, previewed = reviews.items.size)) SeeAllReviewsLink(onSeeAll)
     }
 }

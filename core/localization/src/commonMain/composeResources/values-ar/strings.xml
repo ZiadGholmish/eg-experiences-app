@@ -660,4 +660,29 @@
     <string name="liked_trips_signed_out_title">سجّل دخولك عشان تشوف الرحلات اللي عجبتك</string>
     <string name="liked_trips_signed_out_body">الإعجابات بتتحفظ مع حسابك، على أي موبايل تسجّل دخولك عليه.</string>
     <string name="liked_trips_sign_in">سجّل دخولك</string>
+    <!-- MP-M2 -->
+    <string name="review_author_open">افتح البروفايل</string>
+    <string name="traveller_member_since">معانا من %1$s</string>
+    <string name="traveller_past_trips">رحلات سابقة</string>
+    <string name="traveller_liked_trips">إعجابات</string>
+    <string name="traveller_no_past_trips">لسه مفيش رحلات.</string>
+    <string name="traveller_no_liked_trips">لسه مفيش إعجابات.</string>
+    <string name="traveller_nothing_shared">مفيش حاجة تانية متشاركة هنا.</string>
+    <string name="traveller_not_public">البروفايل ده مش معروض للناس.</string>
+    <string name="public_profile_title">البروفايل العام</string>
+    <string name="public_profile_intro">إنت بس اللي بتقرر المسافرين التانيين يشوفوا إيه. البروفايل بتاعك بيفضل خاص لحد ما تفتحه، وتقدر تقفله في أي وقت.</string>
+    <string name="public_profile_master">خلّي البروفايل بتاعي عام</string>
+    <string name="public_profile_master_hint">المسافرين يقدروا يفتحوه لما يدوسوا على اسمك في تقييماتك.</string>
+    <string name="public_profile_shows">بيظهر فيه إيه</string>
+    <string name="public_profile_needs_public">افتح البروفايل العام الأول عشان تختار دول.</string>
+    <string name="public_profile_past_trips">الرحلات اللي طلعتها</string>
+    <string name="public_profile_past_trips_hint">الرحلات بس، من غير تواريخ ولا أسعار ولا حجوزات.</string>
+    <string name="public_profile_likes">الرحلات اللي عجبتني</string>
+    <string name="public_profile_reviews">تقييماتي باسمي</string>
+    <string name="public_profile_reviews_hint">لو قفلتها: تقييماتك بتفضل على الرحلات، باسم «مسافر».</string>
+    <string name="public_profile_full_name">اسمي كامل وصورتي</string>
+    <string name="public_profile_full_name_hint">لو قفلتها: اسمك الأول وأول حرف من اسم العيلة بس، زي «منى س.»</string>
+    <string name="public_profile_view">شوف البروفايل العام بتاعي</string>
+    <string name="public_profile_private_note">البروفايل بتاعك خاص، فمحدش يقدر يفتحه.</string>
+    <string name="public_profile_save_failed">معرفناش نحفظ التغيير ده. جرّب تاني.</string>
 </resources>

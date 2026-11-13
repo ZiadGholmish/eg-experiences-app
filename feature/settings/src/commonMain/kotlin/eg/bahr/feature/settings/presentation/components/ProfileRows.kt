@@ -72,7 +72,14 @@ internal fun ProfileRowGroup(
 @Composable
 private fun ProfileRowItem(row: ProfileRow) {
     val c = MaterialTheme.colorScheme
-    val accent = if (row.danger) c.onErrorContainer else c.primary
+    // A disabled row (Sign out while signing out, MP-M2's "View my public profile" while private) looks it, not only
+    // reads it: everything in the secondary colour.
+    val accent =
+        when {
+            !row.enabled -> c.onSurfaceVariant
+            row.danger -> c.onErrorContainer
+            else -> c.primary
+        }
     Row(
         modifier =
             Modifier
@@ -89,7 +96,12 @@ private fun ProfileRowItem(row: ProfileRow) {
             Text(
                 text = row.label,
                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                color = if (row.danger) c.onErrorContainer else c.onSurface,
+                color =
+                    when {
+                        !row.enabled -> c.onSurfaceVariant
+                        row.danger -> c.onErrorContainer
+                        else -> c.onSurface
+                    },
             )
             row.sub?.let {
                 Text(

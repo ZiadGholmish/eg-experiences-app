@@ -24,11 +24,11 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import eg.bahr.core.catalog.presentation.components.InitialAvatar
 import eg.bahr.core.catalog.presentation.components.Photo
+import eg.bahr.core.catalog.presentation.components.ReviewAuthor
 import eg.bahr.core.catalog.presentation.components.ReviewStars
 import eg.bahr.core.catalog.presentation.components.Tint
 import eg.bahr.core.catalog.presentation.components.TripCard
 import eg.bahr.core.catalog.presentation.components.VerifiedTrip
-import eg.bahr.core.catalog.presentation.components.toneTint
 import eg.bahr.core.designsystem.components.BahrCard
 import eg.bahr.core.designsystem.components.ImageGround
 import eg.bahr.core.designsystem.components.SeatBadge
@@ -104,7 +104,12 @@ internal fun HomeCard(
 
         is HomeCards.Reviews -> {
             val review = cards.items[index]
-            HomeReviewCard(review, compact, modifier) { context.onAction(HomeAction.OpenTrip(review.trip.slug)) }
+            HomeReviewCard(
+                review = review,
+                compact = compact,
+                modifier = modifier,
+                onAuthorClick = { publicId -> context.onAction(HomeAction.OpenTraveller(publicId)) },
+            ) { context.onAction(HomeAction.OpenTrip(review.trip.slug)) }
         }
     }
 }
@@ -326,25 +331,30 @@ private fun BusIcon() {
 
 /**
  * A review: the author's initial, name and date, the stars, the text (a few lines; the trip page has it whole),
- * "Verified trip" when the server says so, and the trip it is about, which a tap opens.
+ * "Verified trip" when the server says so, and the trip it is about, which a tap opens. MP-M2: when the server sent
+ * the author's public id, their name is a link of its own ([onAuthorClick]); a tap anywhere else still opens the trip.
  */
 @Composable
 private fun HomeReviewCard(
     review: HomeReviewDto,
     compact: Boolean,
     modifier: Modifier,
+    onAuthorClick: (publicId: String) -> Unit,
     onClick: () -> Unit,
 ) {
     BahrCard(modifier = modifier.fillMaxWidth(), onClick = onClick) {
         Column(modifier = Modifier.padding(BahrSpacing.lg), verticalArrangement = Arrangement.spacedBy(BahrSpacing.sm)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm)) {
-                InitialAvatar(name = review.author, tint = toneTint(review.tone), size = BahrSize.avatarSmall)
-                Text(
-                    text = review.author,
-                    style = MaterialTheme.typography.labelLarge.byContent(),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                ReviewAuthor(
                     modifier = Modifier.weight(1f),
+                    props =
+                        ReviewAuthor.Props(
+                            author = review.author,
+                            tone = review.tone,
+                            publicId = review.authorPublicId,
+                            onOpenProfile = onAuthorClick,
+                            singleLine = true,
+                        ),
                 )
                 Secondary(BahrFormat.dayMonth(review.dateISO))
             }

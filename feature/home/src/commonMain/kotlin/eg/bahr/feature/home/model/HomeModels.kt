@@ -233,12 +233,16 @@ internal data class HomeDepartureDto(
     val trip: HomeTripRefDto,
 )
 
-/** openapi `HomeReview`: an approved review of [trip]. [body] is absent for a rating only. */
+/**
+ * openapi `HomeReview`: an approved review of [trip]. [body] is absent for a rating only. [authorPublicId] (MP-B2) is
+ * there only when the author's name opens their public profile.
+ */
 @Serializable
 internal data class HomeReviewDto(
     val id: String,
     val rating: Int,
     val author: String,
+    val authorPublicId: String? = null,
     val tone: String? = null,
     val dateISO: LocalDate,
     val verified: Boolean = false,

@@ -29,13 +29,19 @@ import eg.bahr.feature.map.navigation.TripMapRoute
 import eg.bahr.feature.mytrips.navigation.MyTripsRoute
 import eg.bahr.feature.notifications.navigation.NotificationsRoute
 import eg.bahr.feature.notifications.navigation.navigateToNotifications
+import eg.bahr.feature.reviews.navigation.ReviewsRoute
 import eg.bahr.feature.reviews.navigation.WriteReviewRoute
+import eg.bahr.feature.reviews.navigation.navigateToReviews
 import eg.bahr.feature.reviews.navigation.navigateToWriteReview
 import eg.bahr.feature.search.navigation.SearchTripsRoute
 import eg.bahr.feature.search.navigation.navigateToSearchTrips
 import eg.bahr.feature.settings.navigation.EditPersonalInfoRoute
 import eg.bahr.feature.settings.navigation.ProfileRoute
+import eg.bahr.feature.settings.navigation.PublicProfileSettingsRoute
+import eg.bahr.feature.settings.navigation.TravellerProfileRoute
 import eg.bahr.feature.settings.navigation.navigateToEditPersonalInfo
+import eg.bahr.feature.settings.navigation.navigateToPublicProfileSettings
+import eg.bahr.feature.settings.navigation.navigateToTravellerProfile
 import eg.bahr.feature.splash.navigation.SplashRoute
 import eg.bahr.feature.tripdetails.navigation.TripDetailRoute
 import eg.bahr.feature.tripdetails.navigation.navigateToTripDetail
@@ -168,6 +174,68 @@ class AppNavHostRootsTest {
 
         onUi { nav.popBackStack() }
         assertTrue(nav.isAt(AppTab.Profile))
+    }
+
+    /**
+     * MP-M2: Account → Public profile is pushed over Profile, and "View my public profile" opens the traveller page on
+     * top of it by the account's public id; Back walks back through both.
+     */
+    @Test
+    fun `Public profile is pushed over Profile - its View opens the profile on top - Back returns`() {
+        show(start = ProfileRoute)
+
+        onUi { nav.navigateToPublicProfileSettings() }
+        assertFalse(nav.isAt(AppTab.Profile))
+        onUi { nav.navigateToPublicProfileSettings() }
+        onUi { nav.navigateToTravellerProfile(PUBLIC_ID) }
+        assertEquals(TravellerProfileRoute(PUBLIC_ID), nav.currentBackStackEntry!!.toRoute<TravellerProfileRoute>())
+        assertEquals(
+            listOf(
+                ProfileRoute::class.simpleName,
+                PublicProfileSettingsRoute::class.simpleName,
+                TravellerProfileRoute::class.simpleName,
+            ),
+            screens(),
+            "a second tap on the row adds no copy",
+        )
+
+        onUi { nav.popBackStack() }
+        onUi { nav.popBackStack() }
+        assertTrue(nav.isAt(AppTab.Profile))
+    }
+
+    /**
+     * MP-M2: a reviewer's name opens their profile over the page it is on (trip page, host page, all reviews, Home) in
+     * that tab's stack, bar hidden; a trip opened from the profile goes on top, and Back returns through them.
+     */
+    @Test
+    fun `a reviewer's name opens their profile over the page - a trip from it on top - Back returns`() {
+        show(start = TripListRoute)
+
+        onUi { nav.navigateToTripDetail(SLUG) }
+        onUi { nav.navigateToReviews(trip = SLUG, title = TITLE) }
+        onUi { nav.navigateToTravellerProfile(PUBLIC_ID) }
+        assertFalse(nav.isAt(AppTab.Home))
+        onUi { nav.navigateToTripDetail(OTHER_SLUG) }
+        assertEquals(
+            listOf(
+                TripListRoute::class.simpleName,
+                TripDetailRoute::class.simpleName,
+                ReviewsRoute::class.simpleName,
+                TravellerProfileRoute::class.simpleName,
+                TripDetailRoute::class.simpleName,
+            ),
+            screens(),
+        )
+
+        onUi { nav.popBackStack() }
+        assertEquals(TravellerProfileRoute(PUBLIC_ID), nav.currentBackStackEntry!!.toRoute<TravellerProfileRoute>())
+
+        // From Home's review card straight away too.
+        show(start = TripListRoute)
+        onUi { nav.navigateToTravellerProfile(PUBLIC_ID) }
+        onUi { nav.popBackStack() }
+        assertTrue(nav.isAt(AppTab.Home))
     }
 
     @Test
@@ -339,6 +407,9 @@ class AppNavHostRootsTest {
                         composable<NotificationsRoute> {}
                         composable<ProfileRoute> {}
                         composable<EditPersonalInfoRoute> {}
+                        composable<PublicProfileSettingsRoute> {}
+                        composable<TravellerProfileRoute> {}
+                        composable<ReviewsRoute> {}
                         composable<TripDetailRoute> {}
                         composable<BookingRoute> {}
                         composable<HoldRoute> {}
@@ -384,6 +455,8 @@ class AppNavHostRootsTest {
 
     private companion object {
         const val SLUG = "lake-burullus-birds"
+        const val OTHER_SLUG = "rosetta-day"
+        const val PUBLIC_ID = "3f9c2a7e5b1d4c8e9a0f6b2d7c4e1a95"
         const val DEPARTURE = "dep-1"
         const val REF = "BRL-7K4M2X9P"
         const val TITLE = "Dawn on Lake Burullus"

@@ -1,6 +1,7 @@
 package eg.bahr.core.catalog.presentation.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,17 +21,21 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.text.style.TextOverflow
 import eg.bahr.core.catalog.model.ImageDto
 import eg.bahr.core.catalog.model.MAX_STARS
 import eg.bahr.core.catalog.model.MIN_STARS
@@ -52,6 +57,7 @@ import eg.bahr.core.localization.generated.resources.host_no_reviews
 import eg.bahr.core.localization.generated.resources.host_rating_average
 import eg.bahr.core.localization.generated.resources.host_rating_bar
 import eg.bahr.core.localization.generated.resources.host_reviews_count
+import eg.bahr.core.localization.generated.resources.review_author_open
 import eg.bahr.core.localization.generated.resources.review_photo
 import eg.bahr.core.localization.generated.resources.review_verified
 import eg.bahr.core.localization.generated.resources.reviews_see_all
@@ -110,14 +116,29 @@ const val SEE_ALL_REVIEWS_TAG = "see_all_reviews"
  * `Review` shape). Its stars when the server sent them (M4-B8; an older server sends none, and then
  * none are drawn); a rating-only review has stars and no text. Since M3-M4 its photos when it has any,
  * and "Verified trip" when the server says so (M3-B7).
+ *
+ * MP-M2: the author's name opens their public profile ([onAuthorClick], with `authorPublicId`) when the server sent
+ * that id and the caller wires a profile page; otherwise it is plain text, drawn as before. [footer] goes under the
+ * rest: a traveller's profile names the trip each review is about there.
  */
 @Composable
-fun ReviewCard(review: ReviewDto) {
+fun ReviewCard(
+    review: ReviewDto,
+    onAuthorClick: ((publicId: String) -> Unit)? = null,
+    footer: (@Composable () -> Unit)? = null,
+) {
     BahrCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(BahrSpacing.lg), verticalArrangement = Arrangement.spacedBy(BahrSpacing.sm)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm)) {
-                InitialAvatar(name = review.author, tint = toneTint(review.tone), size = BahrSize.avatarSmall)
-                review.author?.let { Text(text = it, style = MaterialTheme.typography.labelLarge.byContent()) }
+                ReviewAuthor(
+                    props =
+                        ReviewAuthor.Props(
+                            author = review.author,
+                            tone = review.tone,
+                            publicId = review.authorPublicId,
+                            onOpenProfile = onAuthorClick,
+                        ),
+                )
                 Spacer(Modifier.weight(1f))
                 review.dateISO?.let {
                     Text(
@@ -136,9 +157,69 @@ fun ReviewCard(review: ReviewDto) {
                 Text(text = it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             if (review.verified) VerifiedTrip()
+            footer?.invoke()
         }
     }
 }
+
+/**
+ * A review's author (MP-M2; the avatar and name were ReviewCard's own before): the tinted initial and the name. With a
+ * [Props.publicId] and [Props.onOpenProfile] both there, the pair is one link to the author's public profile: the name
+ * in primary, a 44dp-high touch area, read out as a button ("Mona S., Open profile"). Without, plain text as before.
+ *
+ * Its second caller is Home's review card, which keeps the name to [Props.singleLine] (a rail's cards line up).
+ */
+interface ReviewAuthor {
+    @Immutable
+    data class Props(
+        val author: String?,
+        val tone: String? = null,
+        val publicId: String? = null,
+        val onOpenProfile: ((publicId: String) -> Unit)? = null,
+        val singleLine: Boolean = false,
+    )
+}
+
+@Composable
+fun ReviewAuthor(
+    modifier: Modifier = Modifier,
+    props: ReviewAuthor.Props,
+) {
+    val publicId = props.publicId
+    val open = props.onOpenProfile
+    val link = props.author != null && publicId != null && open != null
+    val openLabel = stringResource(Res.string.review_author_open)
+    Row(
+        modifier =
+            if (link) {
+                modifier
+                    .heightIn(min = BahrSpacing.minTouch)
+                    .clip(BahrTheme.shapes.small)
+                    .clickable(role = Role.Button, onClickLabel = openLabel) { open(publicId) }
+                    .testTag(REVIEW_AUTHOR_LINK_TAG)
+            } else {
+                modifier
+            },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm),
+    ) {
+        InitialAvatar(name = props.author, tint = toneTint(props.tone), size = BahrSize.avatarSmall)
+        props.author?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.labelLarge.byContent(),
+                color = if (link) MaterialTheme.colorScheme.primary else Color.Unspecified,
+                maxLines = if (props.singleLine) 1 else Int.MAX_VALUE,
+                overflow = TextOverflow.Ellipsis,
+                // Single line (Home): the name takes the row's rest, as it did before MP-M2, so it ellipsizes there.
+                modifier = if (props.singleLine) Modifier.weight(1f) else Modifier,
+            )
+        }
+    }
+}
+
+/** For tests: a review author's name when it opens their profile (MP-M2). */
+const val REVIEW_AUTHOR_LINK_TAG = "review_author_link"
 
 /**
  * The traveller's photos (M3-M4), in their order: one row of [BahrSize.reviewPhoto] squares that scrolls sideways when

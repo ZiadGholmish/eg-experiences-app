@@ -16,10 +16,15 @@ import kotlinx.serialization.Serializable
  *
  * Since M3-B7 (drawn since M3-M4): [photos], the traveller's own, in their order (absent when there are none and from
  * older servers), and [verified], written by someone who booked and took the trip through the app (absent: false).
+ *
+ * Since MP-B2: [authorPublicId], present only when the author's profile is public and shows their reviews; then the
+ * name opens that profile (`getTraveller`). Absent, the name is plain text. [author] reads "A traveller" / "مسافر" for
+ * someone who hides their reviews.
  */
 @Serializable
 data class ReviewDto(
     val author: String? = null,
+    val authorPublicId: String? = null,
     val dateISO: LocalDate? = null,
     val body: String? = null,
     val partyLabel: String? = null,

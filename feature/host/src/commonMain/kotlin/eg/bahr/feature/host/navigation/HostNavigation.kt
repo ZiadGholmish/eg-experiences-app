@@ -38,12 +38,16 @@ data class HostProfileRoute(
  * preview when the summary counts more.
  *
  * [onSignIn] (MP-M1) opens the sign-in sheet when a guest taps a trip's heart.
+ *
+ * [onTravellerClick] (MP-M2) opens a reviewer's public profile from their name, when the review carries
+ * `authorPublicId`.
  */
 fun NavGraphBuilder.hostProfileScreen(
     onBack: () -> Unit,
     onTripClick: (slug: String) -> Unit,
     onSeeAllReviews: ((host: String, name: String) -> Unit)? = null,
     onSignIn: () -> Unit,
+    onTravellerClick: ((publicId: String) -> Unit)? = null,
 ) {
     composable<HostProfileRoute> { entry ->
         val route = entry.toRoute<HostProfileRoute>()
@@ -56,6 +60,7 @@ fun NavGraphBuilder.hostProfileScreen(
                 onTripClick = onTripClick,
                 onSeeAllReviews = onSeeAllReviews?.let { open -> { name -> open(route.slug, name) } },
                 onSignIn = onSignIn,
+                onTravellerClick = onTravellerClick,
             )
         }
     }

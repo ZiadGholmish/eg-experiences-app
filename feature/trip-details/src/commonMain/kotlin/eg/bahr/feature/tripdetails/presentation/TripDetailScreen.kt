@@ -92,6 +92,7 @@ internal fun TripDetailScreen(
     placeOpened: Boolean = false,
     pushPrompt: (@Composable (onDone: () -> Unit) -> Unit)? = null,
     onSignIn: () -> Unit = {},
+    onTravellerClick: ((publicId: String) -> Unit)? = null,
     viewModel: TripDetailViewModel =
         koinViewModel { parametersOf(slug, TripLink(date?.let(::linkedDate), placeOpened)) },
 ) {
@@ -139,6 +140,7 @@ internal fun TripDetailScreen(
         onContinue = { departureId -> onContinue(slug, departureId) },
         onHostClick = onHostClick,
         onSeeAllReviews = onSeeAllReviews,
+        onTravellerClick = onTravellerClick,
         modifier = modifier,
     )
 }
@@ -157,6 +159,7 @@ private fun TripPage(
     onContinue: (String) -> Unit,
     onHostClick: ((HostDto) -> Unit)?,
     onSeeAllReviews: ((title: String) -> Unit)?,
+    onTravellerClick: ((publicId: String) -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val trip = state.trip
@@ -211,6 +214,7 @@ private fun TripPage(
                         onSelectDeparture,
                         onHostClick,
                         onSeeAllReviews,
+                        onTravellerClick,
                         onLike,
                     )
                 }
@@ -304,6 +308,7 @@ private fun Section(
     onSelectDeparture: (String) -> Unit,
     onHostClick: ((HostDto) -> Unit)?,
     onSeeAllReviews: ((title: String) -> Unit)?,
+    onTravellerClick: ((publicId: String) -> Unit)?,
     onLike: () -> Unit,
 ) {
     val padded = Modifier.padding(start = BahrSpacing.gutter, end = BahrSpacing.gutter, top = BahrSpacing.xl)
@@ -339,7 +344,12 @@ private fun Section(
 
         TripSection.Reviews ->
             trip?.reviews?.let { reviews ->
-                TripReviews(reviews, padded, onSeeAll = onSeeAllReviews?.let { open -> { open(trip.title) } })
+                TripReviews(
+                    reviews,
+                    padded,
+                    onSeeAll = onSeeAllReviews?.let { open -> { open(trip.title) } },
+                    onAuthorClick = onTravellerClick,
+                )
             }
 
         TripSection.Availability ->

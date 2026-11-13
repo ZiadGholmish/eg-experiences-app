@@ -32,13 +32,23 @@ data class ReviewsRoute(
 
 /**
  * "See all reviews" (M4-M11): a trip's or a host's reviews, paged, with sort, star and (a host's) Trip
- * filters, opened from the trip page or the host page. It opens nothing else.
+ * filters, opened from the trip page or the host page. MP-M2: a reviewer's name opens their public profile
+ * ([onTravellerClick]) when the review carries `authorPublicId`; it opens nothing else.
  */
-fun NavGraphBuilder.reviewsScreen(onBack: () -> Unit) {
+fun NavGraphBuilder.reviewsScreen(
+    onBack: () -> Unit,
+    onTravellerClick: ((publicId: String) -> Unit)? = null,
+) {
     composable<ReviewsRoute> { entry ->
         val route = entry.toRoute<ReviewsRoute>()
         BahrDestination(this) {
-            ReviewsScreen(trip = route.trip, host = route.host, title = route.title, onBack = onBack)
+            ReviewsScreen(
+                trip = route.trip,
+                host = route.host,
+                title = route.title,
+                onBack = onBack,
+                onTravellerClick = onTravellerClick,
+            )
         }
     }
 }

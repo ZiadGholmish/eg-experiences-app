@@ -35,6 +35,9 @@ import eg.bahr.feature.tripdetails.presentation.TripDetailScreen
  * no prompt. The route's `date` / `placeOpened` open the page on a linked date (see [TripDetailRoute]).
  *
  * MP-M1: [onSignIn] opens the sign-in sheet when a guest taps the heart.
+ *
+ * MP-M2: [onTravellerClick] opens a reviewer's public profile from their name (only for a review that carries
+ * `authorPublicId`), usually feature:settings' `navigateToTravellerProfile`.
  */
 fun NavGraphBuilder.tripDetailScreen(
     onBack: () -> Unit,
@@ -43,6 +46,7 @@ fun NavGraphBuilder.tripDetailScreen(
     onSeeAllReviews: ((slug: String, title: String) -> Unit)? = null,
     pushPrompt: (@Composable (onDone: () -> Unit) -> Unit)? = null,
     onSignIn: () -> Unit,
+    onTravellerClick: ((publicId: String) -> Unit)? = null,
 ) {
     composable<TripDetailRoute> { entry ->
         val route = entry.toRoute<TripDetailRoute>()
@@ -63,6 +67,8 @@ fun NavGraphBuilder.tripDetailScreen(
                     },
                 // Null when the app wires no reviews page: no "See all reviews".
                 onSeeAllReviews = onSeeAllReviews?.let { open -> { title -> open(slug, title) } },
+                // Null when the app wires no profile page: every reviewer's name stays plain text (MP-M2).
+                onTravellerClick = onTravellerClick,
             )
         }
     }

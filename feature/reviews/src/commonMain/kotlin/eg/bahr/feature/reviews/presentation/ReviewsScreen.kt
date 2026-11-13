@@ -100,6 +100,7 @@ internal fun ReviewsScreen(
     title: String?,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onTravellerClick: ((publicId: String) -> Unit)? = null,
     viewModel: ReviewsViewModel =
         koinViewModel(key = host?.let { "reviews:host:$it" } ?: "reviews:trip:$trip") { parametersOf(trip, host, title) },
 ) {
@@ -121,7 +122,7 @@ internal fun ReviewsScreen(
                     modifier = Modifier.testTag(REVIEWS_NOT_AVAILABLE_TAG),
                 )
             } else {
-                ReviewsList(state, reviews, viewModel)
+                ReviewsList(state, reviews, viewModel, onTravellerClick)
             }
         }
     }
@@ -132,6 +133,7 @@ private fun ReviewsList(
     state: ReviewsUiState,
     reviews: LazyPagingItems<ReviewDto>,
     viewModel: ReviewsViewModel,
+    onTravellerClick: ((publicId: String) -> Unit)?,
 ) {
     val listState = rememberLazyListState()
     val bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + BahrSpacing.xl
@@ -171,6 +173,7 @@ private fun ReviewsList(
             emptyMessage = if (state.isFiltered) Res.string.reviews_filter_empty else Res.string.host_no_reviews,
             onRetry = viewModel::retry,
             onAppendRetry = appendRetry,
+            onTravellerClick = onTravellerClick,
         )
     }
 }
@@ -307,6 +310,7 @@ private fun LazyListScope.reviewsBody(
     emptyMessage: StringResource,
     onRetry: () -> Unit,
     onAppendRetry: () -> Unit,
+    onTravellerClick: ((publicId: String) -> Unit)?,
 ) {
     when (status) {
         PagedListStatus.Loading ->
@@ -354,7 +358,7 @@ private fun LazyListScope.reviewsBody(
                             .then(if (stale) Modifier.clearAndSetSemantics {} else Modifier)
                             .padding(horizontal = BahrSpacing.gutter),
                 ) {
-                    ReviewCard(review)
+                    ReviewCard(review, onAuthorClick = onTravellerClick)
                 }
             }
             if (!stale) appendFooter(reviews, onAppendRetry)

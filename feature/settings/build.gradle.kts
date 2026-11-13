@@ -12,6 +12,9 @@ kotlin {
             // The stored language it reads and writes (AppSettingsStore). An allowed edge: a feature may
             // depend on any core module.
             implementation(projects.core.datastore)
+            // MP-M2: a traveller's public profile draws the shared trip card, review card and page parts. An allowed
+            // edge (feature → core:*), as feature:host and feature:reviews have.
+            implementation(projects.core.catalog)
         }
         // ProfileApiServiceTest and the Koin graph test run the real client on a MockEngine.
         commonTest.dependencies {

@@ -33,6 +33,14 @@ sealed interface HomeAction {
     data object OpenHosts : HomeAction
 
     /**
+     * A review card's author name (MP-M2): the public profile of the traveller [publicId] (`HomeReview.authorPublicId`,
+     * sent only while that profile is public). The rest of the card still opens its trip.
+     */
+    data class OpenTraveller(
+        val publicId: String,
+    ) : HomeAction
+
+    /**
      * `category`: the category page for [key] (the `category` filter of `GET /trips`). [title] is the
      * label the opener already shows (a chip's, a row's), drawn until the page's own facets arrive;
      * null from a banner, which only knows the key.

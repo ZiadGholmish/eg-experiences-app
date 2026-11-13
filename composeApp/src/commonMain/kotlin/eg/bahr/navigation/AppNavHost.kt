@@ -72,7 +72,11 @@ import eg.bahr.feature.search.navigation.searchTripsScreen
 import eg.bahr.feature.settings.navigation.ProfileRoute
 import eg.bahr.feature.settings.navigation.editPersonalInfoScreen
 import eg.bahr.feature.settings.navigation.navigateToEditPersonalInfo
+import eg.bahr.feature.settings.navigation.navigateToPublicProfileSettings
+import eg.bahr.feature.settings.navigation.navigateToTravellerProfile
 import eg.bahr.feature.settings.navigation.profileScreen
+import eg.bahr.feature.settings.navigation.publicProfileSettingsScreen
+import eg.bahr.feature.settings.navigation.travellerProfileScreen
 import eg.bahr.feature.splash.navigation.SplashRoute
 import eg.bahr.feature.splash.navigation.splashScreen
 import eg.bahr.feature.tripdetails.navigation.TripDetailRoute
@@ -219,6 +223,8 @@ fun AppNavHost(
                             is HomeAction.OpenHost -> navController.navigateToHostProfile(action.slug, action.name, action.avatar)
                             // A hosts row's "See all" (MV-M1): the hosts directory in Home's stack, top rated first.
                             HomeAction.OpenHosts -> navController.navigateToHosts()
+                            // A review card's author name (MP-M2): their public profile, in Home's stack.
+                            is HomeAction.OpenTraveller -> navController.navigateToTravellerProfile(action.publicId)
                         }
                     },
                     // Search opens full screen in this tab (M3-M0b); the map is a tab (M4-M8), which the pill switches to.
@@ -270,6 +276,20 @@ fun AppNavHost(
                     scrollToTop = scrollRequests,
                     // Liked trips (MP-M1, feature:trip-listing's page), in this tab's stack, bar hidden.
                     onLikedTrips = navController::navigateToLikedTrips,
+                    // Account → Public profile (MP-M2), in this tab's stack, bar hidden.
+                    onPublicProfile = navController::navigateToPublicProfileSettings,
+                )
+
+                // Account → Public profile (MP-M2): "View my public profile" opens the same page a reviewer's name opens.
+                publicProfileSettingsScreen(
+                    onBack = { navController.popBackStack() },
+                    onViewProfile = navController::navigateToTravellerProfile,
+                )
+
+                // A traveller's public profile (MP-M2): from a reviewer's name anywhere, or from the account's own settings.
+                travellerProfileScreen(
+                    onBack = { navController.popBackStack() },
+                    onTripClick = navController::navigateToTripDetail,
                 )
 
                 editPersonalInfoScreen(
@@ -347,6 +367,8 @@ fun AppNavHost(
                     pushPrompt = { onDone -> PushPromptSlot(onDone) },
                     // A guest's tap on the heart (MP-M1).
                     onSignIn = { navController.navigateToSignIn() },
+                    // A reviewer's name (MP-M2, only when their profile is public): their profile, in this tab's stack.
+                    onTravellerClick = navController::navigateToTravellerProfile,
                 )
 
                 hostProfileScreen(
@@ -354,9 +376,13 @@ fun AppNavHost(
                     onTripClick = navController::navigateToTripDetail,
                     onSeeAllReviews = { host, name -> navController.navigateToReviews(host = host, title = name) },
                     onSignIn = { navController.navigateToSignIn() },
+                    onTravellerClick = navController::navigateToTravellerProfile,
                 )
 
-                reviewsScreen(onBack = { navController.popBackStack() })
+                reviewsScreen(
+                    onBack = { navController.popBackStack() },
+                    onTravellerClick = navController::navigateToTravellerProfile,
+                )
 
                 bookingScreen(
                     onBack = { navController.popBackStack() },
