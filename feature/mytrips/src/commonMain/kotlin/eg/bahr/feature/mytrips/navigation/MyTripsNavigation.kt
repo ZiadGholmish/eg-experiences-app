@@ -14,18 +14,26 @@ data object MyTripsRoute
 
 /**
  * The My trips tab. [onSignIn] opens the sign-in sheet (feature:auth, wired in :composeApp);
- * [onTripClick] the trip page; [onRateTrip] the review page of a finished booking [ref] (M3-M4, feature:reviews, wired in
+ * [onBookingClick] an Upcoming or Past booking's details (MV-M6, feature:booking, wired in :composeApp), with whether
+ * it may be rated now; [onTripClick] the trip page of a waiting-list entry; [onRateTrip] the review page of a finished booking [ref] (M3-M4, feature:reviews, wired in
  * :composeApp). [scrollToTop] fires when the selected tab is tapped again.
  */
 fun NavGraphBuilder.myTripsScreen(
     onSignIn: () -> Unit,
     onTripClick: (slug: String) -> Unit,
+    onBookingClick: (ref: String, canRate: Boolean) -> Unit = { _, _ -> },
     onRateTrip: (ref: String, title: String?) -> Unit = { _, _ -> },
     scrollToTop: Flow<Unit> = emptyFlow(),
 ) {
     composable<MyTripsRoute> {
         BahrDestination(this) {
-            MyTripsScreen(onSignIn = onSignIn, onTripClick = onTripClick, onRateTrip = onRateTrip, scrollToTop = scrollToTop)
+            MyTripsScreen(
+                onSignIn = onSignIn,
+                onTripClick = onTripClick,
+                onBookingClick = onBookingClick,
+                onRateTrip = onRateTrip,
+                scrollToTop = scrollToTop,
+            )
         }
     }
 }

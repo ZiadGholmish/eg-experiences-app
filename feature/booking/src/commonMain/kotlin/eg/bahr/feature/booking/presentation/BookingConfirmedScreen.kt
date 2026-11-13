@@ -41,8 +41,11 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import eg.bahr.core.common.result.AppError
+import eg.bahr.core.designsystem.components.BahrBackButton
 import eg.bahr.core.designsystem.components.BahrBadge
 import eg.bahr.core.designsystem.components.BahrErrorView
 import eg.bahr.core.designsystem.components.BahrLottie
@@ -64,6 +67,8 @@ import eg.bahr.core.localization.generated.resources.booking_method_test_cash
 import eg.bahr.core.localization.generated.resources.booking_method_vf
 import eg.bahr.core.localization.generated.resources.booking_party_count
 import eg.bahr.core.localization.generated.resources.booking_total
+import eg.bahr.core.localization.generated.resources.mytrips_rate_trip
+import eg.bahr.core.localization.generated.resources.ticket_not_found
 import eg.bahr.core.localization.generated.resources.ticket_note_called_off
 import eg.bahr.core.localization.generated.resources.ticket_note_cancelled
 import eg.bahr.core.localization.generated.resources.ticket_note_completed
@@ -86,15 +91,19 @@ import eg.bahr.core.localization.generated.resources.ticket_row_return
 import eg.bahr.core.localization.generated.resources.ticket_screenshot_note
 import eg.bahr.core.localization.generated.resources.ticket_show_host
 import eg.bahr.core.localization.generated.resources.ticket_show_host_unnamed
+import eg.bahr.core.localization.generated.resources.ticket_title_confirmation
+import eg.bahr.core.localization.generated.resources.ticket_title_details
 import eg.bahr.core.localization.generated.resources.ticket_value_comma
 import eg.bahr.core.localization.generated.resources.ticket_value_dash
 import eg.bahr.core.localization.generated.resources.ticket_value_dot
+import eg.bahr.core.localization.generated.resources.ticket_view_trip
 import eg.bahr.core.localization.generated.resources.ticket_whatsapp_host
 import eg.bahr.core.localization.generated.resources.ticket_whatsapp_host_unnamed
 import eg.bahr.core.localization.generated.resources.ticket_where_to_stand
 import eg.bahr.core.localization.generated.resources.trips_title
 import eg.bahr.core.localization.isRetryable
 import eg.bahr.core.localization.localizedMessage
+import eg.bahr.core.network.ApiErrorCodes
 import eg.bahr.feature.booking.model.BookingDto
 import eg.bahr.feature.booking.model.laterReturnDate
 import org.jetbrains.compose.resources.StringResource
@@ -115,41 +124,85 @@ import kotlin.math.sin
  *
  * Only what the contract serves is drawn: no "Add to calendar" (`Booking.calendar` is not served yet) and no map
  * crop (M3-M2).
+ *
+ * Since MV-M6 it is also a booking's details, opened from My trips ([TicketEntry.Details]): the bar names the entry
+ * and has a way back in every state (loading, error, not found); the details offer the trip's page and, when [canRate]
+ * (My trips' rule), "Rate your trip", instead of the "Trips" button, which there would only repeat Back.
  */
 @Composable
 internal fun BookingConfirmedScreen(
     ref: String,
-    onDone: () -> Unit,
+    actions: TicketCallbacks,
     modifier: Modifier = Modifier,
+    entry: TicketEntry = TicketEntry.Paid,
+    canRate: Boolean = false,
     viewModel: BookingConfirmedViewModel = koinViewModel { parametersOf(ref) },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val booking = state.booking
 
     when {
-        state.isLoading -> TicketSkeleton(modifier)
+        state.isLoading -> TicketSkeleton(entry, actions.onBack, modifier)
 
         booking == null ->
-            BahrErrorView(
-                message = state.error?.localizedMessage().orEmpty(),
-                retryLabel = stringResource(Res.string.action_retry),
-                onRetry = if (state.error?.isRetryable == true) viewModel::load else null,
-                modifier = modifier,
-            )
+            Column(modifier.fillMaxSize()) {
+                // No header without a booking: the bar on the page's own ground, so a 404 or no network is never a dead end.
+                TicketBar(
+                    entry,
+                    actions.onBack,
+                    onHero = false,
+                    modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars).padding(horizontal = BahrSpacing.gutter),
+                )
+                val error = state.error
+                BahrErrorView(
+                    // Not found (an unknown reference, or a booking of another account) says so; anything else as usual.
+                    message =
+                        if ((error as? AppError.Api)?.code == ApiErrorCodes.NOT_FOUND) {
+                            stringResource(Res.string.ticket_not_found)
+                        } else {
+                            error?.localizedMessage().orEmpty()
+                        },
+                    retryLabel = stringResource(Res.string.action_retry),
+                    onRetry = if (state.error?.isRetryable == true) viewModel::load else null,
+                    modifier = Modifier.weight(1f),
+                )
+            }
 
-        else -> Ticket(booking, onDone, modifier)
+        else -> Ticket(booking, entry, canRate, actions, modifier)
     }
 }
+
+/** How the ticket was opened (MV-M6): what its bar says and which way out it offers. */
+internal enum class TicketEntry {
+    /** Right after paying: "Booking confirmation", and "Trips" back to the tab's root. */
+    Paid,
+
+    /** A booking looked up later (a My trips row, a notification): "Booking details", and the trip's page. */
+    Details,
+}
+
+/**
+ * Where the ticket's buttons lead, all wired in `:composeApp`: [onBack] the bar's back button, [onDone] "Trips" after
+ * paying, [onViewTrip] the trip's page (feature:trip-details), [onRateTrip] the review page (feature:reviews).
+ */
+internal class TicketCallbacks(
+    val onBack: () -> Unit = {},
+    val onDone: () -> Unit = {},
+    val onViewTrip: (slug: String) -> Unit = {},
+    val onRateTrip: (ref: String, title: String?) -> Unit = { _, _ -> },
+)
 
 @Composable
 private fun Ticket(
     booking: BookingDto,
-    onDone: () -> Unit,
+    entry: TicketEntry,
+    canRate: Boolean,
+    actions: TicketCallbacks,
     modifier: Modifier,
 ) {
     val ticket = booking.ticketState
     Column(modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-        TicketHeader(booking, ticket)
+        TicketHeader(booking, ticket) { TicketBar(entry, actions.onBack, onHero = true) }
         Column(
             modifier = Modifier.padding(horizontal = BahrSpacing.gutter).padding(top = BahrSpacing.gutter),
             verticalArrangement = Arrangement.spacedBy(BahrSpacing.md),
@@ -163,7 +216,7 @@ private fun Ticket(
                 ?.whereToStand
                 ?.takeIf { it.isNotBlank() && ticket in BUS_AHEAD }
                 ?.let { WhereToStand(it) }
-            TicketActions(booking, ticket, onDone)
+            TicketActions(booking, ticket, entry, canRate, actions)
         }
         Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
     }
@@ -178,6 +231,7 @@ private fun Ticket(
 private fun TicketHeader(
     booking: BookingDto,
     ticket: TicketState,
+    bar: @Composable () -> Unit,
 ) {
     val x = BahrTheme.colors
     val arabic = BahrTheme.locale.isArabic
@@ -193,6 +247,7 @@ private fun TicketHeader(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(BahrSpacing.md),
     ) {
+        bar()
         if (ticket == TicketState.Confirmed) {
             // The booked moment, drawn in once (MV-M5). Decorative: the overline under it says it.
             BahrLottie(
@@ -457,14 +512,17 @@ private fun WhereToStand(text: String) {
 }
 
 /**
- * The host's WhatsApp (coral: the one step forward here) when the server sent the link, the way back to the trips, and
- * on a confirmed ticket the note to take a screenshot.
+ * The host's WhatsApp (coral: the one step forward here) when the server sent the link; then after paying the way
+ * back to the trips, or on a booking's details "Rate your trip" (when it may be rated) and the trip's page; and on a
+ * confirmed ticket the note to take a screenshot.
  */
 @Composable
 private fun TicketActions(
     booking: BookingDto,
     ticket: TicketState,
-    onDone: () -> Unit,
+    entry: TicketEntry,
+    canRate: Boolean,
+    actions: TicketCallbacks,
 ) {
     Column(
         modifier = Modifier.padding(vertical = BahrSpacing.sm),
@@ -487,7 +545,28 @@ private fun TicketActions(
                 modifier = Modifier.fillMaxWidth().testTag(TICKET_WHATSAPP_TAG),
             )
         }
-        DoneButton(onDone)
+        when (entry) {
+            TicketEntry.Paid -> SecondaryButton(BahrIcons.Sailing, stringResource(Res.string.trips_title), actions.onDone)
+            TicketEntry.Details -> {
+                if (canRate) {
+                    SecondaryButton(
+                        icon = BahrIcons.RateReview,
+                        text = stringResource(Res.string.mytrips_rate_trip),
+                        onClick = { actions.onRateTrip(booking.ref, booking.trip?.title) },
+                        tag = TICKET_RATE_TAG,
+                    )
+                }
+                // The trip's page needs its slug; a booking served without one simply has no way there.
+                booking.trip?.slug?.takeIf { it.isNotBlank() }?.let { slug ->
+                    SecondaryButton(
+                        icon = BahrIcons.Sailing,
+                        text = stringResource(Res.string.ticket_view_trip),
+                        onClick = { actions.onViewTrip(slug) },
+                        tag = TICKET_VIEW_TRIP_TAG,
+                    )
+                }
+            }
+        }
         if (ticket == TicketState.Confirmed) {
             Text(
                 text = stringResource(Res.string.ticket_screenshot_note),
@@ -501,11 +580,16 @@ private fun TicketActions(
 }
 
 /**
- * Back to the trips, on `primaryContainer` (the handoff's second action's look): the way out, never coral, so the
- * WhatsApp button stays the screen's one coral action.
+ * A way on from the ticket (back to the trips, the trip's page, the review page) on `primaryContainer` (the handoff's
+ * second action's look): never coral, so the WhatsApp button stays the screen's one coral action.
  */
 @Composable
-private fun DoneButton(onDone: () -> Unit) {
+private fun SecondaryButton(
+    icon: BahrIcons,
+    text: String,
+    onClick: () -> Unit,
+    tag: String? = null,
+) {
     val scheme = MaterialTheme.colorScheme
     Row(
         modifier =
@@ -514,28 +598,70 @@ private fun DoneButton(onDone: () -> Unit) {
                 .heightIn(min = BahrSize.touchTarget)
                 .clip(BahrTheme.shapes.full)
                 .background(scheme.primaryContainer)
-                .clickable(role = Role.Button, onClick = onDone)
+                .clickable(role = Role.Button, onClick = onClick)
+                .then(if (tag != null) Modifier.testTag(tag) else Modifier)
                 .padding(horizontal = BahrSpacing.xl, vertical = BahrSpacing.md),
         horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            imageVector = BahrIcons.Sailing.outlined(),
+            imageVector = icon.outlined(),
             contentDescription = null,
             tint = scheme.primary,
             modifier = Modifier.size(BahrSize.iconMedium),
         )
-        Text(text = stringResource(Res.string.trips_title), style = MaterialTheme.typography.titleSmall, color = scheme.primary)
+        Text(text = text, style = MaterialTheme.typography.titleSmall, color = scheme.primary)
     }
 }
 
 /**
- * While the booking is read (M3-M14): the header's ground with the reference's place shimmering, then the rows'
- * places. The status is not known yet, so no header text is drawn.
+ * The ticket's bar (MV-M6): the round back button and what the page is, "Booking confirmation" after paying or
+ * "Booking details" from My trips. On the teal header ([onHero]) its title is white; on the page's ground (the error
+ * view, which has no header) it is the ground's text colour. The title is the page's heading for screen readers.
  */
 @Composable
-private fun TicketSkeleton(modifier: Modifier) {
-    BahrSkeleton(modifier = modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(BahrSpacing.gutter)) {
+private fun TicketBar(
+    entry: TicketEntry,
+    onBack: () -> Unit,
+    onHero: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth().padding(vertical = BahrSpacing.xs),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(BahrSpacing.md),
+    ) {
+        BahrBackButton(modifier = Modifier.testTag(TICKET_BACK_TAG), props = BahrBackButton.Props(onClick = onBack))
+        Text(
+            text = stringResource(entry.title),
+            style = MaterialTheme.typography.titleMedium,
+            color = if (onHero) BahrTheme.colors.onHero else MaterialTheme.colorScheme.onBackground,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f).semantics { heading() },
+        )
+    }
+}
+
+private val TicketEntry.title: StringResource
+    get() =
+        when (this) {
+            TicketEntry.Paid -> Res.string.ticket_title_confirmation
+            TicketEntry.Details -> Res.string.ticket_title_details
+        }
+
+/**
+ * While the booking is read (M3-M14): the header's ground with the reference's place shimmering, then the rows'
+ * places. The status is not known yet, so no header text is drawn. The bar (MV-M6) sits outside the skeleton's
+ * region: [BahrSkeleton] clears the semantics inside it, and the back button must stay reachable by screen readers.
+ */
+@Composable
+private fun TicketSkeleton(
+    entry: TicketEntry,
+    onBack: () -> Unit,
+    modifier: Modifier,
+) {
+    Column(modifier = modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(BahrSpacing.gutter)) {
         Column(
             modifier =
                 Modifier
@@ -545,12 +671,20 @@ private fun TicketSkeleton(modifier: Modifier) {
                     .windowInsetsPadding(WindowInsets.statusBars)
                     .padding(horizontal = BahrSpacing.gutter)
                     .padding(top = BahrSpacing.sm, bottom = BahrSpacing.xl),
-            horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(BahrSpacing.md),
         ) {
-            BahrSkeletonBlock(Modifier.size(BahrSize.stateDisc), BahrSkeletonBlock.Props(BahrTheme.shapes.full))
-            BahrSkeletonLine(props = BahrSkeletonLine.Props(widthFraction = SKELETON_OVERLINE_WIDTH))
-            BahrSkeletonLine(props = BahrSkeletonLine.Props(widthFraction = SKELETON_REF_WIDTH))
+            // The bar is drawn as it will be: the way back works while the booking is read.
+            TicketBar(entry, onBack, onHero = true)
+            // The one "Loading" for screen readers; the row places below carry no semantics of their own.
+            BahrSkeleton(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(BahrSpacing.md),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                BahrSkeletonBlock(Modifier.size(BahrSize.stateDisc), BahrSkeletonBlock.Props(BahrTheme.shapes.full))
+                BahrSkeletonLine(props = BahrSkeletonLine.Props(widthFraction = SKELETON_OVERLINE_WIDTH))
+                BahrSkeletonLine(props = BahrSkeletonLine.Props(widthFraction = SKELETON_REF_WIDTH))
+            }
         }
         Column(
             modifier = Modifier.padding(horizontal = BahrSpacing.gutter),
@@ -624,6 +758,11 @@ internal const val TICKET_REF_TAG = "ticket_ref"
 internal const val TICKET_NOTE_TAG = "ticket_note"
 internal const val TICKET_MONEY_TAG = "ticket_money"
 internal const val TICKET_WHATSAPP_TAG = "ticket_whatsapp"
+
+/** For tests (MV-M6): the bar's back button, the details' "View trip" and "Rate your trip". */
+internal const val TICKET_BACK_TAG = "ticket_back"
+internal const val TICKET_VIEW_TRIP_TAG = "ticket_view_trip"
+internal const val TICKET_RATE_TAG = "ticket_rate"
 
 // The handoff's `linear-gradient(160deg, primary, teal-50 60%, teal-60)`.
 private const val GRADIENT_ANGLE_DEGREES = 160.0

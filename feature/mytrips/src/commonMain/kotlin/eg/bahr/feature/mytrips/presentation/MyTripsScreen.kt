@@ -72,6 +72,7 @@ import eg.bahr.feature.mytrips.presentation.components.BookingRow
 import eg.bahr.feature.mytrips.presentation.components.DeviceJoinRow
 import eg.bahr.feature.mytrips.presentation.components.TripRowsSkeleton
 import eg.bahr.feature.mytrips.presentation.components.WaitlistRow
+import eg.bahr.feature.mytrips.presentation.components.rateable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import org.jetbrains.compose.resources.StringResource
@@ -85,14 +86,17 @@ import org.koin.compose.viewmodel.koinViewModel
  * list of sections (Upcoming, Waiting list, Past), each under a sticky header with its count, pulled down to read
  * all three again.
  *
- * [onSignIn] opens the sign-in sheet; [onTripClick] the trip page (a booking or entry's trip); [onRateTrip] the review
- * page of a finished booking (M3-M4), whose status the row shows once it is back (the list is read again on return).
+ * [onSignIn] opens the sign-in sheet; [onBookingClick] a booking's details (MV-M6: an Upcoming or Past row, with
+ * whether it may be rated, the row's own rule); [onTripClick] the trip page (a waiting-list entry's trip); [onRateTrip]
+ * the review page of a finished booking (M3-M4), whose status the row shows once it is back (the list is read again
+ * on return).
  * [scrollToTop] fires when the selected tab is tapped again.
  */
 @Composable
 internal fun MyTripsScreen(
     onSignIn: () -> Unit,
     onTripClick: (slug: String) -> Unit,
+    onBookingClick: (ref: String, canRate: Boolean) -> Unit = { _, _ -> },
     onRateTrip: (ref: String, title: String?) -> Unit = { _, _ -> },
     scrollToTop: Flow<Unit> = emptyFlow(),
     viewModel: MyTripsViewModel = koinViewModel(),
@@ -109,6 +113,7 @@ internal fun MyTripsScreen(
             MyTripsActions(
                 onSignIn = onSignIn,
                 onTripClick = onTripClick,
+                onBookingClick = onBookingClick,
                 onRateTrip = onRateTrip,
                 onRefresh = viewModel::pullToRefresh,
                 onRetryUpcoming = viewModel::retryUpcoming,
@@ -121,6 +126,7 @@ internal fun MyTripsScreen(
 internal class MyTripsActions(
     val onSignIn: () -> Unit = {},
     val onTripClick: (String) -> Unit = {},
+    val onBookingClick: (ref: String, canRate: Boolean) -> Unit = { _, _ -> },
     val onRateTrip: (ref: String, title: String?) -> Unit = { _, _ -> },
     val onRefresh: () -> Unit = {},
     val onRetryUpcoming: () -> Unit = {},
@@ -275,7 +281,7 @@ private fun LazyListScope.upcomingRows(
     items(bookings, key = { "upcoming_${it.ref}" }, contentType = { CONTENT_BOOKING }) { booking ->
         BookingRow(
             booking,
-            onClick = { booking.trip?.slug?.let(actions.onTripClick) },
+            onClick = { actions.onBookingClick(booking.ref, booking.rateable) },
             onRateTrip = { actions.onRateTrip(booking.ref, booking.trip?.title) },
         )
     }
@@ -304,7 +310,7 @@ private fun LazyListScope.pastRows(
         past[index]?.let { booking ->
             BookingRow(
                 booking,
-                onClick = { booking.trip?.slug?.let(actions.onTripClick) },
+                onClick = { actions.onBookingClick(booking.ref, booking.rateable) },
                 onRateTrip = { actions.onRateTrip(booking.ref, booking.trip?.title) },
             )
         }

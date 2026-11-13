@@ -38,6 +38,7 @@ import eg.bahr.feature.booking.navigation.hasBookingInProgress
 import eg.bahr.feature.booking.navigation.holdScreen
 import eg.bahr.feature.booking.navigation.navigateToBooking
 import eg.bahr.feature.booking.navigation.navigateToBookingByRef
+import eg.bahr.feature.booking.navigation.navigateToBookingDetails
 import eg.bahr.feature.booking.navigation.navigateToHold
 import eg.bahr.feature.booking.navigation.navigateToHoldByRef
 import eg.bahr.feature.booking.navigation.navigateToPaidBooking
@@ -278,19 +279,23 @@ fun AppNavHost(
                     onOpenBooking = navController::navigateToBookingByRef,
                 )
 
-                // The My trips tab's root (M3-M0): signed out it offers the sign-in sheet; a row opens its trip, a finished
-                // booking's "Rate your trip" the review page (M3-M4, feature:reviews) in this tab's stack, bar hidden.
+                // The My trips tab's root (M3-M0): signed out it offers the sign-in sheet; a booking row opens the booking's
+                // details (MV-M6, feature:booking) on top, a waiting-list row its trip, a finished booking's "Rate your trip"
+                // the review page (M3-M4, feature:reviews), all in this tab's stack, bar hidden.
                 myTripsScreen(
                     onSignIn = navController::navigateToSignIn,
                     onTripClick = navController::navigateToTripDetail,
+                    onBookingClick = navController::navigateToBookingDetails,
                     onRateTrip = { ref, title -> navController.navigateToWriteReview(ref, title) },
                     scrollToTop = scrollRequests,
                 )
 
-                // The review page (M3-M4): back or "Done" returns to My trips, which reads its bookings again.
+                // The review page (M3-M4): back returns to the page under it. "Done" (sent) returns to My trips, which
+                // reads its bookings again and shows the review's status: also from a booking's details (MV-M6), whose
+                // "Rate your trip" would otherwise still show (`getBooking` does not say a booking was reviewed).
                 writeReviewScreen(
                     onBack = { navController.popBackStack() },
-                    onDone = { navController.popBackStack() },
+                    onDone = navController::popToMyTripsOrBack,
                 )
 
                 // The sign-in sheet, pushed in whichever tab asked (bar hidden); closing or finishing goes back
@@ -352,8 +357,15 @@ fun AppNavHost(
                     onBack = { navController.popBackStack() },
                 )
 
-                // Done: back to the root of the tab the booking was made in.
-                bookingConfirmedScreen(onDone = { navController.popToRoot(tab) })
+                // The booking's ticket. After paying, "Trips" goes back to the root of the tab the booking was made in.
+                // As a booking's details (MV-M6: a My trips row, a notification) it opens the trip's page and, when My
+                // trips says the booking may be rated, the review page, on top; Back returns to where it was opened.
+                bookingConfirmedScreen(
+                    onDone = { navController.popToRoot(tab) },
+                    onBack = { navController.popBackStack() },
+                    onViewTrip = navController::navigateToTripDetail,
+                    onRateTrip = { ref, title -> navController.navigateToWriteReview(ref, title) },
+                )
             }
         }
     }
@@ -393,6 +405,15 @@ internal fun NavController.popToRoot(tab: AppTab) {
     if (!popBackStack(tab.rootRoute, inclusive = false) && !isAt(tab)) {
         navigate(tab.rootRoute) { popUpTo(graph.id) { inclusive = true } }
     }
+}
+
+/**
+ * A sent review's "Done" (M3-M4, MV-M6): back to My trips when it is under the review page (it always is today: "Rate
+ * your trip" is on My trips and on a booking's details opened from it), popping the details too; else one step back.
+ * Internal for AppNavHostRootsTest.
+ */
+internal fun NavController.popToMyTripsOrBack() {
+    if (!popBackStack(MyTripsRoute, inclusive = false)) popBackStack()
 }
 
 /**

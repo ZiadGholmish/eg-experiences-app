@@ -55,10 +55,17 @@ data class OpenHoldRoute(
 )
 
 /**
- * The confirmation screen keys on the booking reference — the thing the user is
- * told to keep, and the thing a "where is my booking" deep link will carry.
+ * The booking's ticket keys on the booking reference — the thing the user is told to keep, and the thing a "where is
+ * my booking" deep link will carry.
+ *
+ * [details] (MV-M6): opened as a booking to look at (a My trips row, a notification) rather than right after paying.
+ * The bar then says "Booking details" and the ticket offers the trip's page instead of "Trips". [canRate]: My trips'
+ * own rule for "Rate your trip" (`canReview` and no review yet), handed over because `getBooking` does not serve
+ * `canReview` (it is on `listMyBookings` only).
  */
 @Serializable
 data class BookingConfirmedRoute(
     val ref: String,
+    val details: Boolean = false,
+    val canRate: Boolean = false,
 )

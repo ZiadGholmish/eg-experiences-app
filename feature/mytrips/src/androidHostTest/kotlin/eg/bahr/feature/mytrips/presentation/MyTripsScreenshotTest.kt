@@ -21,6 +21,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -279,6 +280,54 @@ class MyTripsScreenshotTest {
         assertEquals(listOf<Pair<String, String?>>("BRL-1R1R1R1R" to "الفجر على بحيرة البرلس"), rated)
         // The button is its own target: the row under it did not open the trip.
         assertTrue(opened.isEmpty())
+    }
+
+    /**
+     * MV-M6: an Upcoming or Past booking row opens the booking's details (its reference, and whether it may be rated by
+     * the row's own rule), not the trip; a waiting-list row still opens its trip.
+     */
+    @Config(qualifiers = "en-w360dp-h1400dp-xhdpi")
+    @Test
+    fun `a booking row opens the booking - a waiting-list row its trip`() {
+        val bookings = mutableListOf<Pair<String, Boolean>>()
+        val trips = mutableListOf<String>()
+        compose.setContent {
+            Themed(AppLanguage.ENGLISH) {
+                MyTripsContent(
+                    state = allSections,
+                    past = flowOf(PagingData.from(MyTripsFixtures.pastWithReviews(), loaded)).collectAsLazyPagingItems(),
+                    actions =
+                        MyTripsActions(onBookingClick = {
+                            ref,
+                            canRate,
+                            ->
+                            bookings += ref to canRate
+                        }, onTripClick = { trips += it }),
+                )
+            }
+        }
+        val upcoming = MyTripsFixtures.upcoming().first()
+        val waitlist = MyTripsFixtures.waitlist().first()
+        val (rateable, reviewed) = MyTripsFixtures.pastWithReviews().let { it[0] to it[1] }
+
+        // Each row is one button whose lines merge into it: the row is found by its date (day and month joined by a no-break space).
+        compose.onAllNodesWithText("24\u00A0Oct", substring = true)[0].performClick()
+        assertEquals(listOf(upcoming.ref to false), bookings, "the first upcoming row: its booking")
+
+        compose.onNodeWithTag(sectionHeaderTag(MyTripsSection.Waitlist)).assertExists()
+        compose.onAllNodesWithText("24\u00A0Oct", substring = true)[1].performClick()
+        assertEquals(listOf(waitlist.trip!!.slug), trips, "the waiting-list row: its trip")
+
+        compose.onNodeWithTag(MY_TRIPS_LIST_TAG).performScrollToNode(hasText("Sat 3\u00A0Oct", substring = true))
+        compose.onNodeWithText("Sat 3\u00A0Oct", substring = true).performClick()
+        compose.onNodeWithTag(MY_TRIPS_LIST_TAG).performScrollToNode(hasText("26\u00A0Sep", substring = true))
+        compose.onNodeWithText("26\u00A0Sep", substring = true).performClick()
+        assertEquals(
+            listOf(upcoming.ref to false, rateable.ref to true, reviewed.ref to false),
+            bookings,
+            "past rows: their bookings, rateable only while not reviewed",
+        )
+        assertEquals(1, trips.size, "no booking row opened a trip")
     }
 
     @Test

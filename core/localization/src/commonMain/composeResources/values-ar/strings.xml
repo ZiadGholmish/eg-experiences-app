@@ -321,6 +321,11 @@
     <string name="ticket_whatsapp_host">ابعت لـ%1$s على واتساب</string>
     <string name="ticket_whatsapp_host_unnamed">ابعت للمضيف على واتساب</string>
     <string name="ticket_screenshot_note">خد سكرين شوت — الشبكة بتقطع في جزء من الطريق.</string>
+    <!-- MV-M6: شريط التذكرة بيقول اتفتحت منين (بعد الدفع، أو حجز من رحلاتي)، وزرار يفتح الرحلة. -->
+    <string name="ticket_title_confirmation">تأكيد الحجز</string>
+    <string name="ticket_title_details">تفاصيل الحجز</string>
+    <string name="ticket_view_trip">تفاصيل الرحلة</string>
+    <string name="ticket_not_found">مش لاقيين الحجز ده. اتأكد من رقم الحجز، أو إنك داخل بالحساب اللي حجز بيه.</string>
     <string name="booking_payer_vf_number">رقم فودافون كاش</string>
     <string name="booking_payer_card_name">الاسم على الكارت</string>
     <string name="booking_payer_card_note">هتكتب بيانات الكارت في صفحة الدفع الآمنة.</string>

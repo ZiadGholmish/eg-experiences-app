@@ -300,6 +300,11 @@
     <string name="ticket_whatsapp_host">Message %1$s on WhatsApp</string>
     <string name="ticket_whatsapp_host_unnamed">Message the host on WhatsApp</string>
     <string name="ticket_screenshot_note">Screenshot this — there is no signal for part of the drive.</string>
+    <!-- MV-M6: the ticket's bar names how it was opened (after paying, or a booking from My trips), and its way to the trip. -->
+    <string name="ticket_title_confirmation">Booking confirmation</string>
+    <string name="ticket_title_details">Booking details</string>
+    <string name="ticket_view_trip">View trip</string>
+    <string name="ticket_not_found">We couldn’t find this booking. Check the reference, or that you’re signed in to the account that booked it.</string>
     <string name="booking_payer_vf_number">Vodafone Cash number</string>
     <string name="booking_payer_card_name">Name on card</string>
     <string name="booking_payer_card_note">You enter your card on the secure payment page.</string>
