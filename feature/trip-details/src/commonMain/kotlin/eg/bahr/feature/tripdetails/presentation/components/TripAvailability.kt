@@ -20,12 +20,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.Dp
 import eg.bahr.core.catalog.presentation.components.SectionTitle
 import eg.bahr.core.designsystem.components.BahrPrimaryButton
 import eg.bahr.core.designsystem.components.BahrSkeletonLine
@@ -202,7 +205,7 @@ private fun DateCard(
     Column(
         modifier =
             Modifier
-                .width(BahrSize.dateCard)
+                .width(dateCardWidth())
                 .then(if (look.elevation != null) Modifier.bahrShadow(look.elevation, shape, x) else Modifier)
                 .clip(shape)
                 .then(if (look.background != null) Modifier.background(look.background) else Modifier)
@@ -272,7 +275,7 @@ private fun DateCardSkeleton() {
     Column(
         modifier =
             Modifier
-                .width(BahrSize.dateCard)
+                .width(dateCardWidth())
                 .bahrShimmer(BahrTheme.shapes.extraLarge)
                 .heightIn(min = BahrSpacing.minTouch)
                 .padding(BahrSpacing.md),
@@ -293,6 +296,18 @@ private fun DateCardSkeleton() {
         }
     }
 }
+
+/**
+ * A date card's width (MV-M11): [BahrSize.dateCard] at the default text size, and wider in step with a larger one, so the
+ * lines break where they do at the default size. At a fixed width, the Pixel's 1.3 text size clipped the Arabic month
+ * ("21 نوفم") and wrapped "باقي 8 مقاعد" onto two lines. The padding and the icon are fixed, so the text gains a little
+ * room; Android 14's non-linear scaling grows text by at most the linear factor. Never narrower than the default (a
+ * smaller text size keeps the designed card). The skeleton card has the same width, so it wraps its placeholder count as a
+ * loaded card wraps its own, and the row keeps its height when the dates land (MV-M7).
+ */
+@Composable
+@ReadOnlyComposable
+private fun dateCardWidth(): Dp = BahrSize.dateCard * LocalDensity.current.fontScale.coerceAtLeast(1f)
 
 /** A date card's colours, icon and edge for one availability × selection. */
 private class DateCardLook(

@@ -245,6 +245,27 @@ class TripPageStabilityTest {
     @Test
     fun dateRowKeepsItsHeightEnglish() = dateRowKeepsItsHeight(AppLanguage.ENGLISH)
 
+    /*
+     * MV-M11: at a larger text size the date cards widen and grow (the Pixel runs 1.3); the skeleton cards must grow with
+     * them, or the row would jump when the dates land.
+     */
+
+    @Config(qualifiers = "en-w360dp-h3200dp-xhdpi", fontScale = FONT_SCALE_PIXEL)
+    @Test
+    fun dateRowKeepsItsHeightAtFontScale13Arabic() = dateRowKeepsItsHeight(AppLanguage.ARABIC)
+
+    @Config(qualifiers = "en-w360dp-h3200dp-xhdpi", fontScale = FONT_SCALE_PIXEL)
+    @Test
+    fun dateRowKeepsItsHeightAtFontScale13English() = dateRowKeepsItsHeight(AppLanguage.ENGLISH)
+
+    @Config(qualifiers = "en-w360dp-h3200dp-xhdpi", fontScale = FONT_SCALE_LARGE)
+    @Test
+    fun dateRowKeepsItsHeightAtFontScale15Arabic() = dateRowKeepsItsHeight(AppLanguage.ARABIC)
+
+    @Config(qualifiers = "en-w360dp-h3200dp-xhdpi", fontScale = FONT_SCALE_LARGE)
+    @Test
+    fun dateRowKeepsItsHeightAtFontScale15English() = dateRowKeepsItsHeight(AppLanguage.ENGLISH)
+
     /** Skeleton cards → the trip's own dates with their seat counts shimmering → the live dates: one height throughout. */
     private fun dateRowKeepsItsHeight(language: AppLanguage) {
         open(language, withCard = true)
@@ -349,6 +370,8 @@ class TripPageStabilityTest {
         const val SLUG = "burullus-dawn"
         const val SETTLE_MS = 2_000L
         const val SWIPE_PX = 200f
+        const val FONT_SCALE_PIXEL = 1.3f
+        const val FONT_SCALE_LARGE = 1.5f
         val json = Json { ignoreUnknownKeys = true }
     }
 }
