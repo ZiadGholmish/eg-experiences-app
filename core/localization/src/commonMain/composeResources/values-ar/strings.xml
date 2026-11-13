@@ -244,6 +244,36 @@
     <string name="booking_summary_total_note">الإجمالي بيتأكد لما المقاعد تتحجز، قبل ما تدفع.</string>
     <string name="booking_hold_cta">احجز المقاعد وادفع</string>
     <string name="booking_hold_note">المقاعد بتتحجز لك كام دقيقة لحد ما تدفع. مش هيتم خصم أي مبلغ قبل التأكيد.</string>
+    <!-- MB-M1: HOLD_BLOCKED في خطوة التاريخ والعدد. ليه، إمتى ("بعد 5 ساعات"، من retryAfter)، وإيه اللي لسه شغال. -->
+    <string name="booking_blocked_title">الحجز واقف دلوقتي</string>
+    <!-- محايدة عن قصد (2026-11-13): الإيقاف ممكن يكون تلقائي أو من فريق العمل (MB-B1). -->
+    <string name="booking_blocked_why">حجز مقاعد جديدة متوقف مؤقتًا على حسابك وعلى الجهاز ده.</string>
+    <plurals name="booking_blocked_in_minutes">
+        <item quantity="zero">تقدر تحجز تاني بعد %1$d دقيقة.</item>
+        <item quantity="one">تقدر تحجز تاني بعد دقيقة.</item>
+        <item quantity="two">تقدر تحجز تاني بعد دقيقتين.</item>
+        <item quantity="few">تقدر تحجز تاني بعد %1$d دقايق.</item>
+        <item quantity="many">تقدر تحجز تاني بعد %1$d دقيقة.</item>
+        <item quantity="other">تقدر تحجز تاني بعد %1$d دقيقة.</item>
+    </plurals>
+    <plurals name="booking_blocked_in_hours">
+        <item quantity="zero">تقدر تحجز تاني بعد %1$d ساعة.</item>
+        <item quantity="one">تقدر تحجز تاني بعد ساعة.</item>
+        <item quantity="two">تقدر تحجز تاني بعد ساعتين.</item>
+        <item quantity="few">تقدر تحجز تاني بعد %1$d ساعات.</item>
+        <item quantity="many">تقدر تحجز تاني بعد %1$d ساعة.</item>
+        <item quantity="other">تقدر تحجز تاني بعد %1$d ساعة.</item>
+    </plurals>
+    <plurals name="booking_blocked_in_days">
+        <item quantity="zero">تقدر تحجز تاني بعد %1$d يوم.</item>
+        <item quantity="one">تقدر تحجز تاني بعد يوم.</item>
+        <item quantity="two">تقدر تحجز تاني بعد يومين.</item>
+        <item quantity="few">تقدر تحجز تاني بعد %1$d أيام.</item>
+        <item quantity="many">تقدر تحجز تاني بعد %1$d يوم.</item>
+        <item quantity="other">تقدر تحجز تاني بعد %1$d يوم.</item>
+    </plurals>
+    <string name="booking_blocked_later">تقدر تحجز تاني بعد شوية.</string>
+    <string name="booking_blocked_still_open">لسه تقدر تتفرج على الرحلات وتسجّل في قائمة الانتظار.</string>
     <plurals name="booking_seats_left_cap">
         <item quantity="zero">مفيش مقاعد فاضية في اليوم ده.</item>
         <item quantity="one">فاضل مقعد واحد بس في اليوم ده.</item>
@@ -361,6 +391,7 @@
     <string name="error_validation">راجع بياناتك وجرّب تاني.</string>
     <string name="error_rate_limited">محاولات كتير. استنى دقيقة وجرّب تاني.</string>
     <string name="error_payment_declined">الدفع متمش. جرّب تاني أو ادفع بطريقة تانية.</string>
+    <string name="error_hold_blocked">الحجز واقف لفترة على حسابك وعلى الجهاز ده. لسه تقدر تسجّل في قائمة الانتظار.</string>
     <!-- Screen-reader state of a button whose action is in flight. -->
     <string name="a11y_busy">جاري التحميل</string>
     <string name="action_retry">حاول مرة أخرى</string>

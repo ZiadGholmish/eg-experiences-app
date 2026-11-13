@@ -35,6 +35,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.util.Locale
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 /**
  * Date + party × {ar, en} × {loading, loaded, no seats, back from an expired hold}, driven through
@@ -44,6 +46,8 @@ import java.util.Locale
  * - loaded: the date picked on the trip page selected, a party of 2 and the guest filled in, so the
  *   coral button is live.
  * - hold expired: back from held seats that ran out, on a date with fewer seats than the policy allows.
+ * - hold blocked (MB-M1): the hold came back `HOLD_BLOCKED` with 5 hours left; the bar says why, when and what
+ *   still works, with no button; light and dark.
  * - no seats: the hold came back `NO_SEATS_AVAILABLE` and the re-read dates show every D3 reason
  *   (cancelled, sold out, booking closed) next to the open ones; the error sits above the button.
  *
@@ -103,6 +107,18 @@ class BookingScreenshotTest {
     @Test
     fun multiDayEnglish() =
         snapLoaded(AppLanguage.ENGLISH, "A night in the White Desert", "Nada Hassan", prefix = "booking_multi_day", overnight = true)
+
+    @Test
+    fun holdBlockedArabic() = snapHoldBlocked(AppLanguage.ARABIC, "الفجر على بحيرة البرلس", "ندى حسن")
+
+    @Test
+    fun holdBlockedEnglish() = snapHoldBlocked(AppLanguage.ENGLISH, "Dawn on Lake Burullus", "Nada Hassan")
+
+    @Test
+    fun holdBlockedDarkArabic() = snapHoldBlocked(AppLanguage.ARABIC, "الفجر على بحيرة البرلس", "ندى حسن", BahrThemeName.Dark)
+
+    @Test
+    fun holdBlockedDarkEnglish() = snapHoldBlocked(AppLanguage.ENGLISH, "Dawn on Lake Burullus", "Nada Hassan", BahrThemeName.Dark)
 
     /** The form's skeleton in dark mode (M3-M14). */
     @Test
@@ -192,6 +208,36 @@ class BookingScreenshotTest {
         capture("booking_hold_expired", language)
     }
 
+    /** `HOLD_BLOCKED` with `retryAfter` 5 hours, on a clock that stands still so the golden always says "5 hours". */
+    private fun snapHoldBlocked(
+        language: AppLanguage,
+        title: String,
+        name: String,
+        theme: BahrThemeName = BahrThemeName.LakeBurullus,
+    ) {
+        val repo =
+            FakeBookingRepository(
+                tripBySlug = { AppResult.Success(BookingFixtures.trip(title = title)) },
+                departuresFor = { AppResult.Success(BookingFixtures.saturdays()) },
+                placeHold = {
+                    AppResult.Failure(AppError.Api(ApiErrorCodes.HOLD_BLOCKED, null, FORBIDDEN, retryAfterSeconds = FIVE_HOURS_S))
+                },
+            )
+        val stoppedClock =
+            object : Clock {
+                override fun now(): Instant = Instant.parse("2026-11-13T10:00:00Z")
+            }
+        val vm = BookingViewModel(SLUG, "dep-2", repo, FakeActiveHoldStore(), stoppedClock)
+        show(language, vm, theme)
+        compose.runOnUiThread {
+            vm.increaseParty()
+            vm.setGuestName(name)
+            vm.setGuestPhone("010 1234 5678")
+            vm.placeHold()
+        }
+        capture(if (theme == BahrThemeName.Dark) "booking_hold_blocked_dark" else "booking_hold_blocked", language)
+    }
+
     /** dep-1 cancelled (it was also full), dep-2 just sold out, dep-3 sold out, dep-4 booking closed. */
     private fun everyReason(dates: List<BookingDepartureDto>) =
         dates.map {
@@ -247,5 +293,7 @@ class BookingScreenshotTest {
     private companion object {
         const val SETTLE_MS = 1_000L
         const val CONFLICT = 409
+        const val FORBIDDEN = 403
+        const val FIVE_HOURS_S = 5 * 3_600L
     }
 }

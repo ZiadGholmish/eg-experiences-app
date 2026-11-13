@@ -6,6 +6,7 @@ import io.ktor.client.call.NoTransformationFoundException
 import io.ktor.client.call.body
 import io.ktor.client.plugins.HttpRequestTimeoutException
 import io.ktor.client.statement.HttpResponse
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.ContentConvertException
 import io.ktor.util.network.UnresolvedAddressException
@@ -58,6 +59,11 @@ suspend inline fun <reified T> callApi(crossinline block: suspend () -> HttpResp
                         message = envelope.error?.message,
                         httpStatus = response.status.value,
                         reason = envelope.error?.reason,
+                        // The body's figure first; the header says the same (openapi `HoldBlocked`), for a body without it.
+                        // Either one ≤ 0 breaks the contract (at least 1) and is dropped, not shown as "in 1 minute".
+                        retryAfterSeconds =
+                            envelope.error?.retryAfter?.takeIf { it > 0 }
+                                ?: response.headers[HttpHeaders.RetryAfter]?.toLongOrNull()?.takeIf { it > 0 },
                     ),
                 )
         }

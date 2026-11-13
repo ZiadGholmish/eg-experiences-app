@@ -4,6 +4,7 @@ import eg.bahr.core.common.result.AppError
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.error_departure_not_open
 import eg.bahr.core.localization.generated.resources.error_generic
+import eg.bahr.core.localization.generated.resources.error_hold_blocked
 import eg.bahr.core.localization.generated.resources.error_hold_expired
 import eg.bahr.core.localization.generated.resources.error_network
 import eg.bahr.core.localization.generated.resources.error_no_seats_available
@@ -34,6 +35,7 @@ class AppErrorMessagesTest {
         assertEquals(Res.string.error_validation, api("VALIDATION_FAILED").messageRes())
         assertEquals(Res.string.error_rate_limited, api("RATE_LIMITED").messageRes())
         assertEquals(Res.string.error_payment_declined, api("PAYMENT_DECLINED").messageRes())
+        assertEquals(Res.string.error_hold_blocked, api("HOLD_BLOCKED").messageRes())
     }
 
     @Test

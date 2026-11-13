@@ -16,6 +16,8 @@ import eg.bahr.feature.booking.model.GuestRequest
 import eg.bahr.feature.booking.model.PlaceHoldRequest
 import eg.bahr.feature.booking.navigation.HoldRoute
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,6 +25,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 internal data class BookingUiState(
     val trip: BookingTripDto? = null,
@@ -52,6 +56,11 @@ internal data class BookingUiState(
     val heldAlready: Boolean = false,
     /** The last hold on this screen ran out (the held-seats screen came back at 00:00). */
     val holdExpired: Boolean = false,
+    /**
+     * The server takes no hold from this person for a while (`HOLD_BLOCKED`, MB-M1). Kept apart from [holdError],
+     * which any edit clears: no edit lifts a block. Gone once its time has passed, which brings the button back.
+     */
+    val holdBlock: HoldBlock? = null,
 ) {
     /**
      * The live dates when they have answered, else the trip's own `dates` (the same shape, read with
@@ -104,6 +113,7 @@ internal data class BookingUiState(
     val canPlaceHold: Boolean
         get() =
             !isPlacingHold &&
+                holdBlock == null &&
                 selectedDeparture?.isOpen == true &&
                 partySize in MIN_PARTY_SIZE..partyCap &&
                 isNameValid &&
@@ -140,6 +150,9 @@ internal class BookingViewModel(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(BookingUiState(selectedDepartureId = departureId))
     val uiState: StateFlow<BookingUiState> = _uiState.asStateFlow()
+
+    /** Keeps [BookingUiState.holdBlock]'s "in 5 hours" current and lifts the block when its time is up. */
+    private var blockTicker: Job? = null
 
     init {
         load()
@@ -242,6 +255,11 @@ internal class BookingViewModel(
                 }
 
                 is AppResult.Failure -> {
+                    val block = result.error.asHoldBlocked()
+                    if (block != null) {
+                        onHoldBlocked(block.retryAfterSeconds)
+                        return@launch
+                    }
                     _uiState.update { it.copy(isPlacingHold = false, holdError = result.error) }
                     // The seat counts on screen were wrong (someone else took the seats, or booking
                     // closed): re-read them rather than let the user try the same date again blind.
@@ -249,6 +267,32 @@ internal class BookingViewModel(
                 }
             }
         }
+    }
+
+    /**
+     * `retryAfter` counts from when the answer arrived, so the deadline is the device's clock read now plus it (the
+     * device clock is all there is to count against: the error carries no `serverNow`). The ticker re-reads the clock
+     * each time rather than counting down, so a backgrounded app is right when it comes back.
+     */
+    private fun onHoldBlocked(retryAfterSeconds: Long?) {
+        val receivedAt = clock.now()
+        val until = retryAfterSeconds?.let { receivedAt + it.seconds }
+        val block = HoldBlock(until = until, left = retryAfterSeconds?.seconds?.toBlockTimeLeft())
+        _uiState.update { it.copy(isPlacingHold = false, holdError = null, holdBlock = block) }
+        blockTicker?.cancel()
+        if (until == null) return
+        blockTicker =
+            viewModelScope.launch {
+                while (true) {
+                    val left = until - clock.now()
+                    if (!left.isPositive()) {
+                        _uiState.update { it.copy(holdBlock = null) }
+                        break
+                    }
+                    _uiState.update { it.copy(holdBlock = HoldBlock(until, left.toBlockTimeLeft())) }
+                    delay(left.coerceAtMost(BLOCK_TICK))
+                }
+            }
     }
 
     /**
@@ -350,8 +394,13 @@ internal class BookingViewModel(
     private fun BookingUiState.withValidParty(): BookingUiState =
         copy(partySize = partySize.coerceIn(BookingUiState.MIN_PARTY_SIZE, partyCap))
 
+    private fun AppError.asHoldBlocked(): AppError.Api? = (this as? AppError.Api)?.takeIf { it.code == ApiErrorCodes.HOLD_BLOCKED }
+
     private fun AppError.isStaleDates(): Boolean =
         this is AppError.Api && (code == ApiErrorCodes.NO_SEATS_AVAILABLE || code == ApiErrorCodes.DEPARTURE_NOT_OPEN)
 }
 
 private const val LOG_TAG = "booking"
+
+/** How often a block's "in 40 minutes" is said again: the smallest unit it is said in. */
+private val BLOCK_TICK = 1.minutes

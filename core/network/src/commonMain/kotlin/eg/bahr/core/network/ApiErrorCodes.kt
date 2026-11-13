@@ -39,6 +39,12 @@ object ApiErrorCodes {
     const val OTP_INVALID = "OTP_INVALID"
     const val OTP_RATE_LIMITED = "OTP_RATE_LIMITED"
     const val RATE_LIMITED = "RATE_LIMITED"
+
+    /**
+     * `placeHold` only (403, since M3-B13): too many of this install's, account's or phone's holds ended unpaid, so no
+     * new hold until `retryAfter` seconds have passed. Waiting lists and browsing stay open.
+     */
+    const val HOLD_BLOCKED = "HOLD_BLOCKED"
     const val INTERNAL_ERROR = "INTERNAL_ERROR"
 
     // ---- Client-side only: never sent by the backend ----

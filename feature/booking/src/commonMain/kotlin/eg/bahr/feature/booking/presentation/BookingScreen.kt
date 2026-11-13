@@ -1,31 +1,48 @@
 package eg.bahr.feature.booking.presentation
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import eg.bahr.core.designsystem.components.BahrErrorView
 import eg.bahr.core.designsystem.components.BahrPrimaryButton
 import eg.bahr.core.designsystem.components.StickyActionBar
 import eg.bahr.core.designsystem.format.BahrFormat
 import eg.bahr.core.designsystem.icon.BahrIcons
+import eg.bahr.core.designsystem.theme.BahrSize
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.action_retry
+import eg.bahr.core.localization.generated.resources.booking_blocked_in_days
+import eg.bahr.core.localization.generated.resources.booking_blocked_in_hours
+import eg.bahr.core.localization.generated.resources.booking_blocked_in_minutes
+import eg.bahr.core.localization.generated.resources.booking_blocked_later
+import eg.bahr.core.localization.generated.resources.booking_blocked_still_open
+import eg.bahr.core.localization.generated.resources.booking_blocked_title
+import eg.bahr.core.localization.generated.resources.booking_blocked_why
 import eg.bahr.core.localization.generated.resources.booking_hold_cta
 import eg.bahr.core.localization.generated.resources.booking_hold_note
 import eg.bahr.core.localization.generated.resources.booking_price_per_person
@@ -42,6 +59,7 @@ import eg.bahr.feature.booking.presentation.components.DateRows
 import eg.bahr.feature.booking.presentation.components.GuestDetails
 import eg.bahr.feature.booking.presentation.components.PartyStepper
 import eg.bahr.feature.booking.presentation.components.PriceSummary
+import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -173,6 +191,9 @@ private fun Heading(trip: BookingTripDto) {
  * The sticky bar: why the last hold failed (if it did), the one coral button, and the hold
  * explanation. While the hold is in flight the button keeps its coral fill with a progress
  * indicator and ignores taps, so a double tap cannot place two holds.
+ *
+ * While holds are blocked (`HOLD_BLOCKED`, MB-M1) the bar holds only [HoldBlockedNotice]: no button to try again
+ * until the time has passed, when the view model drops the block and the button comes back.
  */
 @Composable
 private fun HoldBar(
@@ -180,6 +201,11 @@ private fun HoldBar(
     onHold: () -> Unit,
 ) {
     StickyActionBar {
+        val block = state.holdBlock
+        if (block != null) {
+            HoldBlockedNotice(block, Modifier.weight(1f))
+            return@StickyActionBar
+        }
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(BahrSpacing.sm)) {
             val message =
                 when {
@@ -210,6 +236,69 @@ private fun HoldBar(
         }
     }
 }
+
+/**
+ * Why booking is paused (holds left unpaid), when it opens again ("in 5 hours", rounded up), and what still works.
+ * On `secondaryContainer` (gold): a pause, not a failure, and coral is for actions only. Announced as it appears.
+ */
+@Composable
+private fun HoldBlockedNotice(
+    block: HoldBlock,
+    modifier: Modifier = Modifier,
+) {
+    val c = MaterialTheme.colorScheme
+    Column(
+        modifier =
+            modifier
+                .clip(BahrTheme.shapes.medium)
+                .background(c.secondaryContainer)
+                .padding(BahrSpacing.md)
+                .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }
+                .testTag(HOLD_BLOCKED_TAG),
+        verticalArrangement = Arrangement.spacedBy(BahrSpacing.xs),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(BahrSpacing.sm)) {
+            Icon(
+                BahrIcons.HourglassTop.filled(),
+                contentDescription = null,
+                tint = c.onSecondaryContainer,
+                modifier = Modifier.size(BahrSize.iconMedium),
+            )
+            Text(
+                text = stringResource(Res.string.booking_blocked_title),
+                style = MaterialTheme.typography.titleSmall,
+                color = c.onSecondaryContainer,
+            )
+        }
+        Text(
+            text = stringResource(Res.string.booking_blocked_why),
+            style = MaterialTheme.typography.bodyMedium,
+            color = c.onSecondaryContainer,
+        )
+        Text(
+            text = blockedUntilText(block.left),
+            style = MaterialTheme.typography.labelLarge,
+            color = c.onSecondaryContainer,
+        )
+        Text(
+            text = stringResource(Res.string.booking_blocked_still_open),
+            style = MaterialTheme.typography.bodyMedium,
+            color = c.onSecondaryContainer,
+        )
+    }
+}
+
+@Composable
+private fun blockedUntilText(left: BlockTimeLeft?): String =
+    when (left?.unit) {
+        BlockUnit.MINUTES -> pluralStringResource(Res.plurals.booking_blocked_in_minutes, left.count, left.count)
+        BlockUnit.HOURS -> pluralStringResource(Res.plurals.booking_blocked_in_hours, left.count, left.count)
+        BlockUnit.DAYS -> pluralStringResource(Res.plurals.booking_blocked_in_days, left.count, left.count)
+        null -> stringResource(Res.string.booking_blocked_later)
+    }
+
+/** The "booking paused" notice, for tests. */
+internal const val HOLD_BLOCKED_TAG = "booking_hold_blocked"
 
 /** The scrolling form, for tests that scroll to a part of it. */
 internal const val BOOKING_FORM_TAG = "booking_form"

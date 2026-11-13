@@ -223,6 +223,24 @@
     <string name="booking_hold_cta">Hold seats and pay</string>
     <!-- No length in the copy: the hold's length is server policy, and nothing is held yet to read it from. -->
     <string name="booking_hold_note">Seats are held for a few minutes while you pay. Nothing is charged until you confirm.</string>
+    <!-- MB-M1: HOLD_BLOCKED on the date + party step. Why, when ("in 5 hours", from retryAfter), and what still works. -->
+    <string name="booking_blocked_title">Booking is paused for now</string>
+    <!-- Neutral on purpose (user, 2026-11-13): a block may be automatic (unpaid holds) or set by staff (MB-B1). -->
+    <string name="booking_blocked_why">New seat holds are paused on this account and this device.</string>
+    <plurals name="booking_blocked_in_minutes">
+        <item quantity="one">You can book again in %1$d minute.</item>
+        <item quantity="other">You can book again in %1$d minutes.</item>
+    </plurals>
+    <plurals name="booking_blocked_in_hours">
+        <item quantity="one">You can book again in %1$d hour.</item>
+        <item quantity="other">You can book again in %1$d hours.</item>
+    </plurals>
+    <plurals name="booking_blocked_in_days">
+        <item quantity="one">You can book again in %1$d day.</item>
+        <item quantity="other">You can book again in %1$d days.</item>
+    </plurals>
+    <string name="booking_blocked_later">You can book again a little later.</string>
+    <string name="booking_blocked_still_open">You can still browse trips and join a waiting list.</string>
     <plurals name="booking_seats_left_cap">
         <item quantity="one">Only %1$d seat left on this date.</item>
         <item quantity="other">Only %1$d seats left on this date.</item>
@@ -358,6 +376,7 @@
     <string name="error_validation">Check your details and try again.</string>
     <string name="error_rate_limited">Too many tries. Wait a minute and try again.</string>
     <string name="error_payment_declined">Your payment didn’t go through. Try again, or pay another way.</string>
+    <string name="error_hold_blocked">Booking is paused for a while on this account and this device. You can still join a waiting list.</string>
     <!-- Screen-reader state of a button whose action is in flight. -->
     <string name="a11y_busy">Loading</string>
     <string name="action_retry">Try again</string>

@@ -27,6 +27,8 @@ internal data class ApiErrorDto(
     val violations: List<FieldViolationDto>? = null,
     /** openapi `ApiError.reason` (since MA-B9): finer than [code] on a few failures. */
     val reason: String? = null,
+    /** openapi `ApiError.retryAfter` (since M3-B13): whole seconds until the same request can succeed. */
+    val retryAfter: Long? = null,
 )
 
 @Serializable

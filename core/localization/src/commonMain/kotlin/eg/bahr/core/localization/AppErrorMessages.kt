@@ -6,6 +6,7 @@ import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.error_account_unauthorized
 import eg.bahr.core.localization.generated.resources.error_departure_not_open
 import eg.bahr.core.localization.generated.resources.error_generic
+import eg.bahr.core.localization.generated.resources.error_hold_blocked
 import eg.bahr.core.localization.generated.resources.error_hold_expired
 import eg.bahr.core.localization.generated.resources.error_network
 import eg.bahr.core.localization.generated.resources.error_no_seats_available
@@ -44,6 +45,9 @@ fun AppError.messageRes(): StringResource =
                 RATE_LIMITED -> Res.string.error_rate_limited
                 // The provider refused to start the payment (M3-M1); the hold is kept, another try or method may work.
                 PAYMENT_DECLINED -> Res.string.error_payment_declined
+                // Holds paused for this account/device (M3-B13 unpaid holds, or by staff MB-B1): the date + party step has its own state with the time left (MB-M1);
+                // this line is for any other place the code reaches.
+                HOLD_BLOCKED -> Res.string.error_hold_blocked
                 // A signed-in request the session could not keep alive (M3-M0): the tokens are dropped.
                 UNAUTHORIZED -> Res.string.error_account_unauthorized
                 else -> Res.string.error_generic
@@ -61,6 +65,7 @@ private const val VALIDATION_FAILED = "VALIDATION_FAILED"
 private const val RATE_LIMITED = "RATE_LIMITED"
 private const val UNAUTHORIZED = "UNAUTHORIZED"
 private const val PAYMENT_DECLINED = "PAYMENT_DECLINED"
+private const val HOLD_BLOCKED = "HOLD_BLOCKED"
 
 /** [messageRes], resolved in the composition's language. */
 @Composable
