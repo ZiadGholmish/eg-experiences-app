@@ -38,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
@@ -119,6 +120,15 @@ internal fun SearchTripsScreen(
     val listState = rememberLazyListState()
     val perPersonLabel = stringResource(Res.string.trip_per_person)
     val keyboard = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+    // MV-M11: a result (a trip, a host, "See all hosts") opens another page over this one, and search stays on the back
+    // stack. Let go of the field and put the keyboard away first rather than leave it to the field leaving the screen,
+    // which let the keyboard stay up over the trip page (iOS ties the keyboard to the focus). Back closes search itself.
+    val leave: (() -> Unit) -> Unit = { open ->
+        focusManager.clearFocus(force = true)
+        keyboard?.hide()
+        open()
+    }
     val status = trips.rememberQueryStatus()
     val chips = state.filterChips
     val motion = rememberListMotion(status, switchKey = state.query to state.filter, order = selectedOrder(chips, state::isSelected))
@@ -201,9 +211,9 @@ internal fun SearchTripsScreen(
                         hosts = state.hosts,
                         onHostClick = { host ->
                             viewModel.onResultOpened()
-                            onHostClick(host)
+                            leave { onHostClick(host) }
                         },
-                        onSeeAll = { onSeeAllHosts(query) },
+                        onSeeAll = { leave { onSeeAllHosts(query) } },
                     )
                 }
             }
@@ -252,7 +262,7 @@ internal fun SearchTripsScreen(
                     },
                 onTripClick = { slug ->
                     viewModel.onResultOpened()
-                    onTripClick(slug)
+                    leave { onTripClick(slug) }
                 },
             )
             navigationBarsSpacer()

@@ -261,6 +261,58 @@ class TripDetailScreenshotTest {
     /** One night away: back the day after each departure. */
     private fun overnight(dates: List<DepartureDto>) = dates.map { it.copy(returnDate = it.date.plus(1, DateTimeUnit.DAY)) }
 
+    /*
+     * MV-M11: the date cards at a larger text size (the Pixel runs 1.3; 1.5 for headroom). Robolectric's font scale goes
+     * through the platform's non-linear text scaling, as on the phone. Every kind of card side by side (cancelled, a
+     * two-digit count, a waiting list the device is on, sold out, booking closed) on November and December dates, whose
+     * Arabic months the fixed-width card clipped ("21 نوفم"): each must show its whole date, and its status on the lines
+     * it takes at the default size. Wide enough for the five cards at 1.5.
+     */
+
+    @Config(qualifiers = WIDE_BAND, fontScale = FONT_SCALE_PIXEL)
+    @Test
+    fun dateCardsFontScale13Arabic() = dateCardsAtFontScale("trip_detail_date_cards_fs13", AppLanguage.ARABIC)
+
+    @Config(qualifiers = WIDE_BAND, fontScale = FONT_SCALE_PIXEL)
+    @Test
+    fun dateCardsFontScale13English() = dateCardsAtFontScale("trip_detail_date_cards_fs13", AppLanguage.ENGLISH)
+
+    @Config(qualifiers = WIDE_BAND, fontScale = FONT_SCALE_LARGE)
+    @Test
+    fun dateCardsFontScale15Arabic() = dateCardsAtFontScale("trip_detail_date_cards_fs15", AppLanguage.ARABIC)
+
+    @Config(qualifiers = WIDE_BAND, fontScale = FONT_SCALE_LARGE)
+    @Test
+    fun dateCardsFontScale15English() = dateCardsAtFontScale("trip_detail_date_cards_fs15", AppLanguage.ENGLISH)
+
+    private fun dateCardsAtFontScale(
+        prefix: String,
+        language: AppLanguage,
+    ) = snap(prefix, language, scrollTo = TripSection.Availability, waitlists = joinedOn(WINTER_JOINED_DATE)) {
+        serve(payload(language), departures(language), dates = ::winterDatesOfEveryKind)
+    }
+
+    /** The seeded dates moved to November and December, one of each kind, and a fifth (sold out, not joined). */
+    private fun winterDatesOfEveryKind(dates: List<DepartureDto>): List<DepartureDto> {
+        val (cancelled, open, soldOut, closed) = dates
+        return listOf(
+            cancelled.copy(
+                date = LocalDate.parse("2026-11-21"),
+                seatsRemaining = 0,
+                soldOut = true,
+                bookable = false,
+                unavailableReason = "CANCELLED",
+            ),
+            open.copy(date = LocalDate.parse("2026-11-28"), seatsRemaining = TWO_DIGIT_SEATS),
+            soldOut.copy(date = LocalDate.parse(WINTER_JOINED_DATE)),
+            soldOut.copy(id = EXTRA_SOLD_OUT_ID, date = LocalDate.parse("2026-12-12")),
+            closed.copy(date = LocalDate.parse("2026-12-19"), bookable = false, unavailableReason = "CLOSED"),
+        )
+    }
+
+    private fun joinedOn(date: String) =
+        waitlistMemory(FakeWaitlistJoinsStore(listOf(storedJoin(departureId = SOLD_OUT_ID, tripSlug = SLUG, date = date))))
+
     /** M4-M13: the waiting-list form just opened under the sold-out date: nothing typed, the button disabled. */
     @Config(qualifiers = "en-w360dp-h900dp-xhdpi")
     @Test
@@ -783,6 +835,12 @@ class TripDetailScreenshotTest {
         val UNREACHABLE_PHOTOS = (1..3).map { ImageDto(url = "http://127.0.0.1:9/photo-$it.png", width = 900, height = 560) }
         const val SOLD_OUT_ID = "0199c3a0-5eed-7000-8000-000000000603"
         const val OPEN_ID = "0199c3a0-5eed-7000-8000-000000000601"
+        const val EXTRA_SOLD_OUT_ID = "0199c3a0-5eed-7000-8000-000000000605"
+        const val WINTER_JOINED_DATE = "2026-12-05"
+        const val TWO_DIGIT_SEATS = 18
+        const val WIDE_BAND = "en-w900dp-h640dp-xhdpi"
+        const val FONT_SCALE_PIXEL = 1.3f
+        const val FONT_SCALE_LARGE = 1.5f
         val json = Json { ignoreUnknownKeys = true }
     }
 }
