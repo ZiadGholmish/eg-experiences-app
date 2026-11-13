@@ -49,6 +49,15 @@ class PhoneNumbersTest {
     }
 
     @Test
+    fun `a pasted mobile validates with or without the country code`() {
+        // MV-M12: the account and payer fields keep what was pasted and normalise only to check and send.
+        listOf("+20 10 1234 5678", "01012345678").forEach {
+            assertEquals("01012345678", PhoneNumbers.normalizeMobile(it), it)
+            assertTrue(PhoneNumbers.isEgyptianMobile(PhoneNumbers.normalizeMobile(it)), it)
+        }
+    }
+
+    @Test
     fun `an Egyptian mobile is 11 digits starting 010 011 012 or 015`() {
         listOf("01012345678", "01112345678", "01212345678", "01512345678").forEach {
             assertTrue(PhoneNumbers.isEgyptianMobile(it), it)

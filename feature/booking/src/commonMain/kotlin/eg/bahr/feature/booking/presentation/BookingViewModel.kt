@@ -34,6 +34,7 @@ internal data class BookingUiState(
     val selectedDepartureId: String? = null,
     val partySize: Int = MIN_PARTY_SIZE,
     val guestName: String = "",
+    /** As typed (MV-M12): cleaned only to check it ([isPhoneValid]) and to send it ([cleanGuestPhone]). */
     val guestPhone: String = "",
     val isPlacingHold: Boolean = false,
     /** Why the last hold failed; cleared by the next edit. */
@@ -90,7 +91,11 @@ internal data class BookingUiState(
 
     /** The contract's `Phone` pattern, so a typo is caught before it costs a seat-hold attempt. */
     val isPhoneValid: Boolean
-        get() = PhoneNumbers.isValid(guestPhone)
+        get() = PhoneNumbers.isValid(cleanGuestPhone)
+
+    /** The number the hold is made under: digits and a leading `+` only ([PhoneNumbers.clean]). */
+    val cleanGuestPhone: String
+        get() = PhoneNumbers.clean(guestPhone)
 
     /**
      * The server checks all of this again and stays the authority; checking here is about not
@@ -176,11 +181,12 @@ internal class BookingViewModel(
     fun setGuestName(name: String) = _uiState.update { it.copy(guestName = name.take(BookingUiState.NAME_MAX_LENGTH), holdError = null) }
 
     /**
-     * Keeps digits and a leading `+` only, so "010 1234 5678" and "+20 10…" both become what the
-     * contract's `Phone` pattern accepts. The server compares phones by their digits.
+     * Keeps exactly what was typed (MV-M12): cleaning on every key took a typed space or dash back out of the
+     * field under the cursor. "010 1234 5678" and "+20 10…" are both cleaned to what the contract's `Phone`
+     * pattern accepts only when checked and sent ([BookingUiState.cleanGuestPhone]).
      */
     fun setGuestPhone(phone: String) {
-        _uiState.update { it.copy(guestPhone = PhoneNumbers.clean(phone), holdError = null) }
+        _uiState.update { it.copy(guestPhone = phone, holdError = null) }
     }
 
     fun placeHold() {
@@ -193,7 +199,7 @@ internal class BookingViewModel(
             PlaceHoldRequest(
                 departureId = departure.id,
                 partySize = state.partySize,
-                guest = GuestRequest(name = state.guestName.trim(), phone = state.guestPhone),
+                guest = GuestRequest(name = state.guestName.trim(), phone = state.cleanGuestPhone),
             )
         viewModelScope.launch {
             // One hold at a time. The back stack guards this within a session (navigateToBooking);
