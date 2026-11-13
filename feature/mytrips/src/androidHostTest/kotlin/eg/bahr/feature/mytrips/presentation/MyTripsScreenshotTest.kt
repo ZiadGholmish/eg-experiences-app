@@ -58,6 +58,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import kotlin.math.absoluteValue
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -246,7 +247,8 @@ class MyTripsScreenshotTest {
     fun sectionFailedDarkEnglish() =
         shoot("mytrips_section_failed_dark", AppLanguage.ENGLISH, waitlistFailed, MyTripsFixtures.past(), theme = BahrThemeName.Dark)
 
-    // Signed in, no trips in any section (M3-M8b): the looping suitcase over the line, shot still under reduced motion.
+    // Signed in, no trips in any section (M3-M8b): the looping map (a suitcase until 2026-11-12) over the line, in the
+    // middle of the space under the title; shot still under reduced motion.
     private val empty =
         MyTripsUiState(session = signedIn, upcoming = SectionLoad.Loaded(emptyList()), waitlist = SectionLoad.Loaded(emptyList()))
 
@@ -261,6 +263,47 @@ class MyTripsScreenshotTest {
 
     @Test
     fun emptyDarkEnglish() = shootStill("mytrips_empty_dark", AppLanguage.ENGLISH, empty, BahrThemeName.Dark)
+
+    /** User, 2026-11-12: the empty state sits in the middle of the space under the title, not at its top. */
+    @Test
+    fun `no trips - the empty state is centred under the title`() {
+        compose.setContent {
+            Themed(AppLanguage.ENGLISH, reducedMotion = true) {
+                MyTripsContent(
+                    state = empty,
+                    past = flowOf(PagingData.from(emptyList<MyBookingDto>(), loaded)).collectAsLazyPagingItems(),
+                    actions = MyTripsActions(),
+                )
+            }
+        }
+        compose.waitUntil(LOTTIE_LOAD_TIMEOUT_MS) { compose.onAllNodesWithTag(BAHR_LOTTIE_READY_TAG).fetchSemanticsNodes().isNotEmpty() }
+        val title = compose.onNodeWithText("My trips").getBoundsInRoot()
+        val list = compose.onNodeWithTag(MY_TRIPS_LIST_TAG).getBoundsInRoot()
+        val art = compose.onNodeWithTag(BAHR_LOTTIE_READY_TAG).getBoundsInRoot()
+        val line = compose.onNodeWithText("No upcoming trips yet.").getBoundsInRoot()
+        // The space under the title ends at the list's bottom padding.
+        val spaceMiddle = (title.bottom + list.bottom - BahrSpacing.lg) / 2
+        val stateMiddle = (art.top + line.bottom) / 2
+        assertTrue((stateMiddle - spaceMiddle).value.absoluteValue <= BahrSpacing.xs.value, "off centre by ${stateMiddle - spaceMiddle}")
+        assertTrue((art.left + art.right - list.left - list.right).value.absoluteValue <= BahrSpacing.xs.value, "not centred across")
+    }
+
+    /** The centred empty state is still the list: pulling it down reads the sections again. */
+    @Test
+    fun `no trips - a pull refreshes`() {
+        var pulls = 0
+        compose.setContent {
+            Themed(AppLanguage.ENGLISH, reducedMotion = true) {
+                MyTripsContent(
+                    state = empty,
+                    past = flowOf(PagingData.from(emptyList<MyBookingDto>(), loaded)).collectAsLazyPagingItems(),
+                    actions = MyTripsActions(onRefresh = { pulls++ }),
+                )
+            }
+        }
+        compose.onNodeWithTag(MY_TRIPS_LIST_TAG).performTouchInput { swipeDown() }
+        compose.runOnIdle { assertEquals(1, pulls) }
+    }
 
     @Test
     fun `Rate your trip calls back with the booking and its trip's title - only where it may be reviewed`() {

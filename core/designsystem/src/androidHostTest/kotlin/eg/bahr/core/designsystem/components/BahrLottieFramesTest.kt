@@ -77,8 +77,8 @@ class BahrLottieFramesTest {
 
     /** The empty states' loops (M3-M8b) pause out of view like the bell. */
     @Test
-    fun suitcaseLoopOutOfViewAsksForNoFrames() {
-        show(BahrLottie.Playback.Loop, offScreen = true, animation = BahrLottie.Animation.Suitcase)
+    fun mapLoopOutOfViewAsksForNoFrames() {
+        show(BahrLottie.Playback.Loop, offScreen = true, animation = BahrLottie.Animation.MapRoute)
         compose.mainClock.advanceTimeBy(LONGER_THAN_ANY_ANIMATION_MS)
         assertFalse(asksForFrames())
     }
@@ -162,8 +162,8 @@ class BahrLottieFramesTest {
     private fun asksForFrames(): Boolean = Recomposer.runningRecomposers.value.any { it.hasPendingWork }
 
     private companion object {
-        /** The longest shipped file is the success check's, 4.6 s (M3-M8b). */
-        const val LONGER_THAN_ANY_ANIMATION_MS = 6_000L
+        /** The longest shipped file is the map's, 6 s (144 frames at 24 fps, 2026-11-12). */
+        const val LONGER_THAN_ANY_ANIMATION_MS = 7_000L
         const val LOAD_TIMEOUT_MS = 10_000L
 
         /** Well below the 640dp test screen. */
