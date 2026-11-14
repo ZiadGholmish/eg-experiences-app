@@ -7,6 +7,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import eg.bahr.core.common.auth.HostSessionStore
 import eg.bahr.core.common.auth.InstallSecretStore
 import eg.bahr.core.common.auth.SessionStore
 import eg.bahr.core.common.auth.StoredSession
@@ -20,6 +21,18 @@ import javax.crypto.spec.GCMParameterSpec
 
 actual fun secureSessionStore(dataStore: DataStore<Preferences>): SessionStore = KeystoreSessionStore(dataStore)
 
+actual fun secureHostSessionStore(dataStore: DataStore<Preferences>): HostSessionStore =
+    KeystoreHostSessionStore(KeystoreSessionStore(dataStore, preferenceKey = HOST_PREFERENCE_KEY, keyAlias = HOST_KEY_ALIAS))
+
+/** Host mode's sign-in (M5-M1): the same sealing as the traveller's, under a Keystore key and a preference of its own. */
+private class KeystoreHostSessionStore(
+    store: SessionStore,
+) : HostSessionStore,
+    SessionStore by store
+
+private const val HOST_PREFERENCE_KEY = "host_session_sealed"
+private const val HOST_KEY_ALIAS = "bahr_host_session"
+
 actual fun secureInstallSecretStore(dataStore: DataStore<Preferences>): InstallSecretStore = KeystoreInstallSecretStore(dataStore)
 
 /**
@@ -29,14 +42,18 @@ actual fun secureInstallSecretStore(dataStore: DataStore<Preferences>): InstallS
  */
 internal class KeystoreSessionStore(
     dataStore: DataStore<Preferences>,
+    // Parameters since M5-M1, so host mode's sign-in gets an item of its own; the traveller's keeps these names.
+    preferenceKey: String = PREFERENCE_KEY,
+    keyAlias: String = KEY_ALIAS,
 ) : SessionStore {
-    private val sealed = SealedPreference(dataStore, stringPreferencesKey("session_sealed"), KeystoreSealer(KEY_ALIAS))
+    private val sealed = SealedPreference(dataStore, stringPreferencesKey(preferenceKey), KeystoreSealer(keyAlias))
 
     override suspend fun read(): StoredSession? = SessionCodec.decode(sealed.read())
 
     override suspend fun write(session: StoredSession?) = sealed.write(session?.let(SessionCodec::encode))
 
     private companion object {
+        const val PREFERENCE_KEY = "session_sealed"
         const val KEY_ALIAS = "bahr_session"
     }
 }

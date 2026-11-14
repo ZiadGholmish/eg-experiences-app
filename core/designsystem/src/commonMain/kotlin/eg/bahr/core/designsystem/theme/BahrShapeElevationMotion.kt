@@ -414,6 +414,12 @@ object BahrSize {
     /** A category's tinted tile (HANDOFF Home → category row: 58px, `extraLarge` radius); the category page's header. */
     val categoryTile = 58.dp
 
+    /** The host manifest's seat bar (HANDOFF §7: 26px cells, `extraSmall` radius, M5-M1). */
+    val seatBar = 26.dp
+
+    /** The gap between two cells of the seat bar (HANDOFF §7: 3px). */
+    val seatBarGap = 3.dp
+
     /** The logo tile in Home's app bar (HANDOFF Home: 34px, `small` radius, the `sailing` icon on primary). */
     val logoTile = 34.dp
 

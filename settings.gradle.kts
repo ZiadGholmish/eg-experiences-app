@@ -66,6 +66,8 @@ include(":feature:auth")
 // The My trips tab (M3-M0).
 include(":feature:mytrips")
 include(":feature:notifications")
+// Host mode (M5-M1): a host's own sign-in, dates, manifest, broadcast and manual bookings (PLAN §5b's feature:host-workspace).
+include(":feature:host-workspace")
 
 // JVM, test-only: ModuleGraphTest (Konsist) enforces the bahr-modularization rules.
 include(":architecture-tests")

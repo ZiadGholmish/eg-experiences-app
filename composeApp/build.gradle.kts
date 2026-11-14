@@ -39,6 +39,8 @@ kotlin {
             implementation(projects.feature.auth)
             implementation(projects.feature.mytrips)
             implementation(projects.feature.notifications)
+            // Host mode (M5-M1), opened from Profile.
+            implementation(projects.feature.hostWorkspace)
 
             implementation(projects.core.common)
             implementation(projects.core.network)

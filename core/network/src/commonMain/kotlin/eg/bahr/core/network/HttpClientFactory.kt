@@ -4,6 +4,7 @@ import co.touchlab.kermit.Logger
 import eg.bahr.core.common.auth.DeviceIdSource
 import eg.bahr.core.common.auth.InstallSecretStore
 import eg.bahr.core.network.auth.AuthSession
+import eg.bahr.core.network.auth.HostSession
 import eg.bahr.core.network.auth.HttpSessionRemote
 import eg.bahr.core.network.auth.bahrAuth
 import io.ktor.client.HttpClient
@@ -65,6 +66,15 @@ internal object HttpClientFactory {
             // Tests build the client directly; it is the session's way to the server then.
             .also { client -> session?.remote = HttpSessionRemote { client } }
 
+    /** As [create] on [engine], without making the client [session]'s way to the server (the Koin module does that). */
+    fun createWith(
+        engine: HttpClientEngine,
+        config: ApiConfig,
+        languageTagProvider: LanguageTagProvider,
+        session: AuthSession,
+        deviceIds: DeviceIdSource,
+    ): HttpClient = HttpClient(engine) { configure(config, languageTagProvider, session, deviceIds, installSecrets = null) }
+
     private fun HttpClientConfig<*>.configure(
         config: ApiConfig,
         languageTagProvider: LanguageTagProvider,
@@ -125,3 +135,14 @@ fun apiHttpClient(
     // Last, so the tests' trailing `{ "ar" }` still means the language.
     languageTagProvider: LanguageTagProvider,
 ): HttpClient = HttpClientFactory.create(engine, config, languageTagProvider, session, deviceIds, installSecrets)
+
+/**
+ * Host mode's client (M5-M1) on a given engine, signed in through [session]: for feature:host-workspace's tests, as
+ * [apiHttpClient] is for the traveller's. The client becomes the host session's way to the server (refresh, sign-out).
+ */
+fun hostApiHttpClient(
+    engine: HttpClientEngine,
+    config: ApiConfig,
+    session: HostSession,
+    languageTagProvider: LanguageTagProvider,
+): HttpClient = HttpClientFactory.create(engine, config, languageTagProvider, session.session, deviceIds = null)

@@ -2,6 +2,7 @@ package eg.bahr.core.datastore
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import eg.bahr.core.common.auth.HostSessionStore
 import eg.bahr.core.common.auth.InstallSecretStore
 import eg.bahr.core.common.auth.SessionStore
 import eg.bahr.core.common.auth.StoredSession
@@ -18,6 +19,13 @@ import kotlinx.serialization.json.Json
  * Android-only and deprecated), so it is written per platform on the system APIs, with no dependency.
  */
 expect fun secureSessionStore(dataStore: DataStore<Preferences>): SessionStore
+
+/**
+ * Host mode's sign-in (M5-M1) in the same secure storage as the traveller's, as an item of its own: its own Keychain
+ * item on iOS, its own Keystore key and preference on Android. Signing out of one, a lost key or a wiped item never
+ * touches the other.
+ */
+expect fun secureHostSessionStore(dataStore: DataStore<Preferences>): HostSessionStore
 
 /**
  * The install secret (`registerDevice`'s `installSecret`, M3-M5) in the same secure storage as the session, as its

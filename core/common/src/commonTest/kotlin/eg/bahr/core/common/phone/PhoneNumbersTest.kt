@@ -82,4 +82,15 @@ class PhoneNumbersTest {
             assertTrue(PhoneNumbers.isValid(it), it)
         }
     }
+
+    @Test
+    fun `normalize keeps any phone - Western digits - a leading plus - nothing else - M5-M1`() {
+        assertEquals("01001234567", PhoneNumbers.normalize("٠١٠٠١٢٣٤٥٦٧"))
+        assertEquals("01001234567", PhoneNumbers.normalize("۰۱۰ ۰۱۲۳ ۴۵۶۷"))
+        assertEquals("+201001234567", PhoneNumbers.normalize(" +20 100-123-4567"))
+        assertEquals("+441234567890", PhoneNumbers.normalize("+44 (1234) 567890"))
+        assertEquals("", PhoneNumbers.normalize(" - "))
+        assertTrue(PhoneNumbers.isValid(PhoneNumbers.normalize("٠١٠٠١٢٣٤٥٦٧")))
+        assertEquals(PhoneNumbers.MAX_LENGTH, PhoneNumbers.normalize("+1234567890123456789").length)
+    }
 }

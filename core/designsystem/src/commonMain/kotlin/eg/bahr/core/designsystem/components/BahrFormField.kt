@@ -16,6 +16,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -39,6 +40,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -48,6 +51,10 @@ import eg.bahr.core.designsystem.theme.BahrBorder
 import eg.bahr.core.designsystem.theme.BahrSize
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
+import eg.bahr.core.localization.generated.resources.Res
+import eg.bahr.core.localization.generated.resources.a11y_hide_password
+import eg.bahr.core.localization.generated.resources.a11y_show_password
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * A labelled form field as the account handoff draws it (M3-M0b, §2 Edit personal info and the
@@ -62,10 +69,12 @@ import eg.bahr.core.designsystem.theme.BahrTheme
  * [Props.enabled] false is the saving state: 60% opacity, no input. [Props.leftToRight] keeps a phone
  * number left to right inside Arabic, as the prototype's `dir=ltr` box does, counter included.
  *
- * Callers: feature:auth's first-sign-in sheet and feature:settings' Edit personal info.
+ * Callers: feature:auth's first-sign-in sheet, feature:settings' Edit personal info, feature:host-workspace's sign-in
+ * and manual booking (M5-M1).
  */
 interface BahrFormField {
-    enum class Keyboard { Name, Phone, Text }
+    /** [Email] and [Password] since M5-M1 (host sign-in): no autocorrect or capitals, and the platform's keyboards. */
+    enum class Keyboard { Name, Phone, Text, Email, Password }
 
     @Immutable
     data class Props(
@@ -88,6 +97,13 @@ interface BahrFormField {
         val imeAction: ImeAction = ImeAction.Next,
         val onImeAction: () -> Unit = {},
         val testTag: String? = null,
+        /** Since M5-M1: the value is drawn as dots (a password) while true. */
+        val concealed: Boolean = false,
+        /**
+         * Since M5-M1: when set, an eye button at the box's end shows or hides a password ([concealed]), read out as
+         * "Show password" / "Hide password".
+         */
+        val onToggleConcealed: (() -> Unit)? = null,
     )
 }
 
@@ -126,6 +142,7 @@ fun BahrFormField(
                 cursorBrush = SolidColor(c.primary),
                 textStyle = MaterialTheme.typography.titleMedium.copy(color = textColor, fontWeight = FontWeight.SemiBold),
                 keyboardOptions = props.keyboard.options(props.imeAction),
+                visualTransformation = if (props.concealed) PasswordVisualTransformation() else VisualTransformation.None,
                 keyboardActions = KeyboardActions(onAny = { props.onImeAction() }),
                 modifier =
                     Modifier
@@ -166,6 +183,18 @@ fun BahrFormField(
                                 )
                             }
                             inner()
+                        }
+                        props.onToggleConcealed?.let { toggle ->
+                            val reveal =
+                                stringResource(if (props.concealed) Res.string.a11y_show_password else Res.string.a11y_hide_password)
+                            IconButton(onClick = toggle, enabled = props.enabled, modifier = Modifier.size(BahrSize.touchTarget)) {
+                                Icon(
+                                    (if (props.concealed) BahrIcons.Visibility else BahrIcons.VisibilityOff).outlined(),
+                                    contentDescription = reveal,
+                                    tint = c.onSurfaceVariant,
+                                    modifier = Modifier.size(BahrSize.iconLarge),
+                                )
+                            }
                         }
                         props.counter?.let {
                             Text(
@@ -213,6 +242,19 @@ private fun BahrFormField.Keyboard.options(ime: ImeAction): KeyboardOptions =
         BahrFormField.Keyboard.Name -> KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ime)
         BahrFormField.Keyboard.Phone -> KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ime)
         BahrFormField.Keyboard.Text -> KeyboardOptions(imeAction = ime)
+        BahrFormField.Keyboard.Email ->
+            KeyboardOptions(
+                keyboardType = KeyboardType.Email,
+                autoCorrectEnabled = false,
+                capitalization = KeyboardCapitalization.None,
+                imeAction = ime,
+            )
+        BahrFormField.Keyboard.Password ->
+            KeyboardOptions(
+                keyboardType = KeyboardType.Password,
+                autoCorrectEnabled = false,
+                imeAction = ime,
+            )
     }
 
 /** The prototype's 6px between the label, the box and the line under it. */

@@ -20,6 +20,7 @@ import eg.bahr.feature.auth.di.authModule
 import eg.bahr.feature.booking.di.bookingModule
 import eg.bahr.feature.home.di.homeModule
 import eg.bahr.feature.host.di.hostModule
+import eg.bahr.feature.hostworkspace.di.hostWorkspaceModule
 import eg.bahr.feature.map.di.mapModule
 import eg.bahr.feature.mytrips.di.myTripsModule
 import eg.bahr.feature.notifications.di.notificationsModule
@@ -136,6 +137,8 @@ fun appModules(
         authModule,
         myTripsModule,
         notificationsModule,
+        // Host mode (M5-M1): its own sign-in and client come from networkModule.
+        hostWorkspaceModule,
     )
 
 fun initKoin(

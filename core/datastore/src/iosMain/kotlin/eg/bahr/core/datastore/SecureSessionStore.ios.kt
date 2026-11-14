@@ -2,6 +2,7 @@ package eg.bahr.core.datastore
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import eg.bahr.core.common.auth.HostSessionStore
 import eg.bahr.core.common.auth.InstallSecretStore
 import eg.bahr.core.common.auth.SessionStore
 import eg.bahr.core.common.auth.StoredSession
@@ -41,6 +42,21 @@ import platform.Security.kSecValueData
 
 /** iOS keeps the session in the Keychain; the preferences file is not used. */
 actual fun secureSessionStore(dataStore: DataStore<Preferences>): SessionStore = KeychainSessionStore()
+
+/**
+ * Host mode's sign-in (M5-M1): a Keychain item of its own (its own service and its own "owned" flag), so the first-read
+ * wipe of a new install and every write stay apart from the traveller's item.
+ */
+actual fun secureHostSessionStore(dataStore: DataStore<Preferences>): HostSessionStore =
+    KeychainHostSessionStore(KeychainSessionStore(service = HOST_SERVICE, ownedKey = HOST_OWNED_KEY))
+
+private class KeychainHostSessionStore(
+    store: SessionStore,
+) : HostSessionStore,
+    SessionStore by store
+
+private const val HOST_SERVICE = "eg.bahr.hostsession"
+private const val HOST_OWNED_KEY = "eg.bahr.hostsession.keychainOwned"
 
 /** The install secret (M3-M5): a Keychain item of its own, beside the session's. */
 actual fun secureInstallSecretStore(dataStore: DataStore<Preferences>): InstallSecretStore = KeychainInstallSecretStore()
