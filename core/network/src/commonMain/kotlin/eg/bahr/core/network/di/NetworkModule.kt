@@ -2,6 +2,7 @@ package eg.bahr.core.network.di
 
 import eg.bahr.core.common.auth.DeviceIdRenewal
 import eg.bahr.core.common.auth.DeviceIdSource
+import eg.bahr.core.common.auth.HostSessionStore
 import eg.bahr.core.common.auth.InstallSecretStore
 import eg.bahr.core.common.auth.SessionStore
 import eg.bahr.core.common.push.NoPushChannel
@@ -11,6 +12,8 @@ import eg.bahr.core.network.HttpClientFactory
 import eg.bahr.core.network.LanguageTagProvider
 import eg.bahr.core.network.auth.AccountLocaleSync
 import eg.bahr.core.network.auth.AuthSession
+import eg.bahr.core.network.auth.HostHttpClient
+import eg.bahr.core.network.auth.HostSession
 import eg.bahr.core.network.auth.HttpSessionRemote
 import eg.bahr.core.network.install.InstallRegistrar
 import eg.bahr.core.network.install.InstallSecrets
@@ -49,6 +52,28 @@ val networkModule =
                 null -> HttpClientFactory.create(config, language, session, deviceIds, installSecrets)
                 else -> HttpClientFactory.create(engine, config, language, session, deviceIds, installSecrets)
             }
+        }
+        // Host mode's sign-in and client (M5-M1): a second session over its own secure item, and a second client whose
+        // bearer is the host's. Typed holders, so `get<AuthSession>()` and `get<HttpClient>()` stay the traveller's.
+        // The host session reaches the server through the host client, resolved lazily as the traveller's is.
+        single {
+            val scope = this
+            HostSession(store = get<HostSessionStore>()).also { host ->
+                host.session.remote = HttpSessionRemote { scope.get<HostHttpClient>().client }
+            }
+        }
+        single {
+            val config = get<ApiConfig>()
+            val language = get<LanguageTagProvider>()
+            val session = get<HostSession>().session
+            // No install secret: no host route takes one (the plugin adds headers only to requests that ask).
+            val deviceIds = get<DeviceIdSource>()
+            HostHttpClient(
+                when (val engine = getOrNull<HttpClientEngine>()) {
+                    null -> HttpClientFactory.create(config, language, session, deviceIds, installSecrets = null)
+                    else -> HttpClientFactory.createWith(engine, config, language, session, deviceIds)
+                },
+            )
         }
         // This install's registration (`registerDevice`, M3-M5), started by the app at launch. The push channel is the
         // platform's (bound by :composeApp); a graph without one registers with no token. The client is resolved on the

@@ -44,6 +44,14 @@ interface SessionStore {
 }
 
 /**
+ * Where host mode's own sign-in is kept (M5-M1): a [SessionStore] of its own (its own Keychain item on iOS, its own
+ * Keystore key and preference on Android), never the customer's. A host signs in with the email and password Bahr
+ * gave them (openapi `signInWithPassword`); that sign-in and the traveller's Apple or Google one live side by side, and
+ * ending one never touches the other. A type of its own so the two stores cannot be swapped by a dependency lookup.
+ */
+interface HostSessionStore : SessionStore
+
+/**
  * A random UUID made once per install (never a hardware id), sent as `X-Device-Id` on sign-in, holds
  * and waiting-list joins (openapi `DeviceId`, M3-B1), so the server can attach this device's anonymous
  * holds and entries to the account it signs in to.

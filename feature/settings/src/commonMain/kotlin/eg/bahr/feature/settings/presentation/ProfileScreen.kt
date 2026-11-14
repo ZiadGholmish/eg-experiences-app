@@ -70,6 +70,8 @@ import eg.bahr.core.localization.generated.resources.profile_appearance
 import eg.bahr.core.localization.generated.resources.profile_can_browse
 import eg.bahr.core.localization.generated.resources.profile_can_hold
 import eg.bahr.core.localization.generated.resources.profile_can_waitlist
+import eg.bahr.core.localization.generated.resources.profile_host_mode
+import eg.bahr.core.localization.generated.resources.profile_host_mode_sub
 import eg.bahr.core.localization.generated.resources.profile_name_phone
 import eg.bahr.core.localization.generated.resources.profile_personal_info
 import eg.bahr.core.localization.generated.resources.profile_provider_email
@@ -121,6 +123,7 @@ internal fun ProfileScreen(
     scrollToTop: Flow<Unit> = emptyFlow(),
     onLikedTrips: () -> Unit = {},
     onPublicProfile: () -> Unit = {},
+    onHostMode: () -> Unit = {},
     viewModel: ProfileViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -154,6 +157,7 @@ internal fun ProfileScreen(
                     onPersonalInfo = onEditPersonalInfo,
                     onLikedTrips = onLikedTrips,
                     onPublicProfile = onPublicProfile,
+                    onHostMode = onHostMode,
                     onLanguage = { sheet = ProfileSheet.Language },
                     onAppearance = { sheet = ProfileSheet.Appearance },
                     onAbout = { sheet = ProfileSheet.About },
@@ -194,6 +198,7 @@ internal class ProfileActions(
     val onPersonalInfo: () -> Unit = {},
     val onLikedTrips: () -> Unit = {},
     val onPublicProfile: () -> Unit = {},
+    val onHostMode: () -> Unit = {},
     val onLanguage: () -> Unit = {},
     val onAppearance: () -> Unit = {},
     val onAbout: () -> Unit = {},
@@ -239,6 +244,15 @@ internal fun ProfileContent(
                 value = appVersion,
                 valueLtr = true,
             )
+        // M5-M1: host mode, for hosts, whether or not they are signed in as travellers (it has its own sign-in).
+        val hostMode =
+            ProfileRow(
+                BahrIcons.Groups,
+                stringResource(Res.string.profile_host_mode),
+                ROW_HOST_MODE,
+                actions.onHostMode,
+                sub = stringResource(Res.string.profile_host_mode_sub),
+            )
         when (val session = state.session) {
             // Nothing until the store has answered, so a signed-in reader never sees the sign-in card flash.
             SessionState.Unknown -> Unit
@@ -246,6 +260,7 @@ internal fun ProfileContent(
                 WelcomeCard(signInButtons)
                 WithoutAnAccount()
                 ProfileRowGroup(listOf(language, appearance, about))
+                ProfileRowGroup(listOf(hostMode))
             }
             is SessionState.SignedIn -> {
                 AccountHeader(state, session)
@@ -266,6 +281,7 @@ internal fun ProfileContent(
                 // Notifications prefs (M3-B10) and My reviews (M3-B7 + M3-M4), then Help & contact, join
                 // About here once they have something to open.
                 ProfileRowGroup(listOf(about))
+                ProfileRowGroup(listOf(hostMode))
                 ProfileRowGroup(
                     listOf(
                         ProfileRow(
@@ -664,5 +680,6 @@ internal const val ROW_PUBLIC_PROFILE = "profile_public_profile"
 internal const val ROW_LANGUAGE = "profile_language"
 internal const val ROW_APPEARANCE = "profile_appearance"
 internal const val ROW_ABOUT = "profile_about"
+internal const val ROW_HOST_MODE = "profile_host_mode"
 internal const val ROW_SIGN_OUT = "settings_sign_out"
 internal const val ROW_DELETE = "settings_delete_account"

@@ -29,6 +29,19 @@ object PhoneNumbers {
 
     fun isValid(phone: String): Boolean = PATTERN.matches(phone)
 
+    /**
+     * Any phone as the contract's wider `Phone` wants it (M5-M1, a host's manual booking: a guest may have a foreign
+     * number): Arabic-Indic (٠–٩) and Eastern Arabic-Indic (۰–۹) digits become Western ones, a leading `+` is kept,
+     * everything else (spaces, dashes, brackets) goes, cut at [MAX_LENGTH]. No country-code rewriting: "+20 10…"
+     * stays "+2010…", which [PATTERN] accepts and the server compares by its digits.
+     */
+    fun normalize(typed: String): String {
+        val western = typed.map(::westernDigit)
+        val plus = western.firstOrNull { !it.isWhitespace() } == '+'
+        val digits = western.filter { it in '0'..'9' }.joinToString("")
+        return (if (plus) "+$digits" else digits).take(MAX_LENGTH)
+    }
+
     /** The handoff's Egyptian mobile (§2): 11 digits, `010`, `011`, `012` or `015` first. */
     val EGYPTIAN_MOBILE = Regex("^01[0125][0-9]{8}$")
 

@@ -2,6 +2,7 @@ package eg.bahr.core.datastore.di
 
 import eg.bahr.core.common.auth.DeviceIdRenewal
 import eg.bahr.core.common.auth.DeviceIdSource
+import eg.bahr.core.common.auth.HostSessionStore
 import eg.bahr.core.common.auth.InstallSecretStore
 import eg.bahr.core.common.auth.SessionStore
 import eg.bahr.core.datastore.ActiveHoldStore
@@ -14,6 +15,7 @@ import eg.bahr.core.datastore.PreferencesWaitlistJoinsStore
 import eg.bahr.core.datastore.PushPromptStore
 import eg.bahr.core.datastore.RecentSearchesStore
 import eg.bahr.core.datastore.WaitlistJoinsStore
+import eg.bahr.core.datastore.secureHostSessionStore
 import eg.bahr.core.datastore.secureInstallSecretStore
 import eg.bahr.core.datastore.secureSessionStore
 import org.koin.dsl.binds
@@ -31,6 +33,8 @@ val dataStoreModule =
         single<WaitlistJoinsStore> { PreferencesWaitlistJoinsStore(get()) }
         // The sign-in (M3-M0): secure storage per platform; and the per-install `X-Device-Id`.
         single<SessionStore> { secureSessionStore(get()) }
+        // Host mode's sign-in (M5-M1): an item of its own in the same secure storage, never the traveller's.
+        single<HostSessionStore> { secureHostSessionStore(get()) }
         // One store behind both: the id that is renewed is the id that is sent (M3-M5).
         single { PreferencesDeviceIdStore(get()) } binds arrayOf(DeviceIdSource::class, DeviceIdRenewal::class)
         // The install secret `registerDevice` issues (M3-M5), in secure storage like the session.

@@ -29,7 +29,8 @@ data object EditPersonalInfoRoute
  * signed-out card; [onEditPersonalInfo] opens [editPersonalInfoScreen]; [deleteAccountSheet] draws
  * feature:auth's delete-account sheet while the row has it open (M3-M0b: sheets, not dialogs). All joined in :composeApp. [scrollToTop] fires when the selected tab is tapped again.
  * [onLikedTrips] (MP-M1) opens the account's liked trips (feature:trip-listing's page). [onPublicProfile] (MP-M2)
- * opens Account → Public profile ([publicProfileSettingsScreen]).
+ * opens Account → Public profile ([publicProfileSettingsScreen]). [onHostMode] (M5-M1) opens host mode ("I'm a host"),
+ * signed in or out of the traveller app alike: host mode has its own sign-in.
  */
 fun NavGraphBuilder.profileScreen(
     appVersion: String,
@@ -39,6 +40,7 @@ fun NavGraphBuilder.profileScreen(
     scrollToTop: Flow<Unit> = emptyFlow(),
     onLikedTrips: () -> Unit,
     onPublicProfile: () -> Unit,
+    onHostMode: () -> Unit = {},
 ) {
     composable<ProfileRoute> {
         BahrDestination(this) {
@@ -50,6 +52,7 @@ fun NavGraphBuilder.profileScreen(
                 scrollToTop = scrollToTop,
                 onLikedTrips = onLikedTrips,
                 onPublicProfile = onPublicProfile,
+                onHostMode = onHostMode,
             )
         }
     }

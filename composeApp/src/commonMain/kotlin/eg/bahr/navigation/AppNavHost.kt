@@ -54,6 +54,11 @@ import eg.bahr.feature.host.navigation.hostProfileScreen
 import eg.bahr.feature.host.navigation.hostsScreen
 import eg.bahr.feature.host.navigation.navigateToHostProfile
 import eg.bahr.feature.host.navigation.navigateToHosts
+import eg.bahr.feature.hostworkspace.navigation.hostDepartureScreen
+import eg.bahr.feature.hostworkspace.navigation.hostModeScreen
+import eg.bahr.feature.hostworkspace.navigation.navigateToHostDeparture
+import eg.bahr.feature.hostworkspace.navigation.navigateToHostMode
+import eg.bahr.feature.hostworkspace.navigation.popToHostMode
 import eg.bahr.feature.map.navigation.TripMapRoute
 import eg.bahr.feature.map.navigation.tripMapScreen
 import eg.bahr.feature.mytrips.navigation.MyTripsRoute
@@ -278,6 +283,19 @@ fun AppNavHost(
                     onLikedTrips = navController::navigateToLikedTrips,
                     // Account → Public profile (MP-M2), in this tab's stack, bar hidden.
                     onPublicProfile = navController::navigateToPublicProfileSettings,
+                    // Host mode (M5-M1): pushed in this tab's stack, so the traveller's bar hides under host mode's own.
+                    onHostMode = navController::navigateToHostMode,
+                )
+
+                // Host mode (M5-M1): its sign-in or its shell (Departures · Profile), and a date's manifest on top. Its
+                // session and client are its own (core:network's HostSession): the traveller stays signed in throughout.
+                hostModeScreen(
+                    onExit = { navController.popBackStack() },
+                    onOpenDeparture = navController::navigateToHostDeparture,
+                )
+                hostDepartureScreen(
+                    onBack = { navController.popBackStack() },
+                    onSignedOut = navController::popToHostMode,
                 )
 
                 // Account → Public profile (MP-M2): "View my public profile" opens the same page a reviewer's name opens.

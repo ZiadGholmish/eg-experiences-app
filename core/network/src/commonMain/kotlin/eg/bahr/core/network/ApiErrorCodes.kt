@@ -69,4 +69,22 @@ object ApiErrorReasons {
      * knows the install. Not a sign-in problem: the tokens are kept, the install registers again.
      */
     const val INSTALL_SECRET_INVALID = "INSTALL_SECRET_INVALID"
+
+    /** FORBIDDEN (since M5-B0): the signed-in host is suspended; every host route refuses until staff reinstate them. */
+    const val HOST_SUSPENDED = "HOST_SUSPENDED"
+
+    /** CONFLICT (since M5-B2): a host broadcast reaches nobody; nothing was sent or recorded. */
+    const val NO_RECIPIENTS = "NO_RECIPIENTS"
+
+    /**
+     * CONFLICT (since M5-B3 for a manual booking): the `Idempotency-Key` was used for another request; nothing was
+     * recorded by this one. Never retry with this key.
+     */
+    const val IDEMPOTENCY_KEY_REUSED = "IDEMPOTENCY_KEY_REUSED"
+
+    /** CONFLICT (since M5-B3): `markManualBookingPaid` on a booking made in the app. */
+    const val NOT_A_MANUAL_BOOKING = "NOT_A_MANUAL_BOOKING"
+
+    /** CONFLICT (since M5-B3): `markManualBookingPaid` on a manual booking no longer CONFIRMED. */
+    const val BOOKING_NOT_CONFIRMED = "BOOKING_NOT_CONFIRMED"
 }

@@ -7,6 +7,7 @@ import eg.bahr.core.catalog.data.TripListRepository
 import eg.bahr.core.catalog.data.WaitlistMemory
 import eg.bahr.core.common.auth.DeviceIdRenewal
 import eg.bahr.core.common.auth.DeviceIdSource
+import eg.bahr.core.common.auth.HostSessionStore
 import eg.bahr.core.common.auth.InstallSecretStore
 import eg.bahr.core.common.auth.SessionStore
 import eg.bahr.core.common.error.AppErrorController
@@ -17,6 +18,8 @@ import eg.bahr.core.datastore.WaitlistJoinsStore
 import eg.bahr.core.network.ApiConfig
 import eg.bahr.core.network.LanguageTagProvider
 import eg.bahr.core.network.auth.AuthSession
+import eg.bahr.core.network.auth.HostHttpClient
+import eg.bahr.core.network.auth.HostSession
 import eg.bahr.core.network.install.InstallRegistrar
 import eg.bahr.core.testing.TEST_BASE_URL
 import eg.bahr.core.testing.runKoinGraphTest
@@ -28,6 +31,7 @@ import org.koin.core.error.DefinitionOverrideException
 import org.koin.dsl.module
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotSame
 import kotlin.test.assertSame
 
 /**
@@ -66,6 +70,11 @@ class AppKoinGraphTest {
             assertSame<Any>(koin.get<DeviceIdSource>(), koin.get<DeviceIdRenewal>(), "the id renewed is the id sent (M3-M5)")
             koin.get<InstallSecretStore>()
             koin.get<HttpClient>().close()
+            // Host mode (M5-M1): its own session and client beside the traveller's, never the same objects.
+            assertNotSame<Any>(koin.get<AuthSession>(), koin.get<HostSession>(), "host mode has its own sign-in")
+            assertNotSame(koin.get<HttpClient>(), koin.get<HostHttpClient>().client, "host mode has its own client")
+            koin.get<HostSessionStore>()
+            koin.get<HostHttpClient>().client.close()
         }
 
     /** Proves the check above can fail: one more binding of a type the graph already has. */
