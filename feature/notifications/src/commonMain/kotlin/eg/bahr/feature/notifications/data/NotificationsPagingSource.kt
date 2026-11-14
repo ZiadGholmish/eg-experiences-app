@@ -6,10 +6,14 @@ import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
 import eg.bahr.feature.notifications.model.NotificationDto
 
-/** An item as one read of the inbox loaded it: [generation] tells which read, so edits made before a re-read stop at it. */
+/**
+ * An item as one read of the inbox loaded it: [generation] tells which read, so edits made before a re-read stop at it;
+ * [owner] whose inbox it is, so the page never shows it under another person (M3-M23).
+ */
 internal data class LoadedNotification(
     val dto: NotificationDto,
     val generation: Int,
+    val owner: InboxOwner,
 )
 
 /** A failed page, carrying the error the screen branches on. */
@@ -39,7 +43,7 @@ internal class NotificationsPagingSource(
                 if (page == FIRST_PAGE) onFirstPage()
                 val items = result.data.items
                 LoadResult.Page(
-                    data = items.filter { seen.add(it.id) }.map { LoadedNotification(it, generation) },
+                    data = items.filter { seen.add(it.id) }.map { LoadedNotification(it, generation, owner) },
                     prevKey = null,
                     // No next page past the total, nor after an empty page (a wrong total cannot loop).
                     nextKey = (page + 1).takeIf { result.data.hasMore && items.isNotEmpty() },

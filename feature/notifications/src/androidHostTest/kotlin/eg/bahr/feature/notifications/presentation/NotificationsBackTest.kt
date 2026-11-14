@@ -14,6 +14,7 @@ import eg.bahr.core.designsystem.theme.BahrLocale
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.localization.ProvideAppLanguage
 import eg.bahr.core.network.auth.SessionState
+import eg.bahr.feature.notifications.data.InboxOwner
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Rule
 import org.junit.Test
@@ -33,7 +34,16 @@ class NotificationsBackTest {
 
     private val now = Instant.parse("2026-10-24T09:00:00Z")
     private val item =
-        InboxEntry.Item("n1", AlertKind.BookingConfirmed, "Booking confirmed", "Dawn on Lake Burullus", now, read = false, target = null)
+        InboxEntry.Item(
+            "n1",
+            AlertKind.BookingConfirmed,
+            "Booking confirmed",
+            "Dawn on Lake Burullus",
+            now,
+            read = false,
+            target = null,
+            owner = InboxOwner.Guest,
+        )
 
     private fun show(actions: NotificationsActions) {
         val loaded = LoadStates(LoadState.NotLoading(true), LoadState.NotLoading(true), LoadState.NotLoading(true))
@@ -44,7 +54,7 @@ class NotificationsBackTest {
                         state = NotificationsUiState(SessionState.SignedOut, now = now),
                         items =
                             flowOf(
-                                PagingData.from(listOf<InboxEntry>(InboxEntry.Header(InboxGroup.Today), item), loaded),
+                                PagingData.from(listOf<InboxEntry>(InboxEntry.Header(InboxGroup.Today, InboxOwner.Guest), item), loaded),
                             ).collectAsLazyPagingItems(),
                         actions = actions,
                     )

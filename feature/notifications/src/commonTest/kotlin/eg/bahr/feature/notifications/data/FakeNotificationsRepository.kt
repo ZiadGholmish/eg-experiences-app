@@ -4,6 +4,7 @@ import eg.bahr.core.common.result.AppResult
 import eg.bahr.core.network.PageDto
 import eg.bahr.core.network.auth.SessionState
 import eg.bahr.feature.notifications.model.NotificationDto
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -23,6 +24,9 @@ internal class FakeNotificationsRepository(
     val calls = mutableListOf<String>()
     var pageReads = 0
 
+    /** Reads of an owner's inbox wait here until completed: the server slow to answer (M3-M23's owner change). */
+    val holds = mutableMapOf<InboxOwner, CompletableDeferred<Unit>>()
+
     /** An action's answer instead of the server's: by name ("mark", "delete", "markAllRead", "clearRead", "page"). */
     var fail: Map<String, AppResult.Failure> = emptyMap()
 
@@ -35,6 +39,7 @@ internal class FakeNotificationsRepository(
         page: Int,
     ): AppResult<PageDto<NotificationDto>> {
         pageReads++
+        holds[owner]?.await()
         fail["page"]?.let { return it }
         val all = inbox(owner)
         val items = all.drop(page * PAGE).take(PAGE)

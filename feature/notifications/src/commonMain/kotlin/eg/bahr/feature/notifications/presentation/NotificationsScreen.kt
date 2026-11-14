@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -31,6 +30,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -38,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -59,8 +60,8 @@ import eg.bahr.core.designsystem.lifecycle.RefreshesOnReturn
 import eg.bahr.core.designsystem.theme.BahrSize
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
+import eg.bahr.core.designsystem.theme.bahrAnimateItem
 import eg.bahr.core.designsystem.theme.bahrTween
-import eg.bahr.core.designsystem.theme.bahrTweenOrNull
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.action_back
 import eg.bahr.core.localization.generated.resources.action_retry
@@ -85,6 +86,7 @@ import eg.bahr.core.localization.generated.resources.alerts_time_now
 import eg.bahr.core.localization.generated.resources.alerts_title
 import eg.bahr.core.localization.generated.resources.alerts_today
 import eg.bahr.core.network.auth.SessionState
+import eg.bahr.feature.notifications.data.inboxOwner
 import eg.bahr.feature.notifications.presentation.components.NotificationRow
 import eg.bahr.feature.notifications.presentation.components.NotificationRowActions
 import org.jetbrains.compose.resources.pluralStringResource
@@ -180,7 +182,11 @@ internal fun NotificationsContent(
     actions: NotificationsActions,
 ) {
     val refresh = items.loadState.refresh
-    val hasItems = items.itemCount > 0
+    val owner = state.session.inboxOwner
+    // Rows count only under their own inbox (M3-M23, the M3-M0 rule): after a sign-in or sign-out the session can
+    // name the new inbox a frame before the list lets go of the previous one's rows.
+    val listOwner = if (items.itemCount > 0) items.peek(0)?.owner else null
+    val hasItems = listOwner != null && listOwner == owner
     // The handoff's page is `surface` (not the off-white page of the trip lists), in light and dark.
     Box(
         Modifier
@@ -197,43 +203,49 @@ internal fun NotificationsContent(
                     // The stored sign-in not read yet: which inbox is not known, so nothing flashes.
                     state.session == SessionState.Unknown -> InboxShown.Unknown
                     hasItems -> InboxShown.List
-                    refresh is LoadState.Loading -> InboxShown.Loading
+                    // The previous inbox's rows, still held: the new one is on its way.
+                    listOwner != null || refresh is LoadState.Loading -> InboxShown.Loading
                     refresh is LoadState.Error -> InboxShown.Error
                     else -> InboxShown.Empty
                 }
             // A cross-fade between them (M3-M22): the last row deleted fades out while the empty state fades in, as
             // the list keeps drawing its going row for the fade. Instant under reduce motion.
-            Crossfade(
-                targetState = shown,
-                animationSpec = bahrTween(),
-                label = "inbox",
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-            ) { target ->
-                when (target) {
-                    InboxShown.Unknown -> Unit
-                    InboxShown.List -> InboxList(items, state.now, actions)
-                    InboxShown.Loading -> InboxSkeleton()
-                    InboxShown.Error ->
-                        Centred {
-                            StateMessage(
-                                art = {
-                                    StateDisc(
-                                        BahrIcons.CloudOff,
-                                        MaterialTheme.colorScheme.errorContainer,
-                                        MaterialTheme.colorScheme.onErrorContainer,
+            // Never out of one person's inbox into another's (M3-M23): a new owner starts a new cross-fade, with
+            // nothing to fade from, and the list going to Loading or Unknown (only an owner change empties it while
+            // loading: a re-read keeps the rows) stops drawing at once instead of fading its rows out.
+            key(owner) {
+                Crossfade(
+                    targetState = shown,
+                    animationSpec = bahrTween(),
+                    label = "inbox",
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                ) { target ->
+                    when (target) {
+                        InboxShown.Unknown -> Unit
+                        InboxShown.List -> if (shown.keepsListDrawn) InboxList(items, state.now, actions)
+                        InboxShown.Loading -> InboxSkeleton()
+                        InboxShown.Error ->
+                            Centred {
+                                StateMessage(
+                                    art = {
+                                        StateDisc(
+                                            BahrIcons.CloudOff,
+                                            MaterialTheme.colorScheme.errorContainer,
+                                            MaterialTheme.colorScheme.onErrorContainer,
+                                        )
+                                    },
+                                    title = stringResource(Res.string.alerts_error_title),
+                                    body = stringResource(Res.string.alerts_error_body),
+                                ) {
+                                    BahrPrimaryButton(
+                                        text = stringResource(Res.string.action_retry),
+                                        onClick = actions.onRetry,
+                                        modifier = Modifier.fillMaxWidth().padding(top = BahrSpacing.md),
                                     )
-                                },
-                                title = stringResource(Res.string.alerts_error_title),
-                                body = stringResource(Res.string.alerts_error_body),
-                            ) {
-                                BahrPrimaryButton(
-                                    text = stringResource(Res.string.action_retry),
-                                    onClick = actions.onRetry,
-                                    modifier = Modifier.fillMaxWidth().padding(top = BahrSpacing.md),
-                                )
+                                }
                             }
-                        }
-                    InboxShown.Empty -> Centred { EmptyState() }
+                        InboxShown.Empty -> Centred { EmptyState() }
+                    }
                 }
             }
         }
@@ -328,7 +340,7 @@ private fun InboxList(
     now: Instant,
     actions: NotificationsActions,
 ) {
-    LazyColumn(state = rememberLazyListState(), modifier = Modifier.fillMaxSize()) {
+    LazyColumn(state = rememberLazyListState(), modifier = Modifier.fillMaxSize().testTag(INBOX_LIST_TAG)) {
         items(
             count = items.itemCount,
             key = items.itemKey { it.key },
@@ -336,7 +348,7 @@ private fun InboxList(
         ) { index ->
             // Keyed by item id and heading: a delete, Clear read, a row coming back or a new one fades and the rest slide
             // (M3-M22). Placement only: the row's own swipe offset is drawn inside it, so the two never fight.
-            val motion = itemMotion()
+            val motion = bahrAnimateItem()
             when (val entry = items[index]) {
                 is InboxEntry.Header -> GroupLabel(entry.group, motion)
                 is InboxEntry.Item ->
@@ -367,21 +379,21 @@ private fun InboxList(
     }
 }
 
-/**
- * An entry's motion in the list (M3-M22): it fades in and out and slides to its new place on the design system's
- * tween, instant under reduce motion (null specs). The same as core:catalog's `bahrAnimateItem`; reaching it would be
- * a new module edge for one modifier.
- */
-@Composable
-private fun LazyItemScope.itemMotion(): Modifier =
-    Modifier.animateItem(
-        fadeInSpec = bahrTweenOrNull(),
-        placementSpec = bahrTweenOrNull(),
-        fadeOutSpec = bahrTweenOrNull(),
-    )
-
 /** What the space under the bar shows; the cross-fade's key. */
-private enum class InboxShown { Unknown, List, Loading, Error, Empty }
+private enum class InboxShown {
+    Unknown,
+    List,
+    Loading,
+    Error,
+    Empty,
+    ;
+
+    /**
+     * Whether a list fading out under this state still draws its rows: towards Empty or Error it does (the last row
+     * deleted fades), towards Loading or Unknown the rows it held are another inbox's (M3-M23), so it draws none.
+     */
+    val keepsListDrawn: Boolean get() = this != Loading && this != Unknown
+}
 
 @Composable
 private fun GroupLabel(
@@ -609,6 +621,9 @@ internal fun DeleteBody(item: InboxEntry.Item) {
         color = BahrTheme.colors.onSurfaceSecondary,
     )
 }
+
+/** The inbox's list, while it is composed (M3-M23's owner-change test: never across a sign-in or sign-out). */
+internal const val INBOX_LIST_TAG = "alerts-list"
 
 private const val CONTENT_HEADER = "header"
 private const val CONTENT_ITEM = "item"

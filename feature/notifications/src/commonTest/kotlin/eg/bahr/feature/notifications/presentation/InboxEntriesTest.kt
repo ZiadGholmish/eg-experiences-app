@@ -1,5 +1,6 @@
 package eg.bahr.feature.notifications.presentation
 
+import eg.bahr.feature.notifications.data.InboxOwner
 import eg.bahr.feature.notifications.data.LoadedNotification
 import eg.bahr.feature.notifications.data.NotificationFixtures.item
 import eg.bahr.feature.notifications.model.NotificationTargetDto
@@ -14,8 +15,11 @@ class InboxEntriesTest {
         kind: String,
         id: String = "BRL-7K4M2X9P",
         slug: String? = null,
-    ) = LoadedNotification(item("n", type = type, target = NotificationTargetDto(kind = kind, id = id, tripSlug = slug)), 1)
-        .toItem(InboxEdits())
+    ) = LoadedNotification(
+        item("n", type = type, target = NotificationTargetDto(kind = kind, id = id, tripSlug = slug)),
+        1,
+        InboxOwner.Account,
+    ).toItem(InboxEdits())
         .target
 
     @Test
@@ -49,6 +53,7 @@ class InboxEntriesTest {
                         ),
                 ),
                 1,
+                InboxOwner.Account,
             ).toItem(InboxEdits())
 
         assertEquals(AlertTarget.Trip("burullus-dawn", date = "2026-11-07", placeOpened = false), moved.target)
@@ -59,8 +64,8 @@ class InboxEntriesTest {
         val unread = item("n")
         val all = InboxEdits(allReadUpTo = 2)
 
-        assertEquals(true, LoadedNotification(unread, 2).toItem(all).read)
-        assertEquals(false, LoadedNotification(unread, 3).toItem(all).read, "a later read shows the server's state")
-        assertEquals(false, LoadedNotification(unread, 2).toItem(all.copy(read = mapOf("n" to false))).read)
+        assertEquals(true, LoadedNotification(unread, 2, InboxOwner.Account).toItem(all).read)
+        assertEquals(false, LoadedNotification(unread, 3, InboxOwner.Account).toItem(all).read, "a later read shows the server's state")
+        assertEquals(false, LoadedNotification(unread, 2, InboxOwner.Account).toItem(all.copy(read = mapOf("n" to false))).read)
     }
 }

@@ -57,7 +57,6 @@ import eg.bahr.core.catalog.presentation.components.HostDirectoryCardSkeleton
 import eg.bahr.core.catalog.presentation.components.ListMotion
 import eg.bahr.core.catalog.presentation.components.PagedListStatus
 import eg.bahr.core.catalog.presentation.components.RefreshBarBelow
-import eg.bahr.core.catalog.presentation.components.bahrAnimateItem
 import eg.bahr.core.catalog.presentation.components.rememberListMotion
 import eg.bahr.core.catalog.presentation.components.rememberQueryStatus
 import eg.bahr.core.catalog.presentation.components.symbolIcon
@@ -73,6 +72,7 @@ import eg.bahr.core.designsystem.theme.BahrAlpha
 import eg.bahr.core.designsystem.theme.BahrSize
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
+import eg.bahr.core.designsystem.theme.bahrAnimateItem
 import eg.bahr.core.designsystem.theme.reducedMotion
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.action_retry

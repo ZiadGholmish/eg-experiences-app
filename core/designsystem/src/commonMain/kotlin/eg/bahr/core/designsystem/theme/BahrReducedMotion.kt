@@ -4,9 +4,11 @@ import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.Modifier
 
 /*
  * Reduce motion (M4-M6): the platform's own setting, read once at the theme and handed down.
@@ -54,3 +56,16 @@ fun <T> bahrTweenOrNull(
     durationMillis: Int = BahrMotion.Medium,
     easing: Easing = BahrMotion.Standard,
 ): FiniteAnimationSpec<T>? = if (BahrTheme.reducedMotion) null else tween(durationMillis, easing = easing)
+
+/**
+ * `animateItem` with the design system's timing: an item fades in and out and slides to its new place when the list
+ * around it changes, instant under reduce motion (null specs). The one list-item motion of the app: the paged trip
+ * lists (core:catalog), the hosts directory, the reviews and the notifications (M3-M23, moved here from core:catalog).
+ */
+@Composable
+fun LazyItemScope.bahrAnimateItem(): Modifier =
+    Modifier.animateItem(
+        fadeInSpec = bahrTweenOrNull(),
+        placementSpec = bahrTweenOrNull(),
+        fadeOutSpec = bahrTweenOrNull(),
+    )

@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -67,8 +66,8 @@ import eg.bahr.core.designsystem.theme.BahrMotion
 import eg.bahr.core.designsystem.theme.BahrSize
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
+import eg.bahr.core.designsystem.theme.bahrAnimateItem
 import eg.bahr.core.designsystem.theme.bahrTween
-import eg.bahr.core.designsystem.theme.bahrTweenOrNull
 import eg.bahr.core.designsystem.theme.reducedMotion
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.a11y_busy
@@ -245,19 +244,6 @@ fun rememberListMotion(
     }
     return remember { ListMotion(dim, settle, pending, currentDirection, layoutSign) }
 }
-
-/**
- * `animateItem` with the design system's timing: an item fades in and out and slides to its new
- * place when the list around it changes. Instant under reduce motion. Public for feature:reviews'
- * list (M4-M11), the second paged list whose items are not trip cards.
- */
-@Composable
-fun LazyItemScope.bahrAnimateItem(): Modifier =
-    Modifier.animateItem(
-        fadeInSpec = bahrTweenOrNull(),
-        placementSpec = bahrTweenOrNull(),
-        fadeOutSpec = bahrTweenOrNull(),
-    )
 
 /**
  * The cards, keyed `trip:<slug>` (unique: the view models drop repeated cards), then a footer while

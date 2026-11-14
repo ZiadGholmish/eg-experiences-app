@@ -5,6 +5,7 @@ import androidx.paging.testing.asSnapshot
 import eg.bahr.core.common.error.AppErrorController
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
+import eg.bahr.core.network.ApiErrorCodes
 import eg.bahr.core.network.auth.SessionState
 import eg.bahr.core.testing.runViewModelTest
 import eg.bahr.feature.notifications.data.AlertsCenter
@@ -224,6 +225,28 @@ class NotificationsViewModelTest {
             )
         }
 
+    /** Already gone on the server (deleted on another phone): NOT_FOUND is what was asked for, not a failure (M3-M23). */
+    @Test
+    fun `a delete answered NOT_FOUND counts as done - the row stays gone - no error - the bell does not come back`() =
+        runViewModelTest {
+            val page = page()
+            advanceUntilIdle()
+            val seat = page.vm.items().first()
+            // Deleted on another phone meanwhile: the server no longer has it.
+            page.repository.inboxes[InboxOwner.Account]?.removeAll { it.id == seat.id }
+            page.repository.fail =
+                mapOf("delete" to AppResult.Failure(AppError.Api(ApiErrorCodes.NOT_FOUND, message = null, httpStatus = HTTP_NOT_FOUND)))
+
+            page.vm.askDelete(seat)
+            page.vm.delete()
+            advanceUntilIdle()
+
+            assertEquals(listOf("n2", "n3"), page.vm.items().map { it.id })
+            assertNull(page.errors.current.first())
+            assertEquals(listOf("delete(Account:n1)"), page.repository.calls)
+            assertEquals(1, page.center.count.value)
+        }
+
     @Test
     fun `a sign-out while the sheet is up closes it - nothing is deleted in either inbox`() =
         runViewModelTest {
@@ -336,4 +359,8 @@ class NotificationsViewModelTest {
             assertEquals(1, center.count.value)
             assertIs<SessionState.SignedOut>(vm.uiState.value.session)
         }
+
+    private companion object {
+        const val HTTP_NOT_FOUND = 404
+    }
 }

@@ -49,7 +49,6 @@ import eg.bahr.core.catalog.presentation.components.PagedListStatus
 import eg.bahr.core.catalog.presentation.components.RatingSummary
 import eg.bahr.core.catalog.presentation.components.RefreshBarBelow
 import eg.bahr.core.catalog.presentation.components.ReviewCard
-import eg.bahr.core.catalog.presentation.components.bahrAnimateItem
 import eg.bahr.core.catalog.presentation.components.rememberListMotion
 import eg.bahr.core.catalog.presentation.components.rememberQueryStatus
 import eg.bahr.core.catalog.presentation.rememberThrottled
@@ -59,6 +58,7 @@ import eg.bahr.core.designsystem.components.BahrFilterChip
 import eg.bahr.core.designsystem.components.BahrSkeleton
 import eg.bahr.core.designsystem.icon.BahrIcons
 import eg.bahr.core.designsystem.theme.BahrSpacing
+import eg.bahr.core.designsystem.theme.bahrAnimateItem
 import eg.bahr.core.designsystem.theme.bahrTween
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.action_retry
