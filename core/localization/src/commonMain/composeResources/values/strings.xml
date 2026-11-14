@@ -631,8 +631,8 @@
     <string name="liked_trips_signed_out_title">Sign in to see your liked trips</string>
     <string name="liked_trips_signed_out_body">Your likes are kept with your account, on every phone you sign in on.</string>
     <string name="liked_trips_sign_in">Sign in</string>
-    <!-- MP-M2: a reviewer's name that opens their public profile (read out as "<name>, Open profile"). -->
-    <string name="review_author_open">Open profile</string>
+    <!-- MP-M2/MP-M3: every reviewer name opens their profile page (public, or the "private" state); the click label. -->
+    <string name="review_author_open">Open %1$s’s profile</string>
     <!-- MP-M2: a traveller's public profile, opened from a reviewer's name or "View my public profile". -->
     <string name="traveller_member_since">Member since %1$s</string>
     <string name="traveller_past_trips">Trips taken</string>
@@ -640,7 +640,8 @@
     <string name="traveller_no_past_trips">No trips yet.</string>
     <string name="traveller_no_liked_trips">No liked trips yet.</string>
     <string name="traveller_nothing_shared">Nothing else is shared on this profile.</string>
-    <string name="traveller_not_public">This profile isn’t public.</string>
+    <string name="traveller_not_public">This account is private.</string>
+    <string name="traveller_private_body">This traveller keeps their profile private.</string>
     <!-- MP-M2: Account → Public profile. Opt-in (PDPL): private until the traveller turns it on. -->
     <string name="public_profile_title">Public profile</string>
     <string name="public_profile_intro">Only you decide what other travellers see. Your profile stays private until you turn it on, and you can turn it off at any time.</string>

@@ -5,12 +5,20 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
 import eg.bahr.core.catalog.model.NextDepartureDto
 import eg.bahr.core.catalog.model.RatingSummaryDto
 import eg.bahr.core.catalog.model.ReviewDto
 import eg.bahr.core.catalog.model.StarCountDto
+import eg.bahr.core.catalog.presentation.components.REVIEW_AUTHOR_LINK_TAG
 import eg.bahr.core.catalog.presentation.components.SEE_ALL_REVIEWS_TAG
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.common.result.AppError
@@ -36,6 +44,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.util.Locale
+import kotlin.test.assertEquals
 
 /**
  * The host page (M4-M10) × {ar, en} × {loading, loaded, no reviews, error, not available}, through the
@@ -211,6 +220,47 @@ class HostProfileScreenshotTest {
     private fun notAvailable(language: AppLanguage) =
         snap("host_not_available", language, FakeHostRepository(hostBySlug = { NOT_FOUND }, listFiltered = { NOT_FOUND }))
 
+    /**
+     * MP-M3: every reviewer's name opens their profile page, the public one with its id and a private one (no
+     * `authorPublicId`) with null; both are buttons labelled "Open <name>’s profile".
+     */
+    @Config(qualifiers = "en-w360dp-h1400dp-xhdpi")
+    @Test
+    fun `every reviewer name opens the profile page - public with its id - private with null`() {
+        val host =
+            ashraf(arabic = false).let { h ->
+                h.copy(
+                    reviews =
+                        h.reviews.mapIndexed { i, r ->
+                            if (i ==
+                                0
+                            ) {
+                                r.copy(authorPublicId = "p-1")
+                            } else {
+                                r
+                            }
+                        },
+                )
+            }
+        val opened = mutableListOf<String?>()
+        show(
+            AppLanguage.ENGLISH,
+            FakeHostRepository(hostBySlug = { AppResult.Success(host) }, listFiltered = { page(cards(arabic = false), totalItems = 2) }),
+            name = ashrafName(arabic = false),
+            onTravellerClick = { opened += it },
+        )
+        val links = compose.onAllNodesWithTag(REVIEW_AUTHOR_LINK_TAG)
+        links.assertCountEquals(host.reviews.size)
+        links[0].performClick()
+        links[1].performClick()
+        assertEquals(listOf("p-1", null), opened)
+        listOf(0 to "Mahmoud A.", 1 to "Salma K.").forEach { (index, author) ->
+            val node = links[index].fetchSemanticsNode()
+            assertEquals("Open $author’s profile", node.config.getOrNull(SemanticsActions.OnClick)?.label)
+            assertEquals(Role.Button, node.config.getOrNull(SemanticsProperties.Role))
+        }
+    }
+
     // ---------- Fixtures and plumbing ----------
 
     private fun ashraf(arabic: Boolean) =
@@ -307,12 +357,31 @@ class HostProfileScreenshotTest {
         repository: FakeHostRepository,
         name: String = redSeaDaysName(language == AppLanguage.ARABIC),
     ) {
+        show(language, repository, name)
+        compose.captureScreenshot("${prefix}_${language.tag}")
+    }
+
+    private fun show(
+        language: AppLanguage,
+        repository: FakeHostRepository,
+        name: String,
+        onTravellerClick: ((publicId: String?) -> Unit)? = null,
+    ) {
         val vm = HostProfileViewModel(SLUG, name, null, repository, waitlistMemory())
         compose.setContent {
             ProvideAppLanguage(language) {
                 BahrTheme(locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English) {
                     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-                        HostProfileScreen(SLUG, name, null, onBack = {}, onTripClick = {}, onSeeAllReviews = {}, viewModel = vm)
+                        HostProfileScreen(
+                            SLUG,
+                            name,
+                            null,
+                            onBack = {},
+                            onTripClick = {},
+                            onSeeAllReviews = {},
+                            onTravellerClick = onTravellerClick,
+                            viewModel = vm,
+                        )
                     }
                 }
             }
@@ -328,7 +397,6 @@ class HostProfileScreenshotTest {
             compose.mainClock.advanceTimeByFrame()
             compose.waitForIdle()
         }
-        compose.captureScreenshot("${prefix}_${language.tag}")
     }
 
     private companion object {

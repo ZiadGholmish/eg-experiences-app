@@ -661,14 +661,15 @@
     <string name="liked_trips_signed_out_body">الإعجابات بتتحفظ مع حسابك، على أي موبايل تسجّل دخولك عليه.</string>
     <string name="liked_trips_sign_in">سجّل دخولك</string>
     <!-- MP-M2 -->
-    <string name="review_author_open">افتح البروفايل</string>
+    <string name="review_author_open">افتح بروفايل %1$s</string>
     <string name="traveller_member_since">معانا من %1$s</string>
     <string name="traveller_past_trips">رحلات سابقة</string>
     <string name="traveller_liked_trips">إعجابات</string>
     <string name="traveller_no_past_trips">لسه مفيش رحلات.</string>
     <string name="traveller_no_liked_trips">لسه مفيش إعجابات.</string>
     <string name="traveller_nothing_shared">مفيش حاجة تانية متشاركة هنا.</string>
-    <string name="traveller_not_public">البروفايل ده مش معروض للناس.</string>
+    <string name="traveller_not_public">الحساب ده خاص.</string>
+    <string name="traveller_private_body">صاحب الحساب اختار يخلّي بروفايله خاص.</string>
     <string name="public_profile_title">البروفايل العام</string>
     <string name="public_profile_intro">إنت بس اللي بتقرر المسافرين التانيين يشوفوا إيه. البروفايل بتاعك بيفضل خاص لحد ما تفتحه، وتقدر تقفله في أي وقت.</string>
     <string name="public_profile_master">خلّي البروفايل بتاعي عام</string>

@@ -74,10 +74,14 @@ data object PublicProfileSettingsRoute
 /**
  * A traveller's public profile (MP-M2), by the opaque [publicId] the server hands out (`Review.authorPublicId`,
  * `HomeReview.authorPublicId`, the owner's `ProfileVisibility.publicId`); never an account id.
+ *
+ * MP-M3: a null [publicId] is a reviewer the server sent no id for (a private profile, or one whose reviews switch is
+ * off): the page shows "This account is private" at once, without a request. There is nothing to ask for, and the
+ * server sends no id exactly so nothing about that account leaks.
  */
 @Serializable
 data class TravellerProfileRoute(
-    val publicId: String,
+    val publicId: String? = null,
 )
 
 /**
@@ -95,7 +99,8 @@ fun NavGraphBuilder.publicProfileSettingsScreen(
 
 /**
  * A traveller's public profile (MP-M2), opened from a reviewer's name on the trip page, the host page, all reviews and
- * Home, and from "View my public profile". [onTripClick] opens a trip card's or a review's trip.
+ * Home (every name since MP-M3; a private one lands on "This account is private"), and from "View my public profile".
+ * [onTripClick] opens a trip card's or a review's trip.
  */
 fun NavGraphBuilder.travellerProfileScreen(
     onBack: () -> Unit,
@@ -109,5 +114,8 @@ fun NavGraphBuilder.travellerProfileScreen(
 
 fun NavController.navigateToPublicProfileSettings() = navigate(PublicProfileSettingsRoute) { launchSingleTop = true }
 
-/** The public profile of [publicId]: what every reviewer name's `onTravellerClick` hands over. */
-fun NavController.navigateToTravellerProfile(publicId: String) = navigate(TravellerProfileRoute(publicId))
+/**
+ * The profile page of [publicId]: what every reviewer name's `onTravellerClick` hands over. Null (MP-M3): a private
+ * author, shown as "This account is private" without a request.
+ */
+fun NavController.navigateToTravellerProfile(publicId: String?) = navigate(TravellerProfileRoute(publicId))

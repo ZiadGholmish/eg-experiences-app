@@ -238,6 +238,31 @@ class AppNavHostRootsTest {
         assertTrue(nav.isAt(AppTab.Home))
     }
 
+    /**
+     * MP-M3: a private reviewer's name (no `authorPublicId`) opens the same page with a null id, over the page it is
+     * on; the null survives the route, and a public reviewer opened after it is its own entry. Back returns.
+     */
+    @Test
+    fun `a private reviewer's name opens the profile page with a null id - Back returns`() {
+        show(start = TripListRoute)
+
+        onUi { nav.navigateToTripDetail(SLUG) }
+        onUi { nav.navigateToTravellerProfile(null) }
+        assertEquals(TravellerProfileRoute(null), nav.currentBackStackEntry!!.toRoute<TravellerProfileRoute>())
+        assertFalse(nav.isAt(AppTab.Home))
+        onUi { nav.popBackStack() }
+        onUi { nav.navigateToTravellerProfile(PUBLIC_ID) }
+        assertEquals(TravellerProfileRoute(PUBLIC_ID), nav.currentBackStackEntry!!.toRoute<TravellerProfileRoute>())
+        onUi { nav.popBackStack() }
+        assertEquals(listOf(TripListRoute::class.simpleName, TripDetailRoute::class.simpleName), screens())
+
+        // From Home's review card straight away too.
+        show(start = TripListRoute)
+        onUi { nav.navigateToTravellerProfile(null) }
+        onUi { nav.popBackStack() }
+        assertTrue(nav.isAt(AppTab.Home))
+    }
+
     @Test
     fun `the confirmation's Done goes back to the root of the tab the booking was made in`() {
         AppTab.entries.forEach { tab ->

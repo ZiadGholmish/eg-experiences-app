@@ -11,14 +11,19 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
@@ -37,6 +42,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -47,8 +53,8 @@ import eg.bahr.core.catalog.presentation.components.ReviewCard
 import eg.bahr.core.catalog.presentation.components.SectionTitle
 import eg.bahr.core.catalog.presentation.components.TextSkeleton
 import eg.bahr.core.catalog.presentation.components.TripCard
-import eg.bahr.core.designsystem.components.BahrEmptyView
 import eg.bahr.core.designsystem.components.BahrErrorView
+import eg.bahr.core.designsystem.components.BahrLottie
 import eg.bahr.core.designsystem.components.BahrSkeleton
 import eg.bahr.core.designsystem.components.BahrSkeletonCircle
 import eg.bahr.core.designsystem.components.ImageGround
@@ -58,6 +64,7 @@ import eg.bahr.core.designsystem.theme.BahrSize
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.designsystem.theme.bahrTween
+import eg.bahr.core.designsystem.theme.reducedMotion
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.action_retry
 import eg.bahr.core.localization.generated.resources.host_no_reviews
@@ -68,6 +75,7 @@ import eg.bahr.core.localization.generated.resources.traveller_no_past_trips
 import eg.bahr.core.localization.generated.resources.traveller_not_public
 import eg.bahr.core.localization.generated.resources.traveller_nothing_shared
 import eg.bahr.core.localization.generated.resources.traveller_past_trips
+import eg.bahr.core.localization.generated.resources.traveller_private_body
 import eg.bahr.core.localization.generated.resources.trip_per_person
 import eg.bahr.core.localization.generated.resources.trip_reviews
 import eg.bahr.core.localization.isRetryable
@@ -93,15 +101,34 @@ import org.koin.core.parameter.parametersOf
  * whether the reader likes the trip. Past trips come without `nextDeparture`, so their cards show no date or seats.
  * Review names are not links here: every review on the page is this traveller's.
  *
- * Any 404 reads "This profile isn't public" (private, unknown and deleted are one answer). The back button stays in
- * every state: the tab bar is hidden here, and iOS has no system Back.
+ * Any 404 reads "This account is private" (private, unknown and deleted are one answer). MP-M3: so does a null
+ * [publicId] (a reviewer the server sent no id for), at once and with no ViewModel, so no request can go out. The back
+ * button stays in every state: the tab bar is hidden here, and iOS has no system Back.
  */
 @Composable
 internal fun TravellerProfileScreen(
-    publicId: String,
+    publicId: String?,
     onBack: () -> Unit,
     onTripClick: (slug: String) -> Unit,
     modifier: Modifier = Modifier,
+) {
+    if (publicId == null) {
+        TravellerProfileContent(state = PRIVATE_TRAVELLER, onBack = onBack, onTripClick = onTripClick, onRetry = {}, modifier = modifier)
+    } else {
+        PublicTravellerProfile(publicId = publicId, onBack = onBack, onTripClick = onTripClick, modifier = modifier)
+    }
+}
+
+/** A reviewer with no public id (MP-M3): the 404 page's state, known without asking. */
+internal val PRIVATE_TRAVELLER = TravellerProfileUiState(isLoading = false, notAvailable = true)
+
+/** The profile behind [publicId], read by its ViewModel. */
+@Composable
+private fun PublicTravellerProfile(
+    publicId: String,
+    onBack: () -> Unit,
+    onTripClick: (slug: String) -> Unit,
+    modifier: Modifier,
     viewModel: TravellerProfileViewModel = koinViewModel(key = "traveller:$publicId") { parametersOf(publicId) },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -141,11 +168,7 @@ internal fun TravellerProfileContent(
             when (shown) {
                 TravellerPage.Loading -> HeaderSkeleton()
 
-                TravellerPage.NotPublic ->
-                    BahrEmptyView(
-                        message = stringResource(Res.string.traveller_not_public),
-                        modifier = Modifier.testTag(TRAVELLER_NOT_PUBLIC_TAG),
-                    )
+                TravellerPage.NotPublic -> PrivateAccount()
 
                 TravellerPage.Failed ->
                     error?.let {
@@ -268,6 +291,91 @@ private fun Header(
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    }
+}
+
+/**
+ * "This account is private" (MP-M2's 404; MP-M3: also a reviewer with no public id; user 2026-11-14: not a bare line,
+ * then a friendly animation). A sleeping cat (the user's pick), then the line and why, centred, the lines held to a
+ * readable width on a tablet. The picture is decoration: the title says it.
+ */
+@Composable
+private fun PrivateAccount() {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(BahrSpacing.xl).testTag(TRAVELLER_NOT_PUBLIC_TAG),
+        verticalArrangement = Arrangement.spacedBy(BahrSpacing.md, Alignment.CenterVertically),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        // The cat breathes in a loop (empty states loop, M3-M8b). Reduce motion, or a file that will not load, gets the
+        // still avatar-and-padlock picture instead: it says "private" on its own, where a frozen cat would just sit.
+        if (BahrTheme.reducedMotion) {
+            PrivateAccountArt()
+        } else {
+            BahrLottie(
+                modifier = Modifier.width(BahrSize.lottieWide),
+                props = BahrLottie.Props(BahrLottie.Animation.SleepingCat, playback = BahrLottie.Playback.Loop),
+                fallback = { PrivateAccountArt() },
+            )
+        }
+        Spacer(Modifier.height(BahrSpacing.xs))
+        Text(
+            text = stringResource(Res.string.traveller_not_public),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.widthIn(max = BahrSize.stateTextMaxWidth).semantics { heading() },
+        )
+        Text(
+            text = stringResource(Res.string.traveller_private_body),
+            style = MaterialTheme.typography.bodyMedium,
+            color = BahrTheme.colors.onSurfaceSecondary,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.widthIn(max = BahrSize.stateTextMaxWidth),
+        )
+    }
+}
+
+/**
+ * The private page's still picture (reduce motion, or the cat's file failing to load): the profile's default avatar
+ * inside a halo, and a padlock badge cut out of both. The padlock sits at the end corner, so it moves to the left in
+ * Arabic, as a badge does.
+ */
+@Composable
+private fun PrivateAccountArt() {
+    val halo = MaterialTheme.colorScheme.primaryContainer
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier =
+            Modifier
+                .size(BahrSize.stateHalo)
+                .clip(BahrTheme.shapes.full)
+                .background(halo)
+                .clearAndSetSemantics {},
+    ) {
+        Box(Modifier.size(BahrSize.avatarLarge)) {
+            DefaultAvatar()
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomEnd)
+                        // A little out of the avatar's corner, onto the halo; `offset` mirrors x in RTL with the corner.
+                        .offset(x = BahrSpacing.sm, y = BahrSpacing.xs)
+                        .size(BahrSize.stateBadge)
+                        .clip(BahrTheme.shapes.full)
+                        .background(halo)
+                        .padding(BahrSize.stateBadgeRing)
+                        .clip(BahrTheme.shapes.full)
+                        .background(MaterialTheme.colorScheme.primary),
+            ) {
+                Icon(
+                    BahrIcons.Lock.filled(),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(BahrSize.iconMedium),
+                )
+            }
         }
     }
 }

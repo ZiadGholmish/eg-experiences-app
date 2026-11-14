@@ -39,15 +39,15 @@ data class HostProfileRoute(
  *
  * [onSignIn] (MP-M1) opens the sign-in sheet when a guest taps a trip's heart.
  *
- * [onTravellerClick] (MP-M2) opens a reviewer's public profile from their name, when the review carries
- * `authorPublicId`.
+ * [onTravellerClick] (MP-M2/MP-M3) opens a reviewer's profile page from their name: with the review's
+ * `authorPublicId`, or null for a private author ("This account is private", shown without a request).
  */
 fun NavGraphBuilder.hostProfileScreen(
     onBack: () -> Unit,
     onTripClick: (slug: String) -> Unit,
     onSeeAllReviews: ((host: String, name: String) -> Unit)? = null,
     onSignIn: () -> Unit,
-    onTravellerClick: ((publicId: String) -> Unit)? = null,
+    onTravellerClick: ((publicId: String?) -> Unit)? = null,
 ) {
     composable<HostProfileRoute> { entry ->
         val route = entry.toRoute<HostProfileRoute>()

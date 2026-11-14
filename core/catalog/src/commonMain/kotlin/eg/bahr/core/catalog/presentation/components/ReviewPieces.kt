@@ -117,14 +117,16 @@ const val SEE_ALL_REVIEWS_TAG = "see_all_reviews"
  * none are drawn); a rating-only review has stars and no text. Since M3-M4 its photos when it has any,
  * and "Verified trip" when the server says so (M3-B7).
  *
- * MP-M2: the author's name opens their public profile ([onAuthorClick], with `authorPublicId`) when the server sent
- * that id and the caller wires a profile page; otherwise it is plain text, drawn as before. [footer] goes under the
- * rest: a traveller's profile names the trip each review is about there.
+ * MP-M3: when the caller wires a profile page ([onAuthorClick]) the author's name always opens it: with the review's
+ * `authorPublicId` (a public profile), or with null when the server sent none (a private author, or one whose reviews
+ * switch is off), which the profile page shows as "This account is private" without asking the server. With no
+ * [onAuthorClick] the name is plain text. [footer] goes under the rest: a traveller's profile names the trip each
+ * review is about there.
  */
 @Composable
 fun ReviewCard(
     review: ReviewDto,
-    onAuthorClick: ((publicId: String) -> Unit)? = null,
+    onAuthorClick: ((publicId: String?) -> Unit)? = null,
     footer: (@Composable () -> Unit)? = null,
 ) {
     BahrCard(modifier = Modifier.fillMaxWidth()) {
@@ -163,9 +165,11 @@ fun ReviewCard(
 }
 
 /**
- * A review's author (MP-M2; the avatar and name were ReviewCard's own before): the tinted initial and the name. With a
- * [Props.publicId] and [Props.onOpenProfile] both there, the pair is one link to the author's public profile: the name
- * in primary, a 44dp-high touch area, read out as a button ("Mona S., Open profile"). Without, plain text as before.
+ * A review's author (MP-M2; the avatar and name were ReviewCard's own before): the tinted initial and the name. With
+ * [Props.onOpenProfile] wired, the pair is one link to the author's profile page, handing over [Props.publicId] (null
+ * for a private author: MP-M3, every name opens something). Public or not, the link looks and reads the same: the name
+ * in primary, a 44dp-high touch area, a button with "Open Mona S.’s profile", so a private author is not singled out.
+ * Without [Props.onOpenProfile], plain text.
  *
  * Its second caller is Home's review card, which keeps the name to [Props.singleLine] (a rail's cards line up).
  */
@@ -175,7 +179,7 @@ interface ReviewAuthor {
         val author: String?,
         val tone: String? = null,
         val publicId: String? = null,
-        val onOpenProfile: ((publicId: String) -> Unit)? = null,
+        val onOpenProfile: ((publicId: String?) -> Unit)? = null,
         val singleLine: Boolean = false,
     )
 }
@@ -185,17 +189,18 @@ fun ReviewAuthor(
     modifier: Modifier = Modifier,
     props: ReviewAuthor.Props,
 ) {
-    val publicId = props.publicId
+    val author = props.author
     val open = props.onOpenProfile
-    val link = props.author != null && publicId != null && open != null
-    val openLabel = stringResource(Res.string.review_author_open)
+    // No name, nothing to tap (the server signs every review, "A traveller" at least, so this is an old payload).
+    val link = author != null && open != null
+    val openLabel = author?.let { stringResource(Res.string.review_author_open, it) }
     Row(
         modifier =
             if (link) {
                 modifier
                     .heightIn(min = BahrSpacing.minTouch)
                     .clip(BahrTheme.shapes.small)
-                    .clickable(role = Role.Button, onClickLabel = openLabel) { open(publicId) }
+                    .clickable(role = Role.Button, onClickLabel = openLabel) { open(props.publicId) }
                     .testTag(REVIEW_AUTHOR_LINK_TAG)
             } else {
                 modifier
@@ -218,7 +223,7 @@ fun ReviewAuthor(
     }
 }
 
-/** For tests: a review author's name when it opens their profile (MP-M2). */
+/** For tests: a review author's name when it opens their profile page (MP-M2; every name since MP-M3). */
 const val REVIEW_AUTHOR_LINK_TAG = "review_author_link"
 
 /**

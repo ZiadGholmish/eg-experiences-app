@@ -4,15 +4,21 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import eg.bahr.core.common.locale.AppLanguage
+import eg.bahr.core.designsystem.components.BAHR_LOTTIE_READY_TAG
 import eg.bahr.core.designsystem.theme.BahrLocale
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.designsystem.theme.BahrThemeName
@@ -34,7 +40,7 @@ import kotlin.test.assertEquals
 
 /**
  * MP-M2 × {ar, en}: a traveller's profile {every section (light and dark), some sections absent, every section on but
- * empty, nothing shared, not public (404), loading}, and Account → Public profile {private (defaults), public with
+ * empty, nothing shared, private (404, and MP-M3's null id; light and dark), loading}, and Account → Public profile {private (defaults), public with
  * some switches on (light and dark), loading}. Then the settings' wiring: a row toggles its switch, the three waiting
  * for the master switch are disabled while private, reviews never are, and "View my public profile" hands over the id
  * only while public.
@@ -92,13 +98,44 @@ class PublicProfileScreenshotTest {
     @Test
     fun nothingSharedEnglish() = traveller("traveller_nothing_shared", AppLanguage.ENGLISH, loaded(profile(false, null, null, null)))
 
+    // MP-M3: the 404 page and a reviewer with no public id are one page, "This account is private". Drawn here through
+    // the screen with a null id: no Koin is started in this class, so a ViewModel (and with it a request) would crash.
     @Test
-    fun notPublicArabic() =
-        traveller("traveller_not_public", AppLanguage.ARABIC, TravellerProfileUiState(isLoading = false, notAvailable = true))
+    fun notPublicArabic() = privateTraveller("traveller_not_public", AppLanguage.ARABIC)
 
     @Test
-    fun notPublicEnglish() =
-        traveller("traveller_not_public", AppLanguage.ENGLISH, TravellerProfileUiState(isLoading = false, notAvailable = true))
+    fun notPublicEnglish() = privateTraveller("traveller_not_public", AppLanguage.ENGLISH)
+
+    @Test
+    fun notPublicDarkArabic() = privateTraveller("traveller_not_public_dark", AppLanguage.ARABIC, BahrThemeName.Dark)
+
+    @Test
+    fun notPublicDarkEnglish() = privateTraveller("traveller_not_public_dark", AppLanguage.ENGLISH, BahrThemeName.Dark)
+
+    /** Reduce motion: the still avatar-and-padlock picture in place of the cat. */
+    @Test
+    fun notPublicReducedMotionArabic() = privateTraveller("traveller_not_public_reduced_motion", AppLanguage.ARABIC, reducedMotion = true)
+
+    @Test
+    fun notPublicReducedMotionEnglish() = privateTraveller("traveller_not_public_reduced_motion", AppLanguage.ENGLISH, reducedMotion = true)
+
+    @Test
+    fun `a null id is the private page at once - with back - and the 404 state draws the same`() {
+        var backs = 0
+        compose.setContent {
+            // Reduce motion: the cat loops forever, which a test that waits for idle would wait out.
+            Themed(AppLanguage.ENGLISH, reducedMotion = true) {
+                TravellerProfileScreen(publicId = null, onBack = { backs++ }, onTripClick = {})
+            }
+        }
+        compose.onNodeWithTag(TRAVELLER_NOT_PUBLIC_TAG).assertIsDisplayed()
+        compose.onNodeWithText("This account is private.").assertIsDisplayed()
+        compose.onNodeWithText("This traveller keeps their profile private.").assertIsDisplayed()
+        compose.onNodeWithTag(TRAVELLER_PAGE_TAG).assertDoesNotExist()
+        compose.onNodeWithContentDescription("Back").performClick()
+        assertEquals(1, backs)
+        assertEquals(TravellerProfileUiState(isLoading = false, notAvailable = true), PRIVATE_TRAVELLER)
+    }
 
     @Test
     fun loadingArabic() = traveller("traveller_loading", AppLanguage.ARABIC, TravellerProfileUiState())
@@ -213,6 +250,31 @@ class PublicProfileScreenshotTest {
         compose.captureScreenshot("${prefix}_${language.tag}")
     }
 
+    private fun privateTraveller(
+        prefix: String,
+        language: AppLanguage,
+        theme: BahrThemeName = BahrThemeName.LakeBurullus,
+        reducedMotion: Boolean = false,
+    ) {
+        compose.mainClock.autoAdvance = false
+        compose.setContent {
+            Themed(language, theme, reducedMotion) { TravellerProfileScreen(publicId = null, onBack = {}, onTripClick = {}) }
+        }
+        if (!reducedMotion) {
+            // The cat's file is read off the main thread; with the clock paused, frames carry it in. It is shot on the
+            // frame it first draws, the loop's start, so every run takes the same pose.
+            compose.waitUntil(LOTTIE_LOAD_TIMEOUT_MS) {
+                compose.mainClock.advanceTimeByFrame()
+                compose.onAllNodesWithTag(BAHR_LOTTIE_READY_TAG).fetchSemanticsNodes().isNotEmpty()
+            }
+        } else {
+            compose.mainClock.advanceTimeByFrame()
+            compose.onAllNodesWithTag(BAHR_LOTTIE_READY_TAG).assertCountEquals(0)
+        }
+        compose.waitForIdle()
+        compose.captureScreenshot("${prefix}_${language.tag}")
+    }
+
     private fun settings(
         prefix: String,
         language: AppLanguage,
@@ -232,10 +294,15 @@ class PublicProfileScreenshotTest {
     private fun Themed(
         language: AppLanguage,
         theme: BahrThemeName = BahrThemeName.LakeBurullus,
+        reducedMotion: Boolean = false,
         content: @Composable () -> Unit,
     ) {
         ProvideAppLanguage(language) {
-            BahrTheme(locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English, theme = theme) {
+            BahrTheme(
+                locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English,
+                theme = theme,
+                reducedMotion = reducedMotion,
+            ) {
                 CompositionLocalProvider(
                     LocalContentColor provides
                         if (theme == BahrThemeName.Dark) MaterialTheme.colorScheme.onBackground else LocalContentColor.current,
@@ -248,3 +315,5 @@ class PublicProfileScreenshotTest {
         val PUBLIC = VISIBILITY.copy(isPublic = true, showPastTrips = true, showLikes = false)
     }
 }
+
+private const val LOTTIE_LOAD_TIMEOUT_MS = 10_000L

@@ -77,7 +77,7 @@ internal fun HostProfileScreen(
     modifier: Modifier = Modifier,
     onSeeAllReviews: ((name: String) -> Unit)? = null,
     onSignIn: () -> Unit = {},
-    onTravellerClick: ((publicId: String) -> Unit)? = null,
+    onTravellerClick: ((publicId: String?) -> Unit)? = null,
     viewModel: HostProfileViewModel = koinViewModel(key = "host:$slug") { parametersOf(slug, name, avatar) },
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -136,7 +136,7 @@ private fun HostPageList(
     onRetryTrips: () -> Unit,
     onSeeAllReviews: ((name: String) -> Unit)?,
     onLike: (TripCardDto) -> Unit,
-    onTravellerClick: ((publicId: String) -> Unit)?,
+    onTravellerClick: ((publicId: String?) -> Unit)?,
 ) {
     val listState = rememberLazyListState()
     val perPersonLabel = stringResource(Res.string.trip_per_person)

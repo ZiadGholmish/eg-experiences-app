@@ -82,7 +82,9 @@ the date + party screen (`radio`, `stepSegmentWidth/Height`, `stepperValue`, M2-
 `logoTile` and hero-slide `heroForward` circle (M4-M1, M4-M7), and the host page's `avatarLarge` and
 rating bars (`ratingBarHeight`, `ratingStarColumn`, M4-M10; the handoff has no host page), and the
 notifications page's row (`notificationRow`, `notificationDisc`, `iconNotification`, `unreadDot`, its skeleton's
-`skeletonLineSmall` and `skeletonLabelWidth`) and the push pre-prompt's `sheetDisc` (account handoff §3, M3-M6).
+`skeletonLineSmall` and `skeletonLabelWidth`) and the push pre-prompt's `sheetDisc` (account handoff §3, M3-M6), and the private-account page's
+`stateHalo`, `stateBadge`, `stateBadgeRing`, `stateTextMaxWidth` and the sleeping cat's `lottieWide` (MP-M3; no
+handoff).
 They exist so `feature/*` holds no `.dp` (ModuleGraphTest). They are not design tokens: changing one
 changes a component, not the theme, and none has a Dusk/HighContrast variant. If design adds a size
 to tokens.json, move it to the token's own group and port it from there.

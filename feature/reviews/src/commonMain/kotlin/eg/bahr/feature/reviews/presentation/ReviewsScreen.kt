@@ -100,7 +100,7 @@ internal fun ReviewsScreen(
     title: String?,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
-    onTravellerClick: ((publicId: String) -> Unit)? = null,
+    onTravellerClick: ((publicId: String?) -> Unit)? = null,
     viewModel: ReviewsViewModel =
         koinViewModel(key = host?.let { "reviews:host:$it" } ?: "reviews:trip:$trip") { parametersOf(trip, host, title) },
 ) {
@@ -133,7 +133,7 @@ private fun ReviewsList(
     state: ReviewsUiState,
     reviews: LazyPagingItems<ReviewDto>,
     viewModel: ReviewsViewModel,
-    onTravellerClick: ((publicId: String) -> Unit)?,
+    onTravellerClick: ((publicId: String?) -> Unit)?,
 ) {
     val listState = rememberLazyListState()
     val bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + BahrSpacing.xl
@@ -310,7 +310,7 @@ private fun LazyListScope.reviewsBody(
     emptyMessage: StringResource,
     onRetry: () -> Unit,
     onAppendRetry: () -> Unit,
-    onTravellerClick: ((publicId: String) -> Unit)?,
+    onTravellerClick: ((publicId: String?) -> Unit)?,
 ) {
     when (status) {
         PagedListStatus.Loading ->

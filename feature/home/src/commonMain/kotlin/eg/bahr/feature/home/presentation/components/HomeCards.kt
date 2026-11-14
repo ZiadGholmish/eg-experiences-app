@@ -331,15 +331,16 @@ private fun BusIcon() {
 
 /**
  * A review: the author's initial, name and date, the stars, the text (a few lines; the trip page has it whole),
- * "Verified trip" when the server says so, and the trip it is about, which a tap opens. MP-M2: when the server sent
- * the author's public id, their name is a link of its own ([onAuthorClick]); a tap anywhere else still opens the trip.
+ * "Verified trip" when the server says so, and the trip it is about, which a tap opens. MP-M2/MP-M3: the author's name
+ * is a link of its own ([onAuthorClick], with their public id, or null for a private author); a tap anywhere else
+ * still opens the trip.
  */
 @Composable
 private fun HomeReviewCard(
     review: HomeReviewDto,
     compact: Boolean,
     modifier: Modifier,
-    onAuthorClick: (publicId: String) -> Unit,
+    onAuthorClick: (publicId: String?) -> Unit,
     onClick: () -> Unit,
 ) {
     BahrCard(modifier = modifier.fillMaxWidth(), onClick = onClick) {
