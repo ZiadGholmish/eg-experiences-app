@@ -8,8 +8,13 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import eg.bahr.core.catalog.presentation.WaitlistTags
@@ -35,9 +40,10 @@ import org.robolectric.annotation.GraphicsMode
 import kotlin.test.assertEquals
 
 /**
- * MP-M2: Home's review card is itself a link to its trip; a reviewer whose profile is public (`authorPublicId`) has a
- * name that is a link of its own. A tap on the name opens the profile and not the trip; a tap elsewhere still opens the
- * trip. Goldens × {ar, en}: the linked name beside a plain one.
+ * MP-M2/MP-M3: Home's review card is itself a link to its trip; every reviewer's name is a link of its own, to the
+ * public profile (`authorPublicId`) or, with no id, to the "This account is private" page (null). A tap on the name
+ * opens the profile page and not the trip; a tap elsewhere still opens the trip. Goldens × {ar, en}: a public and a
+ * private author, drawn the same.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -51,12 +57,28 @@ class HomeReviewAuthorTest {
         val actions = mutableListOf<HomeAction>()
         show(AppLanguage.ENGLISH) { actions += it }
 
-        compose.onNodeWithTag(REVIEW_AUTHOR_LINK_TAG).performClick()
+        compose.onAllNodesWithTag(REVIEW_AUTHOR_LINK_TAG, useUnmergedTree = true)[0].performClick()
         assertEquals(listOf<HomeAction>(HomeAction.OpenTraveller(PUBLIC_ID)), actions)
 
         compose.onNodeWithText(LINKED_BODY).performClick()
         assertEquals(HomeAction.OpenTrip("burullus-dawn"), actions.last())
         assertEquals(2, actions.size)
+    }
+
+    @Test
+    fun `a private author's name opens the private page - with null - as a button with the same label`() {
+        val actions = mutableListOf<HomeAction>()
+        show(AppLanguage.ENGLISH) { actions += it }
+
+        val links = compose.onAllNodesWithTag(REVIEW_AUTHOR_LINK_TAG, useUnmergedTree = true)
+        links.assertCountEquals(2)
+        links[1].performClick()
+        assertEquals(listOf<HomeAction>(HomeAction.OpenTraveller(null)), actions)
+        listOf(0 to "Mona S.", 1 to "A traveller").forEach { (index, name) ->
+            val node = links[index].fetchSemanticsNode()
+            assertEquals("Open $name’s profile", node.config.getOrNull(SemanticsActions.OnClick)?.label)
+            assertEquals(Role.Button, node.config.getOrNull(SemanticsProperties.Role))
+        }
     }
 
     @Test

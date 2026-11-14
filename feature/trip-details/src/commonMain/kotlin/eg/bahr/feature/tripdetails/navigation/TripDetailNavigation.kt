@@ -36,8 +36,9 @@ import eg.bahr.feature.tripdetails.presentation.TripDetailScreen
  *
  * MP-M1: [onSignIn] opens the sign-in sheet when a guest taps the heart.
  *
- * MP-M2: [onTravellerClick] opens a reviewer's public profile from their name (only for a review that carries
- * `authorPublicId`), usually feature:settings' `navigateToTravellerProfile`.
+ * MP-M2/MP-M3: [onTravellerClick] opens a reviewer's profile page from their name, usually feature:settings'
+ * `navigateToTravellerProfile`: with the review's `authorPublicId`, or null for a private author ("This account is
+ * private", shown without a request).
  */
 fun NavGraphBuilder.tripDetailScreen(
     onBack: () -> Unit,
@@ -46,7 +47,7 @@ fun NavGraphBuilder.tripDetailScreen(
     onSeeAllReviews: ((slug: String, title: String) -> Unit)? = null,
     pushPrompt: (@Composable (onDone: () -> Unit) -> Unit)? = null,
     onSignIn: () -> Unit,
-    onTravellerClick: ((publicId: String) -> Unit)? = null,
+    onTravellerClick: ((publicId: String?) -> Unit)? = null,
 ) {
     composable<TripDetailRoute> { entry ->
         val route = entry.toRoute<TripDetailRoute>()

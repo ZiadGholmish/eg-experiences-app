@@ -7,11 +7,17 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToKey
 import eg.bahr.core.catalog.data.LikeState
 import eg.bahr.core.catalog.data.TripHearts
@@ -20,6 +26,7 @@ import eg.bahr.core.catalog.data.WaitlistMemory
 import eg.bahr.core.catalog.model.BadgeDto
 import eg.bahr.core.catalog.model.ImageDto
 import eg.bahr.core.catalog.model.RatingDto
+import eg.bahr.core.catalog.presentation.components.REVIEW_AUTHOR_LINK_TAG
 import eg.bahr.core.catalog.presentation.components.SEE_ALL_REVIEWS_TAG
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.common.result.AppError
@@ -58,6 +65,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.util.Locale
+import kotlin.test.assertEquals
 
 /**
  * The trip page × {ar, en} × {loading, loaded, sold-out date selected} (this is also M1-M3's set),
@@ -774,6 +782,36 @@ class TripDetailScreenshotTest {
         compose.onNodeWithTag(SEE_ALL_REVIEWS_TAG).assertDoesNotExist()
     }
 
+    /**
+     * MP-M3: every reviewer's name opens their profile page, the public one with its id and a private one (no
+     * `authorPublicId`) with null; both are buttons labelled "Open <name>’s profile". A UI test (no golden).
+     */
+    @Config(qualifiers = "en-w360dp-h1000dp-xhdpi")
+    @Test
+    fun `every reviewer name opens the profile page - public with its id - private with null`() {
+        val opened = mutableListOf<String?>()
+        snap(null, AppLanguage.ENGLISH, scrollTo = TripSection.Reviews, onTravellerClick = { opened += it }) {
+            serve(payload(AppLanguage.ENGLISH), departures(AppLanguage.ENGLISH), detail = { trip ->
+                trip.copy(
+                    reviews =
+                        trip.reviews?.let { r ->
+                            r.copy(items = r.items.mapIndexed { i, review -> if (i == 0) review.copy(authorPublicId = "p-1") else review })
+                        },
+                )
+            })
+        }
+        val links = compose.onAllNodesWithTag(REVIEW_AUTHOR_LINK_TAG)
+        links.assertCountEquals(PREVIEWED_REVIEWS)
+        links[0].performClick()
+        links[1].performClick()
+        assertEquals(listOf("p-1", null), opened)
+        listOf(0 to "Nada H.", 1 to "Mahmoud A.").forEach { (index, author) ->
+            val node = links[index].fetchSemanticsNode()
+            assertEquals("Open $author’s profile", node.config.getOrNull(SemanticsActions.OnClick)?.label)
+            assertEquals(Role.Button, node.config.getOrNull(SemanticsProperties.Role))
+        }
+    }
+
     /** The trip's reviews counted as exactly the ones previewed. */
     private fun withEveryReviewShown(trip: TripDetailDto) =
         trip.copy(
@@ -859,8 +897,9 @@ class TripDetailScreenshotTest {
     ) = trip(1, title = title, priceEgp = 450, badge = BadgeDto(badge, "primary"))
         .copy(slug = SLUG, subtitle = subtitle, rating = RatingDto(4.8, 5))
 
+    /** A null [prefix] is a UI test: the page is shown and settled, and no golden is taken. */
     private fun snap(
-        prefix: String,
+        prefix: String?,
         language: AppLanguage,
         select: String? = null,
         act: (TripDetailViewModel) -> Unit = {},
@@ -873,6 +912,7 @@ class TripDetailScreenshotTest {
         lottie: Boolean = false,
         link: TripLink = TripLink(),
         hearts: TripHearts = TripHearts.None,
+        onTravellerClick: ((publicId: String?) -> Unit)? = null,
         stub: FakeTripDetailRepository.() -> Unit,
     ) {
         val viewModel = TripDetailViewModel(SLUG, FakeTripDetailRepository().apply(stub), waitlists, link, hearts)
@@ -890,11 +930,15 @@ class TripDetailScreenshotTest {
                             if (theme == BahrThemeName.Dark) MaterialTheme.colorScheme.onBackground else LocalContentColor.current,
                     ) {
                         Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-                            TripDetailScreen(slug = SLUG, onBack = {}, onContinue = {
-                                _,
-                                _,
-                                ->
-                            }, onHostClick = onHostClick, onSeeAllReviews = onSeeAllReviews, viewModel = viewModel)
+                            TripDetailScreen(
+                                slug = SLUG,
+                                onBack = {},
+                                onContinue = { _, _ -> },
+                                onHostClick = onHostClick,
+                                onSeeAllReviews = onSeeAllReviews,
+                                onTravellerClick = onTravellerClick,
+                                viewModel = viewModel,
+                            )
                         }
                     }
                 }
@@ -932,7 +976,7 @@ class TripDetailScreenshotTest {
             compose.waitForIdle()
             compose.mainClock.advanceTimeBy(SETTLE_MS)
         }
-        compose.captureScreenshot("${prefix}_${language.tag}")
+        if (prefix != null) compose.captureScreenshot("${prefix}_${language.tag}")
     }
 
     @kotlinx.serialization.Serializable
@@ -945,6 +989,9 @@ class TripDetailScreenshotTest {
         const val LIKES = 12
 
         const val SLUG = "burullus-dawn"
+
+        /** The seeded payload's review preview (the server's 3). */
+        const val PREVIEWED_REVIEWS = 3
         const val SETTLE_MS = 1_000L
         const val LOTTIE_LOAD_TIMEOUT_MS = 10_000L
         val UNREACHABLE_PHOTOS = (1..3).map { ImageDto(url = "http://127.0.0.1:9/photo-$it.png", width = 900, height = 560) }

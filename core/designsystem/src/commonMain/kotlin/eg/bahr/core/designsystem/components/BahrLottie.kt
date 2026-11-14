@@ -86,6 +86,12 @@ interface BahrLottie {
 
         /** A magnifying glass with a sad face that changes its mind now and then (square). */
         Magnifier("files/lottie/magnifier.json", SQUARE),
+
+        /**
+         * MP-M3 (user, 2026-11-14): a hand-drawn cat curled up asleep, breathing in a loop: a traveller keeping to
+         * themselves (1910 x 1550, cropped round the cat). Its still frame is the last, the cat as at the start.
+         */
+        SleepingCat("files/lottie/sleeping_cat.json", SLEEPING_CAT_WIDTH / SLEEPING_CAT_HEIGHT),
     }
 
     enum class Playback { Once, Loop }
@@ -108,11 +114,16 @@ interface BahrLottie {
     )
 }
 
+/**
+ * [fallback] (MP-M3), when given, is drawn instead if the file cannot be read or parsed, so a page whose picture
+ * carries weight is never left with an empty box.
+ */
 @Composable
 fun BahrLottie(
     modifier: Modifier = Modifier,
     props: BahrLottie.Props,
-) = BahrLottie(modifier, props, fixedProgress = null)
+    fallback: (@Composable () -> Unit)? = null,
+) = BahrLottie(modifier, props, fixedProgress = null, fallback = fallback)
 
 /**
  * [BahrLottie], or, with [fixedProgress], one still frame of it (0..1): the design system's screenshot
@@ -123,6 +134,7 @@ internal fun BahrLottie(
     modifier: Modifier,
     props: BahrLottie.Props,
     fixedProgress: Float?,
+    fallback: (@Composable () -> Unit)? = null,
 ) {
     val scheme = MaterialTheme.colorScheme
     val extended = BahrTheme.colors
@@ -131,7 +143,12 @@ internal fun BahrLottie(
         remember(props.animation, props.ground, scheme, extended) {
             TintedLottieSpec(props.animation, lottieRoles(scheme, extended, props.ground))
         }
-    val composition by rememberLottieComposition(spec)
+    val result = rememberLottieComposition(spec)
+    if (fallback != null && result.isFailure) {
+        fallback()
+        return
+    }
+    val composition by result
     val reduced = BahrTheme.reducedMotion
     var onScreen by remember { mutableStateOf(false) }
     val progress: () -> Float =
@@ -206,6 +223,13 @@ private fun lottieRoles(
             },
         "success" to extended.success,
         "successContainer" to extended.successContainer,
+        // MP-M3: the sleeping cat's line, fur, patches, paw pads and shadow.
+        "onSurface" to scheme.onSurface,
+        "secondaryContainer" to scheme.secondaryContainer,
+        "primaryDim" to extended.primaryDim,
+        "secondaryDim" to extended.secondaryDim,
+        "quaternary" to extended.quaternary,
+        "outlineVariant" to scheme.outlineVariant,
     )
 
 /**
@@ -240,6 +264,8 @@ private const val SAILBOAT_WIDTH = 348f
 private const val SAILBOAT_HEIGHT = 240f
 private const val BOOKING_CONFIRMED_WIDTH = 500f
 private const val BOOKING_CONFIRMED_HEIGHT = 400f
+private const val SLEEPING_CAT_WIDTH = 1910f
+private const val SLEEPING_CAT_HEIGHT = 1550f
 
 /** The success check, map and magnifier files have square canvases. */
 private const val SQUARE = 1f

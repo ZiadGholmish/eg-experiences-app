@@ -335,7 +335,7 @@ internal fun TripReviews(
     reviews: ReviewsDto,
     modifier: Modifier = Modifier,
     onSeeAll: (() -> Unit)? = null,
-    onAuthorClick: ((publicId: String) -> Unit)? = null,
+    onAuthorClick: ((publicId: String?) -> Unit)? = null,
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(BahrSpacing.md)) {
         Row(verticalAlignment = Alignment.CenterVertically) {

@@ -92,7 +92,7 @@ internal fun TripDetailScreen(
     placeOpened: Boolean = false,
     pushPrompt: (@Composable (onDone: () -> Unit) -> Unit)? = null,
     onSignIn: () -> Unit = {},
-    onTravellerClick: ((publicId: String) -> Unit)? = null,
+    onTravellerClick: ((publicId: String?) -> Unit)? = null,
     viewModel: TripDetailViewModel =
         koinViewModel { parametersOf(slug, TripLink(date?.let(::linkedDate), placeOpened)) },
 ) {
@@ -159,7 +159,7 @@ private fun TripPage(
     onContinue: (String) -> Unit,
     onHostClick: ((HostDto) -> Unit)?,
     onSeeAllReviews: ((title: String) -> Unit)?,
-    onTravellerClick: ((publicId: String) -> Unit)?,
+    onTravellerClick: ((publicId: String?) -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val trip = state.trip
@@ -308,7 +308,7 @@ private fun Section(
     onSelectDeparture: (String) -> Unit,
     onHostClick: ((HostDto) -> Unit)?,
     onSeeAllReviews: ((title: String) -> Unit)?,
-    onTravellerClick: ((publicId: String) -> Unit)?,
+    onTravellerClick: ((publicId: String?) -> Unit)?,
     onLike: () -> Unit,
 ) {
     val padded = Modifier.padding(start = BahrSpacing.gutter, end = BahrSpacing.gutter, top = BahrSpacing.xl)

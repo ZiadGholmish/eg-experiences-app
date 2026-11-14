@@ -7,13 +7,21 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
 import eg.bahr.core.catalog.model.ImageDto
 import eg.bahr.core.catalog.model.RatingSummaryDto
 import eg.bahr.core.catalog.model.ReviewDto
 import eg.bahr.core.catalog.model.StarCountDto
+import eg.bahr.core.catalog.presentation.components.REVIEW_AUTHOR_LINK_TAG
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.common.result.AppError
 import eg.bahr.core.common.result.AppResult
@@ -38,6 +46,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.util.Locale
+import kotlin.test.assertEquals
 
 /**
  * "See all reviews" (M4-M11) × {ar, en} × {loading, loaded, filtered, filter empty, error, not available},
@@ -102,6 +111,31 @@ class ReviewsScreenshotTest {
     private fun loaded(language: AppLanguage) {
         val arabic = language == AppLanguage.ARABIC
         snap("reviews_loaded", language, tripVm(FakeReviewsRepository(reviews = { answer(reviews(arabic), DAWN_SUMMARY) }), language))
+    }
+
+    /**
+     * MP-M3: every reviewer's name opens their profile page, the public one with its id and a private one (no
+     * `authorPublicId`) with null; both are buttons labelled "Open <name>’s profile".
+     */
+    @Test
+    fun `every reviewer name opens the profile page - public with its id - private with null`() {
+        val items = reviews(arabic = false).mapIndexed { i, r -> if (i == 0) r.copy(authorPublicId = "p-1") else r }
+        val opened = mutableListOf<String?>()
+        show(
+            AppLanguage.ENGLISH,
+            tripVm(FakeReviewsRepository(reviews = { answer(items, DAWN_SUMMARY) }), AppLanguage.ENGLISH),
+            onTravellerClick = { opened += it },
+        )
+        val links = compose.onAllNodesWithTag(REVIEW_AUTHOR_LINK_TAG)
+        links.assertCountEquals(items.size)
+        links[0].performClick()
+        links[1].performClick()
+        assertEquals(listOf("p-1", null), opened)
+        listOf(0 to "Tarek N.", 1 to "Heba R.").forEach { (index, author) ->
+            val node = links[index].fetchSemanticsNode()
+            assertEquals("Open $author’s profile", node.config.getOrNull(SemanticsActions.OnClick)?.label)
+            assertEquals(Role.Button, node.config.getOrNull(SemanticsProperties.Role))
+        }
     }
 
     /**
@@ -309,6 +343,19 @@ class ReviewsScreenshotTest {
         theme: BahrThemeName = BahrThemeName.LakeBurullus,
         act: (ReviewsViewModel) -> Unit = {},
     ) {
+        show(language, vm, theme)
+        // The filters are tapped once the first answer (and the host's trips) are in, as a user would.
+        compose.runOnUiThread { act(vm) }
+        settle()
+        compose.captureScreenshot("${prefix}_${language.tag}")
+    }
+
+    private fun show(
+        language: AppLanguage,
+        vm: ReviewsViewModel,
+        theme: BahrThemeName = BahrThemeName.LakeBurullus,
+        onTravellerClick: ((publicId: String?) -> Unit)? = null,
+    ) {
         compose.setContent {
             ProvideAppLanguage(language) {
                 BahrTheme(locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English, theme = theme) {
@@ -319,17 +366,20 @@ class ReviewsScreenshotTest {
                             if (theme == BahrThemeName.Dark) MaterialTheme.colorScheme.onBackground else LocalContentColor.current,
                     ) {
                         Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-                            ReviewsScreen(trip = null, host = null, title = null, onBack = {}, viewModel = vm)
+                            ReviewsScreen(
+                                trip = null,
+                                host = null,
+                                title = null,
+                                onBack = {},
+                                onTravellerClick = onTravellerClick,
+                                viewModel = vm,
+                            )
                         }
                     }
                 }
             }
         }
         settle()
-        // The filters are tapped once the first answer (and the host's trips) are in, as a user would.
-        compose.runOnUiThread { act(vm) }
-        settle()
-        compose.captureScreenshot("${prefix}_${language.tag}")
     }
 
     /** The paging presenter writes its state in an effect: frames, the longest animation, frames again. */

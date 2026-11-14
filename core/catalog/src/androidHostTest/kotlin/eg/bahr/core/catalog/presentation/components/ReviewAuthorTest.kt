@@ -35,10 +35,11 @@ import org.robolectric.annotation.GraphicsMode
 import kotlin.test.assertEquals
 
 /**
- * MP-M2: a review's author name × {ar, en} × {light, dark}: plain (no `authorPublicId`, drawn as before), a link (in
- * primary, a 44dp touch area), and a link that reads "A traveller" / "مسافر" (an account with no name and a public
- * profile, MP-B2 round 1). Then the taps: the link hands over its id, a plain name has no link, and with no profile page
- * wired even an id stays plain.
+ * MP-M2/MP-M3: a review's author name × {ar, en} × {light, dark}: a private author (no `authorPublicId`), a public one,
+ * and a public one that reads "A traveller" / "مسافر" (an account with no name and a public profile, MP-B2 round 1).
+ * Since MP-M3 all three are the same link (in primary, a 44dp touch area). Then the taps: every name is a button with
+ * "Open <name>’s profile", the public one hands over its id and the private one null; with no profile page wired, a
+ * name stays plain.
  *
  * Record: `./gradlew :core:catalog:recordRoborazziAndroidHostTest`; verify: `verifyRoborazziAndroidHostTest`.
  */
@@ -62,29 +63,46 @@ class ReviewAuthorTest {
     fun authorsDarkEnglish() = snap(AppLanguage.ENGLISH, BahrThemeName.Dark)
 
     @Test
-    fun `a linked name hands over its id - A traveller too - a plain one has no link`() {
-        val opened = mutableListOf<String>()
+    fun `every name is a link - a public one hands over its id - a private one null - same role and label`() {
+        val opened = mutableListOf<String?>()
         compose.setContent {
             Themed(AppLanguage.ENGLISH) {
                 Column {
-                    ReviewCard(review(author = "Karim A."), onAuthorClick = { opened += it })
-                    ReviewCard(review(author = "A traveller", publicId = "p-2"), onAuthorClick = { opened += it })
+                    ReviewCard(review(author = "A traveller"), onAuthorClick = { opened += it })
+                    ReviewCard(review(author = "Mona S.", publicId = "p-2"), onAuthorClick = { opened += it })
                 }
             }
         }
         val links = compose.onAllNodesWithTag(REVIEW_AUTHOR_LINK_TAG)
-        links.assertCountEquals(1)
-        compose.onNodeWithTag(REVIEW_AUTHOR_LINK_TAG).performClick()
-        assertEquals(listOf("p-2"), opened)
-        val node = compose.onNodeWithTag(REVIEW_AUTHOR_LINK_TAG).fetchSemanticsNode()
-        assertEquals("Open profile", node.config.getOrNull(SemanticsActions.OnClick)?.label)
-        assertEquals(Role.Button, node.config.getOrNull(SemanticsProperties.Role))
+        links.assertCountEquals(2)
+        links[0].performClick()
+        links[1].performClick()
+        assertEquals(listOf(null, "p-2"), opened)
+        listOf(0 to "A traveller", 1 to "Mona S.").forEach { (index, name) ->
+            val node = links[index].fetchSemanticsNode()
+            assertEquals("Open $name’s profile", node.config.getOrNull(SemanticsActions.OnClick)?.label)
+            assertEquals(Role.Button, node.config.getOrNull(SemanticsProperties.Role))
+        }
     }
 
     @Test
-    fun `with no profile page wired - an id stays plain text`() {
+    fun `the Arabic label names the author`() {
         compose.setContent {
-            Themed(AppLanguage.ENGLISH) { ReviewCard(review(author = "Mona S.", publicId = "p-1")) }
+            Themed(AppLanguage.ARABIC) { ReviewCard(review(author = "مسافر"), onAuthorClick = {}) }
+        }
+        val node = compose.onNodeWithTag(REVIEW_AUTHOR_LINK_TAG).fetchSemanticsNode()
+        assertEquals("افتح بروفايل مسافر", node.config.getOrNull(SemanticsActions.OnClick)?.label)
+    }
+
+    @Test
+    fun `with no profile page wired - a name stays plain text, id or not`() {
+        compose.setContent {
+            Themed(AppLanguage.ENGLISH) {
+                Column {
+                    ReviewCard(review(author = "Mona S.", publicId = "p-1"))
+                    ReviewCard(review(author = "A traveller"))
+                }
+            }
         }
         compose.onAllNodesWithTag(REVIEW_AUTHOR_LINK_TAG).assertCountEquals(0)
     }
@@ -100,7 +118,7 @@ class ReviewAuthorTest {
                     modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(BahrSpacing.gutter),
                     verticalArrangement = Arrangement.spacedBy(BahrSpacing.lg),
                 ) {
-                    ReviewCard(review(author = if (arabic) "كريم ع." else "Karim A."), onAuthorClick = {})
+                    ReviewCard(review(author = if (arabic) "مسافر" else "A traveller"), onAuthorClick = {})
                     ReviewCard(review(author = if (arabic) "منى س." else "Mona S.", publicId = "p-1"), onAuthorClick = {})
                     ReviewCard(review(author = if (arabic) "مسافر" else "A traveller", publicId = "p-2"), onAuthorClick = {})
                 }

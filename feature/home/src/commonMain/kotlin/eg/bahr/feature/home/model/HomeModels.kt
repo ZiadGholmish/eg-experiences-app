@@ -235,7 +235,7 @@ internal data class HomeDepartureDto(
 
 /**
  * openapi `HomeReview`: an approved review of [trip]. [body] is absent for a rating only. [authorPublicId] (MP-B2) is
- * there only when the author's name opens their public profile.
+ * there only when the author's profile is public (otherwise their name opens the "private" page, MP-M3).
  */
 @Serializable
 internal data class HomeReviewDto(

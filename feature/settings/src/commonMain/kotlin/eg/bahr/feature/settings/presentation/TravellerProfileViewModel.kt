@@ -19,7 +19,7 @@ import kotlinx.coroutines.launch
  * A traveller's public profile (MP-M2).
  *
  * [notAvailable]: `getTraveller` answered NOT_FOUND, which is one answer for a private profile, an unknown id and a
- * deleted account (so a probe cannot tell them apart): "This profile isn't public", with no retry, as asking again
+ * deleted account (so a probe cannot tell them apart): "This account is private", with no retry, as asking again
  * gives the same. [error] is any other failure (no connection, RATE_LIMITED), shown with Retry when one may help.
  */
 internal data class TravellerProfileUiState(

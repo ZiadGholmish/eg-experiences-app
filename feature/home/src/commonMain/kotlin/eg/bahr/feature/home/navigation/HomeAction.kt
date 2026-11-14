@@ -33,11 +33,12 @@ sealed interface HomeAction {
     data object OpenHosts : HomeAction
 
     /**
-     * A review card's author name (MP-M2): the public profile of the traveller [publicId] (`HomeReview.authorPublicId`,
-     * sent only while that profile is public). The rest of the card still opens its trip.
+     * A review card's author name (MP-M2): the profile page of the traveller [publicId] (`HomeReview.authorPublicId`,
+     * sent only while that profile is public). MP-M3: every name opens it, with null for a private author, which the
+     * profile page shows as "This account is private" without a request. The rest of the card still opens its trip.
      */
     data class OpenTraveller(
-        val publicId: String,
+        val publicId: String?,
     ) : HomeAction
 
     /**

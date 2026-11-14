@@ -459,6 +459,26 @@ object BahrSize {
     val iconSheet = 28.dp
 
     /**
+     * MP-M3 (user, 2026-11-14): the private-account page's picture: the default traveller avatar ([avatarLarge]) on a
+     * soft halo this wide, the size of a state's animation ([lottieState]) so it sits like the other empty states, and
+     * a padlock badge at its corner.
+     */
+    val stateHalo = 120.dp
+    val stateBadge = 36.dp
+
+    /** The ring of halo colour round [stateBadge], cutting it out of the avatar under it. */
+    val stateBadgeRing = 3.dp
+
+    /**
+     * MP-M3 (user, 2026-11-14): the private-account page's sleeping cat (BahrLottie's SleepingCat, about 5:4), its
+     * width: wider than [lottieState] because the cat lies stretched out; the drawing itself is about 145dp tall.
+     */
+    val lottieWide = 176.dp
+
+    /** A state's lines stop growing at this width on a tablet, so they stay a readable block under the picture. */
+    val stateTextMaxWidth = 360.dp
+
+    /**
      * A traveller's photo on a review card (M3-M4; no handoff size): a square small enough that a review's five
      * fit a phone's card in one scrolling row, beside [avatarSmall] text.
      */

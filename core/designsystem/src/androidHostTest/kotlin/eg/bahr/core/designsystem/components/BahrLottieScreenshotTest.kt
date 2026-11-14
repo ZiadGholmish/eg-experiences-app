@@ -37,7 +37,7 @@ import org.robolectric.annotation.GraphicsMode
  *  - still (reduced motion: the last whole frame, where a played-once animation stops, or the frame the
  *    animation names), in ar and en (the animation itself is not mirrored);
  *  - mid-animation, to show the moving parts' colours (the bell's rings, the boat between two rocks, the
- *    check's halo, the map's pin popping up).
+ *    check's halo, the map's pin popping up, the cat mid-breath).
  *
  * Record: `./gradlew :core:designsystem:recordRoborazziAndroidHostTest`.
  */
@@ -119,6 +119,14 @@ class BahrLottieScreenshotTest {
                         BahrLottie(
                             Modifier.width(BahrSize.lottieCelebration),
                             BahrLottie.Props(BahrLottie.Animation.BookingConfirmed),
+                            progress,
+                        )
+                    }
+                    // MP-M3: the private profile's sleeping cat, on the page's `background` as it is drawn there.
+                    Box(Modifier.background(MaterialTheme.colorScheme.background).padding(BahrSpacing.md)) {
+                        BahrLottie(
+                            Modifier.width(BahrSize.stateHalo),
+                            BahrLottie.Props(BahrLottie.Animation.SleepingCat, ground = BahrLottie.Ground.Background),
                             progress,
                         )
                     }

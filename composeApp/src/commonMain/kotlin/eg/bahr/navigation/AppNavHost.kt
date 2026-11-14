@@ -223,7 +223,7 @@ fun AppNavHost(
                             is HomeAction.OpenHost -> navController.navigateToHostProfile(action.slug, action.name, action.avatar)
                             // A hosts row's "See all" (MV-M1): the hosts directory in Home's stack, top rated first.
                             HomeAction.OpenHosts -> navController.navigateToHosts()
-                            // A review card's author name (MP-M2): their public profile, in Home's stack.
+                            // A review card's author name (MP-M2): their profile page in Home's stack (MP-M3: "private" without an id).
                             is HomeAction.OpenTraveller -> navController.navigateToTravellerProfile(action.publicId)
                         }
                     },
@@ -286,7 +286,8 @@ fun AppNavHost(
                     onViewProfile = navController::navigateToTravellerProfile,
                 )
 
-                // A traveller's public profile (MP-M2): from a reviewer's name anywhere, or from the account's own settings.
+                // A traveller's public profile (MP-M2): from any reviewer's name (MP-M3: a private one shows "This account is
+                // private" without a request), or from the account's own settings.
                 travellerProfileScreen(
                     onBack = { navController.popBackStack() },
                     onTripClick = navController::navigateToTripDetail,
