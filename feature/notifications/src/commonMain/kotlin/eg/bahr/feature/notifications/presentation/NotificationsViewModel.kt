@@ -40,19 +40,12 @@ import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Clock
 import kotlin.time.Instant
 
-/** A swiped item waiting out its undo (M3-M6): deleted on the server only once the snackbar has gone. */
-internal data class PendingDelete(
-    val id: String,
-    val owner: InboxOwner,
-    val wasUnread: Boolean,
-)
-
 internal data class NotificationsUiState(
     val session: SessionState = SessionState.Unknown,
     /** What the rows' "12 min" counts from: the time of the last read of the list. */
     val now: Instant = Instant.DISTANT_PAST,
-    /** The undo snackbar's item. */
-    val pendingDelete: PendingDelete? = null,
+    /** The item whose "Delete this notification?" sheet is up (M3-M22): a full swipe, the menu or the screen reader asked. */
+    val confirmDelete: InboxEntry.Item? = null,
     /** The "Clear read" confirmation is up; [clearingRead] while its request is under way. */
     val confirmClearRead: Boolean = false,
     val clearingRead: Boolean = false,
@@ -65,9 +58,9 @@ internal data class NotificationsUiState(
  * sign-out starts it over on the other inbox.
  *
  * Every change shows at once and the bell's count follows it ([AlertsCenter]), then the server's answer settles it: a
- * failure undoes the change and says so (the app's error snackbar). A swipe hides the item and offers Undo; the DELETE
- * goes when the snackbar has gone, or a next swipe, or the page closes, on the app's scope so it is never lost
- * (deletion is a tombstone, so there is nothing to restore it with afterwards).
+ * failure undoes the change and says so (the app's error snackbar). Deleting one item asks first (M3-M22: a sheet, as
+ * deletion is a tombstone with nothing to restore it from), so there is no Undo; once confirmed the item goes and the
+ * DELETE is sent on the app's scope, so leaving the page at once never loses it.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class NotificationsViewModel(
@@ -91,8 +84,8 @@ internal class NotificationsViewModel(
             .map { it.inboxOwner }
             .distinctUntilChanged()
             .flatMapLatest { owner ->
-                // Another person's inbox now: nothing they changed applies, and an undo window closes on the old one.
-                commitPendingDelete()
+                // Another person's inbox now: nothing they changed applies, and a delete asked on the old one is not theirs.
+                _uiState.update { it.copy(confirmDelete = null) }
                 edits.value = InboxEdits()
                 // The list starts empty and loading on each owner: Paging would keep drawing the previous inbox until the
                 // new one's first page lands, and for ever if that page fails (M3-M0 review #5's rule).
@@ -159,26 +152,35 @@ internal class NotificationsViewModel(
         }
     }
 
-    /** A swipe (or the menu's Delete): hidden now, deleted once its undo has passed. */
-    fun delete(item: InboxEntry.Item) {
+    /** A full swipe, the menu's Delete or the screen reader's: the confirm sheet opens; nothing changes yet. */
+    fun askDelete(item: InboxEntry.Item) {
+        _uiState.update { it.copy(confirmDelete = item) }
+    }
+
+    /** The sheet's Cancel, Back, the scrim or a swipe down: the row stays as it was. */
+    fun dismissDelete() {
+        _uiState.update { it.copy(confirmDelete = null) }
+    }
+
+    /**
+     * The sheet's Delete: the item goes now (and the bell's count with it if unread) and the DELETE is sent on the app's
+     * scope; a failure brings it back and says so. Already gone on the server is what was asked for.
+     */
+    fun delete() {
+        val item = _uiState.value.confirmDelete ?: return
+        _uiState.update { it.copy(confirmDelete = null) }
         val owner = owner() ?: return
-        commitPendingDelete()
         edits.update { it.copy(hidden = it.hidden + item.id) }
         if (!item.read) center.adjust(-1)
-        _uiState.update { it.copy(pendingDelete = PendingDelete(item.id, owner, wasUnread = !item.read)) }
-    }
-
-    /** The snackbar's Undo: the item is back, and nothing is sent. */
-    fun undoDelete(id: String) {
-        val pending = _uiState.value.pendingDelete?.takeIf { it.id == id } ?: return
-        _uiState.update { it.copy(pendingDelete = null) }
-        edits.update { it.copy(hidden = it.hidden - id) }
-        if (pending.wasUnread) center.adjust(1)
-    }
-
-    /** The snackbar went without an Undo. */
-    fun commitDelete(id: String) {
-        if (_uiState.value.pendingDelete?.id == id) commitPendingDelete()
+        center.launch {
+            val result = repository.delete(owner, item.id)
+            if (result is AppResult.Failure && !result.error.isNotFound()) {
+                edits.update { it.copy(hidden = it.hidden - item.id) }
+                if (!item.read) center.adjust(1)
+                errors.show(result.error)
+            }
+            center.refresh()
+        }
     }
 
     /** "Mark all as read": every item loaded so far shows read, and the bell clears. */
@@ -225,25 +227,6 @@ internal class NotificationsViewModel(
                 is AppResult.Success -> source?.invalidate()
                 is AppResult.Failure -> errors.show(result.error)
             }
-        }
-    }
-
-    override fun onCleared() {
-        // The page closed inside an undo window: the delete still goes (on the app's scope).
-        commitPendingDelete()
-    }
-
-    private fun commitPendingDelete() {
-        val pending = _uiState.value.pendingDelete ?: return
-        _uiState.update { it.copy(pendingDelete = null) }
-        center.launch {
-            val result = repository.delete(pending.owner, pending.id)
-            // Already gone is what was asked for.
-            if (result is AppResult.Failure && !result.error.isNotFound()) {
-                edits.update { it.copy(hidden = it.hidden - pending.id) }
-                errors.show(result.error)
-            }
-            center.refresh()
         }
     }
 

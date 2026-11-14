@@ -1,5 +1,9 @@
 package eg.bahr.feature.notifications.presentation
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.paging.LoadState
@@ -8,6 +12,7 @@ import androidx.paging.PagingData
 import androidx.paging.compose.collectAsLazyPagingItems
 import eg.bahr.core.common.locale.AppLanguage
 import eg.bahr.core.designsystem.components.BAHR_LOTTIE_READY_TAG
+import eg.bahr.core.designsystem.components.BahrBottomSheetContent
 import eg.bahr.core.designsystem.theme.BahrLocale
 import eg.bahr.core.designsystem.theme.BahrTheme
 import eg.bahr.core.designsystem.theme.BahrThemeName
@@ -27,7 +32,8 @@ import kotlin.time.Instant
  * The notifications page (M3-M6, account handoff §3; pushed from Home's bell with a Back since M3-M6a) × {ar, en}:
  * loading (the 7-row skeleton), empty (the bell, shot still under reduced motion), an unread + read mix in Today and
  * Earlier (light and dark: the handoff designs the list in both), the error state, and the guest inbox signed out
- * (no sign-in prompt since M3-B12), plus the stored sign-in not read yet.
+ * (no sign-in prompt since M3-B12), plus the stored sign-in not read yet, and the delete confirm sheet (M3-M22) in
+ * light and dark.
  *
  * Record: `./gradlew :feature:notifications:recordRoborazziAndroidHostTest`; verify: `verifyRoborazziAndroidHostTest`.
  */
@@ -92,6 +98,41 @@ class NotificationsScreenshotTest {
 
     @Test
     fun unknownEnglish() = shoot("alerts_unknown", AppLanguage.ENGLISH, SessionState.Unknown)
+
+    /** "Delete this notification?" (M3-M22): the sheet's inside, as screenshot tests cannot draw its window. */
+    @Test
+    fun deleteSheetArabic() = shootDeleteSheet(AppLanguage.ARABIC, BahrThemeName.LakeBurullus)
+
+    @Test
+    fun deleteSheetEnglish() = shootDeleteSheet(AppLanguage.ENGLISH, BahrThemeName.LakeBurullus)
+
+    @Test
+    fun deleteSheetDarkArabic() = shootDeleteSheet(AppLanguage.ARABIC, BahrThemeName.Dark)
+
+    @Test
+    fun deleteSheetDarkEnglish() = shootDeleteSheet(AppLanguage.ENGLISH, BahrThemeName.Dark)
+
+    private fun shootDeleteSheet(
+        language: AppLanguage,
+        theme: BahrThemeName,
+    ) {
+        val item = mix(language).filterIsInstance<InboxEntry.Item>()[1]
+        compose.setContent {
+            ProvideAppLanguage(language) {
+                BahrTheme(
+                    locale = if (language == AppLanguage.ARABIC) BahrLocale.Arabic else BahrLocale.English,
+                    theme = theme,
+                    reducedMotion = true,
+                ) {
+                    Box(Modifier.background(MaterialTheme.colorScheme.surface)) {
+                        BahrBottomSheetContent(deleteProps(NotificationsActions(onBack = {}))) { DeleteBody(item) }
+                    }
+                }
+            }
+        }
+        val dark = if (theme == BahrThemeName.Dark) "_dark" else ""
+        compose.captureScreenshot("alerts_delete_sheet${dark}_${language.tag}")
+    }
 
     private fun shoot(
         prefix: String,

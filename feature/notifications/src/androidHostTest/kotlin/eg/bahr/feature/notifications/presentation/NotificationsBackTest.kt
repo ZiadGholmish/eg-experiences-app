@@ -24,7 +24,7 @@ import kotlin.time.Instant
 
 /**
  * M3-M6a: the page's Back calls onBack. M3-M6: a tap on a row opens it, "Mark all as read" marks all, and a screen
- * reader reaches the swipe's delete and the read toggle as the row's custom actions.
+ * reader reaches the swipe's delete (which asks first, M3-M22) and the read toggle as the row's custom actions.
  */
 @RunWith(RobolectricTestRunner::class)
 class NotificationsBackTest {
@@ -72,19 +72,19 @@ class NotificationsBackTest {
     }
 
     @Test
-    fun `the row's custom actions mark it read and delete it`() {
+    fun `the row's custom actions mark it read and ask to delete it`() {
         val calls = mutableListOf<String>()
         show(
             NotificationsActions(
                 onBack = {},
                 onSetRead = { it, read -> calls += "read ${it.id} $read" },
-                onDelete = { calls += "delete ${it.id}" },
+                onAskDelete = { calls += "ask delete ${it.id}" },
             ),
         )
         val row = compose.onNodeWithContentDescription("Unread. Booking confirmed. Dawn on Lake Burullus. now")
 
         row.fetchSemanticsNode().config[SemanticsActions.CustomActions].forEach { it.action() }
 
-        assertEquals(listOf("read n1 true", "delete n1"), calls)
+        assertEquals(listOf("read n1 true", "ask delete n1"), calls)
     }
 }

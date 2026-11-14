@@ -149,56 +149,59 @@ class NotificationsViewModelTest {
         }
 
     @Test
-    fun `a swipe hides the item and offers Undo - Undo sends nothing - the snackbar going sends the delete`() =
+    fun `asking to delete opens the sheet - nothing is hidden or sent - Cancel leaves the row as it was`() =
         runViewModelTest {
             val page = page()
             advanceUntilIdle()
             val seat = page.vm.items().first()
 
-            page.vm.delete(seat)
-            assertEquals(listOf("n2", "n3"), page.vm.items().map { it.id })
-            assertEquals(1, page.center.count.value)
-            assertEquals(
-                "n1",
-                page.vm.uiState.value.pendingDelete
-                    ?.id,
-            )
+            page.vm.askDelete(seat)
+            assertEquals(seat, page.vm.uiState.value.confirmDelete)
+            assertEquals(listOf("n1", "n2", "n3"), page.vm.items().map { it.id }, "asking hides nothing")
 
-            page.vm.undoDelete("n1")
+            page.vm.dismissDelete()
             advanceUntilIdle()
+            assertNull(page.vm.uiState.value.confirmDelete)
             assertEquals(listOf("n1", "n2", "n3"), page.vm.items().map { it.id })
             assertEquals(2, page.center.count.value)
-            assertTrue(page.repository.calls.isEmpty(), "nothing to restore: nothing was sent")
-
-            page.vm.delete(seat)
-            page.vm.commitDelete("n1")
-            advanceUntilIdle()
-            assertEquals(listOf("delete(Account:n1)"), page.repository.calls)
-            assertNull(page.vm.uiState.value.pendingDelete)
-            assertEquals(listOf("n2", "n3"), page.vm.items().map { it.id })
-            assertEquals(1, page.center.count.value)
+            assertTrue(page.repository.calls.isEmpty(), "Cancel sends nothing")
         }
 
     @Test
-    fun `a next swipe sends the first delete - and closing the page inside the undo sends the last`() =
+    fun `Delete in the sheet - the row goes at once and one DELETE is sent - the bell follows`() =
         runViewModelTest {
             val page = page()
             advanceUntilIdle()
-            val (seat, booking) = page.vm.items()
+            val seat = page.vm.items().first()
 
-            page.vm.delete(seat)
-            page.vm.delete(booking)
+            page.vm.askDelete(seat)
+            page.vm.delete()
+            assertNull(page.vm.uiState.value.confirmDelete)
+            assertEquals(listOf("n2", "n3"), page.vm.items().map { it.id }, "at once, before the server answers")
+            assertEquals(1, page.center.count.value)
             advanceUntilIdle()
-            assertEquals(listOf("delete(Account:n1)"), page.repository.calls)
-            assertEquals(
-                "n2",
-                page.vm.uiState.value.pendingDelete
-                    ?.id,
-            )
 
+            assertEquals(listOf("delete(Account:n1)"), page.repository.calls)
+            assertEquals(listOf("n2", "n3"), page.vm.items().map { it.id })
+            assertEquals(1, page.center.count.value)
+
+            page.vm.delete()
+            advanceUntilIdle()
+            assertEquals(listOf("delete(Account:n1)"), page.repository.calls, "a second Delete with no sheet up sends nothing")
+        }
+
+    @Test
+    fun `a confirmed delete still goes when the page closes at once`() =
+        runViewModelTest {
+            val page = page()
+            advanceUntilIdle()
+
+            page.vm.askDelete(page.vm.items()[1])
+            page.vm.delete()
             page.store.clear()
             advanceUntilIdle()
-            assertEquals(listOf("delete(Account:n1)", "delete(Account:n2)"), page.repository.calls, "the page went; the delete did not")
+
+            assertEquals(listOf("delete(Account:n2)"), page.repository.calls)
         }
 
     @Test
@@ -208,8 +211,8 @@ class NotificationsViewModelTest {
             advanceUntilIdle()
             page.repository.fail = mapOf("delete" to AppResult.Failure(AppError.Network))
 
-            page.vm.delete(page.vm.items().first())
-            page.vm.commitDelete("n1")
+            page.vm.askDelete(page.vm.items().first())
+            page.vm.delete()
             advanceUntilIdle()
 
             assertEquals(listOf("n1", "n2", "n3"), page.vm.items().map { it.id })
@@ -219,6 +222,22 @@ class NotificationsViewModelTest {
                     .first()
                     ?.error,
             )
+        }
+
+    @Test
+    fun `a sign-out while the sheet is up closes it - nothing is deleted in either inbox`() =
+        runViewModelTest {
+            val page = page()
+            advanceUntilIdle()
+            page.vm.askDelete(page.vm.items().first())
+
+            page.repository.state.value = SessionState.SignedOut
+            advanceUntilIdle()
+            page.vm.delete()
+            advanceUntilIdle()
+
+            assertNull(page.vm.uiState.value.confirmDelete)
+            assertTrue(page.repository.calls.none { it.startsWith("delete") })
         }
 
     @Test
