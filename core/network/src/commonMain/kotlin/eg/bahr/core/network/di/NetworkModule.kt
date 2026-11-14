@@ -9,6 +9,7 @@ import eg.bahr.core.common.push.PushChannel
 import eg.bahr.core.network.ApiConfig
 import eg.bahr.core.network.HttpClientFactory
 import eg.bahr.core.network.LanguageTagProvider
+import eg.bahr.core.network.auth.AccountLocaleSync
 import eg.bahr.core.network.auth.AuthSession
 import eg.bahr.core.network.auth.HttpSessionRemote
 import eg.bahr.core.network.install.InstallRegistrar
@@ -63,5 +64,11 @@ val networkModule =
                 session = get(),
                 language = get(),
             )
+        }
+        // The account's language following the app's (`updateMe {locale}`, M3-M21), started by the app at launch with the
+        // stored language. The client is resolved on its first request.
+        single {
+            val scope = this
+            AccountLocaleSync(clientProvider = { scope.get<HttpClient>() }, session = get())
         }
     }

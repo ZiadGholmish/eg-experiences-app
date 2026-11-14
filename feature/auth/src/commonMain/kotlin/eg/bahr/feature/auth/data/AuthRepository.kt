@@ -113,6 +113,8 @@ internal class DefaultAuthRepository(
                     accountName = signIn.account.name,
                     profileComplete = signIn.account.profileComplete,
                     providers = signIn.account.providers,
+                    // The account's language (M3-M21): core:network's AccountLocaleSync tells it the app's if they differ.
+                    locale = signIn.account.locale,
                 )
                 if (!signIn.account.profileComplete) askForProfile(signIn.account.toPrompt())
                 AppResult.Success(signIn.account)
@@ -127,7 +129,7 @@ internal class DefaultAuthRepository(
         when (val result = api.updateMe(UpdateAccountRequest(name = name, phone = phone))) {
             is AppResult.Success -> {
                 val account = result.data
-                authSession.updateAccount(account.name, account.profileComplete, account.providers)
+                authSession.updateAccount(account.name, account.profileComplete, account.providers, account.locale)
                 result
             }
             is AppResult.Failure -> result

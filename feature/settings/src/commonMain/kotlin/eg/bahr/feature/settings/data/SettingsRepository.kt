@@ -118,7 +118,7 @@ internal class DefaultSettingsRepository(
             if (result is AppResult.Success) {
                 val account = result.data
                 _account.value = account
-                authSession.updateAccount(account.name, account.profileComplete, account.providers)
+                authSession.updateAccount(account.name, account.profileComplete, account.providers, account.locale)
             }
         }
 
@@ -131,7 +131,7 @@ internal class DefaultSettingsRepository(
                 val saved = result.data
                 _account.value = saved
                 // My trips, the sign-in sheet and the next launch read the name from the session.
-                authSession.updateAccount(saved.name, saved.profileComplete, saved.providers)
+                authSession.updateAccount(saved.name, saved.profileComplete, saved.providers, saved.locale)
             }
         }
 

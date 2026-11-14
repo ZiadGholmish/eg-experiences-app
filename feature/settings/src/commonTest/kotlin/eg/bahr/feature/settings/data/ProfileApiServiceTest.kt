@@ -57,9 +57,11 @@ class ProfileApiServiceTest {
 
     private fun HttpRequestData.bodyText() = (body as? OutgoingContent.ByteArrayContent)?.bytes()?.decodeToString().orEmpty()
 
+    private val store = MemoryStore()
+
     private suspend fun setUp(answer: (HttpRequestData) -> Pair<HttpStatusCode, String>): Pair<DefaultSettingsRepository, AuthSession> {
-        val session = AuthSession(MemoryStore())
-        session.signedIn(TOKENS, accountName = "Menna", profileComplete = false, providers = listOf("google"))
+        val session = AuthSession(store)
+        session.signedIn(TOKENS, accountName = "Menna", profileComplete = false, providers = listOf("google"), locale = "en")
         val client =
             apiHttpClient(
                 engine =
@@ -94,6 +96,8 @@ class ProfileApiServiceTest {
             assertEquals("Bearer at", get.headers[HttpHeaders.Authorization])
             assertEquals("menna.hassan@gmail.com", repository.account.first()?.email)
             assertEquals(SessionState.SignedIn("Menna Hassan", profileComplete = true, providers = setOf("google")), session.state.value)
+            // M3-M21: the account's language as the server says it replaces the one kept from sign-in.
+            assertEquals("ar", store.session?.accountLocale)
         }
 
     @Test
@@ -106,7 +110,7 @@ class ProfileApiServiceTest {
             val patch = requests.single()
             assertEquals(HttpMethod.Patch, patch.method)
             val body = Json.parseToJsonElement(patch.bodyText()).jsonObject
-            assertEquals(setOf("name", "phone"), body.keys)
+            assertEquals(setOf("name", "phone"), body.keys, "no locale: core:network's AccountLocaleSync sends that (M3-M21)")
             assertEquals("01012345678", body["phone"]?.jsonPrimitive?.content)
             assertEquals(SessionState.SignedIn("Menna Hassan", profileComplete = true, providers = setOf("google")), session.state.value)
             assertEquals("Menna Hassan", repository.account.first()?.name)

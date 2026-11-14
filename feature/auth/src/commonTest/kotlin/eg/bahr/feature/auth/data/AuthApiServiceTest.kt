@@ -105,6 +105,8 @@ class AuthApiServiceTest {
                 session.state.value,
             )
             assertEquals(AuthTokens("at", "2099-10-13T10:15:00+03:00", "rt", "2099-11-12T10:00:00+03:00"), store.session?.tokens)
+            // M3-M21: the account's language is kept, so core:network can tell whether it follows the app's.
+            assertEquals("ar", store.session?.accountLocale)
         }
 
     @Test
