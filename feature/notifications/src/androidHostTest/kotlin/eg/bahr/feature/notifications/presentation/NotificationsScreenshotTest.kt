@@ -19,6 +19,7 @@ import eg.bahr.core.designsystem.theme.BahrThemeName
 import eg.bahr.core.localization.ProvideAppLanguage
 import eg.bahr.core.network.auth.SessionState
 import eg.bahr.core.testing.captureScreenshot
+import eg.bahr.feature.notifications.data.InboxOwner
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Rule
 import org.junit.Test
@@ -170,7 +171,7 @@ class NotificationsScreenshotTest {
     private fun mix(language: AppLanguage): List<InboxEntry> {
         val ar = language == AppLanguage.ARABIC
         return listOf(
-            InboxEntry.Header(InboxGroup.Today),
+            InboxEntry.Header(InboxGroup.Today, InboxOwner.Account),
             row(
                 "hold",
                 AlertKind.HoldExpiring,
@@ -235,7 +236,7 @@ class NotificationsScreenshotTest {
                 minutesAgo = 180,
                 read = true,
             ),
-            InboxEntry.Header(InboxGroup.Earlier),
+            InboxEntry.Header(InboxGroup.Earlier, InboxOwner.Account),
             row(
                 "remind",
                 AlertKind.TripReminder,
@@ -290,7 +291,7 @@ class NotificationsScreenshotTest {
     private fun guest(language: AppLanguage): List<InboxEntry> {
         val ar = language == AppLanguage.ARABIC
         return listOf(
-            InboxEntry.Header(InboxGroup.Today),
+            InboxEntry.Header(InboxGroup.Today, InboxOwner.Guest),
             row(
                 "seat",
                 AlertKind.SeatOpened,
@@ -306,8 +307,9 @@ class NotificationsScreenshotTest {
                 ),
                 minutesAgo = 25,
                 read = false,
+                owner = InboxOwner.Guest,
             ),
-            InboxEntry.Header(InboxGroup.Earlier),
+            InboxEntry.Header(InboxGroup.Earlier, InboxOwner.Guest),
             row(
                 "news",
                 AlertKind.Broadcast,
@@ -323,6 +325,7 @@ class NotificationsScreenshotTest {
                 ),
                 minutesAgo = 2 * DAY,
                 read = true,
+                owner = InboxOwner.Guest,
             ),
         )
     }
@@ -340,6 +343,8 @@ class NotificationsScreenshotTest {
         body: String,
         minutesAgo: Int,
         read: Boolean,
+        // The page shows rows only under their own inbox (M3-M23): the signed-in shots' account, the guest shots' install.
+        owner: InboxOwner = InboxOwner.Account,
     ) = InboxEntry.Item(
         id = id,
         kind = kind,
@@ -348,6 +353,7 @@ class NotificationsScreenshotTest {
         createdAt = Instant.fromEpochSeconds(NOW.epochSeconds - minutesAgo * SECONDS_PER_MINUTE),
         read = read,
         target = null,
+        owner = owner,
     )
 
     private companion object {

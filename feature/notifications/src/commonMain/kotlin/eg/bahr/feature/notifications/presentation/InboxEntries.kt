@@ -4,6 +4,7 @@ import androidx.paging.PagingData
 import androidx.paging.filter
 import androidx.paging.insertSeparators
 import androidx.paging.map
+import eg.bahr.feature.notifications.data.InboxOwner
 import eg.bahr.feature.notifications.data.LoadedNotification
 import eg.bahr.feature.notifications.model.NotificationDto
 import kotlinx.datetime.LocalDate
@@ -66,8 +67,15 @@ internal sealed interface InboxEntry {
     /** The list key: unique across both kinds. */
     val key: String
 
+    /**
+     * Whose inbox the entry is from (M3-M23). The page hears of a sign-in or sign-out from the session and from the list,
+     * in either order; only the list can say whose rows it still holds, so the page shows them only under their owner.
+     */
+    val owner: InboxOwner
+
     data class Header(
         val group: InboxGroup,
+        override val owner: InboxOwner,
     ) : InboxEntry {
         override val key: String get() = "header-${group.name}"
     }
@@ -80,6 +88,7 @@ internal sealed interface InboxEntry {
         val createdAt: Instant,
         val read: Boolean,
         val target: AlertTarget?,
+        override val owner: InboxOwner,
     ) : InboxEntry {
         override val key: String get() = id
     }
@@ -112,7 +121,7 @@ internal fun PagingData<LoadedNotification>.toEntries(
         .map { it.toItem(edits) }
         .insertSeparators { before: InboxEntry.Item?, after: InboxEntry.Item? ->
             val group = after?.let { groupOf(it.createdAt, today) } ?: return@insertSeparators null
-            if (before == null || groupOf(before.createdAt, today) != group) InboxEntry.Header(group) else null
+            if (before == null || groupOf(before.createdAt, today) != group) InboxEntry.Header(group, after.owner) else null
         }
 
 internal fun groupOf(
@@ -132,6 +141,7 @@ internal fun LoadedNotification.toItem(edits: InboxEdits): InboxEntry.Item {
         createdAt = runCatching { Instant.parse(dto.createdAt) }.getOrDefault(Instant.DISTANT_PAST),
         read = read,
         target = dto.targetFor(kind),
+        owner = owner,
     )
 }
 
