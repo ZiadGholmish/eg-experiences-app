@@ -529,8 +529,8 @@
     <string name="alerts_mark_read">اعتبره اتقرا</string>
     <string name="alerts_mark_unread">اعتبره ما اتقراش</string>
     <string name="alerts_delete">امسح</string>
-    <string name="alerts_deleted">اتمسح الإشعار</string>
-    <string name="alerts_undo">رجّعه</string>
+    <string name="alerts_delete_title">تمسح الإشعار ده؟</string>
+    <string name="alerts_delete_cancel">إلغاء</string>
     <string name="alerts_more">اختيارات تانية</string>
     <string name="alerts_clear_read">امسح اللي اتقرا</string>
     <string name="alerts_clear_read_title">تمسح الإشعارات اللي قريتها؟</string>

@@ -57,7 +57,7 @@ internal class NotificationsApiService(
     /** `markAllNotificationsRead` ("Mark all as read"). */
     suspend fun markAllRead(owner: InboxOwner): AppResult<Unit> = callApi { client.post("${owner.path}/read-all") { proving(owner) } }
 
-    /** `deleteNotification` (a swipe, once its undo has passed; M3-B16): 204 whether or not it was deleted before. */
+    /** `deleteNotification` (once the confirm sheet's Delete is tapped, M3-M22; M3-B16): 204 whether or not it was deleted before. */
     suspend fun delete(
         owner: InboxOwner,
         id: String,

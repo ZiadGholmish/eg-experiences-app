@@ -1,5 +1,6 @@
 package eg.bahr.feature.notifications.presentation
 
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -25,19 +27,12 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Snackbar
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,6 +59,8 @@ import eg.bahr.core.designsystem.lifecycle.RefreshesOnReturn
 import eg.bahr.core.designsystem.theme.BahrSize
 import eg.bahr.core.designsystem.theme.BahrSpacing
 import eg.bahr.core.designsystem.theme.BahrTheme
+import eg.bahr.core.designsystem.theme.bahrTween
+import eg.bahr.core.designsystem.theme.bahrTweenOrNull
 import eg.bahr.core.localization.generated.resources.Res
 import eg.bahr.core.localization.generated.resources.action_back
 import eg.bahr.core.localization.generated.resources.action_retry
@@ -71,7 +68,9 @@ import eg.bahr.core.localization.generated.resources.alerts_clear_read
 import eg.bahr.core.localization.generated.resources.alerts_clear_read_body
 import eg.bahr.core.localization.generated.resources.alerts_clear_read_keep
 import eg.bahr.core.localization.generated.resources.alerts_clear_read_title
-import eg.bahr.core.localization.generated.resources.alerts_deleted
+import eg.bahr.core.localization.generated.resources.alerts_delete
+import eg.bahr.core.localization.generated.resources.alerts_delete_cancel
+import eg.bahr.core.localization.generated.resources.alerts_delete_title
 import eg.bahr.core.localization.generated.resources.alerts_earlier
 import eg.bahr.core.localization.generated.resources.alerts_empty_body
 import eg.bahr.core.localization.generated.resources.alerts_empty_title
@@ -85,7 +84,6 @@ import eg.bahr.core.localization.generated.resources.alerts_time_minutes
 import eg.bahr.core.localization.generated.resources.alerts_time_now
 import eg.bahr.core.localization.generated.resources.alerts_title
 import eg.bahr.core.localization.generated.resources.alerts_today
-import eg.bahr.core.localization.generated.resources.alerts_undo
 import eg.bahr.core.network.auth.SessionState
 import eg.bahr.feature.notifications.presentation.components.NotificationRow
 import eg.bahr.feature.notifications.presentation.components.NotificationRowActions
@@ -111,9 +109,9 @@ internal data class NotificationsActions(
     val onBack: () -> Unit,
     val onOpen: (InboxEntry.Item) -> Unit = {},
     val onSetRead: (InboxEntry.Item, Boolean) -> Unit = { _, _ -> },
-    val onDelete: (InboxEntry.Item) -> Unit = {},
-    val onUndoDelete: (String) -> Unit = {},
-    val onCommitDelete: (String) -> Unit = {},
+    val onAskDelete: (InboxEntry.Item) -> Unit = {},
+    val onDismissDelete: () -> Unit = {},
+    val onDelete: () -> Unit = {},
     val onMarkAllRead: () -> Unit = {},
     val onAskClearRead: () -> Unit = {},
     val onDismissClearRead: () -> Unit = {},
@@ -124,7 +122,8 @@ internal data class NotificationsActions(
 /**
  * The notifications page (M3-M6, account handoff §3), pushed from Home's bell (M3-M6a): newest first in Today and
  * Earlier, unread rows tinted with a dot, a tap reads the item and opens its page ([destinations]), "Mark all as read",
- * a swipe deletes with Undo, a long press reads, unreads or deletes, and the overflow's "Clear read". Signed out it is
+ * a long swipe towards the start asks to delete (a sheet confirms it, M3-M22), a long press reads, unreads or deletes,
+ * and the overflow's "Clear read", which asks too. Signed out it is
  * this install's guest inbox (M3-B12), so there is no sign-in prompt. Reads again on each return.
  */
 @Composable
@@ -145,9 +144,9 @@ internal fun NotificationsScreen(
                     destinations.open(item.target)
                 },
                 onSetRead = viewModel::setRead,
+                onAskDelete = viewModel::askDelete,
+                onDismissDelete = viewModel::dismissDelete,
                 onDelete = viewModel::delete,
-                onUndoDelete = viewModel::undoDelete,
-                onCommitDelete = viewModel::commitDelete,
                 onMarkAllRead = viewModel::markAllRead,
                 onAskClearRead = viewModel::askClearRead,
                 onDismissClearRead = viewModel::dismissClearRead,
@@ -158,6 +157,9 @@ internal fun NotificationsScreen(
     NotificationsContent(state = state, items = items, actions = actions)
     if (state.confirmClearRead) {
         BahrBottomSheet(props = clearReadProps(state, actions)) { ClearReadBody() }
+    }
+    state.confirmDelete?.let { item ->
+        BahrBottomSheet(props = deleteProps(actions)) { DeleteBody(item) }
     }
 }
 
@@ -177,8 +179,6 @@ internal fun NotificationsContent(
     items: LazyPagingItems<InboxEntry>,
     actions: NotificationsActions,
 ) {
-    val snackbar = remember { SnackbarHostState() }
-    UndoSnackbar(state.pendingDelete, snackbar, actions)
     val refresh = items.loadState.refresh
     val hasItems = items.itemCount > 0
     // The handoff's page is `surface` (not the off-white page of the trip lists), in light and dark.
@@ -192,13 +192,28 @@ internal fun NotificationsContent(
     ) {
         Column(Modifier.fillMaxSize()) {
             TopBar(actions, showListActions = hasItems && state.session != SessionState.Unknown)
-            Box(Modifier.weight(1f).fillMaxWidth()) {
+            val shown =
                 when {
                     // The stored sign-in not read yet: which inbox is not known, so nothing flashes.
-                    state.session == SessionState.Unknown -> Unit
-                    hasItems -> InboxList(items, state.now, actions)
-                    refresh is LoadState.Loading -> InboxSkeleton()
-                    refresh is LoadState.Error ->
+                    state.session == SessionState.Unknown -> InboxShown.Unknown
+                    hasItems -> InboxShown.List
+                    refresh is LoadState.Loading -> InboxShown.Loading
+                    refresh is LoadState.Error -> InboxShown.Error
+                    else -> InboxShown.Empty
+                }
+            // A cross-fade between them (M3-M22): the last row deleted fades out while the empty state fades in, as
+            // the list keeps drawing its going row for the fade. Instant under reduce motion.
+            Crossfade(
+                targetState = shown,
+                animationSpec = bahrTween(),
+                label = "inbox",
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+            ) { target ->
+                when (target) {
+                    InboxShown.Unknown -> Unit
+                    InboxShown.List -> InboxList(items, state.now, actions)
+                    InboxShown.Loading -> InboxSkeleton()
+                    InboxShown.Error ->
                         Centred {
                             StateMessage(
                                 art = {
@@ -218,32 +233,9 @@ internal fun NotificationsContent(
                                 )
                             }
                         }
-                    else -> Centred { EmptyState() }
+                    InboxShown.Empty -> Centred { EmptyState() }
                 }
             }
-        }
-        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(BahrSpacing.gutter)) { Snackbar(it) }
-    }
-}
-
-/**
- * The swipe's Undo (M3-M6): one snackbar per deleted item; Undo puts it back, and its going away (timeout, a swipe on
- * the snackbar) lets the delete go. A next delete replaces it; the view model has already sent the first.
- */
-@Composable
-private fun UndoSnackbar(
-    pending: PendingDelete?,
-    snackbar: SnackbarHostState,
-    actions: NotificationsActions,
-) {
-    val message = stringResource(Res.string.alerts_deleted)
-    val undo = stringResource(Res.string.alerts_undo)
-    val current by rememberUpdatedState(actions)
-    LaunchedEffect(pending?.id, snackbar) {
-        val id = pending?.id ?: return@LaunchedEffect
-        when (snackbar.showSnackbar(message, actionLabel = undo, duration = SnackbarDuration.Short)) {
-            SnackbarResult.ActionPerformed -> current.onUndoDelete(id)
-            SnackbarResult.Dismissed -> current.onCommitDelete(id)
         }
     }
 }
@@ -342,17 +334,21 @@ private fun InboxList(
             key = items.itemKey { it.key },
             contentType = items.itemContentType { if (it is InboxEntry.Header) CONTENT_HEADER else CONTENT_ITEM },
         ) { index ->
+            // Keyed by item id and heading: a delete, Clear read, a row coming back or a new one fades and the rest slide
+            // (M3-M22). Placement only: the row's own swipe offset is drawn inside it, so the two never fight.
+            val motion = itemMotion()
             when (val entry = items[index]) {
-                is InboxEntry.Header -> GroupLabel(entry.group)
+                is InboxEntry.Header -> GroupLabel(entry.group, motion)
                 is InboxEntry.Item ->
                     NotificationRow(
+                        modifier = motion,
                         item = entry,
                         time = relativeTime(entry.createdAt, now),
                         actions =
                             NotificationRowActions(
                                 onOpen = { actions.onOpen(entry) },
                                 onSetRead = { read -> actions.onSetRead(entry, read) },
-                                onDelete = { actions.onDelete(entry) },
+                                onAskDelete = { actions.onAskDelete(entry) },
                             ),
                     )
                 null -> Unit
@@ -371,14 +367,33 @@ private fun InboxList(
     }
 }
 
+/**
+ * An entry's motion in the list (M3-M22): it fades in and out and slides to its new place on the design system's
+ * tween, instant under reduce motion (null specs). The same as core:catalog's `bahrAnimateItem`; reaching it would be
+ * a new module edge for one modifier.
+ */
 @Composable
-private fun GroupLabel(group: InboxGroup) {
+private fun LazyItemScope.itemMotion(): Modifier =
+    Modifier.animateItem(
+        fadeInSpec = bahrTweenOrNull(),
+        placementSpec = bahrTweenOrNull(),
+        fadeOutSpec = bahrTweenOrNull(),
+    )
+
+/** What the space under the bar shows; the cross-fade's key. */
+private enum class InboxShown { Unknown, List, Loading, Error, Empty }
+
+@Composable
+private fun GroupLabel(
+    group: InboxGroup,
+    modifier: Modifier,
+) {
     Text(
         text = stringResource(if (group == InboxGroup.Today) Res.string.alerts_today else Res.string.alerts_earlier),
         style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier =
-            Modifier
+            modifier
                 .fillMaxWidth()
                 .padding(start = BahrSpacing.gutter, end = BahrSpacing.gutter, top = BahrSpacing.md, bottom = BahrSpacing.xs)
                 .semantics { heading() },
@@ -560,6 +575,36 @@ private fun clearReadProps(
 private fun ClearReadBody() {
     Text(
         text = stringResource(Res.string.alerts_clear_read_body),
+        style = MaterialTheme.typography.bodyMedium,
+        color = BahrTheme.colors.onSurfaceSecondary,
+    )
+}
+
+/**
+ * "Delete this notification?" (M3-M22): asked after a full swipe, the menu's Delete or the screen reader's, as a
+ * deletion cannot be undone. The destructive Delete first, Cancel (the default focus) last; any way out leaves the row.
+ */
+@Composable
+internal fun deleteProps(actions: NotificationsActions) =
+    BahrBottomSheet.Props(
+        title = stringResource(Res.string.alerts_delete_title),
+        onDismiss = actions.onDismissDelete,
+        actions =
+            listOf(
+                BahrBottomSheet.Action(
+                    text = stringResource(Res.string.alerts_delete),
+                    style = BahrBottomSheet.Action.Style.Destructive,
+                    onClick = actions.onDelete,
+                ),
+            ),
+        cancel = BahrBottomSheet.Action(text = stringResource(Res.string.alerts_delete_cancel), onClick = actions.onDismissDelete),
+    )
+
+/** Which one: the row's title, as the list shows it. */
+@Composable
+internal fun DeleteBody(item: InboxEntry.Item) {
+    Text(
+        text = item.title,
         style = MaterialTheme.typography.bodyMedium,
         color = BahrTheme.colors.onSurfaceSecondary,
     )

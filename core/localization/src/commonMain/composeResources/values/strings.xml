@@ -489,7 +489,7 @@
     <string name="alerts_empty_title">No notifications yet</string>
     <string name="alerts_empty_body">We’ll tell you here when a booking is confirmed, a seat opens on a trip you’re waiting for, or a host messages you.</string>
     <!-- The notifications page (M3-M6, account handoff §3). Copy from the prototype where it has it; the rest
-         (the row menu, delete + undo, Clear read, the relative times beyond the prototype's) is new: needs a native read. -->
+         (the row menu, the delete confirm sheet (M3-M22), Clear read, the relative times beyond the prototype's) is new: needs a native read. -->
     <string name="alerts_mark_all_read">Mark all as read</string>
     <string name="alerts_error_title">We couldn’t load your notifications</string>
     <string name="alerts_error_body">Your connection looks weak. Try again in a moment.</string>
@@ -508,8 +508,9 @@
     <string name="alerts_mark_read">Mark as read</string>
     <string name="alerts_mark_unread">Mark as unread</string>
     <string name="alerts_delete">Delete</string>
-    <string name="alerts_deleted">Notification deleted</string>
-    <string name="alerts_undo">Undo</string>
+    <!-- The sheet that confirms deleting one notification (M3-M22); its body is the row's title. -->
+    <string name="alerts_delete_title">Delete this notification?</string>
+    <string name="alerts_delete_cancel">Cancel</string>
     <string name="alerts_more">More options</string>
     <string name="alerts_clear_read">Clear read</string>
     <string name="alerts_clear_read_title">Clear the notifications you’ve read?</string>

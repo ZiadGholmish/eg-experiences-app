@@ -86,8 +86,8 @@ internal sealed interface InboxEntry {
 }
 
 /**
- * What the page changed before the server's list shows it (M3-M6): items [hidden] (deleted, or waiting out a delete's
- * undo; ids never come back, so they stay hidden), read or unread by hand ([read]), and "Mark all as read", which holds
+ * What the page changed before the server's list shows it (M3-M6): items [hidden] (deleted, or with their DELETE under
+ * way; ids never come back, so they stay hidden), read or unread by hand ([read]), and "Mark all as read", which holds
  * for every item loaded by the read numbered [allReadUpTo] or before; a later read shows the server's state.
  */
 internal data class InboxEdits(

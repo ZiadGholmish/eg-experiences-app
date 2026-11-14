@@ -24,8 +24,7 @@ import kotlinx.coroutines.launch
  * - the bell's unread count ([UnreadAlerts]): read when the inbox owner changes (sign-in, sign-out), after each
  *   registration that landed ([registrations]: a sign-in's moves the guest inbox into the account, openapi
  *   `registerDevice`), on foreground and push, and after each change the page makes; one read at a time, in order;
- * - the page's deferred deletes ([launch]): a swipe's DELETE goes when its undo has passed, which can be after the
- *   page has gone.
+ * - the page's deletes ([launch]): a confirmed DELETE (M3-M22) finishes even if the page closes at once.
  */
 internal class AlertsCenter(
     private val repository: NotificationsRepository,
@@ -81,7 +80,7 @@ internal class AlertsCenter(
         _count.value = count
     }
 
-    /** Work that must finish even if the page goes first (a delete after its undo). */
+    /** Work that must finish even if the page goes first (a confirmed delete). */
     fun launch(block: suspend () -> Unit): Job = scope.launch { block() }
 
     private suspend fun read(registerOnRefusal: Boolean) {
