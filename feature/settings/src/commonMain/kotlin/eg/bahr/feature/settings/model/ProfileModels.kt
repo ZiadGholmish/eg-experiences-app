@@ -18,9 +18,14 @@ internal data class AccountDto(
     val profileComplete: Boolean = false,
 )
 
-/** openapi `UpdateAccountRequest`: absent fields stay as they are on the server. */
+/**
+ * openapi `UpdateAccountRequest`: absent fields stay as they are on the server. Profile sends the name and phone only;
+ * the account's [locale] follows the app's language through core:network's AccountLocaleSync (M3-M21), app-wide, so
+ * a switch is not sent twice.
+ */
 @Serializable
 internal data class UpdateAccountRequest(
     val name: String? = null,
     val phone: String? = null,
+    val locale: String? = null,
 )

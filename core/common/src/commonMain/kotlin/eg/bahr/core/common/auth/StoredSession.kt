@@ -21,6 +21,10 @@ data class AuthTokens(
  * without a network (Settings' "signed in as …"): [accountName] (absent until set),
  * [profileComplete] (name and phone both set) and [providers] (`apple`, `google`; `apple` means
  * account deletion re-authenticates with Apple first). Personal data: secure storage only.
+ *
+ * [accountLocale] is the account's language as the server last said it (openapi `Account.locale`, M3-M21): the
+ * language its in-app and push notifications are written in. Kept so a restart can tell, without a request, whether
+ * the account still follows the app's language. Null when unknown (a sign-in kept by a build before M3-M21).
  */
 @Serializable
 data class StoredSession(
@@ -28,6 +32,7 @@ data class StoredSession(
     val accountName: String? = null,
     val profileComplete: Boolean = false,
     val providers: List<String> = emptyList(),
+    val accountLocale: String? = null,
 )
 
 /** Where [StoredSession] is kept (Keychain on iOS, Keystore-encrypted on Android; core:datastore). */

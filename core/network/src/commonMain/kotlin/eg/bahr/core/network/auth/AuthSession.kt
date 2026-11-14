@@ -58,6 +58,20 @@ class AuthSession(
     private val _state = MutableStateFlow<SessionState>(SessionState.Unknown)
     val state: StateFlow<SessionState> = _state.asStateFlow()
 
+    private val knownAccountLocale = MutableStateFlow<String?>(null)
+
+    /**
+     * The signed-in account's language as the server last said it (`Account.locale`), null when signed out or not known
+     * yet (M3-M21). Apart from [state] on purpose: what screens show does not change with it.
+     */
+    internal val accountLocale: StateFlow<String?> = knownAccountLocale.asStateFlow()
+
+    /**
+     * Which sign-in this is (M3-M21 review #1): bumped by every sign-in and every sign-out, so an answer to a request made
+     * for one sign-in is not taken for the next one's. Not the tokens: a refresh during the request rotates them.
+     */
+    private var generation = 0L
+
     /** The server side of refresh and sign-out; set by the HTTP client factory, which owns the client. */
     internal var remote: SessionRemote? = null
 
@@ -68,25 +82,61 @@ class AuthSession(
             _state.value
         }
 
-    /** A successful sign-in (`signInWithProvider`): keeps the tokens and the account summary. */
+    /** A successful sign-in (`signInWithProvider`): keeps the tokens and the account summary, its [locale] included. */
     suspend fun signedIn(
         tokens: AuthTokens,
         accountName: String?,
         profileComplete: Boolean,
         providers: List<String>,
+        locale: String? = null,
     ) = mutex.withLock {
         loaded = true
-        save(StoredSession(tokens, accountName, profileComplete, providers))
+        generation++
+        save(StoredSession(tokens, accountName, profileComplete, providers, accountLocale = locale))
     }
 
-    /** A fresh read or update of the account (`getMe`, `updateMe`); ignored when signed out meanwhile. */
+    /**
+     * A fresh read or update of the account (`getMe`, `updateMe`); ignored when signed out meanwhile. A null [locale]
+     * keeps the one kept.
+     */
     suspend fun updateAccount(
         accountName: String?,
         profileComplete: Boolean,
         providers: List<String>,
+        locale: String? = null,
     ) = mutex.withLock {
         ensureLoaded()
-        current?.let { save(it.copy(accountName = accountName, profileComplete = profileComplete, providers = providers)) }
+        current?.let {
+            save(
+                it.copy(
+                    accountName = accountName,
+                    profileComplete = profileComplete,
+                    providers = providers,
+                    accountLocale = locale ?: it.accountLocale,
+                ),
+            )
+        }
+    }
+
+    /** The sign-in a request is about to be made for; hand it back to [updateAccountLocale] with the answer. */
+    internal suspend fun signInGeneration(): Long =
+        mutex.withLock {
+            ensureLoaded()
+            generation
+        }
+
+    /**
+     * The account's language after `updateMe` set it (M3-M21). Ignored when the sign-in it was asked for ([forSignIn],
+     * from [signInGeneration]) has ended meanwhile: written into the next account's session, it would stand for that
+     * account's own language, which then would never be sent (review #1).
+     */
+    internal suspend fun updateAccountLocale(
+        locale: String,
+        forSignIn: Long,
+    ) = mutex.withLock {
+        ensureLoaded()
+        if (forSignIn != generation) return@withLock
+        current?.let { save(it.copy(accountLocale = locale)) }
     }
 
     /**
@@ -181,12 +231,17 @@ class AuthSession(
                 null
             }
         loaded = true
+        // The locale first, so a listener to both never sees a sign-in with the previous one's locale.
+        knownAccountLocale.value = current?.accountLocale
         _state.value = current.toState()
     }
 
     /** Memory first (so a failed write still takes effect for this run), then the secure store. */
     private suspend fun save(session: StoredSession?) {
+        // Every way out (sign-out, deletion, a refused refresh, a 401 nothing could cure) ends this sign-in.
+        if (session == null) generation++
         current = session
+        knownAccountLocale.value = session?.accountLocale
         _state.value = session.toState()
         try {
             store.write(session)

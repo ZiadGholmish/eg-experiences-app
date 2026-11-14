@@ -11,6 +11,7 @@ import eg.bahr.core.datastore.createPreferencesDataStore
 import eg.bahr.core.datastore.di.dataStoreModule
 import eg.bahr.core.network.ApiConfig
 import eg.bahr.core.network.LanguageTagProvider
+import eg.bahr.core.network.auth.AccountLocaleSync
 import eg.bahr.core.network.di.networkModule
 import eg.bahr.core.network.install.InstallRegistrar
 import eg.bahr.deeplink.DeepLinkParser
@@ -153,10 +154,14 @@ fun initKoin(
 /**
  * After [initKoin] (M3-M5): reads the push permission once and starts this install's registration (`registerDevice`),
  * which runs for the life of the process on [scope]: now, on each sign-in and sign-out, and whenever the token changes.
+ * Also starts the signed-in account's language following the app's (M3-M21), on the same scope.
  */
 fun Koin.startInstallRegistration(scope: CoroutineScope) {
     getOrNull<PushChannel>()?.refresh()
     get<InstallRegistrar>().start(scope)
+    // The store's own flow, not AppLanguageState's: that one starts at the default before the store is read, and an
+    // English app would first tell its English account it is Arabic.
+    get<AccountLocaleSync>().start(scope, get<AppSettingsStore>().language)
 }
 
 /**
